@@ -20,7 +20,12 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_passive_scenario,
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
-from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
+from financial_brain.forward_edge.data_permissions import (
+    DEFAULT_PERMISSION_REGISTRY,
+    DataPermission,
+    DataUse,
+    load_permission_registry,
+)
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
@@ -54,9 +59,11 @@ class ForwardSessionRunner:
     """
 
     def __init__(self, state: ForwardSessionStore, journal_path: Path, *,
-                 clock: ClockProvider | None = None) -> None:
+                 clock: ClockProvider | None = None,
+                 permission_registry_path: Path = DEFAULT_PERMISSION_REGISTRY) -> None:
         self.state_store = state
         self.clock = clock or SystemClock()
+        self.permission_registry_path = Path(permission_registry_path)
         self.journal_path = Path(journal_path)
         self.provenance = repository_provenance(entry_point="ForwardSessionRunner")
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
@@ -447,10 +454,21 @@ class ForwardSessionRunner:
                     except (KeyError, TypeError, ValueError) as exc:
                         raise ForwardSessionRunnerError(f"invalid market data permission: {exc}") from exc
                     local_date = event.available_at.astimezone(IST).date()
+                    try:
+                        permission_registry, registry_sha256 = load_permission_registry(
+                            self.permission_registry_path)
+                    except (OSError, TypeError, ValueError) as exc:
+                        raise ForwardSessionRunnerError(
+                            f"data permission registry unavailable: {exc}") from exc
+                    canonical_permission = permission_registry.get(
+                        (event.source, DataUse.PAPER_SIMULATION))
+                    if canonical_permission is None or permission != canonical_permission:
+                        raise ForwardSessionRunnerError(
+                            f"paper simulation permission for {event.source!r} does not match the canonical registry")
                     if not permission.allows(source_id=event.source, use=DataUse.PAPER_SIMULATION, on=local_date):
                         raise ForwardSessionRunnerError(
                             f"market data permission does not allow paper simulation for {event.source!r}")
-                    permission_evidence = dict(matching[0])
+                    permission_evidence = {**dict(matching[0]), "registry_sha256": registry_sha256}
                 if event.event_time.astimezone(IST).date() != config.exchange_date:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")
                 if event.available_at < event.received_at:

@@ -1,6 +1,6 @@
 {
   "authority_map": "docs/edge-program/authoritative-contracts.v1.json",
-  "candidate_count": 1621,
+  "candidate_count": 1624,
   "candidates": [
     {
       "canonical_contract_ids": [],
@@ -1402,9 +1402,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/data_permissions.py::PermissionStatus",
       "kind": "class",
-      "line": 13,
+      "line": 20,
       "related_role": "UNREVIEWED",
-      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05"
+      "source_sha256": "7d8fe3cd3643387ae89c471b5dbcb337256cf16234c7c41b0fade058d1d60746"
     },
     {
       "canonical_contract_ids": [],
@@ -1412,9 +1412,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/data_permissions.py::DataUse",
       "kind": "class",
-      "line": 19,
+      "line": 26,
       "related_role": "UNREVIEWED",
-      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05"
+      "source_sha256": "7d8fe3cd3643387ae89c471b5dbcb337256cf16234c7c41b0fade058d1d60746"
     },
     {
       "canonical_contract_ids": [],
@@ -1422,9 +1422,19 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/data_permissions.py::DataPermission",
       "kind": "class",
-      "line": 29,
+      "line": 36,
       "related_role": "UNREVIEWED",
-      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05"
+      "source_sha256": "7d8fe3cd3643387ae89c471b5dbcb337256cf16234c7c41b0fade058d1d60746"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/data_permissions.py::load_permission_registry",
+      "kind": "function",
+      "line": 79,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "7d8fe3cd3643387ae89c471b5dbcb337256cf16234c7c41b0fade058d1d60746"
     },
     {
       "canonical_contract_ids": [],
@@ -2548,6 +2558,26 @@
       "line": 355,
       "related_role": "UNREVIEWED",
       "source_sha256": "524cff425292958d6ecafe87f627f440a01747a745050526718d07de1017822d"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/execution_charter.py::ExecutionCharterError",
+      "kind": "class",
+      "line": 18,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "837b5c0100f40d7bd9d2af2cae6e3f271293af65faf82becd8fb49aa091d5566"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/execution_charter.py::ExecutionCharter",
+      "kind": "class",
+      "line": 23,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "837b5c0100f40d7bd9d2af2cae6e3f271293af65faf82becd8fb49aa091d5566"
     },
     {
       "canonical_contract_ids": [],
@@ -5741,9 +5771,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunnerError",
       "kind": "class",
-      "line": 44,
+      "line": 49,
       "related_role": "UNREVIEWED",
-      "source_sha256": "baf39b0fbe506b580ea1a2b17db651247fe988f42163fce9e4db0e2308cf8de8"
+      "source_sha256": "da8a97c9c674c75d7df54b948341fec56e224812a15a7cea7585fa3fb27b684c"
     },
     {
       "canonical_contract_ids": [
@@ -5758,9 +5788,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner",
       "kind": "class",
-      "line": 48,
+      "line": 53,
       "related_role": "CANONICAL_OWNER",
-      "source_sha256": "baf39b0fbe506b580ea1a2b17db651247fe988f42163fce9e4db0e2308cf8de8"
+      "source_sha256": "da8a97c9c674c75d7df54b948341fec56e224812a15a7cea7585fa3fb27b684c"
     },
     {
       "canonical_contract_ids": [],
@@ -7088,7 +7118,7 @@
       "kind": "function",
       "line": 65,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7098,7 +7128,7 @@
       "kind": "function",
       "line": 88,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7108,7 +7138,7 @@
       "kind": "function",
       "line": 97,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7118,7 +7148,7 @@
       "kind": "function",
       "line": 116,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7128,7 +7158,7 @@
       "kind": "function",
       "line": 128,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7138,7 +7168,7 @@
       "kind": "function",
       "line": 134,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7148,7 +7178,7 @@
       "kind": "function",
       "line": 176,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7158,7 +7188,7 @@
       "kind": "function",
       "line": 191,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7168,7 +7198,7 @@
       "kind": "function",
       "line": 205,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [
@@ -7183,7 +7213,7 @@
       "kind": "function",
       "line": 220,
       "related_role": "CANONICAL_OWNER",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7191,9 +7221,9 @@
       "domain": "paper",
       "id": "src/financial_brain/paper/intraday_runner.py::path_of_bar",
       "kind": "function",
-      "line": 481,
+      "line": 501,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7201,9 +7231,9 @@
       "domain": "paper",
       "id": "src/financial_brain/paper/intraday_runner.py::run_replay",
       "kind": "function",
-      "line": 486,
+      "line": 506,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7211,9 +7241,9 @@
       "domain": "paper",
       "id": "src/financial_brain/paper/intraday_runner.py::run_archive_replay",
       "kind": "function",
-      "line": 568,
+      "line": 588,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7221,9 +7251,9 @@
       "domain": "paper",
       "id": "src/financial_brain/paper/intraday_runner.py::evidence",
       "kind": "function",
-      "line": 708,
+      "line": 728,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -7231,9 +7261,9 @@
       "domain": "paper",
       "id": "src/financial_brain/paper/intraday_runner.py::write_report",
       "kind": "function",
-      "line": 761,
+      "line": 781,
       "related_role": "UNREVIEWED",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "canonical_contract_ids": [],
@@ -16124,7 +16154,7 @@
       "kind": "class",
       "line": 24,
       "related_role": "UNREVIEWED",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "canonical_contract_ids": [],
@@ -16134,7 +16164,7 @@
       "kind": "class",
       "line": 28,
       "related_role": "UNREVIEWED",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "canonical_contract_ids": [],
@@ -16144,7 +16174,7 @@
       "kind": "class",
       "line": 35,
       "related_role": "UNREVIEWED",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "canonical_contract_ids": [],
@@ -16152,9 +16182,9 @@
       "domain": "portfolio",
       "id": "src/financial_brain/portfolio/canonical_ledger.py::PortfolioEvent",
       "kind": "class",
-      "line": 65,
+      "line": 76,
       "related_role": "UNREVIEWED",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "canonical_contract_ids": [
@@ -16166,9 +16196,9 @@
       "domain": "portfolio",
       "id": "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
       "kind": "class",
-      "line": 226,
+      "line": 238,
       "related_role": "CANONICAL_OWNER",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "canonical_contract_ids": [],
@@ -16622,7 +16652,7 @@
     "evaluation": 387,
     "execution": 91,
     "forecasting": 41,
-    "forward_edge": 630,
+    "forward_edge": 633,
     "paper": 244,
     "portfolio": 48,
     "risk": 63,
@@ -17475,7 +17505,7 @@
       "name": "write"
     }
   ],
-  "module_count": 300,
+  "module_count": 301,
   "modules": [
     {
       "domain": "forward_edge",
@@ -17630,7 +17660,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/data_permissions.py",
-      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05"
+      "source_sha256": "7d8fe3cd3643387ae89c471b5dbcb337256cf16234c7c41b0fade058d1d60746"
     },
     {
       "domain": "forward_edge",
@@ -17696,6 +17726,11 @@
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/execution.py",
       "source_sha256": "524cff425292958d6ecafe87f627f440a01747a745050526718d07de1017822d"
+    },
+    {
+      "domain": "forward_edge",
+      "path": "src/financial_brain/forward_edge/execution_charter.py",
+      "source_sha256": "837b5c0100f40d7bd9d2af2cae6e3f271293af65faf82becd8fb49aa091d5566"
     },
     {
       "domain": "forward_edge",
@@ -17980,7 +18015,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "baf39b0fbe506b580ea1a2b17db651247fe988f42163fce9e4db0e2308cf8de8"
+      "source_sha256": "da8a97c9c674c75d7df54b948341fec56e224812a15a7cea7585fa3fb27b684c"
     },
     {
       "domain": "forward_edge",
@@ -18115,7 +18150,7 @@
     {
       "domain": "paper",
       "path": "src/financial_brain/paper/intraday_runner.py",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e"
+      "source_sha256": "06a2446b86e4862d22b54f7dcf4ac064b9b8638801e95712e1f87c06a08f09b3"
     },
     {
       "domain": "paper",
@@ -18925,7 +18960,7 @@
     {
       "domain": "portfolio",
       "path": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2"
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b"
     },
     {
       "domain": "portfolio",
@@ -18981,5 +19016,5 @@
   "schema": "fb.entrypoint-inventory.v1",
   "scope": "Public top-level Python functions/classes only across the seven checklist domains plus portfolio accounting. Static candidates are not proof of shared semantics. Private names, methods, dynamically registered callables and external schedulers are excluded.",
   "unresolved_contract_owner_ids": [],
-  "unreviewed_candidate_count": 1464
+  "unreviewed_candidate_count": 1467
 }

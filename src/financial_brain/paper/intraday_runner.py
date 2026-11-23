@@ -224,7 +224,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              clock=None, data_permission=None) -> dict:
     from ..providers import kite_data as kd
     from ..forward_edge.clock import ClockProvider, SystemClock
-    from ..forward_edge.data_permissions import DataPermission, DataUse
+    from ..forward_edge.data_permissions import DataPermission, DataUse, load_permission_registry
 
     if clock is not None and now_fn is not None:
         raise ValueError("pass either clock or legacy now_fn, not both")
@@ -241,12 +241,31 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     except (KeyError, TypeError, ValueError) as exc:
         return {"day": day, "status": "rights_blocked", "reason": f"invalid data permission: {exc}",
                 "quote_requests": 0, "broker_orders": False}
-    if (not isinstance(permission, DataPermission)
-            or not permission.allows(source_id="KITE_CONNECT_READ_ONLY",
-                                     use=DataUse.PAPER_SIMULATION, on=now.date())):
+    try:
+        permission_registry, registry_sha256 = load_permission_registry()
+    except (OSError, TypeError, ValueError) as exc:
         return {"day": day, "status": "rights_blocked",
-                "reason": "a current KITE_CONNECT_READ_ONLY PAPER_SIMULATION permission is required",
+                "reason": f"canonical data permission registry unavailable: {exc}",
                 "quote_requests": 0, "broker_orders": False}
+    canonical_permission = permission_registry.get(("KITE_CONNECT_READ_ONLY", DataUse.PAPER_SIMULATION))
+    if not isinstance(permission, DataPermission) or permission != canonical_permission:
+        return {"day": day, "status": "rights_blocked",
+                "reason": "KITE_CONNECT_READ_ONLY permission does not match the canonical source/use registry",
+                "quote_requests": 0, "broker_orders": False}
+    if not permission.allows(source_id="KITE_CONNECT_READ_ONLY",
+                             use=DataUse.PAPER_SIMULATION, on=now.date()):
+        return {"day": day, "status": "rights_blocked",
+                "reason": "canonical KITE_CONNECT_READ_ONLY PAPER_SIMULATION permission is unknown, denied or expired",
+                "quote_requests": 0, "broker_orders": False}
+    permission_evidence = {
+        "source_id": permission.source_id, "use": permission.use.value,
+        "status": permission.status.value,
+        "effective_from": permission.effective_from.isoformat() if permission.effective_from else None,
+        "effective_through": (permission.effective_through.isoformat()
+                              if permission.effective_through else None),
+        "evidence_ref": permission.evidence_ref, "reviewer": permission.reviewer,
+        "registry_sha256": registry_sha256,
+    }
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)
@@ -258,7 +277,8 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                                     stale_after_seconds=max(90.0, float(poll) * 2))
 
     def feed_health_note(**extra) -> str:
-        body = {"feed_health": feed_health.snapshot(now=now_fn())}
+        body = {"feed_health": feed_health.snapshot(now=now_fn()),
+                "data_permission": permission_evidence}
         body.update(extra)
         return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
 

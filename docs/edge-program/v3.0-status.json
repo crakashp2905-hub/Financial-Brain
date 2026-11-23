@@ -5845,22 +5845,42 @@
     {
       "id": "PA-02-02",
       "text": "Keep Kite live-quote paper simulation disabled or isolated until written permission resolves the documented virtual/mock-trading ambiguity; use only expressly permitted sources and modes meanwhile.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "The canonical docs/edge-program/data-permissions.v1.json keeps KITE_CONNECT_READ_ONLY PAPER_SIMULATION at UNKNOWN_RIGHTS.",
+        "src/financial_brain/paper/intraday_runner.py now requires an exact match to the canonical effective-dated permission registry before the first live quote request; arbitrary --data-permission-file content cannot override UNKNOWN_RIGHTS.",
+        "src/financial_brain/forward_edge/session_runner.py applies the same canonical registry check before accepting a normalized provider event; current Kite live-quote paper simulation is denied by default.",
+        "docs/edge-program/kite-paper-rights-runtime-gate-audit-2026-11-24.md records the runtime and rights disposition."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T18:37:04Z",
+      "commit": null,
+      "test_evidence": [
+        "Focused tests for missing, forged, unknown and expired Kite permissions plus isolated fixture authorization: 6 passed across tests/test_phase5_intraday_runner.py and tests/test_forward_edge_session_runner.py.",
+        "python scripts/data_use_matrix.py --check; python scripts/entrypoint_inventory.py --check; python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed.",
+        "Scoped Ruff and git diff --check: passed."
+      ],
+      "test_result": "The live Kite quote runner makes zero quote requests under UNKNOWN_RIGHTS; both live quote and forward-event paths require the canonical current PAPER_SIMULATION permission."
     },
     {
       "id": "PA-02-03",
       "text": "Log source contract, evidence of approval and expiry for every entitlement; failed or expired entitlements automatically halt that datasource.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/data-permissions.v1.json records source, use, status, effective dates, evidence reference and reviewer for each known source/use entitlement.",
+        "Live Kite run records and normalized runner event evidence include the registry hash; missing, mismatched, unknown and expired Kite permissions block quote polling or event ingestion.",
+        "docs/edge-program/kite-paper-rights-runtime-gate-audit-2026-11-24.md documents the implemented Kite controls and remaining adapters."
+      ],
+      "blocker": "Canonical enforcement and automatic source halt are not yet integrated into every non-Kite provider adapter; written Kite approval is also absent.",
+      "last_audited_at_utc": "2026-11-23T18:37:04Z",
+      "commit": null,
+      "test_evidence": [
+        "Focused missing, forged, unknown and expired Kite permission checks: 6 passed across tests/test_phase5_intraday_runner.py and tests/test_forward_edge_session_runner.py.",
+        "Scoped Ruff, source/entry-point inventory freshness checks and git diff --check: passed."
+      ],
+      "test_result": "Kite entitlements are evidence-bound and fail closed before market requests or forward-event acceptance; non-Kite provider enforcement remains incomplete."
     },
     {
       "id": "PA-02-04",
@@ -15796,6 +15816,8 @@
       "PA-01-15",
       "PA-01-16",
       "PA-02-01",
+      "PA-02-02",
+      "PA-02-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15818,15 +15840,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 277,
+    "audited_count": 279,
     "status_counts": {
-      "COMPLETE": 46,
+      "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 214,
-      "UNASSESSED": 1101
+      "PARTIAL": 215,
+      "UNASSESSED": 1099
     },
-    "verified_complete_count": 46,
+    "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15942,10 +15964,10 @@
     "evidence_update": "PA-01-16 verified complete across build policy, modes/configuration, CLI, API and paper integration tests; write requests remain unconditionally denied."
   },
   "counts_by_status": {
-    "COMPLETE": 46,
+    "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 214,
-    "UNASSESSED": 1101
+    "PARTIAL": 215,
+    "UNASSESSED": 1099
   }
 }

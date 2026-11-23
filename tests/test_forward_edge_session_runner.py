@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
 import sqlite3
+import json
 
 import duckdb
 import pytest
@@ -73,7 +74,20 @@ def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
 
 
 def make_runner(tmp_path):
-    return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    permission_path = tmp_path / "permissions.json"
+    permission_path.write_text(json.dumps({
+        "schema": "fb.data_permissions.v1",
+        "permissions": [{
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+            "status": "USE_ALLOWED", "effective_from": "2026-11-13",
+            "effective_through": None, "evidence_ref": "tests/fixture-kite-permission",
+            "reviewer": "test-fixture",
+        }],
+    }), encoding="utf-8")
+    return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
+                               tmp_path / "journal.sqlite",
+                               permission_registry_path=permission_path)
 
 
 def opened(runner, session_id="s", config=None):
@@ -122,6 +136,21 @@ def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_pat
         runner.ingest("s", config, [observed])
     assert runner.records("s")["events"] == []
     assert runner.records("s")["data_rejections"]
+    runner.close()
+
+
+def test_forged_session_permission_cannot_override_canonical_unknown_rights(tmp_path):
+    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
+                                  tmp_path / "journal.sqlite")
+    config = make_config()
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+             "depth": {"buy": [{"price": 100.0, "quantity": 50}],
+                       "sell": [{"price": 100.1, "quantity": 40}]}}
+    observed = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="does not match the canonical registry"):
+        runner.ingest("s", config, [observed])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 
@@ -1511,8 +1540,8 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
     executed_at = decided_at + timedelta(milliseconds=100)
     closed_at = executed_at + timedelta(seconds=1)
     clock = SequenceClock([NOW, decided_at, executed_at, closed_at])
-    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
-                                  tmp_path / "journal.sqlite", clock=clock)
+    runner = make_runner(tmp_path)
+    runner.clock = clock
     assert runner.begin("clock-session", make_config(),
                         preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     signal_event = normalize_kite_quote("NSE:INFY", {

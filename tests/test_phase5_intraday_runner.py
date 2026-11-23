@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+import json
 import tempfile
 from pathlib import Path
 
@@ -108,7 +109,19 @@ def setup(monkeypatch, tmp_path):
     monkeypatch.setattr(R, "daily_view", lambda **kw: (None, None, None))      # never touch the research database
     monkeypatch.setattr(R, "daily_up", lambda d: None)                     # nor for the daily trend
     from financial_brain.ingest import quote_archive as QA
+    from financial_brain.forward_edge import data_permissions
     monkeypatch.setattr(QA, "PATH", tmp_path / "quotes.duckdb")          # nor the real quote archive
+    permission_registry = tmp_path / "data-permissions.json"
+    permission_registry.write_text(json.dumps({
+        "schema": "fb.data_permissions.v1",
+        "permissions": [{
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+            "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+            "effective_through": None, "evidence_ref": "tests/synthetic-feed",
+            "reviewer": "test-fixture",
+        }],
+    }), encoding="utf-8")
+    monkeypatch.setattr(data_permissions, "DEFAULT_PERMISSION_REGISTRY", permission_registry)
     run_live = R.run_live
     test_permission = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
                        "status": "USE_ALLOWED", "effective_from": "2026-01-01",
@@ -133,6 +146,51 @@ def test_live_kite_runner_blocks_missing_permission_before_quote_request(monkeyp
     assert result["broker_orders"] is False
 
 
+def test_live_kite_runner_rejects_forged_permission_against_canonical_registry(monkeypatch, tmp_path):
+    from financial_brain.forward_edge import data_permissions
+
+    permission_registry = tmp_path / "data-permissions.json"
+    permission_registry.write_text(json.dumps({
+        "schema": "fb.data_permissions.v1",
+        "permissions": [{
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+            "status": "UNKNOWN_RIGHTS", "effective_from": None,
+            "effective_through": None, "evidence_ref": "external permission pending",
+            "reviewer": None,
+        }],
+    }), encoding="utf-8")
+    monkeypatch.setattr(data_permissions, "DEFAULT_PERMISSION_REGISTRY", permission_registry)
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    requests = []
+    forged = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+              "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+              "effective_through": None, "evidence_ref": "owner-created", "reviewer": "owner"}
+    result = R.run_live(quote_fn=lambda *_args: requests.append(True), now_fn=clock.now,
+                        data_permission=forged, path=tmp_path / "forged.duckdb")
+    assert result["status"] == "rights_blocked"
+    assert result["quote_requests"] == 0 and requests == []
+
+
+def test_live_kite_runner_halts_before_quote_request_for_expired_registry_permission(monkeypatch, tmp_path):
+    from financial_brain.forward_edge import data_permissions
+
+    permission_registry = tmp_path / "data-permissions.json"
+    expired = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+               "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+               "effective_through": "2026-10-05", "evidence_ref": "tests/expired",
+               "reviewer": "test-fixture"}
+    permission_registry.write_text(json.dumps({
+        "schema": "fb.data_permissions.v1", "permissions": [expired],
+    }), encoding="utf-8")
+    monkeypatch.setattr(data_permissions, "DEFAULT_PERMISSION_REGISTRY", permission_registry)
+    clock = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    requests = []
+    result = R.run_live(quote_fn=lambda *_args: requests.append(True), now_fn=clock.now,
+                        data_permission=expired, path=tmp_path / "expired.duckdb")
+    assert result["status"] == "rights_blocked"
+    assert result["quote_requests"] == 0 and requests == []
+
+
 def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger(setup):
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
     out = R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb")
@@ -140,6 +198,11 @@ def test_a_live_day_opens_on_the_breakout_takes_the_target_and_writes_the_ledger
     con = R.ledger(setup / "l.duckdb")
     rows = con.execute("SELECT strategy, side, exit_reason, mode FROM trades").fetchall()
     assert ("ORB", "long", "target", "live") in rows
+    note = json.loads(con.execute("SELECT note FROM runs WHERE day=? AND mode='live'",
+                                  ["2026-10-06"]).fetchone()[0])
+    assert note["data_permission"]["source_id"] == "KITE_CONNECT_READ_ONLY"
+    assert note["data_permission"]["effective_from"] == "2026-01-01"
+    assert len(note["data_permission"]["registry_sha256"]) == 64
     assert (setup / "reports" / "2026-10-06-live.md").exists()
 
 
