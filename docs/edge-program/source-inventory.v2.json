@@ -4443,6 +4443,7 @@
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.market_events",
         "financial_brain.forward_edge.quote_archive",
+        "financial_brain.kernel.units",
         "hashlib",
         "json",
         "math",
@@ -4454,7 +4455,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "90bcfb849e4ac4959341c42dab1b86a172f897662da74d76c7ecb2b295c08069",
+      "source_sha256": "e30dc85880ee31ec9123c451a8c0d64f348dbc0015364d610fb6a57a521403f5",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
