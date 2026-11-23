@@ -1,6 +1,6 @@
 {
   "authority_map": "docs/edge-program/authoritative-contracts.v1.json",
-  "candidate_count": 1629,
+  "candidate_count": 1633,
   "candidates": [
     {
       "canonical_contract_ids": [],
@@ -2778,6 +2778,46 @@
       "line": 15,
       "related_role": "UNREVIEWED",
       "source_sha256": "708678c67aff1ea8373e3a37afc4ae225c52391533047a5fa25926c74f938383"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/feed_quality.py::FeedQualityError",
+      "kind": "class",
+      "line": 10,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "fa7826f7d10a88cafd77f989b230eee845d63f616542007f0284227f9e78cf17"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/feed_quality.py::FeedQualityFinding",
+      "kind": "class",
+      "line": 21,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "fa7826f7d10a88cafd77f989b230eee845d63f616542007f0284227f9e78cf17"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/feed_quality.py::FeedQualityReport",
+      "kind": "class",
+      "line": 28,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "fa7826f7d10a88cafd77f989b230eee845d63f616542007f0284227f9e78cf17"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/feed_quality.py::audit_feed",
+      "kind": "function",
+      "line": 38,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "fa7826f7d10a88cafd77f989b230eee845d63f616542007f0284227f9e78cf17"
     },
     {
       "canonical_contract_ids": [],
@@ -16702,7 +16742,7 @@
     "evaluation": 387,
     "execution": 91,
     "forecasting": 41,
-    "forward_edge": 638,
+    "forward_edge": 642,
     "paper": 244,
     "portfolio": 48,
     "risk": 63,
@@ -17555,7 +17595,7 @@
       "name": "write"
     }
   ],
-  "module_count": 302,
+  "module_count": 303,
   "modules": [
     {
       "domain": "forward_edge",
@@ -17806,6 +17846,11 @@
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/feed_health.py",
       "source_sha256": "708678c67aff1ea8373e3a37afc4ae225c52391533047a5fa25926c74f938383"
+    },
+    {
+      "domain": "forward_edge",
+      "path": "src/financial_brain/forward_edge/feed_quality.py",
+      "source_sha256": "fa7826f7d10a88cafd77f989b230eee845d63f616542007f0284227f9e78cf17"
     },
     {
       "domain": "forward_edge",
@@ -19071,5 +19116,5 @@
   "schema": "fb.entrypoint-inventory.v1",
   "scope": "Public top-level Python functions/classes only across the seven checklist domains plus portfolio accounting. Static candidates are not proof of shared semantics. Private names, methods, dynamically registered callables and external schedulers are excluded.",
   "unresolved_contract_owner_ids": [],
-  "unreviewed_candidate_count": 1472
+  "unreviewed_candidate_count": 1476
 }

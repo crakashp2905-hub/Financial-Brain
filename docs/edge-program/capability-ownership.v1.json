@@ -1612,6 +1612,12 @@
       "module_owner": "src/financial_brain/forward_edge/feed_health.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/feed_quality.py",
+      "path": "src/financial_brain/forward_edge/feed_quality.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/feed_quality.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/fixture_adapter.py",
       "path": "src/financial_brain/forward_edge/fixture_adapter.py",
       "module_role": "forward_trading_contract_or_support",

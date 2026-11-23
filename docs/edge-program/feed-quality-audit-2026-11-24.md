@@ -2,6 +2,8 @@
 
 Checklist item: PA-02-08 — detect partial candles, missing minutes, wrong interval anchors, session-open gaps, stale ticks, nonmonotonic timestamps, crossed markets, and out-of-sequence events.
 
+Implementation commit: ceb202ee (Add timestamped feed quality audit).
+
 ## Implemented
 
 - Added forward_edge.feed_quality.audit_feed, a deterministic report over an arrival-ordered event stream for a caller-specified venue, instrument, session, interval, and as-of clock.
