@@ -46,6 +46,8 @@ jobs:
         run: python scripts/forward_engine_graph.py --check
       - name: Verify scoped authoritative state ownership
         run: python scripts/state_ownership.py
+      - name: Verify legacy/integrated paper fixture equivalence report
+        run: python scripts/audit/paper_engine_equivalence.py --check
       - name: Verify protected-trial program windows and budgets
         run: python scripts/validate_trial_program.py
       - name: Validate protocol deviation register
