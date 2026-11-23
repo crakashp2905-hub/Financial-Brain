@@ -5,6 +5,7 @@ import pytest
 
 from financial_brain.kernel.risk_sizing import RiskSizingError, size_trade_plan
 from financial_brain.kernel.trader_signal import EntryCondition, ExitTrigger, PriceBasis, TradePlan
+from financial_brain.kernel.units import BasisPoints, INRNotional, WholeUnits
 
 
 def _plan(*, side="BUY", lot=1, precision=0, quantity=100):
@@ -66,3 +67,16 @@ def test_invalid_depth_participation_and_unrepresentable_lot_precision_fail():
         _size(_plan(), max_depth_participation=Decimal("1.1"))
     with pytest.raises(RiskSizingError, match="unit_precision"):
         _size(_plan(lot="0.05", precision=0))
+
+
+def test_sizing_accepts_nominal_inr_depth_and_basis_point_limits():
+    result = _size(
+        _plan(), risk_budget_inr=INRNotional(Decimal("500")),
+        available_capital_inr=INRNotional(Decimal("50000")),
+        max_notional_inr=INRNotional(Decimal("10000")),
+        depth_available_units=WholeUnits(Decimal("100")),
+        max_depth_participation=BasisPoints(Decimal("1000")),
+        correlated_exposure_room_inr=INRNotional(Decimal("10000")),
+    )
+    assert result.quantity == Decimal("10")
+    assert result.binding_limits == ("DEPTH",)

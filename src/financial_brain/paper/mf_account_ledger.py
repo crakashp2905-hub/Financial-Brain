@@ -10,6 +10,7 @@ from typing import Any
 
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..kernel.trading_clock import IST
+from ..kernel.units import INRNotional, MutualFundUnitDelta
 
 UNIT_QUANTUM = Decimal("0.000000000000000001")
 
@@ -41,8 +42,9 @@ def post_journal(
     transaction_id: str,
     effective_at: datetime,
     recorded_at: datetime,
-    entries: tuple[tuple[str, Decimal | str | int, Decimal | str | int], ...] = (),
-    unit_deltas: tuple[tuple[str, str, Decimal | str | int], ...] = (),
+    entries: tuple[tuple[str, Decimal | str | int | INRNotional,
+                         Decimal | str | int | INRNotional], ...] = (),
+    unit_deltas: tuple[tuple[str, str, Decimal | str | int | MutualFundUnitDelta], ...] = (),
     basis: str = "SIMULATED_ASSUMPTION",
     source_id: str | None = None,
     source_ref: str | None = None,
@@ -69,7 +71,9 @@ def post_journal(
         raise MFPaperLedgerError("account, transaction and monetary or unit journal entries are required")
     normalized = []
     for code, debit_raw, credit_raw in entries:
-        debit, credit = Decimal(str(debit_raw)), Decimal(str(credit_raw))
+        debit_value = debit_raw.amount if isinstance(debit_raw, INRNotional) else debit_raw
+        credit_value = credit_raw.amount if isinstance(credit_raw, INRNotional) else credit_raw
+        debit, credit = Decimal(str(debit_value)), Decimal(str(credit_value))
         if (not debit.is_finite() or not credit.is_finite() or debit < 0 or credit < 0
                 or (debit == 0) == (credit == 0)):
             raise MFPaperLedgerError("each journal line must have exactly one positive side")
@@ -83,7 +87,8 @@ def post_journal(
         if not folio_id.strip() or not instrument_id.strip():
             raise MFPaperLedgerError("unit journal requires folio and instrument identity")
         try:
-            delta = Decimal(str(raw_delta))
+            delta_value = raw_delta.units if isinstance(raw_delta, MutualFundUnitDelta) else raw_delta
+            delta = Decimal(str(delta_value))
         except (InvalidOperation, ValueError) as exc:
             raise MFPaperLedgerError("unit journal quantity must be decimal") from exc
         try:

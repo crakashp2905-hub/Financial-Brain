@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
 from .trader_signal import TradePlan
+from .units import BasisPoints, INRNotional, UnitError, WholeUnits
 
 
 class RiskSizingError(ValueError):
@@ -35,24 +36,40 @@ class RiskSizingResult:
 def size_trade_plan(
     plan: TradePlan,
     *,
-    risk_budget_inr: Decimal | str | int,
-    available_capital_inr: Decimal | str | int,
-    max_notional_inr: Decimal | str | int,
-    depth_available_units: Decimal | str | int,
-    max_depth_participation: Decimal | str | int,
-    correlated_exposure_room_inr: Decimal | str | int,
+    risk_budget_inr: Decimal | str | int | INRNotional,
+    available_capital_inr: Decimal | str | int | INRNotional,
+    max_notional_inr: Decimal | str | int | INRNotional,
+    depth_available_units: Decimal | str | int | WholeUnits,
+    max_depth_participation: Decimal | str | int | BasisPoints,
+    correlated_exposure_room_inr: Decimal | str | int | INRNotional,
 ) -> RiskSizingResult:
     """Size to the minimum of stop risk, capital, notional, depth and correlation room.
 
     This computes a paper quantity from supplied decision-time caps. It does not
     guarantee a fill, stop execution, broker margin availability, or portfolio safety.
     """
-    risk = _value("risk_budget_inr", risk_budget_inr)
-    capital = _value("available_capital_inr", available_capital_inr, positive=True)
-    notional_cap = _value("max_notional_inr", max_notional_inr, positive=True)
-    depth = _value("depth_available_units", depth_available_units, positive=True)
-    participation = _value("max_depth_participation", max_depth_participation)
-    correlated = _value("correlated_exposure_room_inr", correlated_exposure_room_inr)
+    try:
+        risk_input = risk_budget_inr.amount if isinstance(risk_budget_inr, INRNotional) else risk_budget_inr
+        capital_input = available_capital_inr.amount if isinstance(available_capital_inr, INRNotional) else available_capital_inr
+        notional_input = max_notional_inr.amount if isinstance(max_notional_inr, INRNotional) else max_notional_inr
+        depth_input = depth_available_units.units if isinstance(depth_available_units, WholeUnits) else depth_available_units
+        participation_input = (
+            max_depth_participation.as_rate()
+            if isinstance(max_depth_participation, BasisPoints) else max_depth_participation
+        )
+        correlated_input = (
+            correlated_exposure_room_inr.amount
+            if isinstance(correlated_exposure_room_inr, INRNotional)
+            else correlated_exposure_room_inr
+        )
+    except UnitError as exc:
+        raise RiskSizingError(str(exc)) from exc
+    risk = _value("risk_budget_inr", risk_input)
+    capital = _value("available_capital_inr", capital_input, positive=True)
+    notional_cap = _value("max_notional_inr", notional_input, positive=True)
+    depth = _value("depth_available_units", depth_input, positive=True)
+    participation = _value("max_depth_participation", participation_input)
+    correlated = _value("correlated_exposure_room_inr", correlated_input)
     if participation > 1:
         raise RiskSizingError("max_depth_participation must be between 0 and 1")
 

@@ -325,9 +325,14 @@
         "docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md documents validated lot, purchase and SIP lifecycle boundaries and remaining gaps.",
         "src/financial_brain/kernel/mf_systematic_flows.py accepts and normalizes INRNotional, NavPerUnit and MutualFundUnits for SWP/STP instructions/events before reconciliation and persistence.",
         "src/financial_brain/kernel/mf_switch.py accepts and normalizes typed INR notional, NAV and fractional MF units for switch requests/events.",
-        "tests/test_mf_systematic_flows.py and tests/test_mf_switch.py cover nominal typed values and decimal normalization; docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md records the remaining gaps."
+        "tests/test_mf_systematic_flows.py and tests/test_mf_switch.py cover nominal typed values and decimal normalization; docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md records the remaining gaps.",
+        "src/financial_brain/kernel/risk_sizing.py::size_trade_plan accepts INRNotional limits, WholeUnits depth, and BasisPoints participation; conversion to decimal rate is explicit.",
+        "tests/test_risk_sizing.py::test_sizing_accepts_nominal_inr_depth_and_basis_point_limits verifies typed input equivalence with established sizing result.",
+        "src/financial_brain/kernel/units.py adds signed MutualFundUnitDelta for ledger postings; src/financial_brain/paper/mf_account_ledger.py::post_journal accepts INRNotional entries and MutualFundUnitDelta while canonicalizing to the existing Decimal schema.",
+        "tests/test_mf_account_ledger.py::test_journal_accepts_typed_inr_and_signed_mutual_fund_unit_deltas verifies typed journal inputs, balanced rupee totals, and normalized unit deltas.",
+        "src/financial_brain/kernel/risk_sizing.py::size_trade_plan accepts typed INRNotional limits, WholeUnits depth and BasisPoints participation before sizing."
       ],
-      "blocker": "Partial: typed amount/NAV/unit boundaries cover cash equities, option lots, MF lot purchase/allotment/redemption, SIP installments, SWP/STP flows and paired MF switches. MF account-ledger, NAV ingestion, risk sizing, shared forward OMS/accounting serialization, and repository-wide boundary verification remain incomplete.",
+      "blocker": "Partial: typed amount/NAV/unit boundaries cover cash equities, option lots, MF lot purchase/allotment/redemption, SIP installments, SWP/STP flows, paired MF switches, MF account-ledger postings and risk-sizing inputs. NAV ingestion, risk-sizing result values, shared forward OMS/accounting serialization, and repository-wide boundary verification remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
       "commit": "bbf675e5",
       "test_evidence": [
@@ -350,9 +355,15 @@
         "python -m pytest tests/test_mf_systematic_flows.py tests/test_mf_systematic_flow_book.py -q --basetemp=.pytest-checklist-mf-systematic-units: 16 passed.",
         "python -m pytest tests/test_mf_switch.py tests/test_mf_switch_book.py -q --basetemp=.pytest-checklist-mf-switch-units: 8 passed.",
         "python -m ruff check src/financial_brain/kernel/mf_systematic_flows.py src/financial_brain/kernel/mf_switch.py tests/test_mf_systematic_flows.py tests/test_mf_switch.py: passed.",
-        "python -m mypy src/financial_brain/kernel/mf_systematic_flows.py src/financial_brain/kernel/mf_switch.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/kernel/mf_systematic_flows.py src/financial_brain/kernel/mf_switch.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_risk_sizing.py -q --basetemp=.pytest-checklist-risk-units: 5 passed.",
+        "python -m ruff check src/financial_brain/kernel/risk_sizing.py tests/test_risk_sizing.py: passed.",
+        "python -m mypy src/financial_brain/kernel/risk_sizing.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_mf_account_ledger.py -q --basetemp=.pytest-checklist-mf-ledger-units-rerun: 6 passed.",
+        "python -m ruff check src/financial_brain/kernel/units.py src/financial_brain/paper/mf_account_ledger.py tests/test_mf_account_ledger.py: passed.",
+        "python -m mypy src/financial_brain/kernel/units.py src/financial_brain/paper/mf_account_ledger.py --follow-imports=silent: passed."
       ],
-      "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, MF lot purchase/allotment/redemption, SIP, SWP/STP, and MF switch lifecycle inputs. MF account-ledger, NAV ingestion, sizing and shared forward-pipeline integration remain outstanding, so this is partial."
+      "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, MF lot purchase/allotment/redemption, SIP, SWP/STP, MF switches, MF account-ledger postings and risk-sizing inputs. NAV ingestion, risk-sizing result contract and shared forward-pipeline integration remain outstanding, so this is partial."
     },
     {
       "id": "FB-0104",

@@ -8172,13 +8172,14 @@
         "__future__",
         "dataclasses",
         "decimal",
-        "trader_signal"
+        "trader_signal",
+        "units"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/risk_sizing.py",
-      "source_sha256": "9df1d0cba18c82ce334b52a9d9da2d5df3a15bba0db1155c2e9cefc1f215054d",
+      "source_sha256": "f9beb17507c04a04a6beb295b29cd0a4f0204dd870aa7af5c26449e9188429a6",
       "test_paths": []
     },
     {
@@ -8355,7 +8356,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/units.py",
-      "source_sha256": "eac2a5d096ac202159e0add006d64bec7b994543013d63a04ffc627e6685cea0",
+      "source_sha256": "c3b4b4d2979845049453146253fab0c0c004104b3e1ddafb351cc9add6468d89",
       "test_paths": []
     },
     {
@@ -9002,6 +9003,7 @@
         "hashlib",
         "json",
         "kernel.trading_clock",
+        "kernel.units",
         "re",
         "typing"
       ],
@@ -9009,7 +9011,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_account_ledger.py",
-      "source_sha256": "e2aeca19d1e3d5711c3e900a87cdebae82963423f0ea113939426a8b3a7d7693",
+      "source_sha256": "6390647cd4cbff896ea386af32dbcd0775ee04babcdfd3c35d954f036123a7c6",
       "test_paths": []
     },
     {
