@@ -33,6 +33,7 @@ def test_the_genetic_weights_favour_the_planted_feature():
     X = p[["a", "b"]].to_numpy()
     g = LR.Genetic(pop=10, gens=5).fit(X, p["fwd20"].to_numpy(), p["d"].to_numpy())
     assert abs(g.w[0]) > abs(g.w[1])
+    np.testing.assert_allclose(g.predict(X), X @ g.w)
 
 
 def test_forest_factory_is_deterministic_and_shallow_enough_for_the_panel():
@@ -63,6 +64,19 @@ def test_regime_switch_requires_prior_history_and_emits_choice_when_supported():
     assert len(result) > 0
     assert set(result["choice"]) <= {"momentum", "reversal"}
     assert np.isfinite(result["chosen"]).all()
+
+
+def test_regime_switch_skips_small_cross_sections_and_missing_market_history():
+    day = date(2018, 1, 1)
+    small = pd.DataFrame({"d": [day] * 50, "fwd20": np.arange(50),
+                          "mom_12_1": np.arange(50), "roc_20": np.arange(50)})
+    market = pd.DataFrame({"vix": [15.0]}, index=[day])
+    assert LR.regime_switch(small, market, years=[2020], step=1).empty
+
+    full = pd.DataFrame({"d": [day] * 100, "fwd20": np.arange(100),
+                         "mom_12_1": np.arange(100), "roc_20": np.arange(100)})
+    future_market = pd.DataFrame({"vix": [15.0]}, index=[date(2020, 1, 1)])
+    assert LR.regime_switch(full, future_market, years=[2020], step=1).empty
 
 
 def test_the_lstm_walk_forward_predicts_only_its_test_years():

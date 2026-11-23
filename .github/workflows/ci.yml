@@ -145,3 +145,34 @@ jobs:
         run: python scripts/verify_reproducibility.py
       - name: Verify deterministic fixture behavior without market access
         run: python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl
+
+  forecasting-coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+          cache: pip
+          cache-dependency-path: |
+            requirements-lock.txt
+            requirements-forecasting-lock.txt
+      - name: Validate direct dependencies are pinned
+        run: python scripts/validate_requirements_lock.py
+      - name: Install pinned full-test environment
+        run: |
+          python -m pip install --upgrade pip==26.2 setuptools==84.1.0 wheel==0.46.2
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e ".[dev]" --no-deps --no-build-isolation
+      - name: Install pinned CPU forecasting environment
+        run: |
+          python -m pip install -r requirements-forecasting-lock.txt
+          python -m pip check
+      - name: Exercise optional LSTM learner with coverage
+        run: |
+          python -m coverage run --source=financial_brain.evaluation.learners -m pytest tests/test_phase5_learners.py -q
+          python -m coverage report --show-missing --include="*/evaluation/learners.py" --fail-under=90
+      - name: Audit forecasting dependencies
+        run: python -m pip_audit --skip-editable

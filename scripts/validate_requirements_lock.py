@@ -7,6 +7,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+FORECASTING_LOCK = ROOT / "requirements-forecasting-lock.txt"
 PACKAGE_LINE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*==\s*([^\s;]+)\s*(?:;.*)?$")
 REQUIREMENT_NAME = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 
@@ -42,10 +43,34 @@ def validate(pyproject_path: Path = ROOT / "pyproject.toml",
         raise ValueError("project runtime/dev requirements missing from exact lock: " + ", ".join(missing))
 
 
+def validate_forecasting_lock(pyproject_path: Path = ROOT / "pyproject.toml",
+                              lock_path: Path = FORECASTING_LOCK) -> None:
+    project = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    forecasting = project["project"]["optional-dependencies"]["forecasting"]
+    direct = {_canonical(match.group(1)) for raw in forecasting
+              if (match := REQUIREMENT_NAME.match(raw))}
+    locked: dict[str, str] = {}
+    for line_number, line in enumerate(lock_path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip() or line.lstrip().startswith("#") or line.lstrip().startswith("--"):
+            continue
+        match = PACKAGE_LINE.fullmatch(line)
+        if match is None:
+            raise ValueError(f"forecasting lock line {line_number} is not an exact == pin")
+        name, version = match.groups()
+        key = _canonical(name)
+        if key in locked:
+            raise ValueError(f"duplicate forecasting lock entry for {name}")
+        locked[key] = version
+    missing = sorted(direct & {"torch"} - set(locked))
+    if missing:
+        raise ValueError("forecasting runtime dependency missing from exact lock: " + ", ".join(missing))
+
+
 def main() -> int:
     argparse.ArgumentParser(description=__doc__).parse_args()
     validate()
-    print("requirements-lock.txt exactly pins every runtime and dev dependency")
+    validate_forecasting_lock()
+    print("runtime, dev, and optional forecasting test dependencies are pinned")
     return 0
 
 

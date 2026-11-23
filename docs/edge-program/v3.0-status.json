@@ -8694,17 +8694,22 @@
         "The critical-module report enumerates coverage per file, but observed gaps include execution/oms/evidence.py 0%, interfaces/mcp_server.py 0%, risk/stress.py 28%, risk/exposure.py 34%, and execution/oms/kite_broker.py 55%; the configured 82% aggregate does not enforce a per-service floor.",
         "scripts/check_critical_coverage.py defines explicit floors for 34 decision, learning, OMS, interface, opportunity-learning and risk services; CI now exports JSON coverage and enforces each floor.",
         "Targeted tests for the previously uncovered and low-coverage services passed locally: 42 passed across the focused coverage, Kite broker, MCP, OMS evidence, risk, opportunity learning and learner suites. Ruff and git diff --check pass locally.",
-        "Hosted CI has not yet run on the change; previous hosted coverage deficiencies remain the baseline until the new Windows/Linux jobs pass."
+        "Hosted CI has not yet run on the change; previous hosted coverage deficiencies remain the baseline until the new Windows/Linux jobs pass.",
+        "Hosted run 45189372190 on exact head 837fd6c5: Ubuntu and Windows full test suites passed (4,368 passed / 3 skipped each), both reproducibility jobs passed, but the 90% learners.py floor failed at 57.4%. CI missing lines were the LSTM implementation (lines 72-121), which is skipped when optional torch is absent, plus three small branch lines.",
+        "Reproduced the coverage difference locally: focused learner tests measure 97% when torch is installed and 57% when the optional LSTM test is deselected. The core learner tests pass; the separate optional CPU coverage job installs an exact PyTorch CPU pin and enforces >=90% on the learner module.",
+        "Added a regression test for regime_switch returning an empty DataFrame when input rows are all filtered; this exposed and fixed a KeyError on the no-eligible-row path."
       ],
-      "blocker": "The implemented per-service coverage floors and focused tests are not yet proven by hosted Linux and Windows CI on this change. Await exact-head CI success, then complete this item if all 34 floors pass.",
+      "blocker": "The standard locked test jobs omit the optional torch dependency, so the LSTM code path is skipped there. A separate pinned CPU forecasting coverage job now enforces 90% coverage for the learner module; hosted validation of that job and the calibrated base floor is pending.",
       "last_audited_at_utc": "2026-11-23T12:06:00Z",
       "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "test_evidence": [
-        "python -m pytest tests/test_critical_coverage.py tests/test_kite_broker_readonly.py tests/test_mcp_server.py tests/test_oms_evidence.py tests/test_risk_exposure.py tests/test_risk_stress.py tests/test_opportunity_learning_service.py tests/test_phase5_learners.py tests/test_phase5_learned_model.py -q: 42 passed.",
-        "python -m ruff check src tests: passed.",
-        "Hosted Windows/Linux acceptance: pending."
+        "Hosted run 45189372190 on 837fd6c5: 4,368 passed and 3 skipped on Ubuntu and Windows; reproducibility jobs passed; the standard 90% learners.py coverage floor failed because the optional torch LSTM test was skipped.",
+        "python -m pytest tests/test_requirements_lock.py tests/test_critical_coverage.py tests/test_phase5_learners.py::test_regime_switch_requires_prior_history_and_emits_choice_when_supported tests/test_phase5_learners.py::test_regime_switch_skips_small_cross_sections_and_missing_market_history -q: 10 passed.",
+        "With installed torch 2.13.0+cpu, the exact optional-job command `python -m coverage run --source=financial_brain.evaluation.learners -m pytest tests/test_phase5_learners.py -q` followed by the 90% module report passed: 7 passed; learners.py 99%.",
+        "python -m ruff check src tests scripts/check_critical_coverage.py scripts/validate_requirements_lock.py: passed.",
+        "Hosted CI on the new base-floor and optional forecasting job: pending."
       ],
-      "test_result": "Focused local tests and a fail-closed per-service CI coverage gate are implemented; full per-module acceptance awaits a green hosted run on the exact change."
+      "test_result": "Focused tests pass and the optional torch-enabled learner module reaches 99% local coverage. Hosted CI must verify the locked CPU installation, 90% optional-job floor, base platform suites, and artifact freshness before this requirement is complete."
     },
     {
       "id": "SL-00-13",
@@ -15174,7 +15179,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T13:55:00Z",
+    "as_of_utc": "2026-11-23T14:32:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
