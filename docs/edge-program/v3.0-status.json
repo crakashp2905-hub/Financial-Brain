@@ -5375,12 +5375,24 @@
     {
       "id": "PA-00-08",
       "text": "Mark every existing P&L value as historical, historical-paper, local prospective, or independently auditable forward evidence, never a generic `profit` boolean.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/evidence.py defines the canonical historical, fixture, local-paper, prospective-session and independently-attested evidence classes; canonical ledger ingress rejects unrecognized evidence classes.",
+        "src/financial_brain/portfolio/canonical_ledger.py now attaches separate realized/unrealized P&L provenance to position and consolidated-position projections; single classes remain explicit, mixed classes are not collapsed, unmarked values say NOT_COMPUTABLE, and every P&L projection says profitability_claim=NOT_ESTABLISHED.",
+        "tests/test_canonical_portfolio_ledger.py covers local-paper, mixed historical/prospective, consolidated and missing-mark provenance; canonical-ledger and legacy-migration suites pass 18 tests.",
+        "src/financial_brain/interfaces/trader_core.py and src/financial_brain/portfolio/my_book.py still expose broker-reported/calculated P&L without the same end-to-end evidence classification. The 42 frozen research-result notes also lack a complete structured provenance tuple."
+      ],
+      "blocker": "The canonical paper-ledger projections are labeled, but legacy broker-book views, reports, archived P&L documents and local databases have not all been reconciled or classified. Their provenance cannot be safely inferred or backfilled from the numeric value alone.",
+      "last_audited_at_utc": "2026-11-23T16:36:27Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py -q: 18 passed.",
+        "python -m mypy src/financial_brain/portfolio/canonical_ledger.py --ignore-missing-imports: passed.",
+        "python -m ruff check src/financial_brain/portfolio/canonical_ledger.py tests/test_canonical_portfolio_ledger.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Canonical ledger P&L is evidence-classified and never treated as a profitability claim, including when supporting events have mixed evidence. Other P&L surfaces remain unlabeled; PA-00-08 remains PARTIAL."
     },
     {
       "id": "PA-00-09",
@@ -15288,7 +15300,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:30:01Z",
+    "as_of_utc": "2026-11-23T16:36:27Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15524,6 +15536,7 @@
       "PA-00-05",
       "PA-00-06",
       "PA-00-07",
+      "PA-00-08",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15546,13 +15559,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 255,
+    "audited_count": 256,
     "status_counts": {
       "COMPLETE": 35,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 203,
-      "UNASSESSED": 1123
+      "PARTIAL": 204,
+      "UNASSESSED": 1122
     },
     "verified_complete_count": 35,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15648,15 +15661,17 @@
       "tests/test_research_search_space_reconciliation.py",
       "docs/edge-program/capability-provenance.v1.json",
       "scripts/capability_provenance.py",
-      "tests/test_capability_provenance.py"
+      "tests/test_capability_provenance.py",
+      "src/financial_brain/portfolio/canonical_ledger.py",
+      "tests/test_canonical_portfolio_ledger.py"
     ],
-    "evidence_update": "PA-00-07 now records exact source commits, current PR states, changed paths, capability-registry presence/mappings and verified dependency ancestry for main and PR #34/#36/#37/#38/#39/#40."
+    "evidence_update": "PA-00-08 now preserves P&L evidence classes on canonical ledger projections; broker-book interfaces and historical research P&L still lack complete provenance and remain in audit."
   },
   "counts_by_status": {
     "COMPLETE": 35,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 203,
-    "UNASSESSED": 1123
+    "PARTIAL": 204,
+    "UNASSESSED": 1122
   }
 }
