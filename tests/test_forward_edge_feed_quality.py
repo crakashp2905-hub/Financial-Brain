@@ -82,6 +82,37 @@ def test_unavailable_bar_cannot_satisfy_session_coverage() -> None:
     assert {"NOT_AVAILABLE_AT_AS_OF", "SESSION_OPEN_GAP", "MISSING_MINUTE"} <= codes
 
 
+def test_instrument_session_metrics_report_coverage_latency_quote_depth_and_strikes() -> None:
+    bad_bar = _bar("bar-bad", OPEN + timedelta(minutes=1))
+    bad_bar.payload["high"] = 100  # hostile adapter mutation after event validation
+    tick = MarketEvent(
+        "late-tick", EventKind.TICK, "NSE", "NSE:INFY", OPEN, OPEN + timedelta(seconds=2),
+        OPEN + timedelta(seconds=2), {"price": 100}, "fixture")
+    quote = MarketEvent(
+        "quote-depth", EventKind.QUOTE, "NSE", "NSE:INFY", OPEN + timedelta(seconds=1),
+        OPEN + timedelta(seconds=1), OPEN + timedelta(seconds=1),
+        {"bid": 100, "ask": 101, "bid_quantity": 10, "ask_quantity": 12,
+         "depth": {"buy": [[100, 10]], "sell": [[101, 12]]},
+         "selected_strike": 22000, "target_strike": 21900}, "fixture")
+    report = audit_feed(
+        [_bar("bar-good", OPEN), bad_bar, tick, quote],
+        venue="NSE", instrument_id="NSE:INFY", session_open=OPEN,
+        session_close=CLOSE, as_of=OPEN + timedelta(minutes=2),
+    )
+    metrics = report.metrics
+    assert report.session_date.isoformat() == "2026-11-23"
+    assert (metrics.expected_bars, metrics.complete_bars) == (2, 1)
+    assert metrics.bar_coverage_fraction == pytest.approx(0.5)
+    assert (metrics.tick_count, metrics.late_tick_count) == (1, 1)
+    assert metrics.late_tick_rate == pytest.approx(1.0)
+    assert metrics.quote_age_max_seconds == pytest.approx(119.0)
+    assert metrics.depth_validity_fraction == pytest.approx(1.0)
+    assert metrics.inconsistent_ohlc_count == 1
+    assert metrics.strike_selection_count == 1
+    assert metrics.strike_selection_mae == pytest.approx(100 / 21900)
+    assert "INCONSISTENT_OHLC" in {finding.code for finding in report.findings}
+
+
 @pytest.mark.parametrize("field,value", [
     ("session_open", datetime(2026, 11, 23, 9, 15)),
     ("session_close", datetime(2026, 11, 23, 9, 20)),
