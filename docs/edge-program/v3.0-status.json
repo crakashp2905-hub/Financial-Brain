@@ -5449,7 +5449,7 @@
       ],
       "blocker": "No owner-signed charter with actual approved capital and hard-loss values is present. The code and template cannot supply or imply the owner's authorization; a real human must complete the proposal and issue a separately scoped, expiring approval.",
       "last_audited_at_utc": "2026-11-23T16:46:56Z",
-      "commit": null,
+      "commit": "4a51f5e13e7281b47ada18ddc0b666259261fb27",
       "test_evidence": [
         "python -m pytest tests/test_execution_charter.py tests/test_forward_edge_capital_proposal.py -q: 6 passed.",
         "python -m ruff check src/financial_brain/forward_edge/execution_charter.py tests/test_execution_charter.py: passed.",
@@ -5469,7 +5469,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:50:00Z",
-      "commit": null,
+      "commit": "4a51f5e13e7281b47ada18ddc0b666259261fb27",
       "test_evidence": [
         "python scripts/profit_readiness.py --check: passed.",
         "python -m pytest tests/test_profit_readiness.py -q: passed.",
