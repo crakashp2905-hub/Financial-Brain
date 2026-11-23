@@ -148,25 +148,26 @@
       "id": "FB-0009",
       "text": "Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
         ".github/workflows/ci.yml now runs the full Ubuntu/Windows matrix in a pinned Python 3.13.5 environment from requirements-lock.txt, including lint, type checks, migrations, coverage reports/artifacts and dependency audit.",
         "scripts/validate_requirements_lock.py checks every declared runtime/dev direct dependency has an exact lock entry; tests/test_requirements_lock.py covers missing and unpinned packages.",
         "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned.",
-        "Hosted run 45165777612 passed the lock install and dependency check but failed both OS reproducibility jobs because the lock SHA in reproducibility-contract.v1.json was stale; the corrected hash passed both reproducibility jobs in hosted run 45166811757.",
-        "Run 45166811757 then completed the Ubuntu test suite through coverage but failed pip-audit on vulnerable pins for certifi, filelock, pip, pypdf, setuptools, and wheel. Their lock/workflow pins have been raised to the audit-reported fixed versions in the current uncommitted changes; the Windows test suite from that run is still in progress."
+        "Commit 197ac5c2 pins certifi 2026.10.18, filelock 4.2.1, pypdf 6.21.4, pip 26.2, setuptools 84.1.0 and wheel 0.46.2; the dependency lock fingerprint matches the reproducibility contract.",
+        "Hosted run 45168411373 on exact head 197ac5c2f2ff7603c898cd5c6767f0525198c077 succeeded on Ubuntu and Windows: 4,334 tests passed and 3 optional tests skipped on each OS; lint, migration, type, coverage and dependency-audit steps passed; both reproducibility jobs passed.",
+        "Ubuntu CI emitted per-module critical coverage and uploaded coverage XML; pip-audit reported no known vulnerabilities."
       ],
-      "blocker": "A fresh Ubuntu and Windows hosted run must pass on the lock and build-tool versions updated to remove all dependency-audit findings.",
-      "last_audited_at_utc": "2026-11-23T11:48:00Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-23T12:06:00Z",
+      "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
+      "artifact_sha256": "cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889",
       "test_evidence": [
         "python scripts/validate_requirements_lock.py: passed",
         "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
-        "Hosted run 45163583623 test jobs failed at reproducible evidence bundle import: ModuleNotFoundError for cryptography; no full suite result was produced.",
-        "Hosted run 45165777612: lock installation passed on Ubuntu and Windows; reproducibility fingerprint step failed because the contract retained the pre-update lock hash.",
-        "Hosted run 45166811757: Ubuntu and Windows reproducibility jobs passed; Ubuntu test suite and coverage completed, then pip-audit found 49 advisory entries affecting six packages (certifi, filelock, pip, pypdf, setuptools, wheel). Pins were updated to the listed fixed versions in the current branch changes. Windows test job remains active; a fresh full hosted run is still required."
+        "Hosted GitHub Actions run 45168411373: overall success on head 197ac5c2f2ff7603c898cd5c6767f0525198c077; Ubuntu test job 137671279119 and Windows test job 137671279485 both passed, each with 4,334 passed / 3 skipped; Ubuntu reproducibility job 137671279483 and Windows reproducibility job 137671279589 passed.",
+        "Ubuntu test log: 82% aggregate coverage across the configured critical-module selection; coverage artifact 14816058142 SHA-256 cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889; dependency audit: No known vulnerabilities found."
       ],
-      "test_result": "The full locked suite, lint, migrations and coverage completed on Ubuntu, and both reproducibility jobs pass. The current dependency audit is red for vulnerable versions; the listed fixed-version updates are uncommitted and need a fresh Ubuntu/Windows run before this item can be complete."
+      "test_result": "A clean locked install and complete Ubuntu/Windows CI run passed on the exact current PR head, including full tests, lint, typing, migrations, coverage artifacts, dependency audit and cross-platform reproducibility."
     },
     {
       "id": "FB-0010",
@@ -8687,18 +8688,19 @@
       "status": "PARTIAL",
       "evidence": [
         ".github/workflows/ci.yml runs lint, mypy, migrations, full pytest, critical-module and pattern coverage reports, coverage XML artifacts and dependency audit on Ubuntu and Windows using the exact lock.",
-        "The new lock completeness validator found missing coverage, jsonschema and cryptography pins; those packages and their transitives are now pinned in requirements-lock.txt.",
-        "Hosted run 45163583623 failed before tests because cryptography was absent from the lock. The corrected lock and validator require fresh hosted proof."
+        "Hosted run 45168411373 passed on exact head 197ac5c2f2ff7603c898cd5c6767f0525198c077: 4,334 passed and 3 skipped on both Ubuntu and Windows, coverage artifacts uploaded, and pip-audit reported no known vulnerabilities.",
+        "The critical-module report enumerates coverage per file, but observed gaps include execution/oms/evidence.py 0%, interfaces/mcp_server.py 0%, risk/stress.py 28%, risk/exposure.py 34%, and execution/oms/kite_broker.py 55%; the configured 82% aggregate does not enforce a per-service floor."
       ],
-      "blocker": "No green hosted Windows and Linux run exists yet for the corrected full-suite lock; critical learning-service coverage acceptance also needs confirmation.",
-      "last_audited_at_utc": "2026-11-23T11:27:38Z",
-      "commit": "01a3bffb",
+      "blocker": "Add complete coverage scope for critical learning services and explicit per-service coverage floors; current report reveals low or zero coverage for several critical modules despite passing aggregate coverage.",
+      "last_audited_at_utc": "2026-11-23T12:06:00Z",
+      "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "test_evidence": [
         "python scripts/validate_requirements_lock.py: passed",
         "tests/test_requirements_lock.py: 3 passed",
-        "Hosted CI run 45163583623 failed before pytest; corrected rerun is pending."
+        "Hosted CI run 45168411373: all four Ubuntu/Windows test and reproducibility jobs passed; full suites each 4,334 passed / 3 skipped.",
+        "Coverage report from Ubuntu job 137671279119: selected critical-module files total 82%, but per-file 0-55% results are listed in evidence and show the remaining service-level coverage gap."
       ],
-      "test_result": "Pinned install requirements are now validated against project metadata, but full green cross-platform CI and per-critical-service coverage still need hosted evidence."
+      "test_result": "Cross-platform CI and coverage artifacts are established. Coverage reporting now exposes gaps that aggregate CI does not gate; service-specific coverage work remains incomplete."
     },
     {
       "id": "SL-00-13",
@@ -15421,13 +15423,13 @@
     ],
     "audited_count": 248,
     "status_counts": {
-      "COMPLETE": 30,
+      "COMPLETE": 31,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 201,
+      "PARTIAL": 200,
       "UNASSESSED": 1130
     },
-    "verified_complete_count": 30,
+    "verified_complete_count": 31,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15514,10 +15516,10 @@
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
   "counts_by_status": {
-    "COMPLETE": 30,
+    "COMPLETE": 31,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 201,
+    "PARTIAL": 200,
     "UNASSESSED": 1130
   }
 }
