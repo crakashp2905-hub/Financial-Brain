@@ -5341,7 +5341,7 @@
       ],
       "blocker": "The full candidate-level historical evaluation ledger, all scanned/failed permutations and a reconciled global research-look denominator are absent. Do not infer missing trials or add nested candidates to registered-trial counts.",
       "last_audited_at_utc": "2026-11-23T16:18:43Z",
-      "commit": null,
+      "commit": "79154eec",
       "artifact_sha256": "4b91406b6c44ea8cc79b060fdefa9cb9733c89a723dd1cbdd42fd02d998c638d",
       "test_evidence": [
         "python scripts/validate_research_search_space.py: passed; historical 150/151 total remains explicitly unreconciled.",
