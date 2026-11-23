@@ -242,7 +242,7 @@
       ],
       "blocker": "The canonical timestamp contract exists, but repository-wide adapters and persisted market-fact records do not yet require/use it.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "9e5acae22c820eff3b8003bb6811579971c69af5"
     },
     {
       "id": "FB-0106",
