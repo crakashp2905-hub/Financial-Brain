@@ -617,6 +617,28 @@ CREATE TABLE IF NOT EXISTS mf_nav (
     PRIMARY KEY (scheme_code, nav_date)
 );
 
+-- As-observed AMFI scheme metadata snapshots. AMFI's NAVAll rows do not declare legal
+-- effective dates; observed_on/observed_at preserve what was actually available instead
+-- of backdating metadata to the NAV date.
+CREATE TABLE IF NOT EXISTS mf_scheme_master_observations (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    isin_growth             VARCHAR,
+    isin_reinvest           VARCHAR,
+    scheme_name             VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    scheme_type             VARCHAR,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    nav_as_of               DATE NOT NULL,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (

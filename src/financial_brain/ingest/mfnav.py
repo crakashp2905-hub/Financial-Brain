@@ -8,6 +8,8 @@ a NAV since 2018 must not be filed under today.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date, datetime, timezone
 
 from ..evidence import ledger
@@ -44,6 +46,32 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
         [[r["scheme_code"], r["isin_growth"], r["isin_reinvest"], r["scheme_name"],
           r["fund_house"], r["scheme_type"], r["plan"], r["option"], r["nav"],
           r["nav_date"], obj.key, now] for r in rows])
+
+    master_rows = []
+    for row in rows:
+        identity = "|".join((row["scheme_code"], row["plan"] or "", row["option"] or "",
+                             row["isin_growth"] or "", row["isin_reinvest"] or ""))
+        identity_key = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        body = {"identity_key": identity_key, "scheme_code": row["scheme_code"],
+                "isin_growth": row["isin_growth"], "isin_reinvest": row["isin_reinvest"],
+                "scheme_name": row["scheme_name"], "fund_house": row["fund_house"],
+                "scheme_type": row["scheme_type"], "plan": row["plan"],
+                "option": row["option"], "nav_as_of": row["nav_date"].isoformat(),
+                "observed_on": d.isoformat(), "observed_at": now.isoformat(),
+                "source_document_sha256": obj.sha256, "lake_key": obj.key}
+        record_sha = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        master_rows.append([identity_key, row["scheme_code"], row["isin_growth"],
+                            row["isin_reinvest"], row["scheme_name"], row["fund_house"],
+                            row["scheme_type"], row["plan"], row["option"], row["nav_date"],
+                            d, now, obj.sha256, record_sha, obj.key])
+    con.executemany("""INSERT INTO mf_scheme_master_observations
+        (identity_key, scheme_code, isin_growth, isin_reinvest, scheme_name, fund_house,
+         scheme_type, plan, option, nav_as_of, observed_on, observed_at,
+         source_document_sha256, record_sha256, lake_key)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (identity_key, observed_on, source_document_sha256) DO NOTHING""",
+        master_rows)
 
     latest = max((r["nav_date"] for r in rows), default=None)
     fresh = sum(1 for r in rows if r["nav_date"] == latest)

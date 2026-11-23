@@ -517,11 +517,15 @@
     {
       "id": "FB-0301",
       "text": "Add `mf_scheme_master` keyed by scheme code + plan + option + ISIN, effective-dated from AMFI, AMC and SID metadata.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "AMFI NAV ingestion now writes `mf_scheme_master_observations`, keyed by a stable digest of scheme code, plan, option and both ISINs, with name, fund house, scheme type, NAV date, observed date/time, source-document hash and raw lake key.",
+        "The observation date/time is kept distinct from NAV date; NAVAll does not publish legal metadata effective dates, so the importer does not backdate scheme classifications.",
+        "tests/test_phase2_sources.py::test_nav_ingest_is_idempotent: 1 passed, including distinct identities, mixed NAV/observation dates and source hash; scoped Ruff passed."
+      ],
+      "blocker": "AMC/SID metadata and source-declared effective dates are not yet ingested; observed AMFI snapshots alone do not establish full historical scheme changes or every requested scheme attribute.",
+      "last_audited_at_utc": "2026-11-23T09:00:00Z",
       "commit": null
     },
     {
@@ -14101,6 +14105,7 @@
       "FB-0212",
       "FB-0213",
       "FB-0214",
+      "FB-0301",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14120,10 +14125,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 54,
+    "audited_count": 55,
     "status_counts": {
-      "UNASSESSED": 1324,
-      "PARTIAL": 43,
+      "UNASSESSED": 1323,
+      "PARTIAL": 44,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14136,6 +14141,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 54 of 1,378 items audited; 8 COMPLETE, 43 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,324 UNASSESSED. ETF reference, product disclosures, primary-market flow context, quote-only ETF paper fill policy, price history, Kite quotes, sampled bars, valuation health, distinct ETF price/NAV/benchmark return calculations, historical corporate-action adjustment and liquidity analytics are recorded under FB-0201 through FB-0214; latest implementation commit 4ab02513. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 55 of 1,378 items audited; 8 COMPLETE, 44 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,323 UNASSESSED. ETF capabilities through FB-0214 and an as-observed AMFI scheme-master snapshot under FB-0301 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

@@ -73,6 +73,11 @@ def test_nav_ingest_is_idempotent(tmp_path):
         second = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=Fake())
         assert first["schemes"] == second["schemes"] == 3
         assert con.execute("SELECT count(*) FROM mf_nav").fetchone()[0] == 3
+        master = con.execute("""SELECT COUNT(*), COUNT(DISTINCT identity_key),
+                                      MIN(observed_on), MIN(nav_as_of),
+                                      COUNT(DISTINCT source_document_sha256)
+                               FROM mf_scheme_master_observations""").fetchone()
+        assert master == (3, 3, date(2026, 9, 20), date(2018, 7, 2), 1)
         assert con.execute("""SELECT count(*) FROM evidence
                               WHERE kind = 'mf_nav_file'""").fetchone()[0] == 1
 
