@@ -78,7 +78,9 @@ def build_artifacts(root: Path) -> tuple[bytes, bytes, bytes]:
     generator = root / GENERATOR_PATH
     if not generator.is_file() or generator.is_symlink():
         raise RuntimeError("bundle generator must be a regular local file")
-    payloads[GENERATOR_PATH.as_posix()] = generator.read_bytes()
+    # Windows checkouts may materialize CRLF even though Git stores LF. Keep
+    # the archived generator bytes portable so the ZIP hash is cross-platform.
+    payloads[GENERATOR_PATH.as_posix()] = generator.read_bytes().replace(b"\r\n", b"\n")
     manifest = {
         "schema": "fb.checklist-release-inputs.v1",
         "snapshot_commit": SNAPSHOT_COMMIT,

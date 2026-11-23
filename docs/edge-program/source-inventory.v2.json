@@ -3879,7 +3879,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/evidence_bundle.py",
-      "source_sha256": "75041540c2aa5635e03c0d07de8b7746d7918c7ee10120c12289fdb45cd93ded",
+      "source_sha256": "b97ee01f6cbdc180cf83061c752dc1528dbc382fc160aedf451ed14e78791ea1",
       "test_paths": []
     },
     {

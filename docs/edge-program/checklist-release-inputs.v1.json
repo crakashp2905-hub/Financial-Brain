@@ -104,8 +104,8 @@
     },
     {
       "path": "scripts/build_checklist_evidence_bundle.py",
-      "sha256": "6a0c9f4c2ae22ab253143545b48ba6dd93f33a3c7a8d2906b57c69a77cb0139f",
-      "size_bytes": 6848,
+      "sha256": "d4972b9775ccceed15e8362c94fc3c29d1179d6160b995a0303f7f64f600a089",
+      "size_bytes": 7028,
       "source_path": "scripts/build_checklist_evidence_bundle.py"
     },
     {
