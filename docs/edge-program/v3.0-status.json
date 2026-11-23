@@ -5406,7 +5406,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:38:34Z",
-      "commit": null,
+      "commit": "e7b06508",
       "artifact_sha256": "70fd922fcbb4d2c08bacd0230b5ea929a36a7d4113931a41377c1e0317539fb0",
       "test_evidence": [
         "python scripts/validate_product_charter.py --check: passed.",
