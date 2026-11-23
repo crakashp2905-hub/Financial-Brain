@@ -208,9 +208,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/units.py provides Decimal Money, Price and generic Quantity with currency-safe arithmetic."
+        "src/financial_brain/kernel/units.py provides generic Decimal Money, Price and Quantity.",
+        "src/financial_brain/kernel/units.py now adds CurrencyCode, INRNotional, EquityUnits, ETFUnits, OptionLots, MutualFundUnits, NAVPerUnit, PremiumPerUnit and BasisPoints with validation.",
+        "tests/test_kernel_units_clock.py: 28 passed; scoped Ruff passed."
       ],
-      "blocker": "There are no distinct INR notional, equity/ETF whole-unit, option-lot, mutual-fund fractional-unit, NAV/unit, premium/unit or basis-point types.",
+      "blocker": "The explicit types are defined and validated but are not yet enforced end to end across order, position, NAV, option premium and accounting APIs.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

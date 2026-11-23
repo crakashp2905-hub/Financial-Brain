@@ -7,7 +7,21 @@ from decimal import Decimal
 import pytest
 
 from financial_brain.kernel.clock import ClockError, Instants, assert_not_future, utc
-from financial_brain.kernel.units import Money, Price, Quantity, UnitError
+from financial_brain.kernel.units import (
+    BasisPoints,
+    CurrencyCode,
+    EquityUnits,
+    ETFUnits,
+    INRNotional,
+    MutualFundUnits,
+    NAVPerUnit,
+    OptionLots,
+    Money,
+    Price,
+    PremiumPerUnit,
+    Quantity,
+    UnitError,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -82,3 +96,27 @@ def test_future_timestamp_refused() -> None:
 
 def test_date_import_is_used() -> None:
     assert date(2026, 11, 8).isoformat() == "2026-11-08"
+
+
+def test_financial_domain_units_keep_distinct_semantics() -> None:
+    assert CurrencyCode("INR").code == "INR"
+    assert INRNotional("123.45").as_money() == Money.of("123.45", "INR")
+    assert isinstance(EquityUnits(5), EquityUnits)
+    assert isinstance(ETFUnits(2), ETFUnits)
+    assert OptionLots(-3).lots == -3
+    assert MutualFundUnits("1.234567").units == Decimal("1.234567")
+    assert NAVPerUnit("42.10").amount == Decimal("42.10")
+    assert PremiumPerUnit("18.25").currency == "INR"
+    assert BasisPoints("12.5").as_ratio() == Decimal("0.00125")
+
+
+@pytest.mark.parametrize("constructor", [EquityUnits, ETFUnits, OptionLots])
+@pytest.mark.parametrize("bad", [1.5, "2", True])
+def test_whole_share_and_option_lot_units_reject_non_integers(constructor, bad) -> None:
+    with pytest.raises(UnitError):
+        constructor(bad)
+
+
+def test_inr_notional_rejects_negative_amount() -> None:
+    with pytest.raises(UnitError, match="cannot be negative"):
+        INRNotional("-0.01")
