@@ -79,6 +79,22 @@ class Database:
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_effective_from DATE",
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS successor_scheme_code VARCHAR",
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_reason VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_pct DECIMAL(12, 8)",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_plan VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_effective_from DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_effective_to DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS aum_inr DECIMAL(24, 2)",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS aum_as_of DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_initial_inr DECIMAL(20, 2)",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_additional_inr DECIMAL(20, 2)",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_effective_from DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_effective_to DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_schedule VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_effective_from DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_effective_to DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_restrictions VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_from DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_to DATE",
     ]
 
     def migrate(self) -> None:

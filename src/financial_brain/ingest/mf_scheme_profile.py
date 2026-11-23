@@ -42,16 +42,28 @@ def ingest(payload: bytes, observed_on: date, cfg: Config | None = None) -> dict
                     (identity_key, scheme_code, plan, option, isin, riskometer, benchmark_name,
                      benchmark_return_type, manager, objective, effective_from, effective_to,
                      scheme_status, status_effective_from, successor_scheme_code, status_reason,
+                     expense_ratio_pct, expense_ratio_plan, expense_effective_from,
+                     expense_effective_to, aum_inr, aum_as_of, minimum_initial_inr,
+                     minimum_additional_inr, minimum_effective_from, minimum_effective_to,
+                     exit_load_schedule, exit_load_effective_from, exit_load_effective_to,
+                     exit_restrictions, restriction_effective_from, restriction_effective_to,
                      observed_on, observed_at, source_url, source_document_sha256,
                      source_published_at, import_sha256, record_sha256, lake_key)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT (identity_key, observed_on, source_document_sha256) DO NOTHING""",
                     [row["identity_key"], row["scheme_code"], row["plan"], row["option"],
                      row["isin"], row["riskometer"], row["benchmark_name"],
                      row["benchmark_return_type"], row["manager"], row["objective"],
                      row["effective_from"], row["effective_to"], row["scheme_status"],
                      row["status_effective_from"], row["successor_scheme_code"],
-                     row["status_reason"], observed_on, imported_at,
+                     row["status_reason"], row["expense_ratio_pct"], row["expense_ratio_plan"],
+                     row["expense_effective_from"], row["expense_effective_to"],
+                     row["aum_inr"], row["aum_as_of"], row["minimum_initial_inr"],
+                     row["minimum_additional_inr"], row["minimum_effective_from"],
+                     row["minimum_effective_to"], row["exit_load_schedule"],
+                     row["exit_load_effective_from"], row["exit_load_effective_to"],
+                     row["exit_restrictions"], row["restriction_effective_from"],
+                     row["restriction_effective_to"], observed_on, imported_at,
                      row["source_url"], row["source_document_sha256"],
                      row["source_published_at"], import_hash, record_hash, obj.key])
             con.execute("COMMIT")

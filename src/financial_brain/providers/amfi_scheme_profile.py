@@ -6,6 +6,7 @@ import hashlib
 import io
 import re
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from urllib.parse import urlparse
 
 from .base import FetchError
@@ -57,9 +58,8 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             raise FetchError(f"scheme {code} publication time is invalid for observation date",
                              retryable=False)
         facts = {key: row.get(key) or None for key in
-                 ("riskometer", "benchmark_name", "manager", "objective")}
-        if not any(facts.values()):
-            raise FetchError(f"scheme {code} row contains no profile facts", retryable=False)
+                 ("riskometer", "benchmark_name", "manager", "objective",
+                  "exit_load_schedule", "exit_restrictions")}
         raw_benchmark_type = row.get("benchmark_return_type", "").strip()
         benchmark_type = (raw_benchmark_type or "UNKNOWN").upper()
         if benchmark_type not in _BENCHMARK_TYPES:
@@ -71,7 +71,11 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             raise FetchError(f"scheme {code} benchmark requires an explicit return type",
                              retryable=False)
         dates = {}
-        for key in ("effective_from", "effective_to", "status_effective_from"):
+        for key in ("effective_from", "effective_to", "status_effective_from",
+                    "expense_effective_from", "expense_effective_to", "aum_as_of",
+                    "minimum_effective_from", "minimum_effective_to",
+                    "exit_load_effective_from", "exit_load_effective_to",
+                    "restriction_effective_from", "restriction_effective_to"):
             try:
                 dates[key] = date.fromisoformat(row[key]) if row.get(key) else None
             except ValueError as exc:
@@ -88,12 +92,60 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
         if status == "MERGED" and successor is None:
             raise FetchError(f"scheme {code} merged status requires successor_scheme_code",
                              retryable=False)
+        amount_fields: dict[str, Decimal | None] = {}
+        for key in ("expense_ratio_pct", "aum_inr", "minimum_initial_inr",
+                    "minimum_additional_inr"):
+            try:
+                amount_fields[key] = Decimal(row[key]) if row.get(key) else None
+            except InvalidOperation as exc:
+                raise FetchError(f"scheme {code} has invalid {key}", retryable=False) from exc
+            value = amount_fields[key]
+            if value is not None and (not value.is_finite() or value < 0):
+                raise FetchError(f"scheme {code} {key} must be finite and non-negative",
+                                 retryable=False)
+        if amount_fields["expense_ratio_pct"] is not None:
+            if amount_fields["expense_ratio_pct"] >= 100:
+                raise FetchError(f"scheme {code} expense ratio must be below 100 percent",
+                                 retryable=False)
+            plan = (row.get("expense_ratio_plan") or "").upper()
+            if plan not in {"DIRECT", "REGULAR"} or dates["expense_effective_from"] is None:
+                raise FetchError(f"scheme {code} TER requires DIRECT/REGULAR plan and effective date",
+                                 retryable=False)
+        else:
+            plan = None
+        if amount_fields["aum_inr"] is not None and dates["aum_as_of"] is None:
+            raise FetchError(f"scheme {code} AUM requires aum_as_of", retryable=False)
+        if amount_fields["aum_inr"] == 0:
+            raise FetchError(f"scheme {code} AUM must be positive", retryable=False)
+        if dates["aum_as_of"] and dates["aum_as_of"] > observed_on:
+            raise FetchError(f"scheme {code} AUM date is after observation date", retryable=False)
+        if any(amount_fields[key] is not None for key in
+               ("minimum_initial_inr", "minimum_additional_inr")) \
+                and dates["minimum_effective_from"] is None:
+            raise FetchError(f"scheme {code} minimum investments require an effective date",
+                             retryable=False)
+        if facts["exit_load_schedule"] and dates["exit_load_effective_from"] is None:
+            raise FetchError(f"scheme {code} exit-load schedule requires an effective date",
+                             retryable=False)
+        if facts["exit_restrictions"] and dates["restriction_effective_from"] is None:
+            raise FetchError(f"scheme {code} exit restrictions require an effective date",
+                             retryable=False)
+        for start_key, end_key in (("expense_effective_from", "expense_effective_to"),
+                                   ("minimum_effective_from", "minimum_effective_to"),
+                                   ("exit_load_effective_from", "exit_load_effective_to"),
+                                   ("restriction_effective_from", "restriction_effective_to")):
+            if dates[start_key] and dates[end_key] and dates[end_key] < dates[start_key]:
+                raise FetchError(f"scheme {code} {start_key} window is reversed", retryable=False)
+        if (not any(facts.values()) and status is None
+                and not any(value is not None for value in amount_fields.values())):
+            raise FetchError(f"scheme {code} row contains no profile/economic facts", retryable=False)
         rows.append({"identity_key": identity_key, "scheme_code": code,
                      "plan": identity_values[1] or None, "option": identity_values[2] or None,
                      "isin": identity_values[3] or None, **facts,
                      "benchmark_return_type": benchmark_type,
                      **dates, "scheme_status": status, "successor_scheme_code": successor,
                      "status_reason": row.get("status_reason") or None,
+                     **amount_fields, "expense_ratio_plan": plan,
                      "source_url": url, "source_document_sha256": doc_hash,
                      "source_published_at": published})
     if not rows:
