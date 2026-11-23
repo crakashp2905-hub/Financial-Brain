@@ -617,6 +617,28 @@ CREATE TABLE IF NOT EXISTS mf_nav (
     PRIMARY KEY (scheme_code, nav_date)
 );
 
+-- Append-only NAV revisions. AMFI NAVAll supplies a row date but no source publication
+-- timestamp; retrieval and successful repository observation clocks are retained instead.
+CREATE TABLE IF NOT EXISTS mf_nav_observations (
+    scheme_code             VARCHAR NOT NULL,
+    nav_date                DATE NOT NULL,
+    nav                     DOUBLE NOT NULL,
+    isin_growth             VARCHAR,
+    isin_reinvest           VARCHAR,
+    scheme_name             VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    scheme_type             VARCHAR,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    lake_key                VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ,
+    retrieved_at            TIMESTAMPTZ NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    PRIMARY KEY (scheme_code, nav_date, source_document_sha256)
+);
+
 -- As-observed AMFI scheme metadata snapshots. AMFI's NAVAll rows do not declare legal
 -- effective dates; observed_on/observed_at preserve what was actually available instead
 -- of backdating metadata to the NAV date.

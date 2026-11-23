@@ -559,11 +559,15 @@
     {
       "id": "FB-0304",
       "text": "Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; do not silently backdate corrected data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "mfnav.ingest appends `mf_nav_observations` keyed by scheme/date/source-document hash, preserving each corrected NAV with raw lake key, source hash, retrieval time and successful ingestion time; the current `mf_nav` row advances to the latest ingested revision.",
+        "`mfnav.as_known_on()` returns only a revision ingested on or before the timezone-aware decision timestamp. AMFI NAVAll's absent source publication time is stored as NULL, not inferred from the NAV date.",
+        "tests/test_phase2_sources.py::test_nav_ingest_is_idempotent: 1 passed, including replay idempotency and before/after-correction as-known checks; scoped Ruff passed."
+      ],
+      "blocker": "AMFI NAVAll does not provide a source publication timestamp; ingestion/retrieval availability is preserved, but publication-time semantics can only be filled from a source that actually declares them.",
+      "last_audited_at_utc": "2026-11-23T12:00:00Z",
       "commit": null
     },
     {
@@ -14116,6 +14120,7 @@
       "FB-0301",
       "FB-0302",
       "FB-0303",
+      "FB-0304",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14135,10 +14140,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 57,
+    "audited_count": 58,
     "status_counts": {
-      "UNASSESSED": 1321,
-      "PARTIAL": 46,
+      "UNASSESSED": 1320,
+      "PARTIAL": 47,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14151,6 +14156,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 57 of 1,378 items audited; 8 COMPLETE, 46 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,321 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, classification and source-attributed profile facts under FB-0301/FB-0303 have evidence; latest implementation commit 23238642. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 58 of 1,378 items audited; 8 COMPLETE, 47 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,320 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, classification, profile facts and corrected NAV revision history under FB-0301 through FB-0304 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

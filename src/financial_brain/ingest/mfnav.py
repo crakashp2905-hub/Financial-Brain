@@ -42,10 +42,38 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
     con.executemany("""INSERT INTO mf_nav (scheme_code, isin_growth, isin_reinvest,
         scheme_name, fund_house, scheme_type, plan, option, nav, nav_date, lake_key,
         observed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-        ON CONFLICT (scheme_code, nav_date) DO NOTHING""",
+        ON CONFLICT (scheme_code, nav_date) DO UPDATE SET
+            isin_growth=EXCLUDED.isin_growth, isin_reinvest=EXCLUDED.isin_reinvest,
+            scheme_name=EXCLUDED.scheme_name, fund_house=EXCLUDED.fund_house,
+            scheme_type=EXCLUDED.scheme_type, plan=EXCLUDED.plan, option=EXCLUDED.option,
+            nav=EXCLUDED.nav, lake_key=EXCLUDED.lake_key, observed_at=EXCLUDED.observed_at""",
         [[r["scheme_code"], r["isin_growth"], r["isin_reinvest"], r["scheme_name"],
           r["fund_house"], r["scheme_type"], r["plan"], r["option"], r["nav"],
           r["nav_date"], obj.key, now] for r in rows])
+
+    revision_rows = []
+    for row in rows:
+        revision = {key: row[key] for key in
+                    ("scheme_code", "isin_growth", "isin_reinvest", "scheme_name",
+                     "fund_house", "scheme_type", "plan", "option", "nav", "nav_date")}
+        revision.update({"lake_key": obj.key, "source_document_sha256": obj.sha256,
+                         "source_published_at": None,
+                         "retrieved_at": res.retrieved_at, "observed_at": now})
+        record_hash = hashlib.sha256(json.dumps(
+            {key: str(value) if value is not None else None
+             for key, value in revision.items()}, sort_keys=True,
+            separators=(",", ":")).encode("utf-8")).hexdigest()
+        revision_rows.append([row["scheme_code"], row["nav_date"], row["nav"],
+                              row["isin_growth"], row["isin_reinvest"], row["scheme_name"],
+                              row["fund_house"], row["scheme_type"], row["plan"], row["option"],
+                              obj.key, obj.sha256, None, res.retrieved_at, now, record_hash])
+    con.executemany("""INSERT INTO mf_nav_observations
+        (scheme_code, nav_date, nav, isin_growth, isin_reinvest, scheme_name, fund_house,
+         scheme_type, plan, option, lake_key, source_document_sha256, source_published_at,
+         retrieved_at, observed_at, record_sha256)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (scheme_code, nav_date, source_document_sha256) DO NOTHING""",
+        revision_rows)
 
     master_rows = []
     for row in rows:
@@ -85,8 +113,26 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
         ledger.mint(con, kind="mf_nav_file", subject="AMFI", as_of=latest,
                     claim=f"AMFI published NAVs for {fresh} schemes as of {latest}",
                     value={"schemes": len(rows), "as_of_latest": fresh,
-                           "latest_date": latest.isoformat()},
+                           "latest_date": latest.isoformat(),
+                           "source_document_sha256": obj.sha256},
                     source=SOURCE, source_tier=1, lake_key=obj.key,
                     derivation="providers/amfi NAVAll.txt")
     return {"schemes": len(rows), "latest_date": str(latest), "on_latest_date": fresh,
             "lake_key": obj.key}
+
+
+def as_known_on(con, scheme_code: str, nav_date: date, decision_time: datetime) -> dict | None:
+    """Return the latest NAV revision actually ingested by a timezone-aware decision time."""
+    if decision_time.tzinfo is None or decision_time.utcoffset() is None:
+        raise ValueError("decision_time must be timezone-aware")
+    row = con.execute("""SELECT nav, source_document_sha256, source_published_at,
+                               retrieved_at, observed_at, lake_key, record_sha256
+                        FROM mf_nav_observations
+                        WHERE scheme_code=? AND nav_date=? AND observed_at<=?
+                        ORDER BY observed_at DESC, source_document_sha256 DESC LIMIT 1""",
+                      [scheme_code, nav_date, decision_time]).fetchone()
+    if row is None:
+        return None
+    keys = ("nav", "source_document_sha256", "source_published_at", "retrieved_at",
+            "observed_at", "lake_key", "record_sha256")
+    return dict(zip(keys, row))
