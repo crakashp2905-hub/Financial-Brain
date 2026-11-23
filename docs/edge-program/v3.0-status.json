@@ -338,7 +338,7 @@
       ],
       "blocker": "Partial: typed amount/NAV/unit boundaries cover cash equities, option lots and premiums, MF NAV ingest, lot purchase/allotment/redemption, SIP installments, SWP/STP flows, paired MF switches, MF account-ledger postings and risk-sizing inputs. Risk-sizing result values, shared forward OMS/accounting serialization, and repository-wide boundary verification remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
-      "commit": "f28cf201",
+      "commit": "975c117a",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
