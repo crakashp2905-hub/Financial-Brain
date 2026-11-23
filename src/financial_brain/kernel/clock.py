@@ -43,6 +43,43 @@ class Instants:
             )
 
 
+@dataclass(frozen=True)
+class MarketFactTimes:
+    """Timestamp provenance required to determine when a market fact was usable."""
+
+    received_at: datetime
+    available_at: datetime
+    ingested_at: datetime
+    source_at: datetime | None = None
+    exchange_at: datetime | None = None
+    published_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        for name in (
+            "received_at",
+            "available_at",
+            "ingested_at",
+            "source_at",
+            "exchange_at",
+            "published_at",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                object.__setattr__(self, name, utc(value))
+        if self.ingested_at < self.received_at:
+            raise ClockError("ingestion cannot precede receipt")
+        if self.available_at < self.received_at:
+            raise ClockError("strategy availability cannot precede receipt")
+        if self.published_at is not None and self.available_at < self.published_at:
+            raise ClockError("strategy availability cannot precede publication")
+
+    def assert_usable_at(self, decision_time: datetime) -> None:
+        """Reject an observation not yet available or published at decision time."""
+        decision = utc(decision_time)
+        if self.available_at > decision:
+            raise ClockError("market fact was not yet available to the strategy")
+
+
 def assert_not_future(instant: datetime, now: datetime) -> datetime:
     """A fact stamped after the reference clock cannot exist yet; refuse it."""
     t, n = utc(instant), utc(now)

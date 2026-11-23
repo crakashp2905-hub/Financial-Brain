@@ -6,7 +6,14 @@ from decimal import Decimal
 
 import pytest
 
-from financial_brain.kernel.clock import ClockError, Instants, TradingClock, assert_not_future, utc
+from financial_brain.kernel.clock import (
+    ClockError,
+    Instants,
+    MarketFactTimes,
+    TradingClock,
+    assert_not_future,
+    utc,
+)
 from financial_brain.kernel.closures_n import MarketCalendar
 from financial_brain.kernel.units import (
     BasisPoints,
@@ -153,3 +160,39 @@ def test_trading_clock_uses_exchange_hours_in_kolkata() -> None:
     at_close = datetime(2026, 11, 9, 15, 30, tzinfo=IST)
     assert clock.exchange_is_open("NSE", at_open)
     assert not clock.exchange_is_open("NSE", at_close)
+
+
+def test_market_fact_times_preserve_all_provenance_instants() -> None:
+    received = datetime(2026, 11, 9, 3, 45, tzinfo=timezone.utc)
+    fact_times = MarketFactTimes(
+        received_at=received,
+        available_at=received + timedelta(milliseconds=20),
+        ingested_at=received + timedelta(seconds=1),
+        source_at=received - timedelta(milliseconds=50),
+        exchange_at=received - timedelta(milliseconds=100),
+        published_at=received,
+    )
+    fact_times.assert_usable_at(received + timedelta(seconds=2))
+    assert fact_times.exchange_at == received - timedelta(milliseconds=100)
+    assert fact_times.source_at == received - timedelta(milliseconds=50)
+
+
+def test_market_fact_times_reject_impossible_or_not_yet_usable_data() -> None:
+    received = datetime(2026, 11, 9, 3, 45, tzinfo=timezone.utc)
+    with pytest.raises(ClockError, match="cannot precede receipt"):
+        MarketFactTimes(received, received - timedelta(seconds=1), received)
+    future_published = MarketFactTimes(
+        received_at=received,
+        available_at=received + timedelta(seconds=2),
+        ingested_at=received + timedelta(seconds=3),
+        published_at=received + timedelta(seconds=1),
+    )
+    with pytest.raises(ClockError, match="not yet available"):
+        future_published.assert_usable_at(received + timedelta(milliseconds=500))
+    with pytest.raises(ClockError, match="cannot precede publication"):
+        MarketFactTimes(
+            received_at=received,
+            available_at=received + timedelta(milliseconds=500),
+            ingested_at=received + timedelta(seconds=1),
+            published_at=received + timedelta(seconds=1),
+        )

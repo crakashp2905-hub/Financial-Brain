@@ -236,10 +236,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/clock.py::Instants stores event_time, ingest_time, available_time and decision_time.",
-        "src/financial_brain/pit/observations.py has published_at and observed_at fields."
+        "src/financial_brain/kernel/clock.py::MarketFactTimes stores source_at, exchange_at, received_at, available_at, published_at and ingested_at as timezone-aware UTC instants.",
+        "The contract refuses ingestion/strategy availability before receipt and strategy availability before publication; assert_usable_at prevents look-ahead use.",
+        "tests/test_kernel_units_clock.py: 33 passed; scoped Ruff passed."
       ],
-      "blocker": "The required source, exchange, receipt, strategy-availability, published-at and ingested-at timestamps are scattered and are not enforced together in a canonical observation contract.",
+      "blocker": "The canonical timestamp contract exists, but repository-wide adapters and persisted market-fact records do not yet require/use it.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
