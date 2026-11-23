@@ -1,6 +1,6 @@
 # Kite paper rights runtime gate — 2026-11-24
 
-**Checklist:** `PA-02-02` (complete for the fail-closed live-paper gate); `PA-02-03` (partial).  
+**Checklist:** `PA-02-02` (complete for the fail-closed live-paper gate); `PA-02-03` (partial).
 **Permission posture:** no rights were granted or inferred.
 
 The canonical `data-permissions.v1.json` records every KITE source/use permission as `UNKNOWN_RIGHTS`. The live intraday paper runner now loads that registry before any quote request and accepts an entitlement only when the caller-supplied row exactly matches the canonical source/use record and is effective for the current date. An arbitrary permission file cannot override the repository's unknown status. The normalized forward runner applies the same canonical comparison before accepting provider events. Synthetic test permissions require an isolated test registry.
