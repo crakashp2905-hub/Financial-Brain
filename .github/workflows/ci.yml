@@ -100,7 +100,7 @@ jobs:
           path: pytest-results.xml
           if-no-files-found: warn
       - name: Critical-module coverage
-        run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/learners.py,*/evaluation/learned_model.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*,*/opportunity/learning.py"
+        run: python -m coverage report --show-missing --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/learners.py,*/evaluation/learned_model.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*,*/opportunity/learning.py"
       - name: Enforce per-service coverage floors
         run: |
           python -m coverage json --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/learners.py,*/evaluation/learned_model.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*,*/opportunity/learning.py" -o critical-coverage.json

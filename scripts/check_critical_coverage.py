@@ -63,7 +63,9 @@ def check(report: dict) -> list[str]:
         if not isinstance(actual, (int, float)):
             errors.append(f"{suffix}: coverage percentage is missing")
         elif actual < floor:
-            errors.append(f"{suffix}: {actual:.1f}% is below the {floor:.1f}% floor")
+            missing = matches[0][1].get("missing_lines", [])
+            detail = f"; uncovered lines: {missing}" if isinstance(missing, list) and missing else ""
+            errors.append(f"{suffix}: {actual:.1f}% is below the {floor:.1f}% floor{detail}")
     return errors
 
 
