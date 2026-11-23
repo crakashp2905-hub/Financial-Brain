@@ -5407,7 +5407,7 @@
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:38:34Z",
       "commit": "e7b06508",
-      "artifact_sha256": "70fd922fcbb4d2c08bacd0230b5ea929a36a7d4113931a41377c1e0317539fb0",
+      "artifact_sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239",
       "test_evidence": [
         "python scripts/validate_product_charter.py --check: passed.",
         "python scripts/validate_launch_gates.py --check: passed fail-closed across all five desks.",
@@ -5418,12 +5418,24 @@
     {
       "id": "PA-00-10",
       "text": "Declare the business objective: positive expected *and realized prospective* risk-adjusted net value after full costs, not daily positive P&L or every-signal trade frequency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/product-charter.v1.json now states the objective as positive expected and realized prospective risk-adjusted net value after fees, spread, slippage, market impact, financing and applicable taxes, with risk-matched comparison and uncertainty.",
+        "The charter retains NO_TRADE and CASH as valid outcomes and explicitly rejects positive P&L every day and maximum signal/trade frequency as success measures.",
+        "The stated objective is not a result claim: current_status is explicitly NOT_DEMONSTRATED, and historical replay/local simulation do not establish prospective profitability or verified live fills."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T16:41:53Z",
+      "commit": null,
+      "artifact_sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239",
+      "test_evidence": [
+        "python scripts/validate_product_charter.py --check: passed with required objective, full costs and NOT_DEMONSTRATED gate.",
+        "python -m pytest tests/test_product_charter.py -q: 1 passed.",
+        "python -m ruff check scripts/validate_product_charter.py tests/test_product_charter.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "The business objective and valid no-trade outcomes are machine-checked in the product charter. It does not claim the objective has been attained."
     },
     {
       "id": "PA-00-11",
@@ -15311,7 +15323,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:38:34Z",
+    "as_of_utc": "2026-11-23T16:41:53Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15549,6 +15561,7 @@
       "PA-00-07",
       "PA-00-08",
       "PA-00-09",
+      "PA-00-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15571,15 +15584,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 257,
+    "audited_count": 258,
     "status_counts": {
-      "COMPLETE": 36,
+      "COMPLETE": 37,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 204,
-      "UNASSESSED": 1121
+      "UNASSESSED": 1120
     },
-    "verified_complete_count": 36,
+    "verified_complete_count": 37,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15676,15 +15689,17 @@
       "tests/test_capability_provenance.py",
       "src/financial_brain/portfolio/canonical_ledger.py",
       "tests/test_canonical_portfolio_ledger.py",
-      "docs/edge-program/product-charter.v1.json"
+      "docs/edge-program/product-charter.v1.json",
+      "scripts/validate_product_charter.py",
+      "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-00-09 verified complete from the five-desk product charter and fail-closed launch-gate validators; product scope remains distinct from implementation claims."
+    "evidence_update": "PA-00-10 now machine-checks the risk-adjusted prospective net-value objective and full cost basis while explicitly retaining NOT_DEMONSTRATED."
   },
   "counts_by_status": {
-    "COMPLETE": 36,
+    "COMPLETE": 37,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 204,
-    "UNASSESSED": 1121
+    "UNASSESSED": 1120
   }
 }

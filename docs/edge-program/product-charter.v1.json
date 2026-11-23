@@ -8,6 +8,14 @@
     "NO_TRADE and CASH are valid outcomes; the system does not force a recommendation.",
     "Historical replay, deterministic fixture, local paper, prospective observation and independent attestation remain distinct evidence classes."
   ],
+  "business_objective": {
+    "objective": "Positive expected and realized prospective risk-adjusted net value after full costs.",
+    "evaluation_basis": "Future portfolio observations after fees, spread, slippage, market impact, financing and applicable taxes, compared with a risk-matched benchmark and uncertainty reported.",
+    "valid_decisions": ["NO_TRADE", "CASH"],
+    "not_objectives": ["Positive P&L every day", "Maximum signal or trade frequency", "Historical gross return"],
+    "evidence_boundary": "Historical replay and local simulation can inform the objective but cannot establish realized prospective profitability or verified live fills.",
+    "current_status": "NOT_DEMONSTRATED"
+  },
   "execution_policy": {
     "paper_simulation": true,
     "physical_orders_enabled": false,

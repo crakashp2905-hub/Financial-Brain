@@ -31,6 +31,19 @@ def validate() -> None:
         raise ValueError("product charter must not imply that desk capability is implemented")
     if len(body.get("success_criteria", [])) < 3 or len(body.get("shared_invariants", [])) < 4:
         raise ValueError("charter is missing success criteria or shared invariants")
+    objective = body.get("business_objective", {})
+    if ("expected and realized prospective risk-adjusted net value" not in objective.get("objective", "")
+            or objective.get("current_status") != "NOT_DEMONSTRATED"):
+        raise ValueError("charter must state the prospective risk-adjusted net objective without claiming success")
+    if not {"NO_TRADE", "CASH"}.issubset(objective.get("valid_decisions", [])):
+        raise ValueError("business objective must retain NO_TRADE and CASH as valid outcomes")
+    if not {"Positive P&L every day", "Maximum signal or trade frequency"}.issubset(
+            objective.get("not_objectives", [])):
+        raise ValueError("charter must reject daily positive P&L and forced trade frequency as objectives")
+    required_costs = {"fees", "spread", "slippage", "market impact", "financing", "taxes"}
+    basis = objective.get("evaluation_basis", "").lower()
+    if not all(cost in basis for cost in required_costs):
+        raise ValueError("objective must include full trading costs")
 
 
 def main() -> int:
