@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 717,
+  "source_count": 718,
   "sources": [
     {
       "capability_ids": [],
@@ -4280,6 +4280,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/execution.py",
       "source_sha256": "524cff425292958d6ecafe87f627f440a01747a745050526718d07de1017822d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "approvals",
+        "capital_proposal",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/execution_charter.py",
+      "source_sha256": "837b5c0100f40d7bd9d2af2cae6e3f271293af65faf82becd8fb49aa091d5566",
       "test_paths": []
     },
     {
@@ -10531,7 +10550,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "d7189f64f0c944a74126456a9406194f3c08c2209966546efb285d9119b1eba2",
+      "source_sha256": "7ea10c3651a4aab55e6f1ed6411a3da0b5022a122c6f7a1ffb78f14d81c82e2b",
       "test_paths": []
     },
     {
@@ -12678,6 +12697,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 702,
-  "unassigned_role_count": 319
+  "unassessed_count": 703,
+  "unassigned_role_count": 320
 }

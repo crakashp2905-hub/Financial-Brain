@@ -30,14 +30,15 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json now inventories 716 Python files; 701 remain unassessed and 425 remain role-unassigned.",
+        "docs/edge-program/source-inventory.v2.json currently inventories 718 Python files; 703 are unassessed and 320 have an unassigned role hint. This is a routing inventory, not a person-owner assignment.",
         "docs/edge-program/forward-engine-dependency-graph.v1.json was regenerated from the same checkout and its --check passes.",
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check pass; tests/test_source_inventory.py and tests/test_phase2_graph.py: 22 passed.",
         "docs/edge-program/capability-ownership.v1.json still provides broad domains rather than reviewed individual ownership for every strategy, feed, OMS, ledger, renderer and output.",
-        "Expanded scripts/capability_ownership.py to recursively inventory strategy, provider, ingestion, OMS, portfolio, paper, signal, opportunity, interface, API and command modules, plus every source module named for OMS/orders/signals/ledger/journal/strategies. docs/edge-program/capability-ownership.v1.json now lists 24 capability contracts and 490 uniquely assigned modules; each contract has one canonical owner and symbol, and each of the 31 historical/external candidates has a source-record owner distinct from its catalogue owner."
+        "Expanded scripts/capability_ownership.py to recursively inventory strategy, provider, ingestion, OMS, portfolio, paper, signal, opportunity, interface, API and command modules, plus every source module named for OMS/orders/signals/ledger/journal/strategies. docs/edge-program/capability-ownership.v1.json now lists 24 capability contracts and 490 uniquely assigned modules; each contract has one canonical owner and symbol, and each of the 31 historical/external candidates has a source-record owner distinct from its catalogue owner.",
+        "PA-01-07 refreshed the inventory and dependency graph on 2026-11-23; tests/test_source_inventory.py (6 passed) verifies deterministic repeat builds and LF/CRLF-stable hashes."
       ],
       "blocker": "The inventory now covers 490 trader-core modules, 24 owner/symbol capability contracts, and 31 historical/external strategy source records. Internal executable strategy functions and families are not yet reconciled one-to-one with the StrategySpec and AlgorithmSpec lifecycle registries, so a complete per-strategy ownership claim remains premature.",
-      "last_audited_at_utc": "2026-11-23T15:14:00Z",
+      "last_audited_at_utc": "2026-11-23T17:24:47Z",
       "commit": "b4158612",
       "artifact_sha256": "5432cc3ddeae87785b95bb805dbe910a02a9e80ab5935560e8a9e591f3802f26",
       "test_evidence": [
@@ -5609,12 +5610,24 @@
     {
       "id": "PA-01-07",
       "text": "Resolve source inventory snapshot failure in PR #40 without loosening assertions; create deterministic cross-platform inventory generation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "The stale snapshots were regenerated from the current checkout with scripts/source_inventory.py and scripts/forward_engine_graph.py; source count is now 718 and the committed snapshots match byte-for-byte after LF normalization.",
+        "Inventory generation sorts paths and imports, uses canonical JSON and LF-normalized source hashes; tests/test_source_inventory.py checks repeated-build equality, complete path coverage, stable hashes and checkout-line-ending independence.",
+        ".github/workflows/ci.yml runs source-inventory and dependency-graph --check in both Ubuntu and Windows test jobs, with assertions unchanged.",
+        "The source inventory and dependency graph now have current snapshots; no ownership or parse assertions were relaxed."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T17:24:47Z",
+      "commit": null,
+      "test_evidence": [
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed; 718 Python sources.",
+        "python scripts/forward_engine_graph.py --check: passed.",
+        "python -m pytest tests/test_source_inventory.py -q: 6 passed.",
+        "Scoped Ruff and git diff --check: passed."
+      ],
+      "test_result": "The PR #40-era inventory staleness is resolved by refreshing exact current-tree snapshots. Deterministic serialization and normalized path/hash tests pass; CI checks both Linux and Windows."
     },
     {
       "id": "PA-01-08",
@@ -15412,7 +15425,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:21:10Z",
+    "as_of_utc": "2026-11-23T17:24:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15659,6 +15672,7 @@
       "PA-01-04",
       "PA-01-05",
       "PA-01-06",
+      "PA-01-07",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15681,15 +15695,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 266,
+    "audited_count": 267,
     "status_counts": {
-      "COMPLETE": 43,
+      "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 206,
-      "UNASSESSED": 1112
+      "UNASSESSED": 1111
     },
-    "verified_complete_count": 43,
+    "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15790,13 +15804,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-06 verifies protected trial pins and source blobs against the historical baseline, newline-stable hashes, deterministic charter serialization, and automatic CI preservation checks."
+    "evidence_update": "PA-01-07 regenerates source and import-graph snapshots from the current tree with unchanged assertions; deterministic Windows/Linux normalization tests pass."
   },
   "counts_by_status": {
-    "COMPLETE": 43,
+    "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 206,
-    "UNASSESSED": 1112
+    "UNASSESSED": 1111
   }
 }
