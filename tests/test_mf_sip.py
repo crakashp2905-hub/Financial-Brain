@@ -8,6 +8,7 @@ from financial_brain.kernel.mf_sip import (
     MFSIPError, MFSIPInstallment, MFSIPSeries, MFSIPState,
     validate_installment_transition,
 )
+from financial_brain.kernel.units import INRNotional, MutualFundUnits, NavPerUnit
 
 
 START = datetime(2026, 11, 23, 5, tzinfo=timezone.utc)
@@ -69,6 +70,22 @@ def test_allotment_requires_published_available_nav_and_reconciled_units():
             nav_available_at=START + timedelta(hours=1, minutes=1),
             allotted_at=START + timedelta(hours=1, minutes=2), units_allotted=Decimal("499"),
         )
+
+
+def test_sip_accepts_nominal_inr_nav_and_fractional_units_at_model_boundary():
+    scheduled = _installment(amount_inr=INRNotional(Decimal("5000")))
+    assert scheduled.amount_inr == Decimal("5000")
+    allotted = _installment(
+        amount_inr=INRNotional(Decimal("5000")), state=MFSIPState.ALLOTTED,
+        payment_initiated_at=START, funds_available_at=START + timedelta(minutes=1),
+        nav_date=date(2026, 11, 23), nav_per_unit=NavPerUnit(Decimal("10")),
+        nav_published_at=START + timedelta(hours=1),
+        nav_available_at=START + timedelta(hours=1, minutes=1),
+        allotted_at=START + timedelta(hours=1, minutes=2),
+        units_allotted=MutualFundUnits(Decimal("500")),
+    )
+    assert allotted.nav_per_unit == Decimal("10")
+    assert allotted.units_allotted == Decimal("500")
 
 
 def test_missed_installment_is_terminal_and_identity_cannot_change():

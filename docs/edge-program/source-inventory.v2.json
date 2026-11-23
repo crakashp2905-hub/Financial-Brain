@@ -7738,13 +7738,14 @@
         "dataclasses",
         "datetime",
         "decimal",
-        "enum"
+        "enum",
+        "units"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_sip.py",
-      "source_sha256": "602e561f62aa37a1cb8de239fca0346a70b7f797989237cbdb5ab6a8e4f26224",
+      "source_sha256": "9859901e067c27aceafa06285424ca3d633421d0263fa1557f15d6beed7c7461",
       "test_paths": []
     },
     {
