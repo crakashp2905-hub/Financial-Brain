@@ -258,7 +258,7 @@
       ],
       "blocker": "Versioned metadata is an in-memory contract only; authoritative listing/contract/ETF/MF master ingestion and persistence/consumer integration remain incomplete.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "b3b05f84aa78c1f56e4d670847d0276058eb68d5"
     },
     {
       "id": "FB-0107",
