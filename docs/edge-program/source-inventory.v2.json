@@ -4846,7 +4846,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/pipeline.py",
-      "source_sha256": "8d74d751b321e8403ac05a64e23789a384cdf0323e3d7a56dd205b798ba152bb",
+      "source_sha256": "fb61f09b698c917dda06026bf7032b474492a9d1abe7e3107c2b529b5373c9f5",
       "test_paths": []
     },
     {

@@ -20,7 +20,7 @@ from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, In
 from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.modes import Mode, SessionMode, resolve_mode
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
-from financial_brain.kernel.units import Money
+from financial_brain.kernel.units import Money, Price, UnitError, WholeUnits
 
 CCY = "INR"
 CENT = Decimal("0.01")
@@ -37,6 +37,38 @@ def _utc(s: str) -> datetime:
 
 def _canon(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str, allow_nan=False)
+
+
+def _validate_fixture_financial_units(fx: dict) -> None:
+    """Reject malformed fixture order quantities and INR prices before integer/float coercion."""
+    try:
+        quantity = WholeUnits(Decimal(str(fx["quantity"]))).units
+        if quantity <= 0:
+            raise UnitError("fixture order quantity must be positive")
+        Price(Decimal(str(fx["tick"])), "INR")
+        Price(Decimal(str(fx["close_price"])), "INR")
+        if fx.get("limit") is not None:
+            Price(Decimal(str(fx["limit"])), "INR")
+        band = fx.get("price_band")
+        if band is not None:
+            if not isinstance(band, (list, tuple)) or len(band) != 2:
+                raise UnitError("fixture price band must contain two INR prices")
+            Price(Decimal(str(band[0])), "INR")
+            Price(Decimal(str(band[1])), "INR")
+        for quote in fx["quotes"]:
+            Price(Decimal(str(quote["bid"])), "INR")
+            Price(Decimal(str(quote["ask"])), "INR")
+            for field in ("bid_qty", "ask_qty"):
+                depth = WholeUnits(Decimal(str(quote[field]))).units
+                if depth < 0:
+                    raise UnitError("fixture quote depth cannot be negative")
+        for trade in fx.get("trades", ()):
+            Price(Decimal(str(trade["price"])), "INR")
+            trade_quantity = WholeUnits(Decimal(str(trade["qty"]))).units
+            if trade_quantity < 0:
+                raise UnitError("fixture trade quantity cannot be negative")
+    except (KeyError, TypeError, ValueError, ArithmeticError, UnitError) as exc:
+        raise ValueError("fixture financial units are invalid") from exc
 
 
 def _integrity_gate_codes(fx: dict, decision: datetime) -> list[str]:
@@ -123,6 +155,7 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
     session = resolve_mode(mode, now=_utc(fx["decision_utc"]))
     if not isinstance(session, SessionMode) or mode in (Mode.LIVE_CASH, Mode.BROKER_DRYRUN) or broker != "NONE":
         raise PermissionError("the pipeline runs paper only with no broker")
+    _validate_fixture_financial_units(fx)
     trace: list[dict] = []
     ledger = DoubleEntryLedger()
     sid = fx["session_id"]

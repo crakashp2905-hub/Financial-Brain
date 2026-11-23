@@ -345,9 +345,11 @@
         "docs/edge-program/financial-units-kite-market-data-audit-2026-11-24.md records the quote-ingress boundary and open repository-wide scope.",
         "src/financial_brain/kernel/risk_sizing.py exposes typed RiskSizingResult views: Quantity, INR Price, planned INR risk and position INR notional while preserving legacy Decimal fields.",
         "docs/edge-program/financial-units-risk-sizing-output-audit-2026-11-24.md documents the typed RiskSizingResult views and remaining integration work.",
-        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified after the kernel change."
+        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified after the kernel change.",
+        "docs/edge-program/financial-units-fixture-pipeline-audit-2026-11-24.md documents fail-closed typed validation in the legacy fixture pipeline.",
+        "src/financial_brain/forward_edge/pipeline.py::_validate_fixture_financial_units rejects fractional order/depth units and invalid INR execution prices before coercion."
       ],
-      "blocker": "Partial: compatibility fixture-pipeline integration and repository-wide audit of remaining provider, OMS, accounting and output unit boundaries remain outstanding.",
+      "blocker": "Partial: fixture pipeline now validates whole-unit quantities and INR prices before coercion. Other provider adapters, full OMS/accounting serialized state, typed event outputs and remaining repository quantity/price interfaces still require a boundary audit.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
       "commit": "a1afd784",
       "test_evidence": [
@@ -399,9 +401,12 @@
         "Ruff and scoped mypy passed for risk_sizing.py and tests/test_risk_sizing.py.",
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed (682 Python files).",
         "python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed.",
-        "Checklist audit export and deterministic evidence bundle freshness checks passed."
+        "Checklist audit export and deterministic evidence bundle freshness checks passed.",
+        "tests/test_forward_edge_pipeline_compat.py::test_fixture_pipeline_rejects_invalid_order_units_before_execution and ::test_fixture_pipeline_rejects_fractional_quote_depth_before_execution.",
+        "python -m pytest tests/test_forward_edge_pipeline_compat.py tests/test_forward_edge_integrity_gates.py -q --basetemp=.pytest-checklist-forward-units-rerun: 19 passed; legacy fixture golden signatures unchanged.",
+        "Ruff and scoped mypy passed for forward_edge/pipeline.py and tests/test_forward_edge_pipeline_compat.py."
       ],
-      "test_result": "Typed risk-sizing output views are covered for eligible and ineligible cases; all 7 focused risk-sizing tests pass, with Ruff and scoped mypy passing. Decimal compatibility fields remain. Fixture-pipeline integration and broader serialized interface audit remain outstanding."
+      "test_result": "Focused fixture-pipeline and integrity-gate suites pass (19 passed), including fail-closed tests for fractional order/depth units and invalid prices. Historical valid fixture signatures remain unchanged. Broader provider, OMS and accounting unit-contract coverage remains outstanding."
     },
     {
       "id": "FB-0104",
