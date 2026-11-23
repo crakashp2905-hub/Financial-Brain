@@ -214,7 +214,7 @@
       ],
       "blocker": "The explicit types are defined and validated but are not yet enforced end to end across order, position, NAV, option premium and accounting APIs.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "5e2fdd2a941f801d9ba643d426b8be280939e2b9"
     },
     {
       "id": "FB-0104",
