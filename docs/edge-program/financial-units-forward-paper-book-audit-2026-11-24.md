@@ -18,6 +18,7 @@ Status: PARTIAL
 - `tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor` exercises typed OMS inputs through the fill path.
 - `python -m pytest tests/test_forward_edge_session_runner.py -k 'forward_paper_book_signal_accepts_typed or paper_book_adapter_records_qualified_horizon' -q --basetemp=.pytest-checklist-forward-units-rerun` — 2 passed.
 - Focused typed OMS integration: `python -m pytest tests/test_forward_edge_session_runner.py -k 'paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor' -q --basetemp=.pytest-checklist-forward-oms-units` — 1 passed.
+- Full forward runner module: `python -m pytest tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-checklist-forward-runner-full` — 61 passed.
 - Ruff and scoped mypy passed for the adapter and test module.
 
 ## Remaining scope

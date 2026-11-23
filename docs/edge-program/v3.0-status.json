@@ -382,7 +382,8 @@
         "python -m mypy src/financial_brain/forward_edge/paper_book_adapter.py --follow-imports=silent: passed.",
         "python -m pytest tests/test_forward_edge_session_runner.py -k \"paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor\" -q --basetemp=.pytest-checklist-forward-oms-units: 1 passed.",
         "python -m ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/session_runner.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/forward_edge/session_runner.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-checklist-forward-runner-full: 61 passed, including typed OMS execution and existing runner lifecycle/recovery cases."
       ],
       "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, AMFI NAV ingest, MF lot purchase/allotment/redemption, SIP, SWP/STP, MF switches, MF ledger postings and risk-sizing inputs. Risk-sizing result contract and shared forward-pipeline integration remain outstanding, so this is partial."
     },
