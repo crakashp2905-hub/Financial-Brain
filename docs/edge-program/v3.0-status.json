@@ -56,11 +56,18 @@
       "evidence": [
         "src/financial_brain/forward_edge/modes.py (typed execution modes)",
         "src/financial_brain/forward_edge/claim_tier.py (typed claim tiers and qualification gates)",
-        "docs/edge-program/v3.0-status.json SL-00-10 (end-to-end evidence category distinctions remain partial)"
+        "docs/edge-program/v3.0-status.json SL-00-10 (end-to-end evidence category distinctions remain partial)",
+        "Created src/financial_brain/kernel/evidence.py as the canonical EvidenceClass enum and kept forward_edge.evidence_labels as a compatibility re-export. The canonical portfolio ledger now rejects unknown labels and reserves BROKER_EXECUTION_RECEIPT for broker-sourced fill events; source inventory, dependency graph, entry-point and capability snapshots were refreshed on commit bea59258."
       ],
-      "blocker": "Types distinguish several modes and claim tiers, but deterministic fixture, historical replay, local paper, prospectively observed and independently attested evidence are not proven as distinct end-to-end types across every pipeline and artifact.",
-      "last_audited_at_utc": "2026-11-23T00:56:25Z",
-      "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
+      "blocker": "The shared evidence classes and consolidated portfolio-ledger ingress are now fail-closed, but every strategy/report/export/paper pipeline has not yet been proven to preserve historical, fixture, local-paper, observed-forward and attested-forward classes without relabeling or backfill.",
+      "last_audited_at_utc": "2026-11-23T15:25:00Z",
+      "commit": "bea59258",
+      "test_evidence": [
+        "Focused suite: tests/test_canonical_portfolio_ledger.py, tests/test_legacy_portfolio_migration.py, tests/test_evidence_labels.py, tests/test_evidence_claims.py, tests/test_forward_edge_claim_tier.py, tests/test_source_inventory.py, and tests/test_capability_ownership.py: 50 passed.",
+        "python -m ruff check src tests scripts/capability_ownership.py scripts/source_inventory.py: passed.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check; python scripts/forward_engine_graph.py --check; python scripts/entrypoint_inventory.py --check; python scripts/capability_ownership.py --check: passed."
+      ],
+      "test_result": "Unknown and conflicting evidence labels are rejected at canonical ledger ingress. Local integration tests pass, but repository-wide pipeline and output provenance consistency remains unverified; checklist status stays PARTIAL."
     },
     {
       "id": "FB-0004",
@@ -15190,7 +15197,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T15:14:00Z",
+    "as_of_utc": "2026-11-23T15:25:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15531,7 +15538,9 @@
       "tests/test_mf_scheme_master.py",
       "tests/test_oms.py",
       "tests/test_pr_dependency_snapshot.py",
-      "tests/test_product_charter.py"
+      "tests/test_product_charter.py",
+      "src/financial_brain/kernel/evidence.py",
+      "src/financial_brain/forward_edge/evidence_labels.py"
     ],
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
