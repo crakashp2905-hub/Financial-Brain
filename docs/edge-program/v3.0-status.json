@@ -343,7 +343,7 @@
       ],
       "blocker": "Partial: typed boundaries cover cash paper accounts, option lots/premiums, MF NAV ingest/books/SIP/SWP/STP/switch/account-ledger, risk-sizing inputs, forward signal inputs and forward OMS order inputs. Persisted OMS/fill/accounting fields, risk-sizing result values, crash/restart typed-state verification, other order adapters and repository-wide boundary coverage remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
-      "commit": "9209f7e8",
+      "commit": "5401f9e8",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
