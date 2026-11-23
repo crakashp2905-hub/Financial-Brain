@@ -5674,12 +5674,24 @@
     {
       "id": "PA-01-10",
       "text": "Enforce branch protection, required checks, review and CODEOWNERS where enabled; do not present a local simulated check as a hosted required check.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/branch-governance-audit-2026-11-23.md records the last successful GitHub branch-protection read-back and a fresh 403 limitation.",
+        "docs/edge-program/main-branch-protection.v1.md records that main required PRs, strict up-to-date test/reproducibility contexts, and zero approvals per the owner instruction; code-owner review and last-push approval were disabled.",
+        ".github/workflows/ci.yml still declares the four captured context names; this does not prove GitHub currently requires them.",
+        "scripts/validate_codeowners_map.py passes and CODEOWNERS covers documented ownership domains. It routes ownership but does not itself require approval.",
+        "PR #87 hosted checks remain commit-specific; local validators are not described as hosted required checks."
+      ],
+      "blocker": "A fresh GitHub branch-protection API read returned 403 Resource not accessible by integration. Current rule state and whether the zero-approval setting remains active cannot be independently verified by this connector.",
+      "last_audited_at_utc": "2026-11-23T17:34:47Z",
+      "commit": null,
+      "test_evidence": [
+        "GitHub GET /branches/main/protection attempted 2026-11-23: 403 Resource not accessible by integration.",
+        "python scripts/validate_codeowners_map.py: passed.",
+        "Workflow context names checked against the last recorded protection snapshot; they are not treated as proof of current hosted enforcement."
+      ],
+      "test_result": "The last verified branch rules honor the owner’s zero-approval request and require strict CI checks; current branch-protection state remains unverified because the API denies access. Item is PARTIAL."
     },
     {
       "id": "PA-01-11",
@@ -15447,7 +15459,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:32:39Z",
+    "as_of_utc": "2026-11-23T17:34:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15697,6 +15709,7 @@
       "PA-01-07",
       "PA-01-08",
       "PA-01-09",
+      "PA-01-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15719,13 +15732,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 269,
+    "audited_count": 270,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 208,
-      "UNASSESSED": 1109
+      "PARTIAL": 209,
+      "UNASSESSED": 1108
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15828,13 +15841,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-09 adds a validated CI quality matrix and prevents duplicate chart-pattern gates; unit/integration test separation remains open."
+    "evidence_update": "PA-01-10 records the last known zero-approval protection settings and current GitHub API 403; CODEOWNERS passes, but active protection cannot be freshly verified."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 208,
-    "UNASSESSED": 1109
+    "PARTIAL": 209,
+    "UNASSESSED": 1108
   }
 }
