@@ -7540,14 +7540,28 @@
     {
       "id": "SL-00-16",
       "text": "Add migration/equivalence report: compare old versus integrated paper decisions on fixed fixture sessions; explain every divergence, including changes to no-trade decisions.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+      "source_checked": true,
+      "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/ (no migration/equivalence report found)"
+        "scripts/audit/paper_engine_equivalence.py (replays all eight fixed synthetic cases against golden legacy outputs and integrated runner records)",
+        "docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md (classification, P&L, no-trade, and lifecycle differences explained per fixture)",
+        "docs/edge-program/paper-engine-equivalence.v1.json (8/8 outcome labels match; 7/8 P&L cases match at paise precision; adverse-selection case differs by INR 0.01)",
+        "tests/test_forward_edge_pipeline_compat.py (10 passed; fixed outcomes, golden signatures, integrated runner accounting and no-trade/unknown-order assertions)",
+        "src/financial_brain/forward_edge/fixture_adapter.py (integrated fixture decision receives the legacy result; independence limitation documented)",
+        ".github/workflows/ci.yml (paper-engine fixture report freshness verified in CI on Windows and Ubuntu)",
+        "76fd9a0b"
       ],
-      "blocker": "No fixed-session old-versus-integrated paper decision equivalence report was found.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": "Original strategy implementations are not independently run through both paper engines; the integrated fixture adapter records the legacy outcome supplied to it. This proves fixture lifecycle compatibility, not independent strategy parity.",
+      "last_audited_at_utc": "2026-11-23T00:17:11+00:00",
+      "commit": "76fd9a0b",
+      "test_evidence": [
+        "tests/test_forward_edge_pipeline_compat.py (10 passed)",
+        "python scripts/audit/paper_engine_equivalence.py (report generated from all 8 fixtures)",
+        "python scripts/audit/paper_engine_equivalence.py --check (report current)",
+        "python -m ruff check scripts/audit/paper_engine_equivalence.py tests/test_forward_edge_pipeline_compat.py",
+        "git diff --check -- scripts/audit/paper_engine_equivalence.py docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md docs/edge-program/paper-engine-equivalence.v1.json"
+      ],
+      "artifact_sha256": "2d146ece1455c4b98dd7a1e7275df48ca09539eaec0a4f411fe9c370b1770181"
     },
     {
       "id": "SL-00-17",
@@ -13878,7 +13892,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T00:01:32+00:00",
+    "as_of_utc": "2026-11-23T00:17:11+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13902,8 +13916,8 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 14,
-      "NOT_STARTED": 2,
+      "PARTIAL": 15,
+      "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
       "COMPLETE": 1
     },
@@ -13913,6 +13927,6 @@
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-15 PARTIAL: path/role ownership map covers all eight required domains and validates existing repository paths; verified human GitHub owners are not recorded, so CODEOWNERS activation remains pending."
+    "evidence_update": "SL-00-16 PARTIAL: eight deterministic fixture sessions match legacy outcome labels; report explains no-trade, unknown-order, P&L representation and one-paise adverse-selection differences. Independent per-strategy dual-engine execution remains absent."
   }
 }
