@@ -8,6 +8,9 @@ import pytest
 
 from financial_brain.kernel.clock import (
     ClockError,
+    FundTransactionCalendar,
+    FundTransactionRule,
+    FundTransactionType,
     Instants,
     MarketFactTimes,
     TradingClock,
@@ -195,4 +198,78 @@ def test_market_fact_times_reject_impossible_or_not_yet_usable_data() -> None:
             available_at=received + timedelta(milliseconds=500),
             ingested_at=received + timedelta(seconds=1),
             published_at=received + timedelta(seconds=1),
+        )
+
+
+def test_fund_transaction_cutoffs_are_scheme_and_action_specific() -> None:
+    day = date(2026, 11, 9)
+    published = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    calendar = FundTransactionCalendar(
+        [
+            FundTransactionRule(
+                scheme_id="scheme-a",
+                transaction_type=FundTransactionType.PURCHASE.value,
+                effective_from=day,
+                cutoff=time(13, 0),
+                source_kind="KIM",
+                source_ref="https://example.invalid/scheme-a-kim.pdf",
+                source_sha256="a" * 64,
+                published_at=published,
+            ),
+            FundTransactionRule(
+                scheme_id="scheme-a",
+                transaction_type=FundTransactionType.REDEMPTION.value,
+                effective_from=day,
+                cutoff=time(15, 0),
+                source_kind="AMC_NOTICE",
+                source_ref="notice-2026-11",
+                source_sha256="b" * 64,
+                published_at=published,
+            ),
+        ]
+    )
+    clock = TradingClock(
+        scheme_calendars={"scheme-a": MarketCalendar()},
+        fund_transaction_calendar=calendar,
+    )
+    at_14 = datetime(2026, 11, 9, 14, 0, tzinfo=IST)
+    assert clock.accepts_fund_transaction("scheme-a", FundTransactionType.PURCHASE, at_14) == (
+        False,
+        "PAST_FUND_TRANSACTION_CUTOFF",
+    )
+    assert clock.accepts_fund_transaction("scheme-a", FundTransactionType.REDEMPTION, at_14) == (
+        True,
+        "WITHIN_FUND_TRANSACTION_CUTOFF",
+    )
+
+
+def test_fund_transaction_calendar_has_no_universal_fallback() -> None:
+    clock = TradingClock()
+    with pytest.raises(ClockError, match="no reviewed business calendar"):
+        clock.accepts_fund_transaction(
+            "unknown", FundTransactionType.PURCHASE,
+            datetime(2026, 11, 9, 10, 0, tzinfo=IST),
+        )
+
+
+def test_fund_cutoff_notice_must_be_published_before_use() -> None:
+    day = date(2026, 11, 9)
+    rule = FundTransactionRule(
+        scheme_id="scheme-a",
+        transaction_type=FundTransactionType.PURCHASE.value,
+        effective_from=day,
+        cutoff=time(13, 0),
+        source_kind="SID",
+        source_ref="sid-version-2",
+        source_sha256="c" * 64,
+        published_at=datetime(2026, 11, 9, 10, 0, tzinfo=IST),
+    )
+    clock = TradingClock(
+        scheme_calendars={"scheme-a": MarketCalendar()},
+        fund_transaction_calendar=FundTransactionCalendar([rule]),
+    )
+    with pytest.raises(ClockError, match="not yet published"):
+        clock.accepts_fund_transaction(
+            "scheme-a", FundTransactionType.PURCHASE,
+            datetime(2026, 11, 9, 9, 30, tzinfo=IST),
         )

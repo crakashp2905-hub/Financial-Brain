@@ -8,8 +8,10 @@ or be available before it was ingested.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timezone
+from enum import Enum
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from financial_brain.kernel.closures_n import MarketCalendar
@@ -17,6 +19,82 @@ from financial_brain.kernel.closures_n import MarketCalendar
 
 class ClockError(ValueError):
     """Naive timestamps, out-of-order instants and future-dated facts are rejected."""
+
+
+class FundTransactionType(str, Enum):
+    PURCHASE = "PURCHASE"
+    REDEMPTION = "REDEMPTION"
+    SIP = "SIP"
+    STP_IN = "STP_IN"
+    STP_OUT = "STP_OUT"
+    SWP = "SWP"
+
+
+@dataclass(frozen=True)
+class FundTransactionRule:
+    """Source-cited effective-dated transaction cutoff for one scheme and action."""
+
+    scheme_id: str
+    transaction_type: str
+    effective_from: date
+    cutoff: time
+    source_kind: str
+    source_ref: str
+    source_sha256: str
+    published_at: datetime
+    effective_to: date | None = None
+
+    def __post_init__(self) -> None:
+        if not self.scheme_id.strip():
+            raise ClockError("fund transaction rule requires a scheme id")
+        if self.transaction_type not in {
+            FundTransactionType.PURCHASE,
+            FundTransactionType.REDEMPTION,
+            FundTransactionType.SIP,
+            FundTransactionType.STP_IN,
+            FundTransactionType.STP_OUT,
+            FundTransactionType.SWP,
+        }:
+            raise ClockError("unsupported fund transaction type")
+        if self.source_kind not in {"SID", "KIM", "AMC_NOTICE"} or not self.source_ref.strip():
+            raise ClockError("fund cutoff needs a SID/KIM/AMC notice source reference")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", self.source_sha256):
+            raise ClockError("fund cutoff source needs a SHA-256 digest")
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise ClockError("fund transaction effective_to must be later than effective_from")
+        object.__setattr__(self, "published_at", utc(self.published_at))
+
+
+@dataclass
+class FundTransactionCalendar:
+    """Fund-specific transaction cutoff rules; there is deliberately no universal fallback."""
+
+    rules: list[FundTransactionRule] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.rules.sort(key=lambda item: (item.scheme_id, item.transaction_type, item.effective_from))
+        for index, current in enumerate(self.rules):
+            for other in self.rules[index + 1 :]:
+                if (other.scheme_id, other.transaction_type) != (current.scheme_id, current.transaction_type):
+                    continue
+                current_end = current.effective_to or date.max
+                other_end = other.effective_to or date.max
+                if current.effective_from < other_end and other.effective_from < current_end:
+                    raise ClockError("overlapping fund transaction cutoff rules")
+
+    def rule_on(self, scheme_id: str, transaction_type: str, day: date) -> FundTransactionRule:
+        matches = [
+            rule for rule in self.rules
+            if rule.scheme_id == scheme_id
+            and rule.transaction_type == transaction_type
+            and rule.effective_from <= day
+            and (rule.effective_to is None or day < rule.effective_to)
+        ]
+        if not matches:
+            raise ClockError(f"no source-backed cutoff for {scheme_id}/{transaction_type} on {day}")
+        if len(matches) != 1:
+            raise ClockError(f"ambiguous cutoff for {scheme_id}/{transaction_type} on {day}")
+        return matches[0]
 
 
 def utc(value: datetime) -> datetime:
@@ -100,6 +178,7 @@ class TradingClock:
     bank_settlement_calendar: MarketCalendar = field(default_factory=MarketCalendar)
     scheme_calendars: dict[str, MarketCalendar] = field(default_factory=dict)
     exchange_hours: dict[str, tuple[time, time]] = field(default_factory=dict)
+    fund_transaction_calendar: FundTransactionCalendar = field(default_factory=FundTransactionCalendar)
     timezone_name: str = "Asia/Kolkata"
 
     def __post_init__(self) -> None:
@@ -142,3 +221,18 @@ class TradingClock:
         local = utc(instant).astimezone(self.timezone)
         opens, closes = self.exchange_hours[venue]
         return self.is_exchange_session(local.date()) and opens <= local.time().replace(tzinfo=None) < closes
+
+    def accepts_fund_transaction(
+        self, scheme_id: str, transaction_type: FundTransactionType, instant: datetime
+    ) -> tuple[bool, str]:
+        """Apply the scheme/action-specific, published cutoff and business calendar."""
+        at = utc(instant)
+        local = at.astimezone(self.timezone)
+        if not self.is_scheme_business_day(scheme_id, local.date()):
+            return False, "NOT_SCHEME_BUSINESS_DAY"
+        rule = self.fund_transaction_calendar.rule_on(scheme_id, transaction_type.value, local.date())
+        if rule.published_at > at:
+            raise ClockError("fund cutoff notice was not yet published at decision time")
+        if local.time().replace(tzinfo=None) > rule.cutoff:
+            return False, "PAST_FUND_TRANSACTION_CUTOFF"
+        return True, "WITHIN_FUND_TRANSACTION_CUTOFF"

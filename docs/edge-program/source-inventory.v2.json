@@ -6421,14 +6421,16 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "enum",
         "financial_brain.kernel.closures_n",
+        "re",
         "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/clock.py",
-      "source_sha256": "34b53f501776d72bae7045f12a36485dbd0779ab5e4ebe0dcf27839709ee3b1b",
+      "source_sha256": "6ac3a846d2352aec12aa9fd74b3b03f51f6772c79fc613ac6574a59f68d54245",
       "test_paths": []
     },
     {

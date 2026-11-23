@@ -293,9 +293,13 @@
       "id": "FB-0109",
       "text": "Implement effective-dated transaction calendars and fund-specific overrides from the relevant SID/KIM/AMC notice; a universal cutoff is not sufficient.",
       "source_checked": true,
-      "status": "NOT_STARTED",
-      "evidence": [],
-      "blocker": "No effective-dated, fund-specific transaction calendar overrides sourced from SID/KIM/AMC notices were found; the current generic calendar cannot represent those terms.",
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/clock.py::FundTransactionRule records scheme/action-specific effective intervals, cutoff, source kind (SID/KIM/AMC_NOTICE), reference, SHA-256 and publication time.",
+        "FundTransactionCalendar rejects overlapping intervals; TradingClock refuses universal fallback, non-business days and notices not yet published at decision time.",
+        "tests/test_kernel_units_clock.py: 36 passed; scoped Ruff passed."
+      ],
+      "blocker": "No verified SID/KIM/AMC source documents or persisted per-scheme transaction calendar records are available; fixture tests prove the contract, not actual scheme terms.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
