@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 606,
+  "source_count": 607,
   "sources": [
     {
       "capability_ids": [],
@@ -5795,6 +5795,7 @@
         "hashlib",
         "job",
         "json",
+        "kernel.etf_exposure",
         "lake.store",
         "providers.base",
         "providers.etf_reference",
@@ -5806,7 +5807,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/reference.py",
-      "source_sha256": "0346c3324f38e535d4de5bbe3f222b83411b0e0afa61846bc8905448e9c0bcd8",
+      "source_sha256": "a61770a44c9ee398d1679e6c7d3d538d9c6b8b8fca4635c287bae4f8f64aa738",
       "test_paths": []
     },
     {
@@ -6670,6 +6671,21 @@
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/engine_extra.py",
       "source_sha256": "69c6242ae5a80fdb5c0ada800bd8c0f66b7a5da854941f2eb947ce41844c0048",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "enum"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/etf_exposure.py",
+      "source_sha256": "41dfc83521831e747d3905efdd213c6b9551e8a98361b75089b5d1b8cde815a7",
       "test_paths": []
     },
     {
@@ -10216,7 +10232,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/storage/db.py",
-      "source_sha256": "5dd5c029ddb0b572efdf9f443c039ee6ac818b3f39c497f110123a3fe0446418",
+      "source_sha256": "f6b435c34d584ceee824ca38891d54f7b220803c4043ab14a72a328bd6c22131",
       "test_paths": []
     },
     {
@@ -10515,6 +10531,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 591,
-  "unassigned_role_count": 355
+  "unassessed_count": 592,
+  "unassigned_role_count": 356
 }

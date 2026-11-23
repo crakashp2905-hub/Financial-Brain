@@ -30,13 +30,13 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (606 Python source files; 591 remain unassessed; 355 role-unassigned; regenerated SHA-256 e85c02c1ef1dc04ddc1ea07b62102edf802abae38700bd02df41934e2a537545)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after kernel and ETF ingestion changes)",
-        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check; tests/test_source_inventory.py (5 passed)",
+        "docs/edge-program/source-inventory.v2.json (607 Python source files; 592 remain unassessed; 356 role-unassigned; regenerated inventory SHA-256 09a1917595c4b01a3872541ed0db03595391cb4fcf6352b416b9923f90780b03)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after kernel ETF-classification and ingestion changes)",
+        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T01:21:19Z",
+      "last_audited_at_utc": "2026-11-23T02:13:02Z",
       "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
     },
     {
@@ -335,11 +335,15 @@
     {
       "id": "FB-0202",
       "text": "Cover equity broad-market/sector/factor, bond/debt, gold, silver, international and other listed ETFs; classify exposures without assuming same benchmark or treatment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/etf_exposure.py classifies explicit NSE underlying/security labels into broad-market, sector, factor, debt, gold, silver, international, other-listed and unclassified groups; it records the matched rule and confidence, and leaves unknown labels review-required.",
+        "ETFReferenceJob persists exposure class, rule, confidence and matched label alongside the immutable source snapshot; new schema columns have idempotent legacy-database migrations.",
+        "tests/test_etf_reference_provider.py and tests/test_migrations.py: 18 passed; scoped Ruff passed."
+      ],
+      "blocker": "Classification is currently a deterministic label heuristic over one NSE snapshot, not validated holdings/benchmark exposure. BSE/AMC universe coverage, source-backed mappings, and completeness review are still missing.",
+      "last_audited_at_utc": "2026-11-23T02:13:02Z",
       "commit": null
     },
     {

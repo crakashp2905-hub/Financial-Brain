@@ -7,6 +7,7 @@ import pytest
 
 from financial_brain.config import Config
 from financial_brain.ingest.reference import ETFReferenceJob
+from financial_brain.kernel.etf_exposure import ETFExposureClass, classify_etf
 from financial_brain.providers.base import FetchError, FetchResult
 from financial_brain.providers.etf_reference import NSEETFReferenceProvider, parse
 from financial_brain.storage.db import Database
@@ -32,6 +33,36 @@ def test_nse_etf_reference_parser_keeps_identity_and_listing_fields() -> None:
         "face_value": Decimal("10"),
         "status": "LISTED",
     }
+
+
+@pytest.mark.parametrize(
+    ("underlying", "name", "expected"),
+    [
+        ("Nifty 50", "Nippon India ETF Nifty 50", ETFExposureClass.EQUITY_BROAD_MARKET),
+        ("Nifty Bank", "Bank ETF", ETFExposureClass.EQUITY_SECTOR),
+        ("Nifty 50 Equal Weight", "Equal weight ETF", ETFExposureClass.EQUITY_FACTOR),
+        ("Government Securities", "Gilt ETF", ETFExposureClass.BOND_DEBT),
+        ("Gold", "Gold ETF", ETFExposureClass.GOLD),
+        ("Silver", "Silver ETF", ETFExposureClass.SILVER),
+        ("NASDAQ 100", "International ETF", ETFExposureClass.INTERNATIONAL),
+        ("Unfamiliar Index 42", "ETF", ETFExposureClass.OTHER_LISTED),
+        (None, "Unfamiliar ETF", ETFExposureClass.UNCLASSIFIED),
+    ],
+)
+def test_etf_exposure_labels_are_traceable_and_conservative(underlying, name, expected) -> None:
+    result = classify_etf(underlying, name)
+    assert result.exposure_class == expected
+    assert result.rule_id
+    if expected in {ETFExposureClass.OTHER_LISTED, ETFExposureClass.UNCLASSIFIED}:
+        assert result.confidence == "REVIEW_REQUIRED"
+    else:
+        assert result.confidence == "HEURISTIC_LABEL"
+
+
+def test_etf_exposure_does_not_match_partial_words() -> None:
+    result = classify_etf("Bangalore", "ETF")
+    assert result.exposure_class == ETFExposureClass.OTHER_LISTED
+    assert result.rule_id == "UNMAPPED_UNDERLYING_LABEL"
 
 
 def test_nse_etf_provider_fetch_validates_before_returning(monkeypatch) -> None:
@@ -85,10 +116,13 @@ def test_etf_reference_job_lands_hashes_and_idempotently_persists_snapshot(tmp_p
 
     with Database(cfg).connect() as con:
         rows = con.execute(
-            """SELECT symbol, isin, status, source_sha256, record_sha256, lake_key
+            """SELECT symbol, isin, status, source_sha256, record_sha256, lake_key,
+                      exposure_class, exposure_rule, exposure_confidence
                FROM etf_reference_observations WHERE observed_on = ? ORDER BY symbol""",
             [day],
         ).fetchall()
     assert len(rows) == 2
     assert all(row[2] == "LISTED" and len(row[3]) == len(row[4]) == 64 for row in rows)
     assert all(row[5].startswith("NSE/etf_reference/") for row in rows)
+    assert {row[6] for row in rows} == {"EQUITY_BROAD_MARKET", "GOLD"}
+    assert all(row[7] and row[8] == "HEURISTIC_LABEL" for row in rows)

@@ -15,6 +15,7 @@ from ..config import Config, load
 from ..lake.store import RawLake
 from ..providers.base import FetchError, NotPublished
 from ..providers.etf_reference import NSEETFReferenceProvider, parse as parse_etf_reference
+from ..kernel.etf_exposure import classify_etf
 from ..providers.reference import (NSEEquityListProvider, NSEFnoLotsProvider,
                                    NSEIndexCloseProvider)
 from ..storage.db import Database
@@ -213,23 +214,33 @@ class ETFReferenceJob(_RefJobBase):
                     con.execute("DELETE FROM etf_reference_observations WHERE observed_on = ?",
                                 [business_date])
                 for row in rows:
+                    exposure = classify_etf(row["underlying"], row["security_name"])
                     canonical = {
                         key: (str(value) if value is not None else None)
                         for key, value in row.items()
                     }
+                    canonical.update({
+                        "exposure_class": exposure.exposure_class.value,
+                        "exposure_rule": exposure.rule_id,
+                        "exposure_confidence": exposure.confidence,
+                        "exposure_match": exposure.matched_text,
+                    })
                     record_hash = hashlib.sha256(
                         json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()
                     ).hexdigest()
                     con.execute(
                         """INSERT INTO etf_reference_observations
                            (observed_on, exchange, symbol, isin, security_name, underlying,
-                            listing_date, market_lot, face_value, status, source, source_url,
+                            listing_date, market_lot, face_value, exposure_class, exposure_rule,
+                            exposure_confidence, exposure_match, status, source, source_url,
                             source_sha256, record_sha256, retrieved_at, lake_key)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         [row["observed_on"], row["exchange"], row["symbol"], row["isin"],
                          row["security_name"], row["underlying"], row["listing_date"],
-                         row["market_lot"], row["face_value"], row["status"], obj.source,
-                         obj.url, source_hash, record_hash, obj.retrieved_at, obj.key],
+                         row["market_lot"], row["face_value"], exposure.exposure_class.value,
+                         exposure.rule_id, exposure.confidence, exposure.matched_text,
+                         row["status"], obj.source, obj.url, source_hash, record_hash,
+                         obj.retrieved_at, obj.key],
                     )
                 con.execute("COMMIT")
             except Exception:

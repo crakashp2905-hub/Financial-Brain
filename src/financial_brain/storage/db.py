@@ -52,6 +52,12 @@ class Database:
         # Which text the tone model actually read: the filing, or the news headline the
         # filing quotes (events/newsref.py).
         "ALTER TABLE announcement_tone ADD COLUMN IF NOT EXISTS text_source VARCHAR",
+        # Conservative exchange-label classification; legacy observations stay explicitly
+        # UNCLASSIFIED until their source labels are reprocessed.
+        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_class VARCHAR DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_rule VARCHAR DEFAULT 'NO_EXPOSURE_LABEL'",
+        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_confidence VARCHAR DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_match VARCHAR",
     ]
 
     def migrate(self) -> None:
