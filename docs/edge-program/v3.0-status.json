@@ -5705,7 +5705,7 @@
       ],
       "blocker": "Implement and run deterministic merger integration fixture(s) that exercise all five desks and existing zoos through the integrated event/custody path, reconcile closed trades, and prove physical order submission is refused at the combined boundary.",
       "last_audited_at_utc": "2026-11-23T17:39:59Z",
-      "commit": null,
+      "commit": "d87017c9f11eed8cc200514d17037f151db4cfa1",
       "test_evidence": [
         "Source audit: tests/test_phase5_swing.py; tests/test_phase5_intraday_runner.py; tests/test_forward_edge_options_spread.py; tests/test_paper_options_runner.py; tests/test_etf_execution.py; tests/test_mf_order_book.py.",
         "Source audit: tests/test_phase5_zoo.py; tests/test_phase5_zoo_edges.py; tests/test_forward_edge_ledger_reconcile.py; tests/test_decision_manifest.py; tests/test_forward_edge_market_events.py; tests/test_forward_edge_f00.py; tests/test_decision_journal.py; tests/test_oms.py; tests/test_forward_edge_session_runner.py.",
@@ -5725,7 +5725,7 @@
       ],
       "blocker": "Define the scheduled production entrypoint and trusted release-SHA/review source; enforce exact SHA, clean state and approved ancestry before startup, then test fail-closed stale, dirty, missing and unreviewed cases.",
       "last_audited_at_utc": "2026-11-23T17:42:31Z",
-      "commit": null,
+      "commit": "3599c5514952c52ef94680b785f2d1ecb1d81049",
       "test_evidence": [
         "Source review: src/financial_brain/forward_edge/provenance.py; src/financial_brain/forward_edge/session_runner.py; src/financial_brain/forward_edge/cli.py; .github/workflows/ci.yml.",
         "tests/test_forward_edge_provenance.py verifies capture of commit, branch, ancestry, clean state and entrypoint only; it does not test startup refusal.",
@@ -5768,7 +5768,7 @@
       ],
       "blocker": "No integrated release activation path binds replay and net-P&L/ledger gates to restoration of a prior known-good release; no injected-failure rollback rehearsal is recorded.",
       "last_audited_at_utc": "2026-11-23T17:49:33Z",
-      "commit": null,
+      "commit": "f3cbce5d002867f87fd21fc7074ec418c731e40c",
       "test_evidence": [
         "Source audit: .github/workflows/ci.yml; scripts/forward_edge_equivalence_report.py; docs/edge-program/forward-edge-equivalence-report.v1.json; src/financial_brain/forward_edge/champion_governance.py.",
         "Existing focused test names: tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl; tests/test_forward_edge_equivalence_report.py::test_equivalence_report_covers_every_fixed_fixture_and_explains_no_trade; tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders.",
@@ -5789,7 +5789,7 @@
       ],
       "blocker": "Fresh hosted Ubuntu and Windows audit artifacts for the final pushed SHA are still required to prove clean-checkout portability, exact test counts and visible external blockers in both environments.",
       "last_audited_at_utc": "2026-11-23T17:55:38Z",
-      "commit": null,
+      "commit": "c8491a244e5bda02efc83f95702d23330d019437",
       "test_evidence": [
         "python -m pytest tests/test_release_candidate_audit.py tests/test_release_provenance.py -q --basetemp=.pytest-tmp-pa0115c: 5 passed.",
         "python -m ruff check scripts/release_candidate_audit.py scripts/release_provenance.py tests/test_release_candidate_audit.py tests/test_release_provenance.py: passed.",
@@ -5812,7 +5812,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T18:02:47Z",
-      "commit": null,
+      "commit": "7c4b35c83e705a4003ffa5013c5fd17c27c1e58b",
       "test_evidence": [
         "python -m pytest tests/test_api_broker_isolation.py plus eight focused OMS, forward-mode, paper-runner, intraday and CLI probes: 9 passed.",
         "python scripts/validate_product_charter.py --check: passed.",
