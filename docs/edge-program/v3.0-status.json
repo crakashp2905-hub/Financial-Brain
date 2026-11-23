@@ -8545,15 +8545,21 @@
     {
       "id": "SL-00-07",
       "text": "Reconcile the 51 reported historical positions with missing recorded exits; label `UNRESOLVED` and block promoted P&L unless supported by actual execution evidence.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/current-baseline.json (known unresolved exits limitation)",
-        "docs/forward-edge/BLOCKERS.md"
+        "src/financial_brain/portfolio/legacy_migration.py emits UNRESOLVED_POSITION events when source rows lack execution-backed exits; no exit price or P&L is inferred.",
+        "src/financial_brain/portfolio/canonical_ledger.py::snapshot exposes unresolved_positions and blocks P&L promotion with UNRESOLVED_LEGACY_POSITIONS, INCOMPLETE_POSITION_PROJECTION, and missing-opening-balance gates.",
+        "Canonical ledger only clears an unresolved position when receipt rows reconcile to the exact original trade; receipt provenance itself remains an external authentication boundary.",
+        "python -m pytest --basetemp .pytest-tmp-sl0007 tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py -q: 16 passed"
       ],
-      "blocker": "The historical 51-position issue is recorded as a limitation, but an instrument-level reconciliation with UNRESOLVED states and promotion block was not found.",
-      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
-      "commit": null
+      "blocker": "The generic unresolved-position and promotion-block behavior is implemented and tested, but the 51 historical position records, instrument-level exit reconciliation, and authenticated execution evidence are not present in this repository. No count or outcomes are fabricated.",
+      "last_audited_at_utc": "2026-11-23T00:00:00Z",
+      "commit": "63bb6fe143c5fdb7cf165f1c6a955237b7547b92",
+      "test_evidence": [
+        "16 canonical-ledger and legacy-migration tests passed"
+      ],
+      "test_result": "The system fails closed on unresolved legacy exits, but the requested 51-position instrument-level reconciliation remains blocked on the missing historical position and broker receipt records."
     },
     {
       "id": "SL-00-08",
