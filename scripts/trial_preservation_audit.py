@@ -32,6 +32,11 @@ def comparison_commit() -> str:
     return result.stdout.strip()
 
 
+def ledger_line_sha256(raw: bytes) -> str:
+    """Hash one JSONL record with checkout newline differences normalized."""
+    return hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
+
+
 def verify_baseline_blobs() -> list[dict[str, str]]:
     """Compare protected source paths to immutable blob IDs captured from main."""
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
@@ -87,7 +92,7 @@ def build_report() -> dict:
             missing.append("historical_read_window")
         trials.append({
             "name": name,
-            "ledger_line_sha256": hashlib.sha256(raw).hexdigest(),
+            "ledger_line_sha256": ledger_line_sha256(raw),
             "registration_timestamp": row.get("recorded_at"),
             "verdict": row.get("verdict"),
             "failure_gates": row.get("failed", []),

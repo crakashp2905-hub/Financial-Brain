@@ -3,7 +3,12 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from scripts.trial_preservation_audit import build_report, comparison_commit, verify_baseline_blobs
+from scripts.trial_preservation_audit import (
+    build_report,
+    comparison_commit,
+    ledger_line_sha256,
+    verify_baseline_blobs,
+)
 
 
 def test_audit_confirms_pins_and_does_not_invent_missing_trial_provenance() -> None:
@@ -41,3 +46,8 @@ def test_pull_request_audit_uses_the_pr_head_of_github_merge_checkout(monkeypatc
         lambda command, **kwargs: subprocess.CompletedProcess(command, 0, head + "\n", ""),
     )
     assert comparison_commit() == head
+
+
+def test_trial_line_hash_is_stable_across_windows_and_linux_newlines() -> None:
+    record = b'{"kind":"trial","verdict":"FAIL"}'
+    assert ledger_line_sha256(record + b"\n") == ledger_line_sha256(record + b"\r\n")
