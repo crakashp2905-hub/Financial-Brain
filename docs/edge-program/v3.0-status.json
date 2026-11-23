@@ -8457,19 +8457,20 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/authoritative-contracts.v1.json",
-        "tests/test_authoritative_contracts.py",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json",
-        "docs/edge-program/state-ownership.v1.json"
+        "docs/edge-program/authoritative-contracts.v1.json now binds each of its 10 contracts to an exact public callable/class, including the operator CLI, live legacy paper runner, prospective session lifecycle, broker OMS, simulated execution, risk allocation, strategy registry, promotion evidence, forecast distribution and canonical portfolio ledger.",
+        "docs/edge-program/entrypoint-inventory.v1.json inventories 1,622 public top-level functions/classes across 300 modules in all seven checklist domains plus portfolio; 1,465 remain without reviewed contract mappings. Duplicate names are preserved as distinct module-qualified symbols.",
+        "scripts/entrypoint_inventory.py --check and tests/test_entrypoint_inventory.py/tests/test_authoritative_contracts.py (5 passed) validate freshness and exact owner-symbol bindings; CI now runs the inventory check."
       ],
-      "blocker": "Major domains now have a scoped owner, but live Kite-to-ForwardSessionRunner startup, synchronized strategy identity, and a shared end-to-end risk budget remain unresolved.",
-      "last_audited_at_utc": "2026-11-21T15:05:00+05:30",
-      "commit": null,
+      "blocker": "The inventory deliberately does not infer shared semantics. 1,465 candidates remain unreviewed; AST scope excludes class methods, dynamic registrations and runtime call order. Live Kite-to-ForwardSessionRunner startup, StrategySpec/AlgorithmSpec synchronization, and one end-to-end risk budget remain unresolved.",
+      "last_audited_at_utc": "2026-11-23T09:52:23Z",
+      "commit": "b4e4f208",
       "test_evidence": [
-        "tests/test_authoritative_contracts.py",
-        "tests/test_forward_edge_cli.py"
+        "tests/test_entrypoint_inventory.py and tests/test_authoritative_contracts.py: 5 passed",
+        "python scripts/entrypoint_inventory.py --check: passed (1,622 candidates; 300 modules; 0 declared owners without exact symbol binding)",
+        "python -m ruff check scripts/entrypoint_inventory.py tests/test_entrypoint_inventory.py: passed",
+        "git diff --check: passed"
       ],
-      "test_result": "Focused contract inventory and forward CLI tests: 11 passed; Ruff clean; JSON parses; git diff --check clean. Inventory validates unique IDs and resolvable source/evidence paths."
+      "test_result": "All declared authoritative contracts resolve to exact callable/class IDs; the full entrypoint set remains only partially reviewed and no runtime call-order claim is made."
     },
     {
       "id": "SL-00-04",
@@ -15101,7 +15102,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:43:07Z",
+    "as_of_utc": "2026-11-23T09:52:23Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15368,9 +15369,11 @@
       "docs/adr/0005-broker-path-behind-stages.md",
       "docs/edge-program/PROGRESS.md",
       "docs/edge-program/V3.0_PROGRESS.md",
+      "docs/edge-program/authoritative-contracts.v1.json",
       "docs/edge-program/canonical-migration-audit.v1.json",
       "docs/edge-program/capability-ownership.v1.json",
       "docs/edge-program/data-permission-operations.md",
+      "docs/edge-program/entrypoint-inventory.v1.json",
       "docs/edge-program/forward-edge-equivalence-report.v1.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json",
       "docs/edge-program/launch-gate-contract.md",
@@ -15397,6 +15400,7 @@
       "docs/forward-edge/reference-candidates.v1.json",
       "scripts/audit_checklist_baseline.py",
       "scripts/capability_ownership.py",
+      "scripts/entrypoint_inventory.py",
       "scripts/export_checklist_audit.py",
       "scripts/validate_launch_gates.py",
       "scripts/validate_pr_dependency_snapshot.py",
@@ -15427,6 +15431,7 @@
       "tests/test_checklist_audit_export.py",
       "tests/test_checklist_baseline.py",
       "tests/test_decision_availability.py",
+      "tests/test_entrypoint_inventory.py",
       "tests/test_forward_edge_checkpoints.py",
       "tests/test_forward_edge_f00.py",
       "tests/test_forward_edge_integrity_gates.py",
