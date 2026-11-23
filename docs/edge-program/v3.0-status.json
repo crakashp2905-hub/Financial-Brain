@@ -7527,8 +7527,8 @@
         "tests/test_capability_ownership.py (2 passed; domain coverage and no fabricated human owner claims)"
       ],
       "blocker": "Named GitHub users/teams are not established in repository evidence, so active CODEOWNERS assignments and reviewer routing remain pending.",
-      "last_audited_at_utc": "2026-11-23T00:01:32+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-23T00:17:45+00:00",
+      "commit": "2b402395",
       "test_evidence": [
         "tests/test_capability_ownership.py",
         "python scripts/validate_capability_ownership.py",
@@ -13892,7 +13892,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T00:17:11+00:00",
+    "as_of_utc": "2026-11-23T00:17:45+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
