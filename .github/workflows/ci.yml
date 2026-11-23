@@ -175,4 +175,4 @@ jobs:
           python -m coverage run --source=financial_brain.evaluation.learners -m pytest tests/test_phase5_learners.py -q
           python -m coverage report --show-missing --include="*/evaluation/learners.py" --fail-under=90
       - name: Audit forecasting dependencies
-        run: python -m pip_audit --skip-editable
+        run: python -m pip_audit --skip-editable --vulnerability-service osv

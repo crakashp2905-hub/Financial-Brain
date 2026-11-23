@@ -156,10 +156,11 @@
         "Commit 197ac5c2 pins certifi 2026.10.18, filelock 4.2.1, pypdf 6.21.4, pip 26.2, setuptools 84.1.0 and wheel 0.46.2; the dependency lock fingerprint matches the reproducibility contract.",
         "Hosted run 45168411373 on exact head 197ac5c2f2ff7603c898cd5c6767f0525198c077 succeeded on Ubuntu and Windows: 4,334 tests passed and 3 optional tests skipped on each OS; lint, migration, type, coverage and dependency-audit steps passed; both reproducibility jobs passed.",
         "Ubuntu CI emitted per-module critical coverage and uploaded coverage XML; pip-audit reported no known vulnerabilities.",
-        "Hosted run 45185235465 on d3dc90e3: Ubuntu reproducibility passed; Ubuntu test job failed at Verify source inventory snapshot before tests because generated inventory snapshots were stale. Source inventory, forward-engine graph and entrypoint inventory have since been regenerated and their checks pass locally."
+        "Hosted run 45185235465 on d3dc90e3: Ubuntu reproducibility passed; Ubuntu test job failed at Verify source inventory snapshot before tests because generated inventory snapshots were stale. Source inventory, forward-engine graph and entrypoint inventory have since been regenerated and their checks pass locally.",
+        "Hosted run 45196162402 on 24b79a9a stopped Ubuntu and Windows before tests because source-inventory snapshots were stale. Source, dependency-graph and entry-point inventories have now been regenerated and all three freshness checks pass locally; fresh hosted cross-platform CI on the repaired head is pending."
       ],
-      "blocker": "The latest change to CI has not yet passed on the exact current head: hosted Ubuntu stopped at stale generated inventory before tests. Inventory snapshots were refreshed; a clean cross-platform run on the repaired head is pending.",
-      "last_audited_at_utc": "2026-11-23T12:06:00Z",
+      "blocker": "Fresh hosted Ubuntu/Windows test, coverage, audit and reproducibility jobs on the repaired current head: pending.",
+      "last_audited_at_utc": "2026-11-23T14:44:00Z",
       "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "artifact_sha256": "cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889",
       "test_evidence": [
@@ -167,9 +168,10 @@
         "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
         "Hosted GitHub Actions run 45168411373: overall success on head 197ac5c2f2ff7603c898cd5c6767f0525198c077; Ubuntu test job 137671279119 and Windows test job 137671279485 both passed, each with 4,334 passed / 3 skipped; Ubuntu reproducibility job 137671279483 and Windows reproducibility job 137671279589 passed.",
         "Ubuntu test log: 82% aggregate coverage across the configured critical-module selection; coverage artifact 14816058142 SHA-256 cff553de655676e2533e5907f9b8cd24898768923249be1dd5bd7e7f4bd93889; dependency audit: No known vulnerabilities found.",
-        "Hosted cross-platform CI on repaired current head: pending."
+        "Hosted cross-platform CI on repaired current head: pending.",
+        "Fresh hosted Ubuntu/Windows test, coverage, audit and reproducibility jobs on the repaired current head: pending."
       ],
-      "test_result": "The prior exact-head run was green, but the current workflow revision stopped before tests on stale generated snapshots. Snapshots are refreshed; current-head CI acceptance is pending."
+      "test_result": "Generated inventory freshness is repaired and locally verified, but the latest hosted run stopped before tests. Fresh hosted cross-platform CI acceptance is pending."
     },
     {
       "id": "FB-0010",
@@ -8697,19 +8699,21 @@
         "Hosted CI has not yet run on the change; previous hosted coverage deficiencies remain the baseline until the new Windows/Linux jobs pass.",
         "Hosted run 45189372190 on exact head 837fd6c5: Ubuntu and Windows full test suites passed (4,368 passed / 3 skipped each), both reproducibility jobs passed, but the 90% learners.py floor failed at 57.4%. CI missing lines were the LSTM implementation (lines 72-121), which is skipped when optional torch is absent, plus three small branch lines.",
         "Reproduced the coverage difference locally: focused learner tests measure 97% when torch is installed and 57% when the optional LSTM test is deselected. The core learner tests pass; the separate optional CPU coverage job installs an exact PyTorch CPU pin and enforces >=90% on the learner module.",
-        "Added a regression test for regime_switch returning an empty DataFrame when input rows are all filtered; this exposed and fixed a KeyError on the no-eligible-row path."
+        "Added a regression test for regime_switch returning an empty DataFrame when input rows are all filtered; this exposed and fixed a KeyError on the no-eligible-row path.",
+        "Hosted run 45196162402 installed the CPU forecasting lock and passed the optional learner coverage step, but its PyPI audit failed on vulnerable fsspec/Jinja2 pins and could not resolve the local-version torch wheel. Updated those pins, switched the optional audit to OSV, refreshed generated inventories, and confirmed the learner coverage gate passes locally at 99%. Fresh hosted Linux/Windows and optional dependency audit are pending."
       ],
-      "blocker": "The standard locked test jobs omit the optional torch dependency, so the LSTM code path is skipped there. A separate pinned CPU forecasting coverage job now enforces 90% coverage for the learner module; hosted validation of that job and the calibrated base floor is pending.",
-      "last_audited_at_utc": "2026-11-23T12:06:00Z",
+      "blocker": "Fresh hosted CI with service floors and OSV audit on the repaired current head: pending.",
+      "last_audited_at_utc": "2026-11-23T14:44:00Z",
       "commit": "197ac5c2f2ff7603c898cd5c6767f0525198c077",
       "test_evidence": [
         "Hosted run 45189372190 on 837fd6c5: 4,368 passed and 3 skipped on Ubuntu and Windows; reproducibility jobs passed; the standard 90% learners.py coverage floor failed because the optional torch LSTM test was skipped.",
         "python -m pytest tests/test_requirements_lock.py tests/test_critical_coverage.py tests/test_phase5_learners.py::test_regime_switch_requires_prior_history_and_emits_choice_when_supported tests/test_phase5_learners.py::test_regime_switch_skips_small_cross_sections_and_missing_market_history -q: 10 passed.",
         "With installed torch 2.13.0+cpu, the exact optional-job command `python -m coverage run --source=financial_brain.evaluation.learners -m pytest tests/test_phase5_learners.py -q` followed by the 90% module report passed: 7 passed; learners.py 99%.",
         "python -m ruff check src tests scripts/check_critical_coverage.py scripts/validate_requirements_lock.py: passed.",
-        "Hosted CI on the new base-floor and optional forecasting job: pending."
+        "Hosted CI on the new base-floor and optional forecasting job: pending.",
+        "Fresh hosted CI with service floors and OSV audit on the repaired current head: pending."
       ],
-      "test_result": "Focused tests pass and the optional torch-enabled learner module reaches 99% local coverage. Hosted CI must verify the locked CPU installation, 90% optional-job floor, base platform suites, and artifact freshness before this requirement is complete."
+      "test_result": "Focused tests and local optional learner coverage pass; latest hosted optional audit failed on vulnerable pins and the PyPI lookup could not identify the CPU-tagged torch wheel. Pins and audit service are updated; fresh hosted validation is pending."
     },
     {
       "id": "SL-00-13",
