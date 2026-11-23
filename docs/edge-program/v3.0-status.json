@@ -5236,12 +5236,25 @@
     {
       "id": "PA-00-02",
       "text": "Snapshot all open PRs and their bases, branch ancestry, CI results and protected research artifacts; do not silently treat unmerged code as production capability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/open-pr-snapshot-2026-11-23.json captures all 13 open PRs at the recorded timestamp, with base/head refs and commit SHAs, compare ancestry (ahead/behind), mergeability state, commit/file counts, and check-run status/conclusion pinned to each exact head SHA.",
+        "The snapshot explicitly records that open PR code is unmerged and is not counted as production capability.",
+        "Protected artifacts are fingerprinted for every PR that changes them: PR-87 changes protected-pins but leaves docs/trials/ledger.jsonl byte-identical; PR-33 changes protected-pins and adds two rows to the protected trial ledger, flagged for authorization review before merge.",
+        "Snapshot SHA-256: ec0155ec4eaf9073f50c03286a4181868944ae15bed712b2bfc5c7095e4cf10c."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T15:51:23+00:00",
+      "commit": "c394d5f6",
+      "artifact_sha256": "ec0155ec4eaf9073f50c03286a4181868944ae15bed712b2bfc5c7095e4cf10c",
+      "test_evidence": [
+        "python -m pytest tests/test_pr_dependency_snapshot.py -q: 5 passed",
+        "python scripts/validate_pr_dependency_snapshot.py: passed for dependency and all-open-PR snapshots.",
+        "python -m ruff check scripts/validate_pr_dependency_snapshot.py tests/test_pr_dependency_snapshot.py: passed",
+        "python scripts/export_checklist_audit.py --check: passed."
+      ],
+      "test_result": "The 13-row snapshot validates exact commit ancestry and head-pinned CI evidence; protected trial and pin changes are explicit, and unmerged PRs are not promoted as production evidence."
     },
     {
       "id": "PA-00-03",
@@ -15209,7 +15222,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T15:42:27Z",
+    "as_of_utc": "2026-11-23T15:51:23Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15439,6 +15452,7 @@
       "FB-1215",
       "FB-1216",
       "PA-00-01",
+      "PA-00-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15461,15 +15475,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 249,
+    "audited_count": 250,
     "status_counts": {
-      "COMPLETE": 32,
+      "COMPLETE": 33,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 200,
-      "UNASSESSED": 1129
+      "UNASSESSED": 1128
     },
-    "verified_complete_count": 32,
+    "verified_complete_count": 33,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15555,13 +15569,13 @@
       "src/financial_brain/kernel/evidence.py",
       "src/financial_brain/forward_edge/evidence_labels.py"
     ],
-    "evidence_update": "PA-00-01 implementation committed as 5d7e48ef; source entitlements and external scheduler checkout remain explicitly unverified."
+    "evidence_update": "PA-00-02 snapshot and validator committed as c394d5f6; 13 open PRs and protected artifact changes are recorded without promoting unmerged code."
   },
   "counts_by_status": {
-    "COMPLETE": 32,
+    "COMPLETE": 33,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 200,
-    "UNASSESSED": 1129
+    "UNASSESSED": 1128
   }
 }
