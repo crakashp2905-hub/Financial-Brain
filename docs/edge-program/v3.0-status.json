@@ -880,51 +880,71 @@
     {
       "id": "FB-0409",
       "text": "Connect researcher/scanner, event ingestion, news and signals to read-only signal generation; never let an LLM send orders directly.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing `signals.watch.once()` reads the scanner snapshot, read-only research DB, and Kite quotes; existing `agents.brain` coordinator returns `execution_allowed=false` and has no order call path.",
+        "Added `signals.context.read_only_context()` and `research_packet()` to join scanner ISINs to announcements, linked article metadata and raw-source hashes using both source publication and repository observation cutoffs. Future or not-yet-observed items are excluded; packet has no intent/order output.",
+        "tests/test_signal_context.py: 4 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "The new event/news context is not yet invoked by the watch/agent generation runner, and source context is not yet converted into the canonical Signal contract across all desks. Existing process-level read-only architecture remains the enforcement boundary.",
+      "last_audited_at_utc": "2026-11-23T04:51:22Z",
       "commit": null
     },
     {
       "id": "FB-0410",
       "text": "Human decisions may create a separate manual-approved paper sleeve, while an autonomous paper sleeve preserves objective original outcomes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added separate AUTONOMOUS and MANUAL_APPROVED paper sleeve assignments; authenticated human-style approval is required for a manual assignment.",
+        "Manual approval cannot create autonomous eligibility, and adding a manual sleeve leaves the deterministic autonomous assignment byte-for-byte unchanged.",
+        "Added immutable, idempotent `paper_sleeve_assignments` persistence with separate book IDs; tests/test_signal_sleeves.py: 3 passed."
+      ],
+      "blocker": "Assignment persistence is not yet invoked by the production paper-book runner or connected to fills, costs and per-sleeve outcome reconciliation.",
+      "last_audited_at_utc": "2026-11-23T05:01:01Z",
       "commit": null
     },
     {
       "id": "FB-0411",
       "text": "Store rejected signals and their counterfactual follow-up observations without reclassifying them as actual portfolio P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added dedicated rejected-signal and counterfactual outcome tables/APIs with immutable hashes and idempotent replay.",
+        "Counterfactual outcomes require a previously stored rejection, preserve benchmark-relative returns and use the explicit COUNTERFACTUAL_NOT_PNL classification; no fills or account P&L columns are present.",
+        "tests/test_signal_counterfactual.py: 2 passed; scoped Ruff passed."
+      ],
+      "blocker": "Counterfactual observations are not scheduled against a calendar or linked to scanner rejection paths; horizon source coverage and a durable capture pipeline remain outstanding.",
+      "last_audited_at_utc": "2026-11-23T04:55:21Z",
       "commit": null
     },
     {
       "id": "FB-0412",
       "text": "Distinguish signal quality from execution quality and calendar availability; missing data is an explicit state.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added separate signal forecast-error, execution-shortfall and calendar-availability evidence dimensions; no composite score is emitted.",
+        "Missing forecast/source evidence, no-fill state, missing fill evidence, and unknown calendar state remain explicit and distinct.",
+        "Focused signal/MF suite: 81 passed; migration plus signal persistence/context/quality checks: 16 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "These evidence contracts are not yet populated from live signal, OMS fill and exchange calendar ledgers or used in portfolio/dashboard reporting.",
+      "last_audited_at_utc": "2026-11-23T05:01:01Z",
       "commit": null
     },
     {
       "id": "FB-0451",
       "text": "Add typed `EntrySignal` and `ExitSignal`, with UUIDs, explicit `opens_position_id`/`closes_position_id`, strategy/version, instrument, quote-source identity, timestamp and parent signal lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added UUID-backed immutable `EntrySignal`/`ExitSignal` types with opens/closes position IDs, strategy/version, instrument, quote source, event timestamp and parent signal IDs.",
+        "Exit factory maps long entries to SELL_TO_CLOSE and shorts to BUY_TO_COVER; `validate_against()` verifies parent, position, instrument, side and event chronology.",
+        "tests/test_position_signals.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Entry/exit signals are not emitted from the production signal or fill/trigger pipelines, and persistence/position lifecycle reconciliation is not connected.",
+      "last_audited_at_utc": "2026-11-23T05:01:01Z",
       "commit": null
     },
     {
@@ -14166,7 +14186,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T04:43:01Z",
+    "as_of_utc": "2026-11-23T05:01:01Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14247,12 +14267,17 @@
       "FB-0405",
       "FB-0406",
       "FB-0407",
-      "FB-0408"
+      "FB-0408",
+      "FB-0409",
+      "FB-0410",
+      "FB-0411",
+      "FB-0412",
+      "FB-0451"
     ],
-    "audited_count": 80,
+    "audited_count": 85,
     "status_counts": {
-      "UNASSESSED": 1298,
-      "PARTIAL": 68,
+      "UNASSESSED": 1293,
+      "PARTIAL": 73,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 9
@@ -14265,6 +14290,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 80 of 1,378 items audited; 9 COMPLETE, 68 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,298 UNASSESSED. MF allocation recommendations now have a separate cutoff/NAV/cost contract but are not populated or scheduled from live sources. Latest implementation commit: 97936a2f."
+    "evidence_update": "Current snapshot: 85 of 1,378 items audited; 9 COMPLETE, 73 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,293 UNASSESSED. This turn adds source-hashed read-only context, persistent separate paper-sleeve routing, counterfactual outcome storage and independent signal/execution/calendar evidence; production integration remains."
   }
 }

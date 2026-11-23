@@ -736,6 +736,27 @@ CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
     PRIMARY KEY (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)
 );
 
+-- Rejected candidates and forward observations are counterfactual research, never fills/P&L.
+CREATE TABLE IF NOT EXISTS rejected_signal_counterfactuals (
+    signal_id VARCHAR PRIMARY KEY,
+    reason_code VARCHAR NOT NULL,
+    rejected_at TIMESTAMPTZ NOT NULL,
+    decision_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL'
+);
+CREATE TABLE IF NOT EXISTS counterfactual_outcomes (
+    signal_id VARCHAR NOT NULL,
+    horizon_sessions INTEGER NOT NULL,
+    observed_on DATE NOT NULL,
+    realized_return DOUBLE NOT NULL,
+    benchmark_return DOUBLE,
+    outcome_source_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL',
+    PRIMARY KEY (signal_id, horizon_sessions)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (
