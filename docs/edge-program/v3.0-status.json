@@ -114,15 +114,23 @@
       "id": "FB-0007",
       "text": "Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot escape.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/execution/oms/kite_broker.py (separate physical broker transport and rollout/kill-switch locks)",
-        "src/financial_brain/forward_edge/pipeline.py (independent paper-only route)",
-        "docs/edge-program/v3.0-status.json SL-00-11 (broker isolation remains partial)"
+        "src/financial_brain/execution/order_policy.py is the shared unconditional deny policy imported by both forward-edge modes and KiteBroker.",
+        "src/financial_brain/execution/oms/kite_broker.py is the only physical Kite order-request builder; all non-GET requests are denied before credentials or transport.",
+        "tests/test_oms.py covers hostile direct placement, cancellation, all non-GET methods, and OMS auto-submit with forged live credentials/configuration; zero transport calls escape.",
+        "tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags proves paper intents fill only in the paper ledger and never invoke broker transport.",
+        "tests/test_oms.py::test_the_order_path_lives_in_one_file_only verifies no alternate order-request builder exists."
       ],
-      "blocker": "The legacy KiteBroker path and new forward pipeline remain separate; repository evidence does not prove hostile end-to-end denial across every service/API entry point.",
-      "last_audited_at_utc": "2026-11-23T01:13:32Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-23T11:00:00Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "test_evidence": [
+        "python -m pytest tests/test_oms.py -k \"shared_physical_order_lock or oms_auto_submit_cannot_escape or order_path_lives\" -q: 3 passed",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"forward_paper_intent_cannot_reach_broker\" -q: 1 passed",
+        "python -m pytest tests/test_forward_edge_f00.py -k \"only_live_paper_emits_paper_fills\" -q: 1 passed"
+      ],
+      "test_result": "The shared fail-closed order policy governs the sole physical order builder; adversarial direct, OMS and forward-paper checks confirm no physical request escapes through either path."
     },
     {
       "id": "FB-0008",
@@ -15387,13 +15395,13 @@
     ],
     "audited_count": 248,
     "status_counts": {
-      "COMPLETE": 28,
+      "COMPLETE": 29,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 203,
+      "PARTIAL": 202,
       "UNASSESSED": 1130
     },
-    "verified_complete_count": 28,
+    "verified_complete_count": 29,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15480,10 +15488,10 @@
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
   "counts_by_status": {
-    "COMPLETE": 28,
+    "COMPLETE": 29,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 203,
+    "PARTIAL": 202,
     "UNASSESSED": 1130
   }
 }
