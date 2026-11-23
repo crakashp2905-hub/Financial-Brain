@@ -313,17 +313,22 @@
       "evidence": [
         "src/financial_brain/kernel/units.py retains generic Decimal Money/Price/Quantity with currency validation and explicit units.",
         "src/financial_brain/kernel/units.py adds nominal CurrencyCode, INRNotional, WholeUnits, OptionLots, MutualFundUnits, NavPerUnit, OptionPremiumPerUnit and BasisPoints with domain-specific validation.",
-        "tests/test_kernel_units_clock.py checks whole-vs-fractional units, INR-only amount/price units, positive option lots, and explicit bps conversion."
+        "tests/test_kernel_units_clock.py checks whole-vs-fractional units, INR-only amount/price units, positive option lots, and explicit bps conversion.",
+        "src/financial_brain/kernel/paper_account.py now normalizes cash-equity compatibility calls through WholeUnits, Price and Money, and exposes typed submit_typed_intent/record_typed_fill boundaries that enforce positive whole units and account-currency consistency.",
+        "tests/test_paper_account.py::test_typed_cash_order_and_fill_units_are_enforced covers typed order/fill execution, currency mismatch refusal, and fractional quantity refusal."
       ],
-      "blocker": "Partial: typed primitives are implemented and tested but core OMS, forward paper order/accounting, risk sizing, MF allotment and persistence still exchange generic integers/Decimals/floats. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
-      "last_audited_at_utc": "2026-11-21T13:15:00+00:00",
-      "commit": "df854e22",
+      "blocker": "Partial: the cash-equity paper account now enforces typed quantities, prices and currency at its API boundary, but option lots, MF fractional-unit/NAV paths, risk sizing and the shared forward order/accounting pipeline still exchange generic numeric values. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
+      "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
+      "commit": "4baef228",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
-        "python -m mypy src/financial_brain/kernel/units.py --follow-imports=silent: passed"
+        "python -m mypy src/financial_brain/kernel/units.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_paper_account.py -q --basetemp=.pytest-checklist-units: 8 passed",
+        "python -m ruff check src/financial_brain/kernel/paper_account.py tests/test_paper_account.py: passed",
+        "python -m mypy src/financial_brain/kernel/paper_account.py --follow-imports=silent: passed"
       ],
-      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. Shared pipeline integration remains outstanding, so this is partial."
+      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. The cash paper account integration also rejects incompatible currencies and fractional quantities; shared options, MF, sizing and forward-pipeline integration remains outstanding, so this is partial."
     },
     {
       "id": "FB-0104",
