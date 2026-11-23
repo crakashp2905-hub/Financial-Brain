@@ -133,8 +133,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     expected = json.dumps(build_report(), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     if args.check:
-        if not OUTPUT.is_file() or OUTPUT.read_text(encoding="utf-8") != expected:
-            raise SystemExit("trial preservation audit is missing or stale")
+        actual = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else ""
+        if actual != expected:
+            try:
+                expected_doc = json.loads(expected)
+                actual_doc = json.loads(actual)
+                changed = [key for key in sorted(set(expected_doc) | set(actual_doc))
+                           if expected_doc.get(key) != actual_doc.get(key)]
+            except json.JSONDecodeError:
+                changed = ["unparseable-or-missing-report"]
+            raise SystemExit("trial preservation audit is missing or stale; differing sections: " +
+                             ", ".join(changed))
         print("Protected trial preservation audit matches pinned ledger and manifests")
         return 0
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
