@@ -3621,7 +3621,7 @@
       ],
       "blocker": "Partial: typed, durable paper-only decision journal is implemented, but no cockpit/CLI capture flow, separate human-approved paper book, or ForwardSessionRunner consumption exists yet.",
       "last_audited_at_utc": "2026-11-23T23:40:35+00:00",
-      "commit": null,
+      "commit": "ce3b44cc",
       "test_evidence": [
         "tests/test_forward_edge_manual_paper_decisions.py covers APPROVE/REJECT/WATCH/NO_TRADE, frozen candidate hash, human-only actor, expiry/staleness, eligibility, idempotent restart-safe journal and immutable rows.",
         "python -m pytest tests/test_forward_edge_manual_paper_decisions.py -q --basetemp=.pytest-checklist-manual-approval-rerun: 8 passed.",
