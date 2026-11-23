@@ -8602,16 +8602,22 @@
     {
       "id": "SL-00-10",
       "text": "Separate historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward evidence in types, not dashboard text.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/modes.py",
-        "src/financial_brain/forward_edge/claim_tier.py",
-        "src/financial_brain/forward_edge/fixtures.py"
+        "src/financial_brain/forward_edge/evidence_labels.py::EvidenceClass defines distinct HISTORICAL_REPLAY, DETERMINISTIC_FIXTURE, LOCAL_PAPER, PROSPECTIVELY_OBSERVED_SESSION and INDEPENDENTLY_ATTESTED_FORWARD types.",
+        "evidence_labels.classify requires complete session and custody evidence before upgrading to prospectively observed or independently attested classes.",
+        "src/financial_brain/forward_edge/claim_tier.py::ClaimTier and qualify_claim gates independent-forward claims on verified receipts and 60 eligible sessions.",
+        "tests/test_evidence_labels.py; tests/test_forward_edge_claim_tier.py; tests/test_evidence_claims.py",
+        "python -m pytest --basetemp .pytest-tmp-sl0010 tests/test_evidence_labels.py tests/test_forward_edge_claim_tier.py tests/test_evidence_claims.py -q: 21 passed"
       ],
-      "blocker": "Modes and claim tiers exist; all requested evidence categories are not proven as distinct types end to end.",
-      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
-      "commit": null
+      "blocker": "Typed evidence categories and qualification gates exist, but every historical, paper, replay, renderer and reporting path is not proven to preserve the same evidence class end to end; some modules also maintain separate mode/tier taxonomies.",
+      "last_audited_at_utc": "2026-11-23T00:00:00Z",
+      "commit": "ea60e9255be64464859b3851b780695636b4b498",
+      "test_evidence": [
+        "Evidence classification and claim-tier tests: 21 passed"
+      ],
+      "test_result": "The five requested evidence categories have explicit enum values and tested qualification logic; universal preservation through every engine and output remains unverified."
     },
     {
       "id": "SL-00-11",
