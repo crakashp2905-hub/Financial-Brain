@@ -7519,14 +7519,23 @@
     {
       "id": "SL-00-15",
       "text": "Create CODEOWNERS-style ownership map for source adapters, simulation, RL, research governance, risk, portfolio, trader UX and accounting.",
-      "source_checked": false,
-      "status": "NOT_STARTED",
+      "source_checked": true,
+      "status": "PARTIAL",
       "evidence": [
-        ".github/ (workflows present; CODEOWNERS-style map not found)"
+        "docs/edge-program/capability-ownership.v1.json (8 required domains mapped to accountable engineering roles and repository paths; named owners intentionally unset)",
+        "scripts/validate_capability_ownership.py (validates required domains and path existence)",
+        "tests/test_capability_ownership.py (2 passed; domain coverage and no fabricated human owner claims)"
       ],
-      "blocker": "No ownership map covering all requested domains was found.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
-      "commit": null
+      "blocker": "Named GitHub users/teams are not established in repository evidence, so active CODEOWNERS assignments and reviewer routing remain pending.",
+      "last_audited_at_utc": "2026-11-23T00:01:32+00:00",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_capability_ownership.py",
+        "python scripts/validate_capability_ownership.py",
+        "python -m ruff check scripts/validate_capability_ownership.py tests/test_capability_ownership.py",
+        "git diff --check -- docs/edge-program/capability-ownership.v1.json scripts/validate_capability_ownership.py tests/test_capability_ownership.py"
+      ],
+      "artifact_sha256": "a54389a1f4f1dadf927c12f3c303be22a6c5c9b565e165c3903e7f7674c060b2"
     },
     {
       "id": "SL-00-16",
@@ -13869,7 +13878,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-21T06:36:44+00:00",
+    "as_of_utc": "2026-11-23T00:01:32+00:00",
     "audited_ids": [
       "SL-00-01",
       "SL-00-02",
@@ -13893,8 +13902,8 @@
     "audited_count": 18,
     "status_counts": {
       "UNASSESSED": 1360,
-      "PARTIAL": 13,
-      "NOT_STARTED": 3,
+      "PARTIAL": 14,
+      "NOT_STARTED": 2,
       "EXTERNAL_BLOCKED": 1,
       "COMPLETE": 1
     },
@@ -13904,6 +13913,6 @@
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-14 COMPLETE: fail-closed fb learning audit CLI and stale evidence rejection; 68 focused tests pass. Current blockers are reported by the command."
+    "evidence_update": "SL-00-15 PARTIAL: path/role ownership map covers all eight required domains and validates existing repository paths; verified human GitHub owners are not recorded, so CODEOWNERS activation remains pending."
   }
 }

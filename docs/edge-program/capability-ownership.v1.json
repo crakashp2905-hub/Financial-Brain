@@ -1,0 +1,66 @@
+{
+  "schema": "fb.capability-ownership.v1",
+  "scope": "Repository path-to-accountability map for checklist SL-00-15. Roles identify the accountable engineering function, not a named person or GitHub team.",
+  "github_codeowners_ready": false,
+  "github_codeowners_blocker": "No verified GitHub usernames or teams were available; assigning synthetic CODEOWNERS identities would create invalid ownership claims.",
+  "domains": [
+    {
+      "id": "source_adapters",
+      "accountable_role": "Market Data Integration",
+      "paths": ["src/financial_brain/providers/", "src/financial_brain/ingest/", "src/financial_brain/pit/"],
+      "human_owner": null,
+      "responsibility": "Provider adapters, ingestion, source timestamps, permissions metadata, and point-in-time data handling."
+    },
+    {
+      "id": "simulation",
+      "accountable_role": "Paper Trading and Simulation",
+      "paths": ["src/financial_brain/paper/", "src/financial_brain/forward_edge/"],
+      "human_owner": null,
+      "responsibility": "Simulated orders, fills, session lifecycle, replay semantics, and paper execution evidence."
+    },
+    {
+      "id": "reinforcement_learning",
+      "accountable_role": "Learning Systems",
+      "paths": ["src/financial_brain/agents/", "src/financial_brain/evaluation/learners.py", "src/financial_brain/evaluation/learned_model.py"],
+      "human_owner": null,
+      "responsibility": "Learning algorithms, policy evaluation, and controlled adaptation."
+    },
+    {
+      "id": "research_governance",
+      "accountable_role": "Research Governance",
+      "paths": ["src/financial_brain/research/", "src/financial_brain/forward_edge/trials.py", "src/financial_brain/kernel/registry.py"],
+      "human_owner": null,
+      "responsibility": "Hypothesis registration, trial eligibility, strategy versioning, evidence claims, and promotion records."
+    },
+    {
+      "id": "risk",
+      "accountable_role": "Risk Engineering",
+      "paths": ["src/financial_brain/risk/", "src/financial_brain/execution/oms/killswitch.py"],
+      "human_owner": null,
+      "responsibility": "Pre-trade and portfolio risk constraints, breach handling, and safety stops."
+    },
+    {
+      "id": "portfolio",
+      "accountable_role": "Portfolio Engineering",
+      "paths": ["src/financial_brain/portfolio/", "src/financial_brain/universe/"],
+      "human_owner": null,
+      "responsibility": "Portfolio construction, capital allocation, instrument eligibility, and cross-position exposure."
+    },
+    {
+      "id": "trader_ux",
+      "accountable_role": "Trader Experience",
+      "paths": ["src/financial_brain/interfaces/", "src/financial_brain/api/", "src/financial_brain/brief/"],
+      "human_owner": null,
+      "responsibility": "Trader-facing workflows, APIs, briefs, alerts, and explanations."
+    },
+    {
+      "id": "accounting",
+      "accountable_role": "Accounting and Reconciliation",
+      "paths": ["src/financial_brain/attribution/", "src/financial_brain/costs/", "src/financial_brain/forward_edge/paper_accounting.py", "src/financial_brain/execution/oms/"],
+      "human_owner": null,
+      "responsibility": "Cash, positions, fees, realized and unrealized P&L, and reconciliation."
+    }
+  ],
+  "overlap_rule": "A path may appear in multiple domains when its responsibilities genuinely cross-cut; each domain remains separately accountable for its stated responsibility.",
+  "activation_requirement": "Before using this as GitHub CODEOWNERS policy, replace null human_owner values with verified GitHub users or teams and validate those identities against the repository organization."
+}
