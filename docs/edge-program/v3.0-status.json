@@ -5535,7 +5535,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T17:12:50Z",
-      "commit": null,
+      "commit": "55373917136317fed32d4e86f10db00e260db69e",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-tmp-pa0103 tests/test_forward_edge_f00.py tests/test_forward_edge_integrity_gates.py tests/test_forward_edge_tracker.py -q: 66 passed.",
         "python scripts/validate_product_charter.py --check: passed.",
