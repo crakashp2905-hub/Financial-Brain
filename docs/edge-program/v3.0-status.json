@@ -484,7 +484,7 @@
       ],
       "blocker": "Forward ETF books do not yet apply share-unit and cash-distribution events, fund-closure proceeds/unpriced states, or point-in-time lot/tick revisions. Historical price adjustment alone does not settle these ledger events.",
       "last_audited_at_utc": "2026-11-23T06:00:00Z",
-      "commit": "b7ea2751"
+      "commit": "53153295"
     },
     {
       "id": "FB-0213",
@@ -498,7 +498,7 @@
       ],
       "blocker": "Continuous source-attributed ETF market-price/NAV and matched benchmark datasets are not yet populated and consumed by research or paper-performance reports; the current work is an explicit calculation contract.",
       "last_audited_at_utc": "2026-11-23T07:00:00Z",
-      "commit": null
+      "commit": "b7ea2751"
     },
     {
       "id": "FB-0214",
