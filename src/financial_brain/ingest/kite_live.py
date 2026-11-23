@@ -119,6 +119,8 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
             received_at=event.received_at, available_at=event.available_at,
             payload=payload, source=event.source, sequence=event.sequence,
             decision_time=event.decision_time, evidence_id=event.evidence_id,
+            source_at=event.source_at, exchange_at=event.exchange_at,
+            published_at=event.published_at,
         ))
     return events
 

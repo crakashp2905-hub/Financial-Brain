@@ -440,17 +440,22 @@
         "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote records the observed Kite source and exchange timestamps independently from local receipt/availability.",
         "src/financial_brain/forward_edge/session_runner.py persists ingested_at and ingest_clock_source in runner_events and the append-only audit; records() exports the stored ingest timestamp.",
         "tests/test_forward_edge_market_events.py and tests/test_forward_edge_kite_market_data.py cover clock-field round trip, publication ordering and explicit Kite source/exchange clocks.",
-        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed."
+        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed.",
+        "src/financial_brain/ingest/kite_live.py::forward_events now carries normalized source_at, exchange_at and supplied published_at through its event reconstruction instead of dropping them.",
+        "docs/edge-program/kite-live-clock-preservation-audit-2026-11-24.md records the adapter fix and remaining timestamp lineage scope."
       ],
-      "blocker": "Partial: event, Kite quote and paper-runner timestamps are represented and persisted, but there is no repository-wide data-contract audit proving source/exchange/published/ingested clocks survive every provider, filing, NAV, replay and export path. Older records with no such timestamps cannot be backfilled.",
+      "blocker": "Partial: the Kite adapter now preserves source, exchange, receipt, availability and explicitly provided publication clocks. Kite provides no independent publication timestamp in this quote path; other provider, filing, NAV, replay and export paths still need repository-wide lineage audit. Missing historical clocks cannot be reconstructed.",
       "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
       "commit": "cfdd5ad1",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
         "ruff check on changed market-event and Kite-normalization modules/tests: passed",
-        "targeted mypy for market_events.py and market_data.py: passed"
+        "targeted mypy for market_events.py and market_data.py: passed",
+        "tests/test_kite_live_forward_events.py::test_forward_events_preserves_executable_depth_ohlc_status_and_source_hash now verifies all available clock fields and round-trip preservation.",
+        "python -m pytest tests/test_kite_live_forward_events.py tests/test_forward_edge_kite_market_data.py -q --basetemp=.pytest-checklist-kite-clocks: 22 passed.",
+        "Ruff and scoped mypy passed for ingest/kite_live.py and tests/test_kite_live_forward_events.py."
       ],
-      "test_result": "The live quote and forward paper event path preserves source/exchange, receipt, availability and ingestion times, and event envelopes can preserve publication time when supplied. System-wide coverage remains incomplete."
+      "test_result": "Focused Kite adapter and quote-normalization suites pass (22 passed); tests verify source/exchange/receipt/availability clock retention and round-trip serialization. Publication is left unset when the source does not provide it; full repository coverage remains incomplete."
     },
     {
       "id": "FB-0106",

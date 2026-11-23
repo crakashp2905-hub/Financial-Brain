@@ -5963,7 +5963,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/kite_live.py",
-      "source_sha256": "fb202a199c1e4edcc002bc9401370d369f026c18aacd05c1e174647336b3fa6c",
+      "source_sha256": "b711520ddbaa97edbeaa51ab2a54cd39889c9937ceff6668d9137dbb0c976ab3",
       "test_paths": []
     },
     {
