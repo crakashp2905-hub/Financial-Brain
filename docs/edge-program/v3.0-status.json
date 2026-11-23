@@ -153,18 +153,20 @@
         ".github/workflows/ci.yml now runs the full Ubuntu/Windows matrix in a pinned Python 3.13.5 environment from requirements-lock.txt, including lint, type checks, migrations, coverage reports/artifacts and dependency audit.",
         "scripts/validate_requirements_lock.py checks every declared runtime/dev direct dependency has an exact lock entry; tests/test_requirements_lock.py covers missing and unpinned packages.",
         "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned.",
-        "Hosted run 45165777612 passed the lock install and dependency check but failed both OS reproducibility jobs because the lock SHA in reproducibility-contract.v1.json was stale. The contract hash is corrected in the current branch; run 45165777612's full test jobs are still in progress and a fresh run on this correction is required."
+        "Hosted run 45165777612 passed the lock install and dependency check but failed both OS reproducibility jobs because the lock SHA in reproducibility-contract.v1.json was stale; the corrected hash passed both reproducibility jobs in hosted run 45166811757.",
+        "Run 45166811757 then completed the Ubuntu test suite through coverage but failed pip-audit on vulnerable pins for certifi, filelock, pip, pypdf, setuptools, and wheel. Their lock/workflow pins have been raised to the audit-reported fixed versions in the current uncommitted changes; the Windows test suite from that run is still in progress."
       ],
-      "blocker": "A fresh Ubuntu and Windows hosted run must pass on the corrected lock hash and full-test environment.",
-      "last_audited_at_utc": "2026-11-23T11:33:00Z",
+      "blocker": "A fresh Ubuntu and Windows hosted run must pass on the lock and build-tool versions updated to remove all dependency-audit findings.",
+      "last_audited_at_utc": "2026-11-23T11:48:00Z",
       "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
       "test_evidence": [
         "python scripts/validate_requirements_lock.py: passed",
         "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
         "Hosted run 45163583623 test jobs failed at reproducible evidence bundle import: ModuleNotFoundError for cryptography; no full suite result was produced.",
-        "Hosted run 45165777612: lock installation passed on Ubuntu and Windows; reproducibility fingerprint step failed because the contract retained the pre-update lock hash. Local scripts/verify_reproducibility.py --integrity-only passes after updating the contract to the normalized current lock hash. The full test jobs are running but do not validate the separate reproducibility matrix."
+        "Hosted run 45165777612: lock installation passed on Ubuntu and Windows; reproducibility fingerprint step failed because the contract retained the pre-update lock hash.",
+        "Hosted run 45166811757: Ubuntu and Windows reproducibility jobs passed; Ubuntu test suite and coverage completed, then pip-audit found 49 advisory entries affecting six packages (certifi, filelock, pip, pypdf, setuptools, wheel). Pins were updated to the listed fixed versions in the current branch changes. Windows test job remains active; a fresh full hosted run is still required."
       ],
-      "test_result": "The previously floating full suite now has a pinned, completeness-checked environment. The stale lock fingerprint is corrected locally; cross-platform green test, lint, type, migration and coverage results remain unverified pending a fresh run on this correction."
+      "test_result": "The full locked suite, lint, migrations and coverage completed on Ubuntu, and both reproducibility jobs pass. The current dependency audit is red for vulnerable versions; the listed fixed-version updates are uncommitted and need a fresh Ubuntu/Windows run before this item can be complete."
     },
     {
       "id": "FB-0010",
@@ -8819,7 +8821,7 @@
         "python -m pytest tests/test_forward_edge_evidence_bundle.py -q (3 passed)",
         ".github/workflows/ci.yml (cross-platform bundle reproducibility check)",
         "Cross-platform CRLF simulation reproduced the LF evidence bundle byte-for-byte; implementation commit ac5942360477ede0dde906fb8d5b833a51c09b46",
-        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip (reproduced after the pinned full-suite CI and lock-validation updates; SHA-256 8ee1e8ee753a52ba31dd6ee9764c0c4e292964ebd7636f119f1881bf1ddf3de2; adjacent .sha256 file matches)"
+        "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip (reproduced after the pinned full-suite CI, lock-validation, and dependency-audit pin updates; SHA-256 9f8237ddc3c918d4431d6ce9f733a140e747e1f7d810be14dab6b8e0b3efa87a; adjacent .sha256 file matches)"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T11:27:38Z",

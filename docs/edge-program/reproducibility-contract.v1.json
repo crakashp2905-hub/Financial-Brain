@@ -7,13 +7,13 @@
   "exchange_timezone": "Asia/Kolkata",
   "dependency_lock": {
     "path": "requirements-lock.txt",
-    "sha256": "194d0a7d254d87b6763f780d5c1680957e41da4fcbecfe4c2c18d92c780c9cd5",
-    "snapshot_note": "Exact dependency snapshot refreshed 2026-11-23 after completing the locked full-test environment; CI verifies this normalized SHA-256 on Ubuntu and Windows."
+    "sha256": "14bd4d1dfb9e02e4311f3392445ca7a32e88ab23498690558fdef5177b3a8cac",
+    "snapshot_note": "Exact dependency snapshot refreshed 2026-11-23 after completing the locked full-test environment and upgrading packages reported vulnerable by CI dependency audit; CI verifies this normalized SHA-256 on Ubuntu and Windows."
   },
   "build_tools": {
-    "pip": "25.2",
-    "setuptools": "80.9.0",
-    "wheel": "0.45.1"
+    "pip": "26.2",
+    "setuptools": "84.1.0",
+    "wheel": "0.46.2"
   },
   "deterministic_fixture": {
     "path": "docs/forward-edge/fixtures/session-cases.v1.json",
@@ -22,7 +22,7 @@
     "scope": "Synthetic acceptance cases only; this hash is not market evidence."
   },
   "install_and_verify": [
-    "python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1",
+    "python -m pip install --upgrade pip==26.2 setuptools==84.1.0 wheel==0.46.2",
     "python -m pip install -r requirements-lock.txt",
     "python -m pip install -e . --no-deps --no-build-isolation",
     "python -m pip check",

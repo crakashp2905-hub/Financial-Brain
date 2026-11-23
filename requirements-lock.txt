@@ -5,7 +5,7 @@ ast_serialize==0.13.0
 attrs==26.1.0
 boolean.py==5.0
 CacheControl==0.14.4
-certifi==2026.7.22
+certifi==2026.10.18
 cffi==2.1.1
 charset-normalizer==3.5.2
 cloudpickle==3.1.2
@@ -15,7 +15,7 @@ coverage==7.17.4
 cryptography==50.0.2
 defusedxml==0.7.1
 duckdb==1.5.6
-filelock==4.2.0
+filelock==4.2.1
 idna==3.20
 iniconfig==2.3.1
 joblib==1.6.0
@@ -46,7 +46,7 @@ pycparser==3.12
 Pygments==2.21.0
 pymupdf==1.28.2
 pyparsing==3.3.3
-pypdf==6.20.1
+pypdf==6.21.4
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 pytz==2026.5
