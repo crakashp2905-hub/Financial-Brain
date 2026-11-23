@@ -35,6 +35,11 @@ class DataGateResult:
     def eligible(self) -> bool:
         return self.decision == "TRADE"
 
+    @property
+    def data_status(self) -> str:
+        """Stable coarse status for consumers; detailed rejection reasons remain intact."""
+        return "USABLE" if self.eligible else "DATA_UNUSABLE"
+
 
 def evaluate_market_data(*, decision_time: datetime, quote_time: datetime | None,
                          bid: Decimal | None, ask: Decimal | None,
