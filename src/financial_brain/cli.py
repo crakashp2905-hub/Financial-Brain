@@ -405,6 +405,19 @@ def cmd_etf_disclosures(args) -> int:
     return 0
 
 
+def cmd_etf_feed(args) -> int:
+    """Poll full read-only Kite ETF quotes into the timestamped forward-event archive."""
+    from pathlib import Path
+
+    from . import etf_feed
+
+    until = datetime.strptime(args.until, "%H:%M").time()
+    result = etf_feed.run(until=until, poll_seconds=args.poll_seconds,
+                          archive_path=Path(args.archive))
+    print(json.dumps(result, indent=2))
+    return 1 if result.get("rejected") or result.get("missing") else 0
+
+
 def cmd_index(args) -> int:
     """Ingest NSE index closes - the benchmark history."""
     Database(load()).migrate()
@@ -3181,6 +3194,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--file", required=True, help="UTF-8 CSV containing official disclosure facts")
     g.add_argument("--observed-on", required=True, help="import date, YYYY-MM-DD")
     g.set_defaults(fn=cmd_etf_disclosures)
+
+    g = sub.add_parser("etf-feed", help="archive read-only Kite full quotes for referenced NSE ETFs")
+    g.add_argument("--until", default="15:30", help="stop polling at exchange-local HH:MM")
+    g.add_argument("--poll-seconds", type=int, default=60)
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_feed)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

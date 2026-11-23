@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 609,
+  "source_count": 610,
   "sources": [
     {
       "capability_ids": [],
@@ -269,7 +269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "49a578202521563af4ec922ce135a94e15aa0e927c3540919306dd3e3c93bd25",
+      "source_sha256": "df8c36f43cadb39d1c549744919a6e2818b132d0f272e8b36f950fa26a4b4a77",
       "test_paths": []
     },
     {
@@ -1084,6 +1084,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/env.py",
       "source_sha256": "f8ece39f79347de3586ecd4b95ac11e4666fd12a15d5303d84b519880e37e961",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "forward_edge.market_data",
+        "pathlib",
+        "providers.kite_data",
+        "storage.db",
+        "time",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/etf_feed.py",
+      "source_sha256": "ee543516ab624239dff5131e7261590de27633d44b2e8bfdbccf8ead6e1e7844",
       "test_paths": []
     },
     {
@@ -10568,6 +10588,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 594,
-  "unassigned_role_count": 357
+  "unassessed_count": 595,
+  "unassigned_role_count": 358
 }

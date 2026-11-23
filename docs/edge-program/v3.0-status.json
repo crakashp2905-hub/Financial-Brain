@@ -30,8 +30,8 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (609 Python source files; 594 remain unassessed; 357 role-unassigned; regenerated inventory SHA-256 3be540c0d1f1feba98a551bc071253b6bf3289ddf708dc52f79e0e6f5ef5b82c)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure and historical price changes)",
+        "docs/edge-program/source-inventory.v2.json (610 Python source files; 595 remain unassessed; 358 role-unassigned; regenerated inventory SHA-256 291d53f17de857c9b58e46dfb6bc12ae4b04a47a4117e286eb30514d609b2232)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, price history and quote feed changes)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
@@ -377,11 +377,15 @@
     {
       "id": "FB-0205",
       "text": "Subscribe eligible ETFs to Kite/WebSocket or permitted quote source for observed bid, ask, depth, last trade, volume and exchange timestamps (**EXTERNAL feed**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/etf_feed.py polls the current NSE ETF reference universe using the existing read-only Kite full-quote endpoint in batches; src/financial_brain/forward_edge/market_data.py archives exchange time, receipt/availability time, bid/ask, depth, volume and packet hash.",
+        "CLI `fb etf-feed` runs exchange-hours polling to a dedicated forward-event archive and reports missing/rejected quotes; no broker order route is used.",
+        "tests/test_etf_feed.py and tests/test_etf_history.py: 4 passed; scoped Ruff and CLI help passed."
+      ],
+      "blocker": "No authenticated live Kite quote session was exercised here; forward quote coverage/latency and source retention rights still require owner-run market-session evidence.",
+      "last_audited_at_utc": "2026-11-23T02:36:33Z",
       "commit": null
     },
     {
@@ -14023,7 +14027,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T02:29:15Z",
+    "as_of_utc": "2026-11-23T02:36:33Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14051,6 +14055,7 @@
       "FB-0202",
       "FB-0203",
       "FB-0204",
+      "FB-0205",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14070,10 +14075,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 44,
+    "audited_count": 45,
     "status_counts": {
-      "UNASSESSED": 1334,
-      "PARTIAL": 33,
+      "UNASSESSED": 1333,
+      "PARTIAL": 34,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14086,6 +14091,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 44 of 1,378 items audited; 8 COMPLETE, 33 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,334 UNASSESSED. FB-0202 was implemented in 8ba69024, FB-0203 in 05968a32 and FB-0204 in 0c59a39d. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 45 of 1,378 items audited; 8 COMPLETE, 34 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,333 UNASSESSED. FB-0202 was implemented in 8ba69024, FB-0203 in 05968a32 and FB-0204 in 0c59a39d; FB-0205 read-only Kite collector implementation is in progress. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
