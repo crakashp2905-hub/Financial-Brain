@@ -7759,13 +7759,15 @@
         "enum",
         "hashlib",
         "json",
-        "re"
+        "re",
+        "typing",
+        "units"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_switch.py",
-      "source_sha256": "025e943b8d58405fb3e5024b1333af2a66f28cc9dc1355a7bd5d3656ecadffb1",
+      "source_sha256": "62530b4cc38b64629274c395df3a9659ac7301bd6849f7ccc007b234814fb9d5",
       "test_paths": []
     },
     {
@@ -7780,13 +7782,15 @@
         "hashlib",
         "json",
         "re",
-        "trading_clock"
+        "trading_clock",
+        "typing",
+        "units"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/mf_systematic_flows.py",
-      "source_sha256": "35794e7abd9b04f17fde8392b876c7a208b167c0091d6e85e2df18a8ba92407d",
+      "source_sha256": "0754dcf973e353a298257e120fcf2aaf06003456f47cb482bf62e2c56574670f",
       "test_paths": []
     },
     {

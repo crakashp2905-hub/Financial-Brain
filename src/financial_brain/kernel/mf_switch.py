@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from typing import cast
+
+from .units import INRNotional, MutualFundUnits, NavPerUnit, UnitError
 
 
 class MFSwitchError(ValueError):
@@ -59,7 +62,7 @@ class MFSwitchRequest:
     target_plan: str
     target_option: str
     target_isin: str
-    requested_units: Decimal
+    requested_units: Decimal | MutualFundUnits
     requested_at: datetime
 
     def __post_init__(self) -> None:
@@ -71,7 +74,13 @@ class MFSwitchRequest:
         if (self.source_scheme, self.source_plan, self.source_option) == (
                 self.target_scheme, self.target_plan, self.target_option):
             raise MFSwitchError("source and target scheme identities must differ")
-        units = _decimal(self.requested_units, "requested_units")
+        try:
+            raw_units = (self.requested_units.units
+                         if isinstance(self.requested_units, MutualFundUnits)
+                         else self.requested_units)
+        except UnitError as exc:
+            raise MFSwitchError(str(exc)) from exc
+        units = _decimal(raw_units, "requested_units")
         if units.quantize(_UNIT_QUANTUM) != units:
             raise MFSwitchError("requested_units exceed paper unit precision")
         object.__setattr__(self, "requested_units", units)
@@ -84,9 +93,9 @@ class MFSwitchEvent:
     kind: MFSwitchEventKind
     effective_at: datetime
     basis: MFSwitchBasis
-    amount_inr: Decimal | None = None
-    units: Decimal | None = None
-    nav_per_unit: Decimal | None = None
+    amount_inr: Decimal | INRNotional | None = None
+    units: Decimal | MutualFundUnits | None = None
+    nav_per_unit: Decimal | NavPerUnit | None = None
     source_id: str | None = None
     source_ref: str | None = None
     source_sha256: str | None = None
@@ -101,10 +110,18 @@ class MFSwitchEvent:
             raise MFSwitchError("unknown switch event or evidence basis") from exc
         object.__setattr__(self, "basis", basis)
         object.__setattr__(self, "effective_at", _aware(self.effective_at, "effective_at"))
-        for name in ("amount_inr", "units", "nav_per_unit"):
-            value = getattr(self, name)
-            if value is not None:
-                object.__setattr__(self, name, _decimal(value, name))
+        try:
+            for name, unit_type, value_attr in (
+                ("amount_inr", INRNotional, "amount"),
+                ("units", MutualFundUnits, "units"),
+                ("nav_per_unit", NavPerUnit, "amount"),
+            ):
+                value = getattr(self, name)
+                if value is not None:
+                    normalized = value if isinstance(value, unit_type) else unit_type(value)
+                    object.__setattr__(self, name, _decimal(getattr(normalized, value_attr), name))
+        except UnitError as exc:
+            raise MFSwitchError(str(exc)) from exc
         if self.kind in (MFSwitchEventKind.SWITCH_OUT_VALUE_CONFIRMED,
                          MFSwitchEventKind.SWITCH_OUT_PROCEEDS_AVAILABLE,
                          MFSwitchEventKind.SWITCH_IN_FUNDS_APPLIED):
@@ -116,7 +133,10 @@ class MFSwitchEvent:
                 and self.units is not None and self.nav_per_unit is not None):
             if self.amount_inr is None:
                 raise MFSwitchError("allotment event requires amount, units and NAV")
-            if (self.units * self.nav_per_unit).quantize(Decimal("0.01")) != self.amount_inr.quantize(Decimal("0.01")):
+            units = cast(Decimal, self.units)
+            nav = cast(Decimal, self.nav_per_unit)
+            amount = cast(Decimal, self.amount_inr)
+            if (units * nav).quantize(Decimal("0.01")) != amount.quantize(Decimal("0.01")):
                 raise MFSwitchError("allotment units x NAV must reconcile to applied amount")
         provenance = (self.source_id, self.source_ref, self.source_sha256)
         if basis is MFSwitchBasis.OBSERVED_EVIDENCE:
@@ -131,7 +151,7 @@ class MFSwitchEvent:
     def amount(self) -> Decimal:
         if self.amount_inr is None:
             raise MFSwitchError("event has no monetary amount")
-        return self.amount_inr
+        return cast(Decimal, self.amount_inr)
 
 
 @dataclass(frozen=True, slots=True)

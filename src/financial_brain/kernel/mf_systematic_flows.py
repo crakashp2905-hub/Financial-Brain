@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from typing import cast
+
+from .units import INRNotional, MutualFundUnits, NavPerUnit, UnitError
 from .trading_clock import IST
 
 
@@ -75,8 +78,8 @@ class MFSystematicFlowInstruction:
     source_plan: str
     source_option: str
     source_isin: str
-    amount_inr: Decimal | None = None
-    units: Decimal | None = None
+    amount_inr: Decimal | INRNotional | None = None
+    units: Decimal | MutualFundUnits | None = None
     target_scheme: str | None = None
     target_plan: str | None = None
     target_option: str | None = None
@@ -94,8 +97,15 @@ class MFSystematicFlowInstruction:
         object.__setattr__(self, "kind", kind)
         if (self.amount_inr is None) == (self.units is None):
             raise MFSystematicFlowError("specify exactly one withdrawal amount or units")
-        object.__setattr__(self, "amount_inr", _positive(self.amount_inr, "amount_inr"))
-        object.__setattr__(self, "units", _positive(self.units, "units"))
+        try:
+            amount = (self.amount_inr.amount if isinstance(self.amount_inr, INRNotional)
+                      else self.amount_inr)
+            units = (self.units.units if isinstance(self.units, MutualFundUnits)
+                     else self.units)
+        except UnitError as exc:
+            raise MFSystematicFlowError(str(exc)) from exc
+        object.__setattr__(self, "amount_inr", _positive(amount, "amount_inr"))
+        object.__setattr__(self, "units", _positive(units, "units"))
         targets = (self.target_scheme, self.target_plan, self.target_option, self.target_isin)
         if kind is MFSystematicFlowKind.STP:
             if not all(target and target.strip() for target in targets):
@@ -113,12 +123,12 @@ class MFSystematicFlowEvent:
     kind: MFSystematicFlowEventKind
     effective_at: datetime
     basis: MFSystematicFlowBasis
-    amount_inr: Decimal | None = None
-    gross_inr: Decimal | None = None
+    amount_inr: Decimal | INRNotional | None = None
+    gross_inr: Decimal | INRNotional | None = None
     exit_load_inr: Decimal | None = None
     other_charges_inr: Decimal | None = None
-    nav_per_unit: Decimal | None = None
-    units: Decimal | None = None
+    nav_per_unit: Decimal | NavPerUnit | None = None
+    units: Decimal | MutualFundUnits | None = None
     reason: str | None = None
     source_id: str | None = None
     source_ref: str | None = None
@@ -134,8 +144,20 @@ class MFSystematicFlowEvent:
             raise MFSystematicFlowError("unknown event or evidence basis") from exc
         object.__setattr__(self, "basis", basis)
         object.__setattr__(self, "effective_at", _aware(self.effective_at, "effective_at"))
-        for name in ("amount_inr", "gross_inr", "nav_per_unit", "units"):
-            object.__setattr__(self, name, _positive(getattr(self, name), name))
+        try:
+            for name, unit_type, value_attr in (
+                ("amount_inr", INRNotional, "amount"),
+                ("gross_inr", INRNotional, "amount"),
+                ("nav_per_unit", NavPerUnit, "amount"),
+                ("units", MutualFundUnits, "units"),
+            ):
+                value = getattr(self, name)
+                if value is not None:
+                    normalized = value if isinstance(value, unit_type) else unit_type(value)
+                    value = getattr(normalized, value_attr)
+                object.__setattr__(self, name, _positive(value, name))
+        except UnitError as exc:
+            raise MFSystematicFlowError(str(exc)) from exc
         for name in ("exit_load_inr", "other_charges_inr"):
             value = getattr(self, name)
             if value is not None:
@@ -146,13 +168,16 @@ class MFSystematicFlowEvent:
             if self.exit_load_inr is None or self.other_charges_inr is None:
                 raise MFSystematicFlowError("confirmed redemption requires explicit load and other-charge amounts")
             charges = self.exit_load_inr + self.other_charges_inr
-            if (self.gross_inr - charges).quantize(Decimal("0.01")) != self.amount_inr.quantize(Decimal("0.01")):
+            amount = cast(Decimal, self.amount_inr)
+            gross = cast(Decimal, self.gross_inr)
+            if (gross - charges).quantize(Decimal("0.01")) != amount.quantize(Decimal("0.01")):
                 raise MFSystematicFlowError("net redemption value must reconcile to gross less charges")
             if (self.units is None) != (self.nav_per_unit is None):
                 raise MFSystematicFlowError("redemption unit and NAV evidence must be recorded together")
             if self.units is not None and self.nav_per_unit is not None:
-                assert self.gross_inr is not None
-                if (self.units * self.nav_per_unit).quantize(Decimal("0.01")) != self.gross_inr.quantize(Decimal("0.01")):
+                units = cast(Decimal, self.units)
+                nav = cast(Decimal, self.nav_per_unit)
+                if (units * nav).quantize(Decimal("0.01")) != gross.quantize(Decimal("0.01")):
                     raise MFSystematicFlowError("redeemed units x NAV must reconcile to gross value")
         elif self.kind in (MFSystematicFlowEventKind.PAYOUT_AVAILABLE,
                            MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED,
@@ -162,8 +187,10 @@ class MFSystematicFlowEvent:
         elif self.kind is MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED:
             if any(value is None for value in (self.amount_inr, self.nav_per_unit, self.units)):
                 raise MFSystematicFlowError("allotment requires amount, NAV and units")
-            assert self.amount_inr is not None and self.nav_per_unit is not None and self.units is not None
-            if (self.nav_per_unit * self.units).quantize(Decimal("0.01")) != self.amount_inr.quantize(Decimal("0.01")):
+            amount = cast(Decimal, self.amount_inr)
+            nav = cast(Decimal, self.nav_per_unit)
+            units = cast(Decimal, self.units)
+            if (nav * units).quantize(Decimal("0.01")) != amount.quantize(Decimal("0.01")):
                 raise MFSystematicFlowError("allotted units x NAV must reconcile to applied amount")
         elif self.kind is MFSystematicFlowEventKind.MISSED:
             if not (self.reason and self.reason.strip()):
@@ -182,7 +209,7 @@ class MFSystematicFlowEvent:
     def amount(self) -> Decimal:
         if self.amount_inr is None:
             raise MFSystematicFlowError("event has no monetary amount")
-        return self.amount_inr
+        return cast(Decimal, self.amount_inr)
 
 
 @dataclass(frozen=True, slots=True)
