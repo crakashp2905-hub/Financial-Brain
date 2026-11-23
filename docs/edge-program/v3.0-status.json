@@ -5685,7 +5685,7 @@
       ],
       "blocker": "A fresh GitHub branch-protection API read returned 403 Resource not accessible by integration. Current rule state and whether the zero-approval setting remains active cannot be independently verified by this connector.",
       "last_audited_at_utc": "2026-11-23T17:34:47Z",
-      "commit": null,
+      "commit": "f1bd7a621cb7baa588856255d1294314e800ff20",
       "test_evidence": [
         "GitHub GET /branches/main/protection attempted 2026-11-23: 403 Resource not accessible by integration.",
         "python scripts/validate_codeowners_map.py: passed.",
