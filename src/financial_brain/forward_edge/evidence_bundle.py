@@ -156,14 +156,15 @@ def export_evidence_bundle(*, files: Mapping[str, Path], output: Path,
                                           dir=output_path.parent)
     os.close(fd)
     try:
-        with zipfile.ZipFile(temporary_name, "w", compression=zipfile.ZIP_DEFLATED,
-                             compresslevel=9) as archive:
+        # Stored entries avoid zlib-version differences across Linux and Windows,
+        # so identical payloads produce identical release ZIP bytes on both hosts.
+        with zipfile.ZipFile(temporary_name, "w", compression=zipfile.ZIP_STORED) as archive:
             for name, data in sorted(payloads.items()):
                 info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                info.compress_type = zipfile.ZIP_DEFLATED
+                info.compress_type = zipfile.ZIP_STORED
                 info.external_attr = 0o100644 << 16
                 info.create_system = 3
-                archive.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+                archive.writestr(info, data, compress_type=zipfile.ZIP_STORED)
         os.replace(temporary_name, output_path)
     except Exception:
         Path(temporary_name).unlink(missing_ok=True)

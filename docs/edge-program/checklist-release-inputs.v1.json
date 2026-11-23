@@ -1,0 +1,128 @@
+{
+  "inputs": [
+    {
+      "path": "config/github/workflows/ci.yml",
+      "sha256": "9601acb4d000a17c42ddf732ef434c0d448fbea31fdef6513a83d57e95acb167",
+      "size_bytes": 5108,
+      "source_path": ".github/workflows/ci.yml"
+    },
+    {
+      "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
+      "sha256": "9423f2bf515e213d2a59e23ed018e563501714b31ddf6f139fa69ffdc917555f",
+      "size_bytes": 313042,
+      "source_path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md"
+    },
+    {
+      "path": "docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md",
+      "sha256": "f4b8d44611936a6ca8837d517cfd58afb3c0c9896873b28e93bd21a203d859f5",
+      "size_bytes": 3755,
+      "source_path": "docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md"
+    },
+    {
+      "path": "docs/edge-program/V3.0_PROGRESS.md",
+      "sha256": "51c0e1aa60013d3369bdf0064a6d90f971e3388ac79db52e52521440136e0a75",
+      "size_bytes": 6425,
+      "source_path": "docs/edge-program/V3.0_PROGRESS.md"
+    },
+    {
+      "path": "docs/edge-program/capability-ownership.v1.json",
+      "sha256": "a54389a1f4f1dadf927c12f3c303be22a6c5c9b565e165c3903e7f7674c060b2",
+      "size_bytes": 3613,
+      "source_path": "docs/edge-program/capability-ownership.v1.json"
+    },
+    {
+      "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+      "sha256": "bca3d1169d904cc8b4a79f045e4c0f119bb370078c6924a439bbebb6a7f1f13f",
+      "size_bytes": 11301,
+      "source_path": "docs/edge-program/forward-engine-dependency-graph.v1.json"
+    },
+    {
+      "path": "docs/edge-program/historical-strategy-pins.v1.json",
+      "sha256": "b941be12697fe8acde8c8066da0cee28d19962f908037a5991eda491df0ca49a",
+      "size_bytes": 4016,
+      "source_path": "docs/edge-program/historical-strategy-pins.v1.json"
+    },
+    {
+      "path": "docs/edge-program/market-data-sources.v1.json",
+      "sha256": "9308804d08ad2d792343f5c07ed1b218b4c01e707ed868d5062b659902bea843",
+      "size_bytes": 21626,
+      "source_path": "docs/edge-program/market-data-sources.v1.json"
+    },
+    {
+      "path": "docs/edge-program/paper-engine-equivalence.v1.json",
+      "sha256": "2d146ece1455c4b98dd7a1e7275df48ca09539eaec0a4f411fe9c370b1770181",
+      "size_bytes": 9306,
+      "source_path": "docs/edge-program/paper-engine-equivalence.v1.json"
+    },
+    {
+      "path": "docs/edge-program/release-semantics.v1.json",
+      "sha256": "d0e94e6dc2d3cb1b9dfbb5a90f6f16dab3fe6582fc6a353aa3ccab8eb0b6c43c",
+      "size_bytes": 5446,
+      "source_path": "docs/edge-program/release-semantics.v1.json"
+    },
+    {
+      "path": "docs/edge-program/reproducibility-contract.v1.json",
+      "sha256": "5451b36c29404c8523157df6b6b6aabf250b253ca6ac1606ce8d5cbd4f903275",
+      "size_bytes": 1542,
+      "source_path": "docs/edge-program/reproducibility-contract.v1.json"
+    },
+    {
+      "path": "docs/edge-program/source-inventory.v2.json",
+      "sha256": "07cd73afd5b012d95a058c5ce3e7f6685b7eb0d84fb1fa32536e6e849345f617",
+      "size_bytes": 295176,
+      "source_path": "docs/edge-program/source-inventory.v2.json"
+    },
+    {
+      "path": "docs/edge-program/state-ownership.v1.json",
+      "sha256": "79029073f64720646b77f3a58f8ed43f270ab003daeb918d5d00ca1f451e0d48",
+      "size_bytes": 2317,
+      "source_path": "docs/edge-program/state-ownership.v1.json"
+    },
+    {
+      "path": "docs/edge-program/v3.0-baseline-2026-11-21.json",
+      "sha256": "086e4f10e143bf4e9e7cc1332809e10b46cfca0d57f96b31cfe67ad933c8523d",
+      "size_bytes": 8541,
+      "source_path": "docs/edge-program/v3.0-baseline-2026-11-21.json"
+    },
+    {
+      "path": "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "sha256": "238bd9764a9ea328e00146e102623db04ee581830cea1c722751a3686d930f52",
+      "size_bytes": 3668,
+      "source_path": "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
+    },
+    {
+      "path": "docs/edge-program/v3.0-status.json",
+      "sha256": "365e45aa28f3d8848eea0a7b8a61b4c6c1db97b7e68d628a4459e64c018659bf",
+      "size_bytes": 505067,
+      "source_path": "docs/edge-program/v3.0-status.json"
+    },
+    {
+      "path": "scripts/audit/paper_engine_equivalence.py",
+      "sha256": "46511127f85307623129fdda38dd41170be977ff12192e0b09477269a0f5fc7a",
+      "size_bytes": 10061,
+      "source_path": "scripts/audit/paper_engine_equivalence.py"
+    },
+    {
+      "path": "scripts/build_checklist_evidence_bundle.py",
+      "sha256": "6a0c9f4c2ae22ab253143545b48ba6dd93f33a3c7a8d2906b57c69a77cb0139f",
+      "size_bytes": 6848,
+      "source_path": "scripts/build_checklist_evidence_bundle.py"
+    },
+    {
+      "path": "scripts/validate_capability_ownership.py",
+      "sha256": "006c81073e1cd824ebb7970ce0f7667091c2fab759379743de79ef5812b7c469",
+      "size_bytes": 2114,
+      "source_path": "scripts/validate_capability_ownership.py"
+    },
+    {
+      "path": "scripts/validate_historical_strategy_pins.py",
+      "sha256": "1214021ba49eebcf1501af50bebd6026093c572a30df41b2574d5fb9da0faa60",
+      "size_bytes": 3596,
+      "source_path": "scripts/validate_historical_strategy_pins.py"
+    }
+  ],
+  "integrity_scope": "SHA-256 content integrity only; no independent timestamp or external signature is asserted.",
+  "schema": "fb.checklist-release-inputs.v1",
+  "snapshot_commit": "30f721248c0f2b8b5323aa9565197e70c3841c18",
+  "timestamp_attestation": "NONE"
+}
