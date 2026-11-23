@@ -754,6 +754,27 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
     runner.close()
 
 
+def test_paper_fill_is_blocked_by_available_instrument_halt_until_resume(tmp_path):
+    runner, fill_event, decided = trade_setup(tmp_path)
+    halt_at = decided + timedelta(milliseconds=150)
+    halt = MarketEvent("instrument-halt", EventKind.HALT, "NSE", "NSE:INFY",
+                       halt_at, halt_at, halt_at, {"state": "HALTED"}, "FIXTURE")
+    runner.ingest("s", make_config(), [halt], ingest_metadata={
+        halt.event_id: (halt.available_at + timedelta(milliseconds=1), "FIXTURE_CLOCK")})
+    with pytest.raises(ForwardSessionRunnerError, match="is halted at simulated time"):
+        execute(runner, fill_event, decided, order_id="halted-order", execution_offset_ms=200)
+    assert runner.records("s")["intents"] == []
+
+    resumed_at = decided + timedelta(milliseconds=250)
+    resumed = MarketEvent("instrument-resumed", EventKind.HALT, "NSE", "NSE:INFY",
+                          resumed_at, resumed_at, resumed_at, {"state": "RESUMED"}, "FIXTURE")
+    runner.ingest("s", make_config(), [resumed], ingest_metadata={
+        resumed.event_id: (resumed.available_at + timedelta(milliseconds=1), "FIXTURE_CLOCK")})
+    receipt = execute(runner, fill_event, decided, order_id="resumed-order", execution_offset_ms=300)
+    assert receipt["status"] == "FILLED"
+    runner.close()
+
+
 def test_one_tick_worse_post_decision_quote_worsens_simulated_buy_fill(tmp_path):
     quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
              "depth": {"buy": [{"price": 100.0, "quantity": 20}],

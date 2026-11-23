@@ -171,6 +171,29 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("max_quote_age_ms must be a non-negative integer in run constraints")
         return value
 
+    def _require_instrument_not_halted(self, session_id: str, instrument_id: str,
+                                       at: datetime) -> None:
+        """Reject simulated fills while an available source event marks the instrument halted."""
+        cutoff = at.astimezone(timezone.utc)
+        rows = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind='halt' AND available_at<=?",
+            [session_id, cutoff.isoformat()],
+        ).fetchall()
+        halt_events = [MarketEvent.from_dict(json.loads(row[0])) for row in rows]
+        relevant = sorted(
+            (event for event in halt_events
+             if event.instrument_id == instrument_id and event.event_time <= cutoff),
+            key=lambda event: (event.event_time, event.sequence is None, event.sequence or 0,
+                               event.available_at, event.event_id),
+        )
+        active = False
+        for event in relevant:
+            state = event.payload.get("state", event.payload.get("status"))
+            active = str(state).upper() == "HALTED"
+        if active:
+            raise ForwardSessionRunnerError(
+                f"paper execution is blocked because {instrument_id} is halted at simulated time")
+
     def close(self) -> None:
         self._con.close()
         self.state_store.close()
@@ -1149,6 +1172,7 @@ class ForwardSessionRunner:
         event = MarketEvent.from_dict(json.loads(event_row[0]))
         if candidate_intent is not None and candidate_intent.get("symbol") != event.instrument_id:
             raise ForwardSessionRunnerError("paper quote instrument differs from the canonical candidate intent")
+        self._require_instrument_not_halted(session_id, event.instrument_id, simulated_at)
         if event_id in decision["input_event_ids"]:
             signal_event = event
         else:

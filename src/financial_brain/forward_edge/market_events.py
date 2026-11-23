@@ -128,7 +128,11 @@ class MarketEvent:
             if values["volume"] < 0 or values["high"] < max(values["open"], values["close"], values["low"]) or \
                     values["low"] > min(values["open"], values["close"], values["high"]):
                 raise MarketEventError("bar OHLCV is inconsistent")
-        elif self.kind in (EventKind.HALT, EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
+        elif self.kind == EventKind.HALT:
+            halt_state = str(p.get("state", p.get("status", ""))).strip().upper()
+            if halt_state not in {"HALTED", "RESUMED"}:
+                raise MarketEventError("halt event state/status must be HALTED or RESUMED")
+        elif self.kind in (EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
             if not p:
                 raise MarketEventError(f"{self.kind.value} payload cannot be empty")
 
