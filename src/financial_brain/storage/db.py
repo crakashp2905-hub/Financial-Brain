@@ -52,50 +52,67 @@ class Database:
         # Which text the tone model actually read: the filing, or the news headline the
         # filing quotes (events/newsref.py).
         "ALTER TABLE announcement_tone ADD COLUMN IF NOT EXISTS text_source VARCHAR",
-        # Conservative exchange-label classification; legacy observations stay explicitly
-        # UNCLASSIFIED until their source labels are reprocessed.
-        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_class VARCHAR DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_rule VARCHAR DEFAULT 'NO_EXPOSURE_LABEL'",
-        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_confidence VARCHAR DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE etf_reference_observations ADD COLUMN IF NOT EXISTS exposure_match VARCHAR",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_pct DECIMAL(12, 8)",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_effective_from DATE",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS expense_effective_to DATE",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_error_pct DECIMAL(12, 8)",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_difference_pct DECIMAL(12, 8)",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_start DATE",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS tracking_period_end DATE",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS creation_units BIGINT",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS redemption_units BIGINT",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS creation_unit_size BIGINT",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_start DATE",
-        "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_end DATE",
-        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS plan_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS payout_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS structure_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS management_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS asset_class VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS scheme_status VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_effective_from DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS successor_scheme_code VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_reason VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_pct DECIMAL(12, 8)",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_ratio_plan VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_effective_from DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS expense_effective_to DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS aum_inr DECIMAL(24, 2)",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS aum_as_of DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_initial_inr DECIMAL(20, 2)",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_additional_inr DECIMAL(20, 2)",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_effective_from DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS minimum_effective_to DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_schedule VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_effective_from DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_load_effective_to DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_restrictions VARCHAR",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_from DATE",
-        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_to DATE",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS lock_in_until DATE",
+        # Folio ownership was not stored on legacy paper lots. Leave historical rows
+        # NULL; explicit reconciliation is required before folio-scoped transactions.
+        "ALTER TABLE mf_paper_lots ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS folio_id VARCHAR",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS option VARCHAR DEFAULT 'UNKNOWN'",
+        "ALTER TABLE mf_scheme_commercial_terms ADD COLUMN IF NOT EXISTS minimum_redemption_inr VARCHAR",
+        "ALTER TABLE mf_scheme_commercial_terms ADD COLUMN IF NOT EXISTS charge_schedule_json VARCHAR",
+        "ALTER TABLE mf_paper_events ADD COLUMN IF NOT EXISTS other_charges_inr DECIMAL(38,18) DEFAULT 0",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS other_charges_inr DECIMAL(38,18) DEFAULT 0",
+        # Older MF NAV snapshots have observation time but not a separately recorded
+        # local persistence time. Keep those values NULL rather than inventing history.
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS ingested_at TIMESTAMPTZ",
+        # Historical AMFI exports and the daily NAVAll observer share one append-only
+        # table. Keep each source's provenance columns nullable on older schemas.
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS source_document_sha256 VARCHAR",
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS retrieved_at TIMESTAMPTZ",
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS record_sha256 VARCHAR",
+        # AMC-normalized holdings are stored beside the richer scheme disclosure form.
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS portfolio_as_of DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS instrument_id VARCHAR",
         "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS underlying_scheme_code VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS holding_name VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS asset_type VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS weight_pct DECIMAL(12,8)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS market_value_inr DECIMAL(24,2)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS quantity DECIMAL(24,8)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS maturity_date DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS observed_on DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_url VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_document_sha256 VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_published_at TIMESTAMPTZ",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS lake_key VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS yield_to_maturity_pct DECIMAL(12,8)",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN weight_pct TYPE DECIMAL(12,8) USING TRY_CAST(weight_pct AS DECIMAL(12,8))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN market_value_inr TYPE DECIMAL(24,2) USING TRY_CAST(market_value_inr AS DECIMAL(24,2))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN quantity TYPE DECIMAL(24,8) USING TRY_CAST(quantity AS DECIMAL(24,8))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN yield_to_maturity_pct TYPE DECIMAL(12,8) USING TRY_CAST(yield_to_maturity_pct AS DECIMAL(12,8))",
+        # The merged disclosure table holds both normalized AMC CSV rows and the
+        # richer scheme/plan disclosure form. Scheme-only fields are nullable for the
+        # AMC form; its parser and typed persistence API validate their own contracts.
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN plan DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN option DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN scheme_isin DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN disclosure_date DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN asset_class DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN weight_percent DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_id DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_ref DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_sha256 DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN published_at DROP NOT NULL",
+        # Persist the specific effective paper-use grant that authorized each observed
+        # purchase-payment milestone so its event hash can be independently reproduced.
+        "ALTER TABLE mf_paper_purchase_payment_events ADD COLUMN IF NOT EXISTS permission_evidence_json VARCHAR DEFAULT '[]'",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS order_id VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS eligibility_sha256 VARCHAR",
+        "ALTER TABLE mf_paper_redemption_settlements ADD COLUMN IF NOT EXISTS eligibility_evidence_json VARCHAR",
     ]
 
     def migrate(self) -> None:
@@ -107,7 +124,183 @@ class Database:
                     con.execute(stmt)
                 except duckdb.Error:
                     pass  # column already present on this build
+            nav_columns = {row[1] for row in con.execute(
+                "PRAGMA table_info('mf_nav_observations')").fetchall()}
+            if {"scheme_code", "nav_date", "source_document_sha256"} <= nav_columns:
+                con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS mf_nav_history_source_identity
+                    ON mf_nav_observations (scheme_code, nav_date, source_document_sha256)""")
+            portfolio_columns = {row[1] for row in con.execute(
+                "PRAGMA table_info('mf_portfolio_disclosures')").fetchall()}
+            if {"scheme_code", "portfolio_as_of", "instrument_id",
+                    "source_document_sha256"} <= portfolio_columns:
+                con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS mf_portfolio_source_identity
+                    ON mf_portfolio_disclosures
+                    (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)""")
+            self._migrate_mf_ledger_account_codes(con)
+            self._migrate_mf_purchase_eligibility_cancel(con)
+            self._migrate_mf_systematic_event_cancellation(con)
             self._refresh_views(con)
+
+    @staticmethod
+    def _migrate_mf_ledger_account_codes(con) -> None:
+        """Upgrade older cash journals to the monetary-and-unit double-entry ledger."""
+        columns = {row[1] for row in con.execute(
+            "PRAGMA table_info('mf_paper_ledger_entries')").fetchall()}
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_ledger_entries' AND constraint_type='CHECK'""").fetchall()
+        checks = " ".join(str(row[0]) for row in constraints)
+        required_columns = {"folio_id", "instrument_id", "debit_units", "credit_units"}
+        if (required_columns <= columns and "SIP_PAYMENT_PENDING" in checks
+                and "MF_UNITS" in checks and "UNITS_CLEARING" in checks):
+            return
+        folio = "folio_id" if "folio_id" in columns else "NULL"
+        instrument = "instrument_id" if "instrument_id" in columns else "NULL"
+        debit_units = "debit_units" if "debit_units" in columns else "0"
+        credit_units = "credit_units" if "credit_units" in columns else "0"
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_ledger_entries_upgrade (
+                account_id VARCHAR NOT NULL,
+                transaction_id VARCHAR NOT NULL,
+                line_no INTEGER NOT NULL CHECK (line_no > 0),
+                effective_at TIMESTAMPTZ NOT NULL,
+                recorded_at TIMESTAMPTZ NOT NULL,
+                account_code VARCHAR NOT NULL CHECK (account_code IN (
+                    'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
+                    'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
+                    'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN',
+                    'REALIZED_LOSS', 'SIP_PAYMENT_PENDING', 'MF_UNITS',
+                    'UNITS_CLEARING')),
+                debit_inr DECIMAL(38,18) NOT NULL CHECK (debit_inr >= 0),
+                credit_inr DECIMAL(38,18) NOT NULL CHECK (credit_inr >= 0),
+                folio_id VARCHAR, instrument_id VARCHAR,
+                debit_units DECIMAL(38,18) NOT NULL DEFAULT 0 CHECK (debit_units >= 0),
+                credit_units DECIMAL(38,18) NOT NULL DEFAULT 0 CHECK (credit_units >= 0),
+                basis VARCHAR NOT NULL CHECK (basis IN (
+                    'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+                source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+                event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+                PRIMARY KEY (account_id, transaction_id, line_no),
+                CHECK (
+                    (debit_inr > 0 AND credit_inr = 0 AND debit_units = 0
+                        AND credit_units = 0 AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NULL AND instrument_id IS NULL)
+                    OR (credit_inr > 0 AND debit_inr = 0 AND debit_units = 0
+                        AND credit_units = 0 AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NULL AND instrument_id IS NULL)
+                    OR (debit_inr = 0 AND credit_inr = 0 AND debit_units > 0
+                        AND credit_units = 0 AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+                    OR (debit_inr = 0 AND credit_inr = 0 AND debit_units = 0
+                        AND credit_units > 0 AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+                        AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)),
+                CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+                    AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+                    OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+                    AND source_ref IS NULL AND source_sha256 IS NULL))
+            )""")
+            con.execute(f"""INSERT INTO mf_paper_ledger_entries_upgrade (
+                account_id, transaction_id, line_no, effective_at, recorded_at,
+                account_code, debit_inr, credit_inr, folio_id, instrument_id,
+                debit_units, credit_units, basis, source_id, source_ref, source_sha256,
+                event_sha256, evidence_json)
+                SELECT account_id, transaction_id, line_no, effective_at, recorded_at,
+                    account_code, debit_inr, credit_inr, {folio}, {instrument},
+                    {debit_units}, {credit_units}, basis, source_id, source_ref,
+                    source_sha256, event_sha256, evidence_json
+                FROM mf_paper_ledger_entries""")
+            con.execute("DROP TABLE mf_paper_ledger_entries")
+            con.execute("""ALTER TABLE mf_paper_ledger_entries_upgrade
+                RENAME TO mf_paper_ledger_entries""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _migrate_mf_purchase_eligibility_cancel(con) -> None:
+        """Allow a reserved, unallotted MF purchase to be durably cancelled."""
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_purchase_eligibility'
+            AND constraint_type='CHECK'""").fetchall()
+        if any("CANCELLED" in str(row[0]) for row in constraints):
+            return
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_purchase_eligibility_upgrade (
+                order_id VARCHAR PRIMARY KEY,
+                state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED', 'CANCELLED')),
+                eligible_nav_date DATE NOT NULL,
+                transaction_at TIMESTAMPTZ NOT NULL,
+                decision_at TIMESTAMPTZ NOT NULL,
+                evidence_json VARCHAR NOT NULL,
+                eligibility_sha256 VARCHAR NOT NULL,
+                nav_observation_id VARCHAR,
+                nav_per_unit DECIMAL(38,18),
+                units_allotted DECIMAL(38,18),
+                allotment_sha256 VARCHAR,
+                created_at TIMESTAMPTZ NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
+                    AND nav_per_unit IS NULL AND units_allotted IS NULL
+                    AND allotment_sha256 IS NULL)
+                    OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
+                    AND nav_per_unit > 0 AND units_allotted > 0
+                    AND allotment_sha256 IS NOT NULL)
+                    OR (state='CANCELLED' AND nav_observation_id IS NULL
+                    AND nav_per_unit IS NULL AND units_allotted IS NULL
+                    AND allotment_sha256 IS NULL))
+            )""")
+            con.execute("""INSERT INTO mf_paper_purchase_eligibility_upgrade
+                SELECT * FROM mf_paper_purchase_eligibility""")
+            con.execute("DROP TABLE mf_paper_purchase_eligibility")
+            con.execute("""ALTER TABLE mf_paper_purchase_eligibility_upgrade
+                RENAME TO mf_paper_purchase_eligibility""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _migrate_mf_systematic_event_cancellation(con) -> None:
+        """Permit an immutable terminal cancellation event on older SWP/STP books."""
+        constraints = con.execute("""SELECT constraint_text FROM duckdb_constraints()
+            WHERE table_name='mf_paper_systematic_events'
+            AND constraint_type='CHECK'""").fetchall()
+        if any("PURCHASE_CANCELLED" in str(row[0]) for row in constraints):
+            return
+        con.execute("BEGIN TRANSACTION")
+        try:
+            con.execute("""CREATE TABLE mf_paper_systematic_events_upgrade (
+                instruction_id VARCHAR NOT NULL,
+                sequence INTEGER NOT NULL CHECK (sequence > 0),
+                event_id VARCHAR NOT NULL,
+                kind VARCHAR NOT NULL CHECK (kind IN (
+                    'REDEMPTION_REQUESTED', 'VALUE_CONFIRMED', 'PAYOUT_AVAILABLE',
+                    'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED',
+                    'PURCHASE_CANCELLED', 'MISSED')),
+                effective_at TIMESTAMPTZ NOT NULL,
+                recorded_at TIMESTAMPTZ NOT NULL,
+                basis VARCHAR NOT NULL CHECK (basis IN (
+                    'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+                amount_inr DECIMAL(38,18), gross_inr DECIMAL(38,18),
+                exit_load_inr DECIMAL(38,18), other_charges_inr DECIMAL(38,18),
+                nav_per_unit DECIMAL(38,18), units DECIMAL(38,18), reason VARCHAR,
+                source_id VARCHAR, source_ref VARCHAR, source_sha256 VARCHAR,
+                event_sha256 VARCHAR NOT NULL, evidence_json VARCHAR NOT NULL,
+                PRIMARY KEY (instruction_id, sequence),
+                UNIQUE (instruction_id, event_id),
+                UNIQUE (instruction_id, event_sha256)
+            )""")
+            con.execute("""INSERT INTO mf_paper_systematic_events_upgrade
+                SELECT * FROM mf_paper_systematic_events""")
+            con.execute("DROP TABLE mf_paper_systematic_events")
+            con.execute("""ALTER TABLE mf_paper_systematic_events_upgrade
+                RENAME TO mf_paper_systematic_events""")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
 
     def _refresh_views(self, con) -> None:
         """Views over the curated Parquet datasets, plus derived views."""

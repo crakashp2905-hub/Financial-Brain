@@ -351,31 +351,33 @@ def test_malformed_charters_are_rejected(over: dict, message: str) -> None:
 # ---------- FE-0005 / FE-0006 modes fail closed ----------
 
 def test_live_cash_is_unavailable_by_default() -> None:
-    with pytest.raises(ModeError, match="disabled by build policy"):
+    with pytest.raises(ModeError, match="permanently disabled"):
         modes.resolve_mode(Mode.LIVE_CASH, now=NOW)
 
 
-def test_flipping_the_build_flag_alone_does_not_enable_cash(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_credentials_approvals_or_runtime_flags_cannot_enable_cash(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
-    with pytest.raises(ModeError, match="verified broker compliance"):
-        modes.resolve_mode(Mode.LIVE_CASH, now=NOW)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
     compliance = ComplianceRecord("broker-x", True, NOW, SHA)
-    with pytest.raises(ModeError, match="LIVE_CASH_ENABLE"):
-        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, compliance=compliance, live_cash_subject="pilot-1",
-                           live_cash_scope_sha256=SHA)
+    human = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None)
+    with pytest.raises(ModeError, match="permanently disabled"):
+        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
+                           live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
 
 
-def test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass(
+def test_live_cash_stays_disabled_with_human_approval_and_compliance(
         monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     compliance = ComplianceRecord("broker-x", True, NOW, SHA)
     human = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None)
-    granted = modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
-                                 live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
-    assert granted.mode is Mode.LIVE_CASH
+    with pytest.raises(ModeError, match="permanently disabled"):
+        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
+                           live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
     agent = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None,
                       actor_id="agent:exec-bot", actor_type="agent")
-    with pytest.raises(ModeError, match="cannot approve"):
+    with pytest.raises(ModeError, match="permanently disabled"):
         modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(agent,), compliance=compliance,
                            live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
 

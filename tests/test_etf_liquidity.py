@@ -4,67 +4,70 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from financial_brain.etf_history import ETFPriceBar
-from financial_brain.etf_liquidity import report, sweep_depth
-from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.features.etf_liquidity import (
+    ETFDailyLiquidityObservation,
+    analyze_etf_liquidity,
+)
+from financial_brain.forward_edge.market_data import normalize_kite_quote
 
 
-def _quote(at: datetime, *, status: str = "OPEN") -> MarketEvent:
-    return MarketEvent(
-        event_id=at.isoformat(), kind=EventKind.QUOTE, venue="NSE", instrument_id="NSE:ETFONE",
-        event_time=at, received_at=at + timedelta(seconds=1),
-        available_at=at + timedelta(seconds=1), source="KITE_CONNECT_READ_ONLY",
-        payload={
-            "bid": 99.9, "ask": 100.1, "volume": 1000, "exchange_status": status,
-            "depth": {"buy": [{"price": 99.9, "quantity": 100}],
-                      "sell": [{"price": 100.1, "quantity": 100}]},
-        },
-    )
+UTC = timezone.utc
+DAYS = [date(2026, 11, 10), date(2026, 11, 11), date(2026, 11, 12)]
 
 
-def _bars() -> list[ETFPriceBar]:
+def _daily() -> list[ETFDailyLiquidityObservation]:
     return [
-        ETFPriceBar(date(2026, 11, 19), "INF000A01010", "ETFONE", 98, 100, 97, 99,
-                    1000, 100_000, 1.0, "raw-19"),
-        ETFPriceBar(date(2026, 11, 20), "INF000A01010", "ETFONE", 99, 101, 98, 100,
-                    1100, 110_000, 1.0, "raw-20"),
-        ETFPriceBar(date(2026, 11, 23), "INF000A01010", "ETFONE", 100, 102, 99, 101,
-                    900, 90_000, 1.0, "raw-23"),
+        ETFDailyLiquidityObservation(day, close, turnover, f"{i:x}" * 64)
+        for i, (day, close, turnover) in enumerate(zip(DAYS, (100.0, 101.0, 102.0),
+                                                       (100_000.0, 200_000.0, 100_000.0), strict=True), 1)
     ]
 
 
-def test_depth_sweep_never_fills_beyond_displayed_size() -> None:
-    result = sweep_depth([{"price": 100.1, "quantity": 40}], units=50,
-                         side="buy", reference_mid=100)
-    assert result.filled_units == 40 and result.residual_units == 10
-    assert result.vwap == pytest.approx(100.1)
-    assert not result.complete
-
-
-def test_etf_liquidity_report_exposes_cost_capacity_and_data_gaps() -> None:
-    t0 = datetime(2026, 11, 23, 9, 15, tzinfo=timezone.utc)
-    events = [_quote(t0), _quote(t0 + timedelta(minutes=2), status="HALTED")]
-    result = report(
-        events=events, bars=_bars(), intended_units=150,
-        expected_sessions=[date(2026, 11, 19), date(2026, 11, 20),
-                           date(2026, 11, 21), date(2026, 11, 23)],
-        expected_poll_seconds=60,
+def _quote(*, received_delay: int = 1):
+    event_time = datetime(2026, 11, 12, 4, 45, tzinfo=UTC)
+    return normalize_kite_quote(
+        "BSE:INDEXETF",
+        {"timestamp": "2026-11-12 10:15:00", "last_price": 100, "volume": 100,
+         "depth": {"buy": [{"price": 99.9, "quantity": 12}],
+                   "sell": [{"price": 100.1, "quantity": 10}]}},
+        received_at=event_time + timedelta(seconds=received_delay),
     )
-    assert result["quoted_spread_median_bps"] == pytest.approx(20)
-    assert result["effective_spread_bps"] is None
-    assert result["effective_spread_reason"].startswith("TRADE_SIDE")
-    assert result["stale_interval_count"] == 1
-    assert result["halted_quote_fraction"] == 0.5
-    assert result["median_daily_traded_value"] == 100_000
-    assert result["missing_expected_sessions"] == ["2026-11-21"]
-    assert result["buy_depth_sweep"]["residual_units"] == 50
-    assert result["buy_cost_model"] is None
 
 
-def test_empty_liquidity_inputs_stay_unknown() -> None:
-    result = report(events=[], bars=[], intended_units=10)
-    assert result["quoted_spread_median_bps"] is None
-    assert result["median_daily_traded_value"] is None
-    assert result["buy_depth_sweep"] is None
-    with pytest.raises(ValueError, match="positive"):
-        report(events=[], bars=[], intended_units=0)
+def _analyze(*, daily=None, quotes=None, expected=None):
+    return analyze_etf_liquidity(
+        daily if daily is not None else _daily(),
+        quotes if quotes is not None else [_quote()],
+        expected_sessions=expected if expected is not None else DAYS,
+        venue="BSE", instrument_id="BSE:INDEXETF", intended_notional_inr=1000,
+        max_quote_age=timedelta(seconds=2), max_session_gap_fraction=0.0,
+        max_stale_quote_fraction=0.5, max_participation_fraction=0.02,
+        max_estimated_all_in_cost_bps=100, other_round_trip_cost_bps=5,
+    )
+
+
+def test_liquidity_report_combines_spread_depth_staleness_gaps_and_size_cost() -> None:
+    report = _analyze(quotes=[_quote(), _quote(received_delay=10)])
+    assert report["status"] == "ESTIMATE"
+    assert report["median_daily_turnover_inr"] == 100_000
+    assert report["median_spread_bps"] > 0
+    assert report["median_top_bid_depth_inr"] == pytest.approx(1198.8)
+    assert report["median_top_ask_depth_inr"] == pytest.approx(1001.0)
+    assert report["stale_or_non_executable_quote_fraction"] == 0.5
+    assert report["capacity_participation_fraction"] == pytest.approx(0.01)
+    assert report["estimated_all_in_round_trip_cost_bps"] > report["other_round_trip_cost_bps"]
+    assert report["limits_met"] is True
+
+
+def test_missing_sessions_are_reported_and_sparse_history_abstains() -> None:
+    report = _analyze(daily=_daily()[:1])
+    assert report["missing_sessions"] == [day.isoformat() for day in DAYS[1:]]
+    assert report["status"] == "INSUFFICIENT_DATA"
+    assert report["limits_met"] is False
+    assert report["estimated_all_in_round_trip_cost_bps"] is None
+
+
+def test_duplicate_daily_revision_must_be_resolved_before_liquidity_analysis() -> None:
+    daily = _daily()
+    with pytest.raises(ValueError, match="duplicate ETF daily"):
+        _analyze(daily=daily + [daily[-1]])

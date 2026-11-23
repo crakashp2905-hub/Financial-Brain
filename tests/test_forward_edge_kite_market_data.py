@@ -27,6 +27,8 @@ def test_kite_quote_event_preserves_exchange_and_receipt_clocks_and_source():
     assert event.venue == "NSE"
     assert event.instrument_id == "NSE:INFY"
     assert event.event_time.isoformat() == "2026-11-13T04:45:00+00:00"
+    assert event.source_at == event.event_time
+    assert event.exchange_at == event.event_time
     assert event.received_at == received
     assert event.available_at == received
     assert event.source == "KITE_CONNECT_READ_ONLY"

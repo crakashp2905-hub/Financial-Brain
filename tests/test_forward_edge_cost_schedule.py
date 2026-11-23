@@ -23,6 +23,10 @@ def test_effective_cost_resolution_returns_each_charge_with_schedule_lineage() -
     assert sell["dp"] > 0 and sell["schedule_sha256"] == buy["schedule_sha256"]
     assert buy["total"] == pytest.approx(sum(buy[k] for k in (
         "stt", "exchange", "sebi", "stamp", "brokerage", "gst", "dp", "impact")))
+    without_impact = resolved.one_way(day=date(2026, 11, 15), turnover=100_000,
+                                      side=Side.BUY, bucket="large", include_impact=False)
+    assert without_impact["impact"] == 0
+    assert without_impact["total"] == pytest.approx(buy["total"] - buy["impact"])
 
 
 def test_schedule_identity_is_immutable_and_effective_ranges_cannot_overlap() -> None:

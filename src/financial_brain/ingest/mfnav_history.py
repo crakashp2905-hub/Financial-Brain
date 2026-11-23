@@ -56,7 +56,7 @@ def ingest_export(payload: bytes, *, start: date, end: date, source_url: str,
              obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
         con.execute("BEGIN TRANSACTION")
         try:
-            for row in rows:
+            for row_number, row in enumerate(rows, start=1):
                 record = {key: (str(value) if value is not None else None)
                           for key, value in row.items()}
                 record["source_document_sha256"] = obj.sha256
@@ -76,17 +76,21 @@ def ingest_export(payload: bytes, *, start: date, end: date, source_url: str,
                      row["scheme_name"], row["fund_house"], row["scheme_type"],
                      row["plan"], row["option"], row["nav"], row["nav_date"], obj.key,
                      imported_at])
+                observation_id = hashlib.sha256(
+                    f"{obj.sha256}|{row['scheme_code']}|{row['nav_date']}|{row_number}".encode()
+                ).hexdigest()
                 con.execute("""INSERT INTO mf_nav_observations
-                    (scheme_code, nav_date, nav, isin_growth, isin_reinvest, scheme_name,
-                     fund_house, scheme_type, plan, option, lake_key,
-                     source_document_sha256, source_published_at, retrieved_at,
-                     observed_at, record_sha256)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    (observation_id, scheme_code, nav_date, nav, isin_growth, isin_reinvest,
+                     scheme_name, fund_house, scheme_type, plan, option, lake_key,
+                     row_number, row_sha256, source_document_sha256, source_published_at,
+                     retrieved_at, observed_at, ingested_at, record_sha256)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT (scheme_code, nav_date, source_document_sha256) DO NOTHING""",
-                    [row["scheme_code"], row["nav_date"], row["nav"], row["isin_growth"],
-                     row["isin_reinvest"], row["scheme_name"], row["fund_house"],
-                     row["scheme_type"], row["plan"], row["option"], obj.key, obj.sha256,
-                     None, imported_at, imported_at, record_hash])
+                    [observation_id, row["scheme_code"], row["nav_date"], row["nav"],
+                     row["isin_growth"], row["isin_reinvest"], row["scheme_name"],
+                     row["fund_house"], row["scheme_type"], row["plan"], row["option"],
+                     obj.key, row_number, record_hash, obj.sha256, None, imported_at,
+                     imported_at, imported_at, record_hash])
             con.execute("COMMIT")
         except Exception:
             con.execute("ROLLBACK")

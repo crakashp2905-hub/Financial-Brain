@@ -14,6 +14,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 
 from financial_brain.forward_edge import decision_custody as DC
 from financial_brain.forward_edge.data_gate import evaluate_market_data
+from financial_brain.forward_edge.data_permissions import DataPermission
 from financial_brain.forward_edge import execution as X
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge import session_ops as S
@@ -107,6 +108,9 @@ def _integrity_gate_codes(fx: dict, decision: datetime) -> list[str]:
                 session_phase=str(market.get("session_phase", "UNKNOWN")),
                 auction_required=bool(market.get("auction_required", False)),
                 auction_data_present=bool(market.get("auction_data_present", False)),
+                source_id=str(market["source_id"]) if market.get("source_id") else None,
+                entitlement=(DataPermission.from_dict(market["entitlement"])
+                             if isinstance(market.get("entitlement"), dict) else None),
             )
             codes.extend("DATA_" + reason.value for reason in result.reasons)
         except (KeyError, TypeError, ValueError, ArithmeticError):

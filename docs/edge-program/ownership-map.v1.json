@@ -1,0 +1,15 @@
+{
+  "schema": "fb.codeowners_domain_map.v1",
+  "scope": "CODEOWNERS review-routing coverage for the requested Financial-Brain engineering domains. Assignments route to the repository maintainer account; they do not assert separate functional teams or human identities.",
+  "codeowners_file": ".github/CODEOWNERS",
+  "domains": [
+    {"id": "source_adapters", "label": "Source adapters and market data", "paths": ["/src/financial_brain/providers/", "/src/financial_brain/ingest/", "/src/financial_brain/forward_edge/market_data.py", "/src/financial_brain/forward_edge/kite_live.py", "/src/financial_brain/forward_edge/quote_archive.py"], "owner": "@crakashp2905-hub"},
+    {"id": "simulation", "label": "Simulation and paper trading", "paths": ["/src/financial_brain/paper/", "/src/financial_brain/forward_edge/session_runner.py", "/src/financial_brain/forward_edge/fixture_adapter.py"], "owner": "@crakashp2905-hub"},
+    {"id": "reinforcement_learning", "label": "Reinforcement learning and forecasting", "paths": ["/src/financial_brain/forecasting/", "/src/financial_brain/agents/"], "owner": "@crakashp2905-hub"},
+    {"id": "research_governance", "label": "Research governance, approvals, and evidence", "paths": ["/src/financial_brain/research/", "/src/financial_brain/evidence/", "/src/financial_brain/forward_edge/trials.py", "/src/financial_brain/forward_edge/approvals.py"], "owner": "@crakashp2905-hub"},
+    {"id": "risk", "label": "Risk controls", "paths": ["/src/financial_brain/risk/"], "owner": "@crakashp2905-hub"},
+    {"id": "portfolio", "label": "Portfolio construction and allocation", "paths": ["/src/financial_brain/portfolio/", "/src/financial_brain/decisions/"], "owner": "@crakashp2905-hub"},
+    {"id": "trader_ux", "label": "Trader-facing interfaces", "paths": ["/src/financial_brain/interfaces/", "/src/financial_brain/api/", "/src/financial_brain/commands/"], "owner": "@crakashp2905-hub"},
+    {"id": "accounting", "label": "Accounting, costs, and OMS", "paths": ["/src/financial_brain/kernel/", "/src/financial_brain/costs/", "/src/financial_brain/execution/oms/", "/src/financial_brain/forward_edge/paper_accounting.py"], "owner": "@crakashp2905-hub"}
+  ]
+}

@@ -10,7 +10,17 @@
     "docs/trials/manifests/mf.json": "a321e5240e27a199e1f46b05715a993f8be1bf7ac7eb961d79072a22906ce4a1",
     "docs/trials/manifests/x3.json": "f39e619e330f3415356809b189fbb73799d614f7c396554e2e6c775727138b23"
   },
-  "note": "SHA-256 of protected research records as committed. Changing one requires an ADR and a deliberate pin update in the same change.",
-  "schema": "fb.forward_edge.protected_pins.v1",
-  "hash_newline_normalization": "CRLF_TO_LF"
+  "normalize_eol": [
+    "brain/07-Research/Chart patterns and candles - what is testable and how.md",
+    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md",
+    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md",
+    "docs/forward-edge/trial-program.v1.json",
+    "docs/sources/pattern-catalogue.v1.json",
+    "docs/trials/ledger.jsonl",
+    "docs/trials/manifests/is_minute_family.json",
+    "docs/trials/manifests/mf.json",
+    "docs/trials/manifests/x3.json"
+  ],
+  "note": "SHA-256 of protected research records as committed. Changing one requires an ADR and a deliberate pin update in the same change. Every text pin is LF-normalized so Windows and Linux checkouts verify the same content.",
+  "schema": "fb.forward_edge.protected_pins.v1"
 }

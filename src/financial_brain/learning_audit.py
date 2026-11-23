@@ -2,7 +2,8 @@
 
 This is a repository evidence gate, not a profitability certificate. It refuses to
 report ready while dependent changes are unmerged, checklist items lack verified
-completion evidence, or a market-data source lacks documented use and retention rights.
+completion evidence, a market-data source lacks documented use and retention rights,
+or migrated portfolio P&L remains blocked by unresolved or incomplete books.
 """
 from __future__ import annotations
 
@@ -140,7 +141,37 @@ def audit(repo: Path, *, now: datetime | None = None) -> dict:
         errors.append(f"source-permission evidence invalid: {exc}")
     permission_check = AuditCheck("source_permissions", not errors, tuple(errors))
 
-    checks = (dependency_check, evidence_check, permission_check)
+    errors = []
+    try:
+        migration = _read_json(repo / "docs/edge-program/canonical-migration-audit.v1.json")
+        stale = _freshness(migration, "captured_at_utc", now=now, source_name="canonical portfolio audit")
+        if stale:
+            errors.append(stale)
+        ledger = migration.get("ledger")
+        gate = migration.get("pnl_promotion_gate")
+        if not isinstance(ledger, dict) or not isinstance(gate, dict):
+            raise ValueError("canonical migration report has no ledger or P&L promotion gate")
+        for field in ("unresolved_records", "incomplete_projection_accounts", "accounts_without_opening_balance"):
+            value = ledger.get(field)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                errors.append(f"canonical portfolio audit has invalid {field}")
+            elif value:
+                errors.append(f"canonical portfolio audit reports {value} {field.replace('_', ' ')}")
+        integrity = ledger.get("source_integrity_errors")
+        if not isinstance(integrity, dict):
+            errors.append("canonical portfolio audit has no source-integrity counts")
+        else:
+            for field, value in integrity.items():
+                if isinstance(value, bool) or not isinstance(value, int) or value != 0:
+                    errors.append(f"canonical portfolio source integrity {field} is not zero")
+        if gate.get("status") != "ELIGIBLE_FOR_REVIEW":
+            reasons = gate.get("reason_codes", [])
+            errors.append(f"canonical P&L promotion gate is {gate.get('status', 'missing')}: {reasons}")
+    except (ValueError, TypeError, KeyError) as exc:
+        errors.append(f"canonical portfolio evidence invalid: {exc}")
+    portfolio_check = AuditCheck("portfolio_pnl_integrity", not errors, tuple(errors))
+
+    checks = (dependency_check, evidence_check, permission_check, portfolio_check)
     blockers = [f"{check.name}: {message}" for check in checks for message in check.blockers]
     return {
         "schema": "fb.learning_audit.v1",

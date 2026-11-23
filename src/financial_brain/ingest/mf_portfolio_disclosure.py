@@ -29,17 +29,27 @@ def ingest(payload: bytes, observed_on: date, cfg: Config | None = None) -> dict
             [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename, obj.url,
              obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type])
         con.executemany("""INSERT INTO mf_portfolio_disclosures
-            (scheme_code, portfolio_as_of, instrument_id, underlying_scheme_code, holding_name, asset_type, sector,
+            (record_id, scheme_code, plan, option, scheme_isin, disclosure_date,
+             asset_class, weight_percent, source_id, source_ref, source_sha256,
+             published_at, observed_at, portfolio_as_of, instrument_id,
+             underlying_scheme_code, holding_name, asset_type, sector,
              weight_pct, market_value_inr, quantity, credit_rating, maturity_date,
-             modified_duration_years, yield_to_maturity_pct, observed_on, observed_at,
+             modified_duration_years, yield_to_maturity_pct, observed_on,
              source_url, source_document_sha256, source_published_at, lake_key)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)
             DO NOTHING""",
-            [[r["scheme_code"], r["portfolio_as_of"], r["instrument_id"],
+            [[hashlib.sha256((r["scheme_code"] + "|" + r["portfolio_as_of"].isoformat()
+                              + "|" + r["instrument_id"] + "|"
+                              + r["source_document_sha256"]).encode()).hexdigest(),
+              r["scheme_code"], None, None, None, r["portfolio_as_of"],
+              r["asset_type"], str(r["weight_pct"]) if r["weight_pct"] is not None else None,
+              "LOCAL_IMPORT", r["source_url"], r["source_document_sha256"],
+              r["source_published_at"], imported_at, r["portfolio_as_of"],
+              r["instrument_id"],
               r["underlying_scheme_code"], r["holding_name"],
               r["asset_type"], r["sector"], r["weight_pct"], r["market_value_inr"], r["quantity"],
               r["credit_rating"], r["maturity_date"], r["modified_duration_years"],
-              r["yield_to_maturity_pct"], observed_on, imported_at, r["source_url"],
+              r["yield_to_maturity_pct"], observed_on, r["source_url"],
               r["source_document_sha256"], r["source_published_at"], obj.key] for r in rows])
     return {"rows": len(rows), "import_sha256": digest, "lake_key": obj.key}

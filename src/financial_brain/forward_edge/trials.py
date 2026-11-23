@@ -46,10 +46,15 @@ class BudgetStatus:
         return max(0, self.budget - self.spent)
 
 
-def sha256_file(path: Path) -> str:
-    # Git checkouts may materialize CRLF while the committed blob uses LF.
-    # Pin the canonical text content so Windows and Linux verify the same record.
-    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+def sha256_file(path: Path, *, normalize_eol: bool = True) -> str:
+    """Hash a file, normalizing CRLF to LF by default for cross-platform stability.
+
+    Set ``normalize_eol=False`` only when byte-for-byte identity is the intended check.
+    """
+    data = path.read_bytes()
+    if normalize_eol:
+        data = data.replace(bytes([13, 10]), bytes([10]))
+    return hashlib.sha256(data).hexdigest()
 
 
 def load_rows(path: Path) -> list[dict]:
@@ -249,13 +254,13 @@ def assert_new_protected_trial_allowed(
 def verify_pins(repo_root: Path) -> list[str]:
     """Return mismatches between pinned protected files and their bytes (empty when all match)."""
     pins = json.loads((repo_root / PINS_REL).read_text(encoding="utf-8"))
-    if pins.get("hash_newline_normalization") != "CRLF_TO_LF":
-        return ["protected pin manifest must declare CRLF_TO_LF hash normalization"]
+    normalized = set(pins.get("normalize_eol", []))
+    normalize_all = pins.get("hash_newline_normalization") == "CRLF_TO_LF"
     problems = []
     for rel, expected in sorted(pins["files"].items()):
         path = repo_root / rel
         if not path.exists():
             problems.append(f"missing: {rel}")
-        elif sha256_file(path) != expected:
+        elif sha256_file(path, normalize_eol=normalize_all or rel in normalized) != expected:
             problems.append(f"changed: {rel}")
     return problems

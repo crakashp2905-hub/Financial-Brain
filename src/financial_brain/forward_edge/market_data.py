@@ -84,7 +84,8 @@ def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
         return None
     return {"bid": bid, "ask": ask, "bid_quantity": bid_quantity,
             "ask_quantity": ask_quantity, "volume": volume,
-            "depth": depth, "source": event.source, "event_id": event.event_id,
+            "depth": depth, "bid_levels": tuple(bid_levels), "ask_levels": tuple(ask_levels),
+            "source": event.source, "event_id": event.event_id,
             "event_time": event.event_time, "received_at": event.received_at,
             "available_at": event.available_at}
 
@@ -198,7 +199,8 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     return MarketEvent(event_id=event_id, kind=kind, venue=venue.upper(),
                        instrument_id=f"{venue.upper()}:{symbol}", event_time=timestamp,
                        received_at=received_at, available_at=available_at, payload=payload,
-                       source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash)
+                       source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash,
+                       source_at=timestamp, exchange_at=timestamp)
 
 
 def archive_kite_quote_batch(archive: QuoteArchive, quotes: dict[str, dict[str, Any]], *,
@@ -227,3 +229,219 @@ def archive_kite_quote_batch_to_path(path: Path, quotes: dict[str, dict[str, Any
         return archive_kite_quote_batch(archive, quotes, received_at=received_at, clock=clock)
     finally:
         archive.close()
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+from dataclasses import dataclass
+from datetime import date, timezone
+
+
+class DataError(ValueError):
+    pass
+
+
+KINDS = frozenset({"TICK", "QUOTE", "DEPTH", "BAR", "HALT", "AUCTION", "CORP_ACTION", "BROKER_UPDATE"})
+
+
+def _aware(value: datetime, label: str) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise DataError(f"{label} must be timezone-aware")
+    return value.astimezone(timezone.utc)
+
+
+@dataclass(frozen=True)
+class NormalizedEvent:
+    kind: str
+    instrument: str
+    event_utc: datetime
+    received_utc: datetime
+    available_utc: datetime
+    payload: tuple[tuple[str, str], ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.kind not in KINDS:
+            raise DataError(f"unknown kind {self.kind}")
+        e = _aware(self.event_utc, "event")
+        r = _aware(self.received_utc, "received")
+        a = _aware(self.available_utc, "available")
+        if not (e <= r <= a):
+            raise DataError("clocks must satisfy event <= received <= available")
+
+    def content_sha256(self) -> str:
+        body = json.dumps({"kind": self.kind, "instrument": self.instrument,
+                           "event": _aware(self.event_utc, "e").isoformat(),
+                           "received": _aware(self.received_utc, "r").isoformat(),
+                           "available": _aware(self.available_utc, "a").isoformat(),
+                           "payload": [list(p) for p in self.payload]}, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def decision_visible(event: NormalizedEvent, decision_utc: datetime) -> bool:
+    """An event may inform a decision only if it was available then (not merely event-stamped then)."""
+    return _aware(event.available_utc, "a") <= _aware(decision_utc, "decision")
+
+
+@dataclass(frozen=True)
+class Calendar:
+    version: str
+    holidays: frozenset[date]
+    special_sessions: frozenset[date] = frozenset()
+
+    def is_tradable(self, day: date) -> bool:
+        if day in self.special_sessions:
+            return True
+        return day.weekday() < 5 and day not in self.holidays
+
+    def next_tradable(self, after: date) -> date:
+        day = after + timedelta(days=1)
+        for _ in range(60):
+            if self.is_tradable(day):
+                return day
+            day += timedelta(days=1)
+        raise DataError("no tradable session within 60 days: calendar is wrong")
+
+
+def load_calendar(path: Path) -> Calendar:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "version" not in data or "holidays" not in data:
+        raise DataError("calendar needs version and holidays")
+    return Calendar(version=str(data["version"]),
+                    holidays=frozenset(date.fromisoformat(d) for d in data["holidays"]),
+                    special_sessions=frozenset(date.fromisoformat(d) for d in data.get("special_sessions", [])))
+
+
+def fixture_feed(path: Path) -> list[NormalizedEvent]:
+    """Replay normalized events from a JSON fixture, in (event, sequence) order."""
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    events = []
+    for row in rows:
+        events.append(NormalizedEvent(
+            kind=row["kind"], instrument=row["instrument"],
+            event_utc=datetime.fromisoformat(row["event_utc"]),
+            received_utc=datetime.fromisoformat(row["received_utc"]),
+            available_utc=datetime.fromisoformat(row["available_utc"]),
+            payload=tuple(sorted((k, str(v)) for k, v in row.get("payload", {}).items())),
+        ))
+    return sorted(events, key=lambda e: (e.event_utc, e.instrument, e.kind))
+
+
+
+
+@dataclass(frozen=True)
+class FeedHealth:
+    last_available_utc: datetime | None
+    gaps: int
+    disconnects: int
+    dropped_updates: int
+
+
+def entry_allowed(health: FeedHealth, now: datetime, *, max_age: timedelta = timedelta(seconds=5)) -> tuple[bool, list[str]]:
+    reasons = []
+    if health.last_available_utc is None:
+        reasons.append("NO_QUOTES")
+    elif _aware(now, "now") - _aware(health.last_available_utc, "last") > max_age:
+        reasons.append("STALE_QUOTE")
+    if health.gaps:
+        reasons.append("QUOTE_GAP")
+    if health.disconnects:
+        reasons.append("DISCONNECTED")
+    if health.dropped_updates:
+        reasons.append("DROPPED_UPDATES")
+    return (not reasons), reasons
+
+
+@dataclass(frozen=True)
+class DecisionSnapshot:
+    decision_utc: datetime
+    inputs: tuple[tuple[str, str], ...]  # (name, sha256) for every input the strategy read
+
+    def sha256(self) -> str:
+        body = json.dumps({"t": _aware(self.decision_utc, "d").isoformat(), "inputs": [list(i) for i in self.inputs]},
+                          sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class Instrument:
+    isin: str
+    symbol: str
+    lot: int
+    tick: str
+    status: str  # ACTIVE, SUSPENDED, DELISTED
+    rights_ok: bool
+    expiry: date | None = None
+
+
+def instrument_gate(inst: Instrument, as_of: date) -> list[str]:
+    reasons = []
+    if inst.status != "ACTIVE":
+        reasons.append("NOT_TRADABLE_STATUS")
+    if inst.expiry is not None and inst.expiry <= as_of:
+        reasons.append("EXPIRED")
+    if inst.lot <= 0:
+        reasons.append("BAD_LOT")
+    if not inst.rights_ok:
+        reasons.append("NO_DATA_RIGHTS")
+    return reasons
+
+
+def option_quote_executable(bid: float | None, ask: float | None, bid_qty: int, ask_qty: int) -> tuple[bool, str]:
+    if bid is None or ask is None:
+        return False, "ONE_SIDED_OR_MID_ONLY"
+    if bid <= 0 or ask <= 0 or ask < bid:
+        return False, "CROSSED_OR_INVALID"
+    if bid_qty <= 0 or ask_qty <= 0:
+        return False, "NO_DEPTH"
+    return True, "EXECUTABLE"
+
+
+def reconcile_close(live_close: float, authoritative_close: float, *, tolerance: float = 0.0) -> dict:
+    """Record divergence as data. Nothing is overwritten."""
+    diff = authoritative_close - live_close
+    status = "MATCH" if abs(diff) <= tolerance else "DIVERGED"
+    return {"status": status, "live_close": live_close, "authoritative_close": authoritative_close,
+            "difference": round(diff, 10), "version": "close-recon-v1"}
+
+
+def data_gate(*, age_s: float, spread_bps: float | None, volume: int, circuit_hit: bool, frozen: bool,
+              auction_seen: bool, max_age_s: float = 5.0, max_spread_bps: float = 50.0) -> list[str]:
+    codes = []
+    if age_s > max_age_s:
+        codes.append("STALE")
+    if spread_bps is None or spread_bps > max_spread_bps:
+        codes.append("WIDE_SPREAD")
+    if volume <= 0:
+        codes.append("ZERO_VOLUME")
+    if circuit_hit:
+        codes.append("CIRCUIT")
+    if frozen:
+        codes.append("FREEZE")
+    if not auction_seen:
+        codes.append("MISSING_AUCTION")
+    return sorted(codes)
+
+
+def feature_at(closes: list[float], timestamps: list[datetime], t: datetime, window: int = 5) -> float | None:
+    """Mean of the last ``window`` closes whose timestamp is <= t. Future bars cannot change the value."""
+    idx = [i for i, ts in enumerate(timestamps) if _aware(ts, "bar") <= _aware(t, "t")]
+    if len(idx) < window:
+        return None
+    last = idx[-window:]
+    return sum(closes[i] for i in last) / window
+
+
+def coverage(sessions: dict[str, int], names: dict[str, bool], intents: list[tuple[float, bool]],
+             min_quotes: int = 1) -> dict[str, float]:
+    """Share of sessions with enough quotes, share of names with coverage, and share of intent notional covered."""
+    total_sessions = len(sessions)
+    good_sessions = sum(1 for n in sessions.values() if n >= min_quotes)
+    total_names = len(names)
+    good_names = sum(1 for ok in names.values() if ok)
+    total_notional = sum(n for n, _ in intents)
+    covered = sum(n for n, ok in intents if ok)
+    return {
+        "sessions_pct": round(100.0 * good_sessions / total_sessions, 4) if total_sessions else 0.0,
+        "names_pct": round(100.0 * good_names / total_names, 4) if total_names else 0.0,
+        "intent_notional_pct": round(100.0 * covered / total_notional, 4) if total_notional else 0.0,
+    }

@@ -1647,6 +1647,7 @@ def cmd_costs_calc(args) -> int:
 def cmd_paper_intraday(args) -> int:
     """Intraday paper trading: live from Kite quotes, a replay of a past day, or the evidence so far."""
     import logging
+    from pathlib import Path
     from .paper import intraday_runner as IR
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     if args.report:
@@ -1659,7 +1660,14 @@ def cmd_paper_intraday(args) -> int:
     if args.replay:
         out = IR.run_replay(_d(args.replay), n=args.names)
     else:
-        out = IR.run_live(n=args.names)
+        permission = None
+        if args.data_permission_file:
+            try:
+                permission = json.loads(Path(args.data_permission_file).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(json.dumps({"status": "rights_blocked", "reason": f"cannot load permission: {exc}"}))
+                return 2
+        out = IR.run_live(n=args.names, data_permission=permission)
     print(out)
     return 0
 
@@ -3049,6 +3057,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--replay")
     g.add_argument("--report", action="store_true")
     g.add_argument("--names", type=int, default=200)
+    g.add_argument("--data-permission-file", help="reviewed source/use permission JSON required for live Kite quotes")
     g.set_defaults(fn=cmd_paper_intraday)
 
     g = sub.add_parser("paper-compare", help="read-only exact-day live/replay reconciliation")

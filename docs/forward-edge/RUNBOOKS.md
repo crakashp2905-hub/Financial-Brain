@@ -1,6 +1,6 @@
 # Forward-edge paper operations runbooks
 
-These procedures cover the repository's offline and paper-only components. They do not authorize broker orders or establish live-data entitlement. Keep the paper engine in `LIVE_PAPER`; `LIVE_CASH` must remain refused unless every independent governance gate is satisfied.
+These procedures cover the repository's offline and paper-only components. They do not authorize broker orders or establish live-data entitlement. Keep the paper engine in `LIVE_PAPER`; `LIVE_CASH` and every physical broker write are permanently refused by the shared execution policy.
 
 ## Session preflight
 

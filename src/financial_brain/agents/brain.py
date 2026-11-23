@@ -59,8 +59,8 @@ def risk_agent(item: dict, kill_state: dict) -> dict:
     size = item.get("position_size") or {}
     stop = (item.get("invalidation") or {}).get("stop")
     try:
-        shares = float(size["shares"])
-        stop = float(stop)
+        shares = float(str(size["shares"]))
+        stop = float(str(stop))
     except (KeyError, TypeError, ValueError):
         return _agent("risk", "BLOCK", ["position size or invalidation missing"], level=level)
     if not math.isfinite(shares) or not math.isfinite(stop) or shares <= 0 or stop <= 0:
@@ -73,9 +73,9 @@ def risk_agent(item: dict, kill_state: dict) -> dict:
 def economics_agent(item: dict) -> dict:
     chain = item.get("chain") or {}
     try:
-        net = float(chain["expected_net_alpha"])
-        portfolio = float(chain.get("portfolio_utility", chain.get("portfolio_adjusted_alpha")))
-        cost = float(item["expected_cost"])
+        net = float(str(chain["expected_net_alpha"]))
+        portfolio = float(str(chain.get("portfolio_utility", chain.get("portfolio_adjusted_alpha"))))
+        cost = float(str(item["expected_cost"]))
     except (KeyError, TypeError, ValueError):
         return _agent("economics", "BLOCK", ["itemized economics missing"])
     if not all(math.isfinite(x) for x in (net, portfolio, cost)) or cost < 0:

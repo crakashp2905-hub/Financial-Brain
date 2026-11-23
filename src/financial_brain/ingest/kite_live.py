@@ -72,9 +72,19 @@ def forward_events(symbols: list[str], *, quote_fn=None, received_at: datetime |
 
     if not symbols or any(not isinstance(symbol, str) or not symbol.strip() for symbol in symbols):
         raise ValueError("symbols must be non-empty strings")
-    if len(set(symbols)) != len(symbols):
-        raise ValueError("symbols must be unique")
-    keys = [f"NSE:{symbol}" for symbol in symbols]
+    keys = []
+    for value in symbols:
+        value = value.strip()
+        if ":" in value:
+            exchange, symbol = value.split(":", 1)
+            exchange = exchange.strip().upper()
+            if exchange not in {"NSE", "BSE"} or not symbol.strip() or ":" in symbol:
+                raise ValueError("qualified symbols must be NSE:SYMBOL or BSE:SYMBOL")
+            keys.append(f"{exchange}:{symbol.strip()}")
+        else:
+            keys.append(f"NSE:{value}")
+    if len(set(keys)) != len(keys):
+        raise ValueError("exchange-qualified symbols must be unique")
     raw = (quote_fn or kd.quote)(keys, "full")
     receipt = received_at or datetime.now(timezone.utc)
     if receipt.tzinfo is None or receipt.utcoffset() is None:
@@ -127,3 +137,14 @@ def divergence(con, *, tolerance: float = 0.03) -> list[dict]:
         WHERE l.last_price IS NOT NULL ORDER BY ABS(l.last_price / a.close_adj - 1) DESC""").fetchall()
     return [{"symbol": r[0], "live": r[1], "archive_close": r[2], "archive_date": r[3], "gap": r[4],
              "flag": abs(r[4]) > tolerance} for r in rows]
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+
+
+def _valid_level(level: dict) -> bool:
+    try:
+        return float(level["price"]) > 0 and int(level["quantity"]) > 0
+    except (KeyError, TypeError, ValueError):
+        return False

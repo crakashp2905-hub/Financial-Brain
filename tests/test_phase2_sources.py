@@ -86,8 +86,8 @@ def test_nav_ingest_is_idempotent(tmp_path):
     provider = Fake()
     with db.connect() as con:
         first = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=provider)
-        first_observed = con.execute("""SELECT observed_at FROM mf_nav_observations
-                                       WHERE scheme_code='135762' ORDER BY observed_at LIMIT 1""").fetchone()[0]
+        first_observed = con.execute("""SELECT ingested_at FROM mf_nav_observations
+                                       WHERE scheme_code='135762' ORDER BY ingested_at LIMIT 1""").fetchone()[0]
         assert mfnav.as_known_on(
             con, "135762", date(2026, 9, 18), first_observed - timedelta(seconds=1)) is None
         assert mfnav.as_known_on(

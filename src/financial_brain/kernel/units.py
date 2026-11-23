@@ -55,7 +55,7 @@ class Money:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "amount", to_decimal(self.amount))
-        _check_currency(self.currency)
+        object.__setattr__(self, "currency", _check_currency(self.currency))
 
     @classmethod
     def of(cls, amount: object, currency: str) -> Money:
@@ -110,7 +110,7 @@ class Price:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "value", to_decimal(self.value))
-        _check_currency(self.currency)
+        object.__setattr__(self, "currency", _check_currency(self.currency))
         if self.value <= 0:
             raise UnitError("a traded price must be strictly positive")
 
@@ -130,6 +130,11 @@ class CurrencyCode:
     def __post_init__(self) -> None:
         _check_currency(self.code)
 
+    @property
+    def value(self) -> str:
+        """Compatibility name used by the canonical typed-unit API."""
+        return self.code
+
 
 @dataclass(frozen=True)
 class INRNotional:
@@ -145,6 +150,12 @@ class INRNotional:
 
     def as_money(self) -> Money:
         return Money(self.amount, "INR")
+
+    @classmethod
+    def from_money(cls, amount: Money) -> INRNotional:
+        if amount.currency != "INR":
+            raise UnitError("INR notional requires INR currency")
+        return cls(amount.amount)
 
 
 @dataclass(frozen=True)
@@ -170,14 +181,38 @@ class ETFUnits:
 
 
 @dataclass(frozen=True)
+class WholeUnits:
+    """Integral equity/ETF units; signed values can represent long/short positions."""
+
+    units: Decimal
+
+    def __post_init__(self) -> None:
+        units = to_decimal(self.units)
+        if units != units.to_integral_value():
+            raise UnitError("equity/ETF units must be whole units")
+        object.__setattr__(self, "units", units)
+
+
+@dataclass(frozen=True)
 class OptionLots:
-    """Signed integer number of option lots; contract lot size is instrument metadata."""
+    """Positive integer option lots; order side carries direction separately."""
+
+    lots: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.lots, bool) or not isinstance(self.lots, int) or self.lots <= 0:
+            raise UnitError("option lots must be a positive integer")
+
+
+@dataclass(frozen=True)
+class SignedOptionLots:
+    """Signed integer lots for position deltas; order tickets should use OptionLots."""
 
     lots: int
 
     def __post_init__(self) -> None:
         if isinstance(self.lots, bool) or not isinstance(self.lots, int):
-            raise UnitError("option lots must be a whole integer")
+            raise UnitError("signed option lots must be an integer")
 
 
 @dataclass(frozen=True)
@@ -217,6 +252,33 @@ class PremiumPerUnit:
 
 
 @dataclass(frozen=True)
+class INRPerUnit:
+    """Positive INR-denominated price per one unit/share/contract premium."""
+
+    amount: Decimal
+    currency: str = "INR"
+
+    def __post_init__(self) -> None:
+        amount = to_decimal(self.amount)
+        _check_currency(self.currency)
+        if self.currency != "INR":
+            raise UnitError("this unit is denominated in INR")
+        if amount <= 0:
+            raise UnitError("per-unit price must be positive")
+        object.__setattr__(self, "amount", amount)
+
+
+@dataclass(frozen=True)
+class NavPerUnit(INRPerUnit):
+    """Mutual-fund NAV per scheme unit, in INR."""
+
+
+@dataclass(frozen=True)
+class OptionPremiumPerUnit(INRPerUnit):
+    """Option premium per underlying unit, in INR (lot multiplier is separate)."""
+
+
+@dataclass(frozen=True)
 class BasisPoints:
     """A signed rate in basis points; 10,000 bps equals a unit ratio."""
 
@@ -226,4 +288,7 @@ class BasisPoints:
         object.__setattr__(self, "value", to_decimal(self.value))
 
     def as_ratio(self) -> Decimal:
+        return self.value / Decimal(10_000)
+
+    def as_rate(self) -> Decimal:
         return self.value / Decimal(10_000)

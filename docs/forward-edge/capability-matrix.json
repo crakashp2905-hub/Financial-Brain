@@ -222,10 +222,11 @@
       "status": "DONE",
       "tests": [
         "test_live_cash_is_unavailable_by_default",
-        "test_flipping_the_build_flag_alone_does_not_enable_cash",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
         "test_broker_dryrun_needs_verified_compliance",
         "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
         "test_session_mode_is_immutable"
       ],
       "blockers": [],
@@ -237,14 +238,15 @@
       "status": "DONE",
       "tests": [
         "test_live_cash_is_unavailable_by_default",
-        "test_flipping_the_build_flag_alone_does_not_enable_cash",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
         "test_broker_dryrun_needs_verified_compliance",
         "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
         "test_session_mode_is_immutable"
       ],
       "blockers": [],
-      "note": "LIVE_CASH refused by build policy; needs compliance and human approval."
+      "note": "LIVE_CASH is permanently refused in this pipeline, including with approval and compliance inputs."
     },
     {
       "id": "FE-0007",
@@ -593,10 +595,11 @@
       "wave": "F03",
       "status": "PARTIAL",
       "tests": [
-        "test_dated_instrument_eligibility_fails_closed_on_status_rights_and_ticket_rules"
+        "test_dated_instrument_eligibility_fails_closed_on_status_rights_and_ticket_rules",
+        "test_option_quantity_uses_contract_units_and_effective_lot_size"
       ],
       "blockers": [],
-      "note": "Existing effective-dated instrument master now validates ISIN, expiry, option strike, rights status, tick/lot/freeze rules, lifecycle status and trading phase. No authoritative exchange/broker instrument-master ingestion or mapping is configured."
+      "note": "Effective-dated rules now carry explicit shares, ETF units, option/futures contracts, tick/lot/freeze rules, lifecycle and session phase. Canonical candidates bind their unit into intent identity; the durable runner validates it against the frozen instrument rule and records it on the order and fill. Legacy rules without unit evidence stay UNSPECIFIED and cannot authorize a typed candidate. Authoritative exchange/broker instrument-master ingestion and migration of all strategy/order paths remain outstanding."
     },
     {
       "id": "FE-0040",
@@ -777,10 +780,15 @@
       "tests": [
         "test_same_candidate_produces_equivalent_versioned_engine_intents",
         "test_adapter_rejects_spec_mismatch_or_missing_forward_contract",
-        "test_intent_identity_changes_with_decision_or_signal_payload"
+        "test_intent_identity_changes_with_decision_or_signal_payload",
+        "test_approved_candidate_flows_through_versioned_paper_pipeline",
+        "test_risk_rejection_is_journaled_and_never_reaches_paper_oms",
+        "test_candidate_requires_matching_frozen_paper_eligibility",
+        "test_candidate_must_be_listed_in_the_session_frozen_eligibility",
+        "test_versioned_candidate_runs_through_durable_runner_to_accounting"
       ],
       "blockers": [],
-      "note": "Versioned adapter creates deterministic canonical intents and projections for kernel OMS and legacy paper. Existing session runners have not yet adopted the adapter; equivalence is contract-tested rather than end-to-end."
+      "note": "Candidates require eligibility pinned in frozen session configuration, then pass through the durable runner's versioned decision, manifest, risk, OMS, fill, and account path; order identity, symbol, side, quantity, and reference price are bound to the canonical intent. The normalized adapter is available, but every existing equity/ETF/option strategy has not yet been migrated to emit candidates, and multi-leg options/account parity remains incomplete."
     },
     {
       "id": "FE-0056",
@@ -1665,7 +1673,6 @@
       "tests": [
         "test_software_actor_identifiers_cannot_approve",
         "test_non_human_actor_type_is_rejected_even_with_a_human_looking_name",
-        "test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass",
         "test_human_paper_champion_change_needs_scoped_approval_and_verified_receipt",
         "test_champion_change_fails_without_external_custody_or_exact_human_approval"
       ],
@@ -1701,12 +1708,13 @@
       "wave": "F12",
       "status": "PARTIAL",
       "tests": [
-        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders"
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open"
       ],
       "blockers": [
         "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
       ],
-      "note": "No broker adapter exists; physical-order gate is False everywhere."
+      "note": "Legacy Kite account adapter is read-only: the shared order policy denies every non-GET request; external broker review remains a separate gate."
     },
     {
       "id": "FE-0133",

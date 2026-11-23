@@ -666,6 +666,140 @@ def workstation_panel(rcon, asof, shown: pd.DataFrame, *, capital: float, holdin
     return "".join(out)
 
 
+def mf_paper_panel(con, asof: date) -> str:
+    """Render account-scoped MF values using only NAVs available by the report date."""
+    from ..kernel.trading_clock import IST
+    from ..kernel.mf_paper_realism import WEIGHTS
+    from .mf_lot_book import account_snapshot
+    from .mf_paper_realism_book import assess_account_mf_realism
+
+    known_at = datetime.combine(asof, datetime.max.time(), tzinfo=IST)
+    rows = con.execute(
+        "SELECT account_id FROM mf_paper_accounts ORDER BY account_id"
+    ).fetchall()
+    if not rows:
+        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
+
+    out = ["<h2>Mutual fund paper book</h2>",
+           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
+    for (account_id,) in rows:
+        snapshot = account_snapshot(con, account_id, known_at=known_at)
+        realism = assess_account_mf_realism(
+            con, account_id=account_id, assessed_at=known_at,
+        )
+        realism_factors = {factor.dimension: factor for factor in realism.factors}
+        settlements = con.execute("""SELECT settlement_id, scheme_code, state,
+            net_inr, payout_available_at, payout_basis, payout_evidence_ref,
+            payout_source_id, payout_source_sha256
+            FROM mf_paper_redemption_settlements WHERE account_id=?
+              AND (created_at<=? AND updated_at<=?)
+            ORDER BY created_at, settlement_id""",
+            [account_id, known_at, known_at]).fetchall()
+        out.append(
+            f"<h3>{_e(account_id)} · NAV value Rs {snapshot['market_value_inr']:,.2f} · "
+            f"unrealized P&amp;L Rs {snapshot['unrealized_pnl_inr']:+,.2f}</h3>"
+            f"<div class='sub'>Cash Rs {snapshot['cash_inr']:,.2f} · pending redemption Rs "
+            f"{snapshot['pending_redemption_inr']:,.2f} · stale positions "
+            f"{snapshot['stale_position_count']} · unavailable NAVs "
+            f"{snapshot['unvalued_position_count']}</div>"
+        )
+        realism_rows = []
+        for dimension, weight in WEIGHTS.items():
+            factor = realism_factors.get(dimension)
+            label = dimension.value.replace("_", " ").title()
+            if factor is None:
+                realism_rows.append(
+                    f"<tr><td>{_e(label)}</td><td class='r'>0.0%</td>"
+                    f"<td class='r'>{weight * 100:.0f}%</td>"
+                    "<td>MISSING · contributes zero</td><td>Not assessed as of cutoff</td></tr>"
+                )
+                continue
+            contribution = weight * factor.value * 100
+            realism_rows.append(
+                f"<tr><td>{_e(label)}</td><td class='r'>{factor.value * 100:.1f}%</td>"
+                f"<td class='r'>{weight * 100:.0f}%</td><td>{_e(factor.basis.value)}</td>"
+                f"<td>{_e(factor.rationale)} · contributes {contribution:.1f} points</td></tr>"
+            )
+        out.append(
+            f"<h4>MF PAPER REALISM · {realism.score:.1f}/100 · evidence coverage "
+            f"{realism.evidence_coverage:.0f}% · observed coverage {realism.observed_coverage:.0f}%</h4>"
+            "<div class='sub'>Operational evidence completeness only; not an empirical profitability or execution-fidelity claim. "
+            "Missing dimensions contribute zero. The dimension weights are design defaults, not calibrated weights.</div>"
+            "<div class='wrap'><table><tr><th>Dimension</th><th class='r'>Factor</th>"
+            "<th class='r'>Weight</th><th>Basis</th><th>As-of evidence</th></tr>"
+            + "".join(realism_rows) + "</table></div>"
+        )
+        if settlements:
+            payout_rows = []
+            for (settlement_id, scheme_code, state, net_inr, available_at,
+                 basis, evidence_ref, source_id, source_hash) in settlements:
+                if state == "CASH_AVAILABLE" and basis == "OBSERVED_EVIDENCE":
+                    realization = "OBSERVED_EVIDENCE"
+                elif state == "CASH_AVAILABLE" and basis == "SIMULATED_ASSUMPTION":
+                    realization = "SIMULATED_ASSUMPTION"
+                else:
+                    realization = "PENDING / NOT REALIZED"
+                evidence = evidence_ref or "—"
+                source = source_id or "—"
+                digest = source_hash[:12] if source_hash else "—"
+                amount = f"Rs {net_inr:,.2f}" if net_inr is not None else "—"
+                payout_rows.append(
+                    f"<tr><td>{_e(settlement_id)}</td><td>{_e(scheme_code)}</td>"
+                    f"<td>{_e(state)}</td><td>{_e(realization)}</td>"
+                    f"<td class='r'>{amount}</td><td>{_e(available_at.isoformat() if available_at else '—')}</td>"
+                    f"<td>{_e(evidence)}</td><td>{_e(source)}</td><td>{_e(digest)}</td></tr>"
+                )
+            out.append(
+                "<h4>Redemption payout realization</h4><div class='wrap'><table>"
+                "<tr><th>Settlement</th><th>Scheme</th><th>State</th><th>Realization basis</th>"
+                "<th class='r'>Net payout</th><th>Available at</th><th>Evidence reference</th>"
+                "<th>Source</th><th>Source SHA-256</th></tr>" + "".join(payout_rows)
+                + "</table></div>"
+            )
+        out.append(
+            f"<h3>{_e(account_id)} · NAV value Rs {snapshot['market_value_inr']:,.2f} · "
+            f"unrealized P&amp;L Rs {snapshot['unrealized_pnl_inr']:+,.2f}</h3>"
+            f"<div class='sub'>Cash Rs {snapshot['cash_inr']:,.2f} · pending redemption Rs "
+            f"{snapshot['pending_redemption_inr']:,.2f} · stale positions "
+            f"{snapshot['stale_position_count']} · unavailable NAVs "
+            f"{snapshot['unvalued_position_count']}</div>"
+        )
+        if not snapshot["positions"]:
+            out.append("<div class='sub'>No open MF positions.</div>")
+            continue
+        position_rows = []
+        for position in snapshot["positions"]:
+            nav = position["nav_per_unit"]
+            value = position["market_value_inr"]
+            pnl = position["unrealized_pnl_inr"]
+            status = position["valuation_status"]
+            cls = "warn" if status != "CURRENT" else "ok"
+            pnl_class = "pos" if pnl is not None and pnl > 0 else "neg" if pnl is not None and pnl < 0 else ""
+            folio = position["folio_id"] or "UNASSIGNED · reconcile ownership"
+            nav_text = f"{nav:,.4f}" if nav is not None else "—"
+            value_text = f"Rs {value:,.2f}" if value is not None else "—"
+            basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
+            pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
+            position_rows.append(
+                f"<tr><td>{_e(folio)}</td><td>{_e(position['scheme_code'])}</td>"
+                f"<td>{_e(position['plan'])}</td>"
+                f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
+                f"<td class='r'>{nav_text}</td>"
+                f"<td>{_e(position['nav_date'] or '—')}</td>"
+                f"<td class='r'>{value_text}</td>"
+                f"<td class='r'>{basis_text}</td>"
+                f"<td class='r {pnl_class}'>{pnl_text}</td>"
+                f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
+            )
+        out.append(
+            "<div class='wrap'><table><tr><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
+            "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
+            "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
+            "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
+        )
+    return "".join(out)
+
+
 def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
     from ..evaluation import champion as C
     from ..opportunity import scanners as S
@@ -688,6 +822,10 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
               f"<div class='sub'>{b['pct_above_ma200']:.0%} above 200d · {b['pct_up_20d']:.0%} up 20d · {b['pct_near_52w_high']:.0%} near high</div></div>"]
     ks = KS.load()
     parts.append(f"<div class='tile'><div class='k'>Kill switch</div><div class='v'>{_chip(ks['level'])}</div><div class='sub'>{_e('; '.join(ks.get('reasons', [])) or 'no trip')}</div></div></div>")
+    try:
+        parts.append(mf_paper_panel(rcon, asof))
+    except Exception as e:                          # noqa: BLE001 - MF books may not be initialized yet
+        parts.append(f"<div class='sub'>MF paper book unavailable: {_e(str(e)[:100])}</div>")
     # ---------------------------------------------------------------- opportunities
     cs = S.cross_section(rcon, asof)
     opps = S.scan(cs, asof, capital=capital)

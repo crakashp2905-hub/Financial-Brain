@@ -21,6 +21,9 @@ from financial_brain.forward_edge.paper_book_adapter import (
     record_exit_decision,
     reconcile_entry_receipt,
 )
+from financial_brain.forward_edge.strategy_adapter import CandidateSignal
+from financial_brain.forward_edge.strategy_pipeline import execute_candidate
+from financial_brain.kernel.registry import StrategyEligibility, StrategySpec
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -30,11 +33,21 @@ from financial_brain.forward_edge.venue_calendar import Session as VenueSession,
 
 
 NOW = datetime(2026, 11, 13, 4, 45, tzinfo=timezone.utc)
+READY_PREFLIGHT = {name: True for name in (
+    "calendar", "credentials", "disk", "feeds", "data_contracts", "risk", "system_health",
+    "broker_disabled",
+)}
 
 
 def make_config(*, max_quote_age_ms=None):
     constraints = {"max_positions": 1, "session_phase": "CONTINUOUS",
-                   "instrument_rules": fixture_rule_book("NSE:INFY")}
+                   "allow_synthetic_fixture_events": True,
+                   "instrument_rules": fixture_rule_book("NSE:INFY"),
+                   "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
+                                        "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
+                                        "effective_from": "2026-11-13", "effective_through": None,
+                                        "evidence_ref": "tests/fixture-kite-permission",
+                                        "reviewer": "test-fixture"}]}
     if max_quote_age_ms is not None:
         constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
@@ -43,6 +56,12 @@ def make_config(*, max_quote_age_ms=None):
 
 def make_config_with_constraints(constraints):
     constraints = {"session_phase": "CONTINUOUS",
+                   "allow_synthetic_fixture_events": True,
+                   "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
+                                        "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
+                                        "effective_from": "2026-11-13", "effective_through": None,
+                                        "evidence_ref": "tests/fixture-kite-permission",
+                                        "reviewer": "test-fixture"}],
                    "instrument_rules": fixture_rule_book("NSE:INFY"), **constraints}
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
@@ -59,7 +78,8 @@ def make_runner(tmp_path):
 
 def opened(runner, session_id="s", config=None):
     return runner.begin(session_id, config or make_config(), now=NOW,
-                        preflight={"data_rights_configured": True, "risk_policy_loaded": True})
+                        preflight={**READY_PREFLIGHT, "data_rights_configured": True,
+                                   "risk_policy_loaded": True})
 
 
 def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
@@ -87,6 +107,31 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     assert records["events"][0]["ingested_at"] == archived_at.isoformat()
     assert records["events"][0]["ingest_clock_source"] == "QUOTE_ARCHIVE"
     archive.close()
+    runner.close()
+
+
+def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"data_permissions": [], "allow_synthetic_fixture_events": False})
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+             "depth": {"buy": [{"price": 100.0, "quantity": 50}],
+                       "sell": [{"price": 100.1, "quantity": 40}]}}
+    observed = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="rights are unknown"):
+        runner.ingest("s", config, [observed])
+    assert runner.records("s")["events"] == []
+    assert runner.records("s")["data_rejections"]
+    runner.close()
+
+
+def test_fixture_source_cannot_bypass_rights_gate_without_frozen_fixture_scope(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"allow_synthetic_fixture_events": False})
+    opened(runner, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="fixture market events require"):
+        runner.ingest("s", config, [make_event()])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 
@@ -128,10 +173,24 @@ def test_runner_event_schema_migration_adds_ingest_provenance_columns(tmp_path):
 
 def test_preflight_failures_reject_the_session_without_accepting_market_events(tmp_path):
     runner = make_runner(tmp_path)
-    state = runner.begin("s", make_config(), now=NOW, preflight={"feed_entitlement": False})
+    state = runner.begin("s", make_config(), now=NOW,
+                         preflight={**READY_PREFLIGHT, "feeds": False, "feed_entitlement": False})
     assert state is SessionState.REJECTED
+    assert set(runner.records("s")["lifecycle"][0]["checks"]) >= set(READY_PREFLIGHT)
     with pytest.raises(ForwardSessionRunnerError, match="OPEN session"):
         runner.ingest("s", make_config(), [make_event()])
+    runner.close()
+
+
+def test_omitted_required_preflight_checks_are_recorded_as_failures(tmp_path):
+    runner = make_runner(tmp_path)
+    state = runner.begin("missing-checks", make_config(), now=NOW,
+                         preflight={"risk_policy_loaded": True})
+    assert state is SessionState.REJECTED
+    checks = runner.records("missing-checks")["lifecycle"][0]["checks"]
+    assert all(checks[name] is False for name in READY_PREFLIGHT)
+    with pytest.raises(ForwardSessionRunnerError, match="OPEN session"):
+        runner.ingest("missing-checks", make_config(), [make_event()])
     runner.close()
 
 
@@ -178,7 +237,7 @@ def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(t
 
     opened_state = runner.plan_calendar_day(
         "special-on", make_config(), venue="NSE", calendar=calendar, now=NOW,
-        preflight={"special_session_adapter": True}, supported_session_types=frozenset({"SPECIAL"}))
+        preflight={**READY_PREFLIGHT, "special_session_adapter": True}, supported_session_types=frozenset({"SPECIAL"}))
     assert opened_state is SessionState.OPEN
     pre_open = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 09:30:00", "last_price": 100.0, "volume": 100,
@@ -195,7 +254,7 @@ def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(t
     calendar = _calendar(date(2026, 11, 13))
     runner = make_runner(tmp_path)
     state = runner.plan_calendar_day("planned", make_config(), venue="NSE", calendar=calendar,
-                                    now=NOW, preflight={"risk_policy_loaded": True})
+                                    now=NOW, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     assert state is SessionState.OPEN
     _, closes = calendar.session_bounds_utc("NSE", date(2026, 11, 13))
     assert runner.resume("planned", now=closes - timedelta(seconds=1))["state"] == "OPEN"
@@ -215,7 +274,7 @@ def test_supervisor_marks_stale_feed_incomplete_and_keeps_fresh_feed_open(tmp_pa
     runner = make_runner(tmp_path)
     for session_id in ("stale", "fresh"):
         assert runner.plan_calendar_day(session_id, make_config(), venue="NSE", calendar=calendar,
-                                        now=NOW, preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                                        now=NOW, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     event = make_event(event_id="fresh-quote")
     runner.ingest("fresh", make_config(), [event],
                   ingest_metadata={event.event_id: (NOW, "SUPERVISOR_TEST_CLOCK")})
@@ -409,6 +468,90 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
     return manifest
 
 
+def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    spec = StrategySpec(
+        "orb", "v1", {"window": 15}, "test-owner", family="session_breakout",
+        code_sha256="a" * 64, asset_scope=("NSE_EQ",), decision_clock="bar_close",
+        direction="LONG", stop_exit="range_low", horizon="intraday",
+        data_requirements=("ohlcv_1m",),
+    )
+    eligibility = StrategyEligibility(
+        "orb", "v1", "PAPER_ELIGIBLE", "tests/frozen-orb.json", "b" * 64,
+        "approved test fixture", spec.hash(),
+    )
+    config = replace(config, constraints={
+        **config.constraints, "strategy_eligibilities": [eligibility.__dict__],
+    })
+    opened(runner, config=config)
+    signal_event = make_event()
+    runner.ingest("s", config, [signal_event])
+    decided_at = NOW + timedelta(milliseconds=10)
+    quote = {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 1000,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 3}]},
+    }
+    fill_event = normalize_kite_quote(
+        "NSE:INFY", quote, received_at=decided_at + timedelta(milliseconds=100)
+    )
+    runner.ingest("s", config, [fill_event])
+    signal = CandidateSignal(
+        "orb", "v1", "NSE:INFY", "BUY", 2, "candidate-1",
+        decided_at.isoformat(), Decimal("100.1"), {"setup": "opening-range"},
+    )
+    manifest = record_manifest(
+        runner, session_id="s", decision_id="candidate-1", event=signal_event,
+        decided_at=decided_at, quantity=2, persist=False,
+    )
+    result = execute_candidate(
+        runner,
+        session_id="s",
+        spec=spec,
+        eligibility=eligibility,
+        signal=signal,
+        input_event_ids=(signal_event.event_id,),
+        manifest=manifest,
+        risk={"allowed": True, "policy_id": "risk-v1", "policy_sha256": "c" * 64,
+              "assessed_at": decided_at},
+        execution={
+            "event_id": fill_event.event_id,
+            "limit_price": Decimal("100.1"),
+            "tick_size": Decimal("0.05"),
+            "freeze_limit": 1000,
+            "slice_size": 1000,
+            "adverse_slippage_bps": Decimal("0"),
+            "latency_ms": 100,
+            "simulated_at": decided_at + timedelta(milliseconds=101),
+            "max_wait_ms": 5000,
+        },
+    )
+    records = runner.records("s")
+    assert result.receipt is not None
+    assert result.receipt["filled_quantity"] == 2
+    assert result.receipt["quantity_unit"] == "SHARES"
+    assert records["decisions"][0]["payload"]["candidate_intent"]["intent_id"] == result.intent.intent_id
+    assert records["intents"][0]["order_id"] == result.intent.intent_id
+    assert records["accounting"]["errors"] == []
+    assert records["accounting"]["positions"]["NSE:INFY"] == 2
+    assert records["accounting"]["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
+    assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
+    assert records["order_events"][-1]["fill_evidence_id"] is not None
+    with pytest.raises(ForwardSessionRunnerError, match="canonical candidate intent"):
+        runner.execute_paper_intent(
+            session_id="s", order_id="forged-order", decision_id="candidate-1",
+            event_id=fill_event.event_id, side="BUY", quantity=2,
+            limit_price=Decimal("100.1"), tick_size=Decimal("0.05"),
+            freeze_limit=1000, slice_size=1000, adverse_slippage_bps=Decimal("0"),
+            latency_ms=100, quantity_unit="SHARES",
+            simulated_at=decided_at + timedelta(milliseconds=101),
+            max_wait_ms=5000,
+        )
+    assert len(runner.records("s")["intents"]) == 1
+    runner.close()
+
+
 def execute(runner, event, decided, *, order_id="order-1", qty=2, limit="100.30",
             execution_offset_ms=100, max_wait_ms=None, price_band=None,
             passive_trade_event_ids=()):
@@ -492,8 +635,12 @@ def test_passive_paper_receipt_uses_journaled_trade_through_ticks(tmp_path):
     assert receipt["status"] == "FILLED" and receipt["execution_style"] == "PASSIVE_LIMIT"
     assert receipt["average_price"] == "100"
     assert receipt["simulated_adverse_selection_cost_inr"] == "0.20"
+    assert receipt["execution_cost_basis"] == "PASSIVE_TRADE_THROUGH_WITH_SEPARATE_ADVERSE_SELECTION"
     assert "charges_inr" not in receipt
     assert receipt["execution_evidence_event_ids"] == [quote.event_id, tick.event_id]
+    assert receipt["simulation_fidelity"] == "OBSERVED_TRADE_SIM"
+    assert receipt["trade_provenance"][0]["event_sha256"] == tick.sha256()
+    assert runner.records("s")["accounting"]["simulation_fidelity"] == "OBSERVED_TRADE_SIM"
     runner.close()
 
 
@@ -538,6 +685,10 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
         simulated_at=decided + timedelta(milliseconds=200))
     assert receipt["status"] == "FILLED"
     assert receipt["quote_event_id"] == fill_event.event_id
+    assert receipt["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
+    assert receipt["quote_provenance"]["event_sha256"] == fill_event.sha256()
+    assert receipt["quote_provenance"]["exchange"] == "NSE"
+    assert receipt["quote_provenance"]["available_at_utc"] == fill_event.available_at.isoformat()
     decision_inputs = runner.records("s")["decisions"][0]["input_event_ids"]
     assert decision_inputs
     assert signal_event.event_id not in decision_inputs
@@ -598,11 +749,17 @@ def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tm
 
 
 def test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags(tmp_path, monkeypatch):
+    import urllib.request
+
     from financial_brain.execution.oms.kite_broker import KiteBroker
     from financial_brain.forward_edge import modes
 
     calls = []
     monkeypatch.setattr(KiteBroker, "place", lambda *_args, **_kwargs: calls.append("place"))
+    monkeypatch.setattr(KiteBroker, "_request",
+                        lambda *_args, **_kwargs: pytest.fail("paper session called Kite transport"))
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda *_args, **_kwargs: pytest.fail("paper session opened an HTTP transport"))
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     monkeypatch.setenv("FB_LIVE_ORDERS", "1")
     runner, event, decided = trade_setup(tmp_path)
@@ -684,6 +841,10 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
     assert buy["charges_inr"] > "0"
+    assert buy["execution_cost_basis"] == "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE"
+    assert buy["simulated_adverse_selection_cost_inr"] == "0.00"
+    assert buy["cost_items"][0]["impact"] == 0
+    assert all(item.get("type") != "SIMULATED_ADVERSE_SELECTION" for item in buy["cost_items"])
     sell = runner.execute_paper_intent(
         session_id="s", order_id="sell", decision_id="trade-1", event_id=fill_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
@@ -835,6 +996,21 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     runner.close()
 
 
+def test_trading_audit_rows_bind_source_commit_and_executable_runner(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    rows = runner.records("s")["audit_log"]
+    for kind in ("market_event", "decision", "decision_manifest", "risk_verdict",
+                 "paper_intent", "execution_receipt"):
+        row = next(item for item in rows if item["kind"] == kind)
+        provenance = row["record"]["provenance"]
+        assert provenance["executable_entry_point"] == "ForwardSessionRunner"
+        assert provenance["source_tree_state"] in {"CLEAN", "DIRTY", "UNKNOWN"}
+        assert "source_commit" in provenance
+        assert "branch_ancestry_sha256" in provenance
+    runner.close()
+
+
 def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_path, monkeypatch):
     runner = make_runner(tmp_path)
     record = {"session_id": "s", "occurred_at": NOW.isoformat(), "status": "OPEN"}
@@ -877,7 +1053,7 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
     second_config = replace(make_config(), exchange_date=second_day)
     second_start = NOW + timedelta(days=3)
     assert runner.begin("s2", second_config, now=second_start,
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     before_sell = runner.records("s2")["accounting"]
     assert before_sell["positions"] == {"NSE:INFY": 2}
     assert before_sell["cash_inr"] == first_day_accounting["cash_inr"]
@@ -930,7 +1106,7 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     config = replace(make_config(), exchange_date=exchange_day)
     runner = make_runner(tmp_path)
     assert runner.begin("book-adapter", config, now=start,
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     quote = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-16 10:15:00", "last_price": 101.0, "volume": 1000,
         "depth": {"buy": [{"price": 100.95, "quantity": 20}],
@@ -1102,7 +1278,7 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
     exit_day = date(2026, 11, 16)
     exit_config = replace(entry_config, exchange_date=exit_day)
     exit_start = NOW + timedelta(days=3)
-    runner.begin("s2", exit_config, now=exit_start, preflight={"risk_policy_loaded": True})
+    runner.begin("s2", exit_config, now=exit_start, preflight={**READY_PREFLIGHT, "risk_policy_loaded": True})
     stop_quote = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-16 10:15:00", "last_price": 94.9, "volume": 1000,
         "depth": {"buy": [{"price": 94.95, "quantity": 20}],
@@ -1242,6 +1418,36 @@ def test_partial_missed_and_rejected_scenarios_keep_requested_vs_filled_separate
     assert missed["status"] == "MISSED" and missed["filled_quantity"] == 0
     rejected = execute(runner, event, decided, order_id="freeze", qty=11)
     assert rejected["status"] == "REJECTED" and rejected["filled_quantity"] == 0
+    events = runner.records("s")["order_events"]
+    states_by_order = {}
+    for row in events:
+        states_by_order.setdefault(row["paper_order_id"], []).append(row["state"])
+    assert states_by_order["partial"] == ["CREATED", "SUBMITTED", "PARTIAL"]
+    assert states_by_order["missed"] == ["CREATED", "SUBMITTED", "MISSED"]
+    assert states_by_order["freeze"] == ["CREATED", "SUBMITTED", "REJECTED"]
+    with pytest.raises(ForwardSessionRunnerError, match=r"unresolved paper order states: \['PARTIAL'\]"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    runner.close()
+
+
+def test_paper_receipt_records_multi_level_observed_depth_fills(tmp_path):
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 1},
+                                {"price": 100.10, "quantity": 2},
+                                {"price": 100.15, "quantity": 20}]}}
+    runner, event, decided = trade_setup(tmp_path, quote=quote)
+    receipt = execute(runner, event, decided, qty=3, limit="100.30")
+    assert receipt["status"] == "FILLED"
+    assert receipt["depth_match_mode"] == "OBSERVED_OPPOSING_BOOK_LEVELS"
+    assert receipt["filled_quantity"] == 3
+    assert receipt["visible_depth_fills"] == [
+        {"price": "100.20", "quantity": 1},
+        {"price": "100.25", "quantity": 2},
+    ]
+    assert receipt["observed_opposing_depth_quantity"] == 23
+    assert receipt["average_price"] == "100.2333333333333333333333333"
+    assert runner.records("s")["accounting"]["positions"] == {"NSE:INFY": 3}
     runner.close()
 
 
@@ -1308,7 +1514,7 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
     runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
                                   tmp_path / "journal.sqlite", clock=clock)
     assert runner.begin("clock-session", make_config(),
-                        preflight={"risk_policy_loaded": True}) is SessionState.OPEN
+                        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     signal_event = normalize_kite_quote("NSE:INFY", {
         "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
         "depth": {"buy": [{"price": 99.95, "quantity": 20}],
@@ -1367,12 +1573,69 @@ def test_unknown_outbox_after_crash_requires_receipt_reconciliation(tmp_path, mo
     assert recovery["unresolved_paper_outbox_keys"] == ["paper:s:order-1"]
     assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
                                                   reconciled_by="local-receipt-check") is True
+    assert [row["state"] for row in runner.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "FILLED"]
     receipt = execute(runner, event, decided)
     assert receipt["status"] == "FILLED"
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     report = runner.close_session("s", now=decided + timedelta(seconds=1), complete=True)
     assert report["status"] == "CLOSED" and report["execution_receipt_count"] == 1
     runner.close()
+
+
+def test_restart_materializes_unknown_order_state_if_process_dies_before_order_ack(tmp_path, monkeypatch):
+    runner, event, decided = trade_setup(tmp_path)
+    persist = runner._persist_paper_receipt
+    append_order_event = runner._append_paper_order_event
+
+    def persist_then_crash(session_id, order_id, body, *, commit=True):
+        persist(session_id, order_id, body, commit=commit)
+        raise RuntimeError("simulated crash before outbox acknowledgement")
+
+    def crash_before_unknown_journal(**kwargs):
+        if kwargs["state"] == "UNKNOWN":
+            raise RuntimeError("simulated process death while recording UNKNOWN")
+        return append_order_event(**kwargs)
+
+    monkeypatch.setattr(runner, "_persist_paper_receipt", persist_then_crash)
+    monkeypatch.setattr(runner, "_append_paper_order_event", crash_before_unknown_journal)
+    with pytest.raises(RuntimeError, match="process death"):
+        execute(runner, event, decided)
+    assert [row["state"] for row in runner.records("s")["order_events"]] == ["CREATED", "SUBMITTED"]
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    recovery = recovered.resume("s")
+    assert recovery["manual_reconciliation_required"] is True
+    assert [row["state"] for row in recovery["records"]["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN"]
+    assert recovered.reconcile_unknown_paper_intent(
+        session_id="s", order_id="order-1", reconciled_by="receipt-row-check") is True
+    assert [row["state"] for row in recovered.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "FILLED"]
+    recovered.close()
+
+
+def test_restart_rebuilds_terminal_order_state_from_dispatched_receipt(tmp_path, monkeypatch):
+    runner, event, decided = trade_setup(tmp_path)
+
+    def crash_before_lifecycle_commit(**_kwargs):
+        raise RuntimeError("simulated crash after outbox dispatch")
+
+    monkeypatch.setattr(runner, "_append_paper_receipt_outcome", crash_before_lifecycle_commit)
+    with pytest.raises(RuntimeError, match="after outbox dispatch"):
+        execute(runner, event, decided)
+    assert runner._con.execute(
+        "SELECT state FROM outbox WHERE key='paper:s:order-1'").fetchone()[0] == "DISPATCHED"
+    assert [row["state"] for row in runner.records("s")["order_events"]] == ["CREATED", "SUBMITTED"]
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    recovery = recovered.resume("s")
+    assert recovery["unresolved_paper_outbox_keys"] == []
+    assert [row["state"] for row in recovery["records"]["order_events"]] == [
+        "CREATED", "SUBMITTED", "FILLED"]
+    recovered.close()
 
 
 def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt(tmp_path, monkeypatch):
@@ -1398,6 +1661,8 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     assert recovery["manual_reconciliation_required"] is True
     assert runner.reconcile_unknown_paper_intent(session_id="s", order_id="order-1",
                                                   reconciled_by="local-receipt-check") is False
+    assert [row["state"] for row in runner.records("s")["order_events"]] == [
+        "CREATED", "SUBMITTED", "UNKNOWN", "SUBMITTED"]
     receipt = execute(runner, event, decided)
     assert receipt["status"] == "FILLED"
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1

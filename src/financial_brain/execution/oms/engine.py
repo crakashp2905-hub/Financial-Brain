@@ -1,10 +1,12 @@
-"""The OMS: an intent becomes an order, the order passes the gate and the stage, goes to the broker, and every change
-the broker reports is journaled exactly once.
+"""The OMS: an intent becomes a paper order, passes risk and rollout checks, and is journaled exactly once.
+
+The Kite adapter is read-only for account/reconciliation queries. A shared build policy refuses all broker writes;
+passing the rollout stage does not submit a physical order.
 
     submit(intent)       build the order (deterministic client id - submitting the same intent twice returns the
                          first order), run the risk gate, then by stage: AWAITING_APPROVAL (TICKET) or send
-    approve(id, actor)   a human releases an AWAITING_APPROVAL order; an ``agent:`` actor is refused
-    poll()               read the broker's order book and move each live order to what the broker says
+    approve(id, actor)   a human releases an AWAITING_APPROVAL paper order; an ``agent:`` actor is refused
+    poll()               read the configured broker adapter's order book; physical Kite writes stay disabled
     cycle()              poll, then reconcile; a mismatch halts (kill switch + one stage down)
     end_of_day()         cancel what is still working, expire unapproved tickets, reconcile
 

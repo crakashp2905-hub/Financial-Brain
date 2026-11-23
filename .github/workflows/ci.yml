@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
+        os: [ubuntu-24.04, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -42,16 +42,26 @@ jobs:
         run: python scripts/source_inventory.py
       - name: Verify source inventory snapshot
         run: python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check
+      - name: Verify trader capability owners
+        run: python scripts/capability_ownership.py --check
+      - name: Validate five-desk product charter
+        run: python scripts/validate_product_charter.py --check
+      - name: Validate five-desk launch gates and evidence labels
+        run: python scripts/validate_launch_gates.py --check
+      - name: Verify complete per-item checklist audit export
+        run: python scripts/export_checklist_audit.py --check
       - name: Verify old/new forward-engine dependency graph
         run: python scripts/forward_engine_graph.py --check
+      - name: Verify fixed-fixture legacy/integrated paper equivalence report
+        run: python scripts/forward_edge_equivalence_report.py --check
+      - name: Verify CODEOWNERS domain coverage
+        run: python scripts/validate_codeowners_map.py
+      - name: Verify historical reference-strategy pins
+        run: python scripts/validate_reference_candidates.py
+      - name: Verify reproducible checklist evidence bundle
+        run: python scripts/build_checklist_evidence_bundle.py --check
       - name: Verify scoped authoritative state ownership
         run: python scripts/state_ownership.py
-      - name: Verify legacy/integrated paper fixture equivalence report
-        run: python scripts/audit/paper_engine_equivalence.py --check
-      - name: Validate immutable historical strategy reference pins
-        run: python scripts/validate_historical_strategy_pins.py
-      - name: Verify v3 checklist release evidence bundle
-        run: python scripts/build_checklist_evidence_bundle.py --check
       - name: Verify protected-trial program windows and budgets
         run: python scripts/validate_trial_program.py
       - name: Validate protocol deviation register
@@ -67,10 +77,9 @@ jobs:
       - name: Chart-pattern offline demo (network denied)
         run: python -m financial_brain.patterns.demo --offline
       - name: Test suite
-        id: test_suite
         run: python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml
       - name: Summarize test and skip counts
-        if: always() && steps.test_suite.outcome != 'skipped'
+        if: always()
         run: python scripts/ci_test_summary.py pytest-results.xml
       - name: Upload pytest report
         if: always()

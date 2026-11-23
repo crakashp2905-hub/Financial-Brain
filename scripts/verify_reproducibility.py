@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -11,17 +12,14 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from packaging.requirements import Requirement
-try:
-    from scripts.text_hash import sha256_lf_normalized
-except ModuleNotFoundError:  # direct `python scripts/verify_reproducibility.py` invocation
-    from text_hash import sha256_lf_normalized
 
 
 CONTRACT = Path("docs/edge-program/reproducibility-contract.v1.json")
 
 
 def sha256(path: Path) -> str:
-    return sha256_lf_normalized(path.read_bytes())
+    """SHA-256 of the file with CRLF mapped to LF, so Windows (autocrlf) and Linux checkouts agree."""
+    return hashlib.sha256(path.read_bytes().replace(bytes([13, 10]), bytes([10]))).hexdigest()
 
 
 def verify(*, integrity_only: bool = False) -> list[str]:
@@ -32,8 +30,6 @@ def verify(*, integrity_only: bool = False) -> list[str]:
         return [f"cannot read reproducibility contract: {exc}"]
     if contract.get("schema") != "fb.edge_program.reproducibility_contract.v1":
         return ["invalid reproducibility contract schema"]
-    if contract.get("hash_newline_normalization") != "CRLF_TO_LF":
-        errors.append("reproducibility contract must specify CRLF_TO_LF hash normalization")
     lock = contract["dependency_lock"]
     fixture = contract["deterministic_fixture"]
     for record in (lock, fixture):

@@ -24,7 +24,13 @@ from financial_brain.forward_edge.session_runner import ForwardSessionRunner
 from financial_brain.forward_edge.session_state import ForwardRunConfig, ForwardSessionStore, SessionState
 
 IST = ZoneInfo("Asia/Kolkata")
-
+FIXTURE_PROVENANCE: dict[str, str | None] = {
+    "source_commit": None,
+    "source_branch": None,
+    "source_tree_state": "SYNTHETIC_FIXTURE",
+    "branch_ancestry_sha256": None,
+    "executable_entry_point": "ForwardSessionRunner:synthetic-fixture",
+}
 
 def _fixture_cost_schedule(day, fee_bps: str) -> tuple[dict[str, Any], str]:
     fee_rate = float(Decimal(fee_bps) / Decimal(10_000))
@@ -115,7 +121,12 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
         temporary = None
         directory = Path(state_dir)
         directory.mkdir(parents=True, exist_ok=True)
-    runner = ForwardSessionRunner(ForwardSessionStore(directory / "state.sqlite"), directory / "journal.sqlite")
+    # Pin provenance only for this synthetic adapter so golden fixture hashes do not
+    # depend on the developer checkout or GitHub's synthetic PR merge commit.
+    with patch("financial_brain.forward_edge.session_runner.repository_provenance",
+               return_value=FIXTURE_PROVENANCE):
+        runner = ForwardSessionRunner(ForwardSessionStore(directory / "state.sqlite"),
+                                      directory / "journal.sqlite")
     try:
         cost_schedule_data, cost_schedule_sha256 = _fixture_cost_schedule(
             session_date, str(fx.get("fee_bps", "3")))
@@ -124,6 +135,7 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
             session_date, "fixture-v1", str(fx["strategy_sha256"]), str(fx["benchmark_id"]),
             (instrument,), Decimal("1000000"),
             {"max_positions": 1, "max_quote_age_ms": 5_000, "session_phase": "CONTINUOUS",
+             "allow_synthetic_fixture_events": True,
              "liquidity_bucket": "large", "cost_schedule": cost_schedule_data,
              "instrument_rules": fixture_rule_book(instrument, tick_size=str(fx["tick"]),
                                                      freeze_quantity=max(1000, quantity))},

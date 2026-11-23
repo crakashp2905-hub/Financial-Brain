@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from zoneinfo import ZoneInfo
+
+from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 
 
 class GateReason(StrEnum):
@@ -19,6 +22,8 @@ class GateReason(StrEnum):
     AUCTION_DATA_MISSING = "AUCTION_DATA_MISSING"
     NOT_CONTINUOUS_SESSION = "NOT_CONTINUOUS_SESSION"
     INVALID_REQUEST = "INVALID_REQUEST"
+    RIGHTS_UNKNOWN = "RIGHTS_UNKNOWN"
+    RIGHTS_DENIED = "RIGHTS_DENIED"
 
 
 @dataclass(frozen=True)
@@ -37,13 +42,23 @@ def evaluate_market_data(*, decision_time: datetime, quote_time: datetime | None
                          volume: int | None, is_circuit_limited: bool = False,
                          quantity: int | None = None, freeze_limit: int | None = None,
                          session_phase: str = "CONTINUOUS", auction_required: bool = False,
-                         auction_data_present: bool = True) -> DataGateResult:
+                         auction_data_present: bool = True, source_id: str | None = None,
+                         entitlement: DataPermission | None = None,
+                         data_use: DataUse = DataUse.PAPER_SIMULATION) -> DataGateResult:
     """Evaluate known inputs. Missing/invalid inputs abstain with stable reason codes."""
     reasons: set[GateReason] = set()
     if decision_time.tzinfo is None or decision_time.utcoffset() is None:
         reasons.add(GateReason.QUOTE_CLOCK_INVALID)
     if max_age_ms < 0 or max_spread_bps < 0 or (volume is not None and volume < 0):
         reasons.add(GateReason.INVALID_REQUEST)
+    if entitlement is None or source_id is None:
+        reasons.add(GateReason.RIGHTS_UNKNOWN)
+    elif (entitlement.status.value == "DENIED" and entitlement.source_id == source_id
+          and entitlement.use is data_use):
+        reasons.add(GateReason.RIGHTS_DENIED)
+    elif not entitlement.allows(source_id=source_id, use=data_use,
+                                on=decision_time.astimezone(ZoneInfo("Asia/Kolkata")).date()):
+        reasons.add(GateReason.RIGHTS_UNKNOWN)
     if quote_time is None or bid is None or ask is None:
         reasons.add(GateReason.QUOTE_MISSING)
     elif quote_time.tzinfo is None or quote_time.utcoffset() is None:

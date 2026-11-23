@@ -1,135 +1,131 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from decimal import Decimal
-from zoneinfo import ZoneInfo
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
-import duckdb
 
-from financial_brain.etf_valuation import (
-    assess_valuation_health, compare_latest_for_quote, compare_quote_to_inav,
+from financial_brain.features.etf_valuation import (
+    compare_quote_to_inav,
+    detect_etf_valuation_anomalies,
 )
-from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.market_data import normalize_kite_quote
+from financial_brain.providers.etf_reference import (
+    ETFReferenceError,
+    ETFReferenceRecord,
+    ETFValuationObservation,
+)
 
-IST = ZoneInfo("Asia/Kolkata")
+
+UTC = timezone.utc
+NOW = datetime(2026, 11, 13, 4, 45, 3, tzinfo=UTC)
 
 
-def _quote(at: datetime) -> MarketEvent:
-    return MarketEvent(
-        event_id="q1", kind=EventKind.QUOTE, venue="NSE", instrument_id="NSE:ETFONE",
-        event_time=at, received_at=at + timedelta(seconds=1),
-        available_at=at + timedelta(seconds=1), source="KITE_CONNECT_READ_ONLY",
-        payload={"bid": 100, "ask": 101, "last_price": 100.5, "volume": 1000},
+def _identity() -> ETFReferenceRecord:
+    return ETFReferenceRecord(
+        source_id="NSE", exchange="NSE", symbol="INDEXETF", isin="INE000A01001",
+        listing_date=date(2020, 1, 2), effective_from=date(2020, 1, 2), effective_to=None,
+        series="EQ", published_at=datetime(2020, 1, 2, 3, tzinfo=UTC),
+        observed_at=datetime(2020, 1, 2, 4, tzinfo=UTC), source_ref="reference",
+        source_sha256="a" * 64,
     )
 
 
-def _inav(at: datetime) -> dict:
-    return {"indicative_nav": Decimal("100"), "indicative_nav_at": at,
-            "source_published_at": at - timedelta(minutes=1),
-            "source_url": "https://amc.example.in/etf/inav.csv",
-            "source_document_sha256": "b" * 64}
-
-
-def test_comparison_uses_synchronized_midpoint_and_returns_percent() -> None:
-    quote_time = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    inav_time = quote_time + timedelta(seconds=1)
-    result = compare_quote_to_inav(
-        _quote(quote_time), _inav(inav_time),
-        decision_time=quote_time + timedelta(seconds=2),
+def _quote(*, symbol: str = "INDEXETF", timestamp: str = "2026-11-13 10:15:00",
+           received: datetime = NOW):
+    return normalize_kite_quote(
+        f"NSE:{symbol}",
+        {"timestamp": timestamp, "last_price": 101.5, "volume": 100,
+         "depth": {"buy": [{"price": 101.4, "quantity": 12}],
+                   "sell": [{"price": 101.6, "quantity": 9}]}},
+        received_at=received,
     )
-    assert result.status == "COMPARABLE"
-    assert result.market_mid == Decimal("100.5")
-    assert result.premium_discount_pct == Decimal("0.500")
-    assert result.timestamp_skew == timedelta(seconds=1)
+
+
+def _inav(*, symbol: str = "INDEXETF", observed: datetime | None = None) -> ETFValuationObservation:
+    observed = observed or datetime(2026, 11, 13, 4, 45, 1, tzinfo=UTC)
+    return ETFValuationObservation(
+        source_id="NSE", exchange="NSE", symbol=symbol, isin="INE000A01001",
+        valuation_type="INAV", valuation_date=date(2026, 11, 13), value_per_unit="100.00",
+        published_at=observed - timedelta(seconds=1), observed_at=observed,
+        source_ref="iNAV observation", source_sha256="b" * 64,
+    )
+
+
+def _compare(quote, inav, *, decision: datetime = NOW, quote_age=5, inav_age=10, skew=2):
+    return compare_quote_to_inav(
+        quote, identity=_identity(), inav=inav, decision_time=decision,
+        quote_max_age=timedelta(seconds=quote_age), inav_max_age=timedelta(seconds=inav_age),
+        max_observation_skew=timedelta(seconds=skew),
+    )
+
+
+def test_fresh_synchronized_quote_reports_midquote_premium_in_bps() -> None:
+    result = _compare(_quote(), _inav())
+    assert result["premium_discount_bps"] == "150"
+    assert result["quote_age_seconds"] == 3.0
+    assert result["inav_age_seconds"] == 2.0
+    assert result["observation_skew_seconds"] == 1.0
+    assert len(result["quote_sha256"]) == len(result["inav_sha256"]) == 64
 
 
 @pytest.mark.parametrize(
-    ("decision_delta", "quote_delta", "inav_delta", "wide_age", "expected"),
+    ("quote", "inav", "decision", "ages", "match"),
     [
-        (timedelta(seconds=12), timedelta(0), timedelta(0), False, "STALE_QUOTE"),
-        (timedelta(seconds=12), timedelta(seconds=11), timedelta(0), False, "STALE_INAV"),
-        (timedelta(seconds=12), timedelta(0), timedelta(seconds=10), True,
-         "ASYNCHRONOUS_OBSERVATIONS"),
+        (_quote(), _inav(), NOW + timedelta(seconds=20), (5, 60, 2), "quote is stale"),
+        (_quote(), _inav(), NOW, (5, 1, 2), "iNAV is stale"),
+        (_quote(timestamp="2026-11-13 10:15:04", received=NOW + timedelta(seconds=10)),
+         _inav(), NOW + timedelta(seconds=11), (30, 30, 2), "asynchronous"),
+        (_quote(), _inav(observed=NOW + timedelta(seconds=1)), NOW, (5, 10, 2), "unavailable"),
     ],
 )
-def test_asynchronous_or_stale_inputs_are_refused(
-    decision_delta, quote_delta, inav_delta, wide_age, expected
-) -> None:
-    start = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    kwargs = {"max_timestamp_skew": timedelta(seconds=2)}
-    if wide_age:
-        kwargs.update(max_quote_age=timedelta(seconds=20), max_inav_age=timedelta(seconds=20))
-    result = compare_quote_to_inav(_quote(start + quote_delta), _inav(start + inav_delta),
-                                   decision_time=start + decision_delta, **kwargs)
-    assert result.status == "REFUSED"
-    assert result.premium_discount_pct is None
-    assert result.reason == expected
+def test_stale_future_or_asynchronous_values_are_refused(quote, inav, decision, ages, match) -> None:
+    with pytest.raises(ETFReferenceError, match=match):
+        _compare(quote, inav, decision=decision, quote_age=ages[0], inav_age=ages[1], skew=ages[2])
 
 
-def test_comparison_refuses_unavailable_or_unprovenanced_inav() -> None:
-    start = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    inav = _inav(start)
-    inav["source_url"] = ""
-    result = compare_quote_to_inav(
-        _quote(start), inav, decision_time=start + timedelta(seconds=2))
-    assert result.reason == "INAV_PROVENANCE_MISSING"
-    assert result.premium_discount_pct is None
-    inav = _inav(start)
-    inav["source_document_sha256"] = "bad"
-    result = compare_quote_to_inav(
-        _quote(start), inav, decision_time=start + timedelta(seconds=2))
-    assert result.reason == "INAV_PROVENANCE_MISSING"
-    with pytest.raises(ValueError, match="timezone-aware"):
-        compare_quote_to_inav(_quote(start), _inav(start), decision_time=datetime(2026, 11, 23))
+def test_inav_for_another_symbol_is_refused() -> None:
+    with pytest.raises(ETFReferenceError, match="same point-in-time ETF identity"):
+        _compare(_quote(), _inav(symbol="OTHERETF"))
 
 
-def test_latest_database_inav_is_resolved_asof_before_comparison() -> None:
-    con = duckdb.connect(":memory:")
-    con.execute("""CREATE TABLE etf_reference_observations
-        (observed_on DATE, exchange VARCHAR, symbol VARCHAR, isin VARCHAR)""")
-    con.execute("""CREATE TABLE etf_product_disclosures
-        (isin VARCHAR, observed_on DATE, indicative_nav DECIMAL(20,8),
-         indicative_nav_at TIMESTAMPTZ, source_published_at TIMESTAMPTZ, source_url VARCHAR,
-         source_document_sha256 VARCHAR)""")
-    con.execute("""INSERT INTO etf_reference_observations VALUES
-        ('2026-11-23','NSE','ETFONE','INF000A01010')""")
-    con.execute("""INSERT INTO etf_product_disclosures VALUES
-        ('INF000A01010','2026-11-23',100,'2026-11-23 10:00:00+05:30',
-         '2026-11-23 09:59:00+05:30','https://amc.example.in/inav','%s'),
-        ('INF000A01010','2026-11-23',110,'2026-11-23 11:00:00+05:30',
-         '2026-11-23 10:59:00+05:30','https://amc.example.in/inav','%s')"""
-        % ("c" * 64, "d" * 64))
-    quote_time = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    try:
-        result = compare_latest_for_quote(
-            con, _quote(quote_time), decision_time=quote_time + timedelta(seconds=2))
-    finally:
-        con.close()
-    assert result.status == "COMPARABLE"
-    assert result.indicative_nav == Decimal("100.00000000")
-
-
-def test_health_flags_multiday_nav_stale_inav_and_large_premium() -> None:
-    now = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    result = assess_valuation_health(
-        nav=Decimal("100"), nav_as_of=now.date() - timedelta(days=5),
-        indicative_nav=Decimal("100"), indicative_nav_at=now - timedelta(seconds=10),
-        market_mid=Decimal("102"), decision_time=now,
+def _valuation(kind: str, day: date, value: str, hour: int) -> ETFValuationObservation:
+    observed = datetime(day.year, day.month, day.day, hour, tzinfo=UTC)
+    return ETFValuationObservation(
+        source_id="NSE", exchange="NSE", symbol="INDEXETF", isin="INE000A01001",
+        valuation_type=kind, valuation_date=day, value_per_unit=value,
+        published_at=observed - timedelta(minutes=1), observed_at=observed,
+        source_ref=f"{kind} source record", source_sha256=("c" if kind == "NAV" else "d") * 64,
     )
-    assert result.status == "ALERT"
-    assert result.nav_age_days == 5
-    assert result.premium_discount_pct == Decimal("2.00")
-    assert result.premium_flag == "LARGE_PREMIUM"
-    assert {"NAV_STALE_MULTIDAY", "INAV_STALE", "LARGE_PREMIUM"} <= set(result.reasons)
 
 
-def test_unknown_international_closure_calendar_is_not_inferred() -> None:
-    now = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
-    result = assess_valuation_health(
-        nav=None, nav_as_of=None, indicative_nav=None, indicative_nav_at=None,
-        market_mid=None, decision_time=now,
+def test_anomaly_report_finds_nav_inav_gaps_repeats_staleness_closures_and_premiums() -> None:
+    sessions = [date(2026, 11, 10), date(2026, 11, 11), date(2026, 11, 12)]
+    navs = [_valuation("NAV", day, "100", 12) for day in sessions]
+    inavs = [_valuation("INAV", sessions[-1], "100", 4)]
+    as_of = datetime(2026, 11, 12, 5, tzinfo=UTC)
+    findings = detect_etf_valuation_anomalies(
+        expected_sessions=sessions, navs=navs, inavs=inavs,
+        premium_comparisons=[{"premium_discount_bps": "250", "quote_event_time": "2026-11-12T04:59:00+00:00"}],
+        underlying_open_by_session={sessions[1]: False}, as_of=as_of,
+        max_nav_age=timedelta(hours=24), max_inav_age=timedelta(minutes=30),
+        max_repeated_nav_sessions=2, max_abs_premium_discount_bps="150",
     )
-    assert result.international_market_context == "UNKNOWN"
-    assert "UNDERLYING_MARKET_CLOSED" not in result.reasons
-    assert "NAV_MISSING" in result.reasons and "INAV_MISSING" in result.reasons
+    types = [row["type"] for row in findings]
+    assert types.count("INAV_GAP") == 2
+    assert "INAV_STALE" in types
+    assert "NAV_REPEATED_ACROSS_SESSIONS" in types
+    assert "UNDERLYING_MARKET_CLOSED" in types
+    assert "LARGE_PREMIUM_DISCOUNT" in types
+    assert "NAV_GAP" not in types
+
+
+def test_anomaly_report_requires_resolved_valuation_revisions() -> None:
+    day = date(2026, 11, 12)
+    nav = _valuation("NAV", day, "100", 12)
+    with pytest.raises(ETFReferenceError, match="resolve NAV revisions"):
+        detect_etf_valuation_anomalies(
+            expected_sessions=[day], navs=[nav, nav], inavs=[], premium_comparisons=[],
+            underlying_open_by_session={}, as_of=NOW, max_nav_age=timedelta(days=1),
+            max_inav_age=timedelta(minutes=1), max_repeated_nav_sessions=2,
+            max_abs_premium_discount_bps=100,
+        )

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections import Counter
 
+from financial_brain.forward_edge.evidence_labels import metadata
+
 
 def audit(run) -> dict:
     """Return coverage and accounting facts without relabelling simulated fills.
@@ -27,4 +29,5 @@ def audit(run) -> dict:
         "equity_rows": len(run.equity),
         "warnings": list(run.warnings),
         "paper_only": True,
+        **metadata("historical_replay"),
     }

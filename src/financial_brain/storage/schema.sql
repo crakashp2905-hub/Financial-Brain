@@ -61,68 +61,6 @@ CREATE TABLE IF NOT EXISTS securities (
     status          VARCHAR DEFAULT 'active'
 );
 
--- Immutable observations of the exchange's current ETF reference list. Each row is
--- tied to the exact source file hash; omission from a later snapshot is not a delisting.
-CREATE TABLE IF NOT EXISTS etf_reference_observations (
-    observed_on      DATE NOT NULL,
-    exchange         VARCHAR NOT NULL,
-    symbol           VARCHAR NOT NULL,
-    isin             VARCHAR NOT NULL,
-    security_name    VARCHAR NOT NULL,
-    underlying       VARCHAR,
-    listing_date     DATE,
-    market_lot       INTEGER NOT NULL,
-    face_value       DECIMAL(20, 6),
-    exposure_class   VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
-    exposure_rule    VARCHAR NOT NULL DEFAULT 'NO_EXPOSURE_LABEL',
-    exposure_confidence VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
-    exposure_match   VARCHAR,
-    status           VARCHAR NOT NULL,
-    source           VARCHAR NOT NULL,
-    source_url       VARCHAR NOT NULL,
-    source_sha256    VARCHAR NOT NULL,
-    record_sha256    VARCHAR NOT NULL,
-    retrieved_at     TIMESTAMPTZ NOT NULL,
-    lake_key         VARCHAR NOT NULL,
-    PRIMARY KEY (observed_on, exchange, isin)
-);
-
--- Source-attributed ETF product facts transcribed from official AMC/index-provider
--- disclosures. A missing field remains NULL; the disclosed return type must be explicit.
-CREATE TABLE IF NOT EXISTS etf_product_disclosures (
-    observed_on             DATE NOT NULL,
-    isin                    VARCHAR NOT NULL,
-    benchmark_name          VARCHAR,
-    benchmark_return_type   VARCHAR NOT NULL,
-    fund_house              VARCHAR,
-    inception_date          DATE,
-    listing_date            DATE,
-    nav                     DECIMAL(20, 8),
-    nav_as_of               DATE,
-    indicative_nav          DECIMAL(20, 8),
-    indicative_nav_at       TIMESTAMPTZ,
-    expense_ratio_pct       DECIMAL(12, 8),
-    expense_effective_from  DATE,
-    expense_effective_to    DATE,
-    tracking_error_pct      DECIMAL(12, 8),
-    tracking_difference_pct DECIMAL(12, 8),
-    tracking_period_start   DATE,
-    tracking_period_end     DATE,
-    -- Issuer/market-maker primary-market context only; never a retail redemption route.
-    creation_units          BIGINT,
-    redemption_units        BIGINT,
-    creation_unit_size      BIGINT,
-    flow_period_start       DATE,
-    flow_period_end         DATE,
-    source_url              VARCHAR NOT NULL,
-    source_document_sha256  VARCHAR NOT NULL,
-    source_published_at     TIMESTAMPTZ NOT NULL,
-    import_sha256           VARCHAR NOT NULL,
-    record_sha256           VARCHAR NOT NULL,
-    lake_key                VARCHAR NOT NULL,
-    PRIMARY KEY (observed_on, isin, source_document_sha256)
-);
-
 -- Symbol history. One row per (isin, exchange, ticker, series) span actually observed
 -- in the data - this is how a symbol change becomes a fact rather than a guess.
 CREATE TABLE IF NOT EXISTS security_listings (
@@ -617,144 +555,662 @@ CREATE TABLE IF NOT EXISTS mf_nav (
     PRIMARY KEY (scheme_code, nav_date)
 );
 
--- Append-only NAV revisions. AMFI NAVAll supplies a row date but no source publication
--- timestamp; retrieval and successful repository observation clocks are retained instead.
+-- Append-only observations of AMFI NAV rows. A source may republish a corrected NAV for
+-- the same scheme/date; keep every byte-backed observation and use observed_at as the
+-- conservative availability bound. AMFI's daily file does not provide a per-row
+-- publication timestamp, so source_published_at remains NULL unless an authorized
+-- provider explicitly supplies one.
 CREATE TABLE IF NOT EXISTS mf_nav_observations (
-    scheme_code             VARCHAR NOT NULL,
-    nav_date                DATE NOT NULL,
-    nav                     DOUBLE NOT NULL,
-    isin_growth             VARCHAR,
-    isin_reinvest           VARCHAR,
-    scheme_name             VARCHAR NOT NULL,
-    fund_house              VARCHAR,
-    scheme_type             VARCHAR,
-    plan                    VARCHAR,
-    option                  VARCHAR,
-    lake_key                VARCHAR NOT NULL,
-    source_document_sha256  VARCHAR NOT NULL,
-    source_published_at     TIMESTAMPTZ,
-    retrieved_at            TIMESTAMPTZ NOT NULL,
-    observed_at             TIMESTAMPTZ NOT NULL,
-    record_sha256           VARCHAR NOT NULL,
-    PRIMARY KEY (scheme_code, nav_date, source_document_sha256)
+    observation_id      VARCHAR PRIMARY KEY,
+    scheme_code         VARCHAR NOT NULL,
+    isin_growth         VARCHAR,
+    isin_reinvest       VARCHAR,
+    scheme_name         VARCHAR NOT NULL,
+    fund_house          VARCHAR,
+    scheme_type         VARCHAR,
+    plan                VARCHAR,
+    option              VARCHAR,
+    nav                 DOUBLE NOT NULL,
+    nav_date            DATE NOT NULL,
+    lake_key            VARCHAR NOT NULL,
+    row_number          INTEGER NOT NULL,
+    row_sha256          VARCHAR NOT NULL,
+    source_published_at TIMESTAMPTZ,
+    observed_at         TIMESTAMPTZ NOT NULL,
+    ingested_at         TIMESTAMPTZ,
+    -- Provenance fields used by the bounded historical-export ingestion path.
+    -- These coexist with the per-row NAVAll observation identity above.
+    source_document_sha256 VARCHAR,
+    retrieved_at        TIMESTAMPTZ,
+    record_sha256       VARCHAR
 );
 
--- As-observed AMFI scheme metadata snapshots. AMFI's NAVAll rows do not declare legal
--- effective dates; observed_on/observed_at preserve what was actually available instead
--- of backdating metadata to the NAV date.
-CREATE TABLE IF NOT EXISTS mf_scheme_master_observations (
-    identity_key            VARCHAR NOT NULL,
-    scheme_code             VARCHAR NOT NULL,
-    isin_growth             VARCHAR,
-    isin_reinvest           VARCHAR,
-    scheme_name             VARCHAR NOT NULL,
-    fund_house              VARCHAR,
-    scheme_type             VARCHAR,
-    plan_type               VARCHAR NOT NULL,
-    payout_type             VARCHAR NOT NULL,
-    structure_type          VARCHAR NOT NULL,
-    management_type         VARCHAR NOT NULL,
-    asset_class             VARCHAR NOT NULL,
-    plan                    VARCHAR,
-    option                  VARCHAR,
-    nav_as_of               DATE NOT NULL,
-    observed_on             DATE NOT NULL,
-    observed_at             TIMESTAMPTZ NOT NULL,
-    source_document_sha256  VARCHAR NOT NULL,
-    record_sha256           VARCHAR NOT NULL,
-    lake_key                VARCHAR NOT NULL,
-    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+-- Effective-dated mutual-fund reference metadata. Each immutable row carries its source
+-- hash and both publication and observation clocks; unavailable classifications are
+-- explicit UNKNOWN values rather than guessed from a scheme name.
+CREATE TABLE IF NOT EXISTS mf_scheme_master (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    structure       VARCHAR NOT NULL,
+    investment_style VARCHAR NOT NULL,
+    asset_category  VARCHAR NOT NULL,
+    category_label  VARCHAR NOT NULL,
+    fund_house      VARCHAR,
+    riskometer      VARCHAR,
+    benchmark_tri   VARCHAR,
+    manager         VARCHAR,
+    objective       VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref      VARCHAR NOT NULL,
+    source_sha256   VARCHAR NOT NULL,
+    published_at    TIMESTAMPTZ NOT NULL,
+    observed_at     TIMESTAMPTZ NOT NULL
 );
 
--- AMC/SID facts retain both declared validity and when the repository observed them.
-CREATE TABLE IF NOT EXISTS mf_scheme_profile_disclosures (
-    identity_key            VARCHAR NOT NULL,
-    scheme_code             VARCHAR NOT NULL,
-    plan                    VARCHAR,
-    option                  VARCHAR,
-    isin                    VARCHAR,
-    riskometer              VARCHAR,
-    benchmark_name          VARCHAR,
-    benchmark_return_type   VARCHAR NOT NULL,
-    manager                 VARCHAR,
-    objective               VARCHAR,
-    effective_from          DATE,
-    effective_to            DATE,
-    scheme_status           VARCHAR,
-    status_effective_from   DATE,
-    successor_scheme_code   VARCHAR,
-    status_reason           VARCHAR,
-    expense_ratio_pct       DECIMAL(12, 8),
-    expense_ratio_plan      VARCHAR,
-    expense_effective_from DATE,
-    expense_effective_to   DATE,
-    aum_inr                 DECIMAL(24, 2),
-    aum_as_of               DATE,
-    minimum_initial_inr     DECIMAL(20, 2),
-    minimum_additional_inr  DECIMAL(20, 2),
-    minimum_effective_from  DATE,
-    minimum_effective_to    DATE,
-    exit_load_schedule      VARCHAR,
-    exit_load_effective_from DATE,
-    exit_load_effective_to   DATE,
-    exit_restrictions       VARCHAR,
-    restriction_effective_from DATE,
-    restriction_effective_to DATE,
-    observed_on             DATE NOT NULL,
-    observed_at             TIMESTAMPTZ NOT NULL,
-    source_url              VARCHAR NOT NULL,
-    source_document_sha256  VARCHAR NOT NULL,
-    source_published_at     TIMESTAMPTZ NOT NULL,
-    import_sha256           VARCHAR NOT NULL,
-    record_sha256           VARCHAR NOT NULL,
-    lake_key                VARCHAR NOT NULL,
-    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+-- Append-only, permission-gated lifecycle facts keep closed, merged, renamed, and
+-- suspended schemes in point-in-time universes. Successor links are explicit evidence;
+-- they are never inferred from similar names or current scheme availability.
+CREATE TABLE IF NOT EXISTS mf_scheme_lifecycle (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    lifecycle       VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    successor_scheme_code VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
 );
 
--- Monthly/quarterly AMC portfolio snapshots. Unknown fields remain NULL rather than inferred.
+-- Disclosed, effective-dated fees and dealing constraints. Numeric amounts/rates are
+-- stored as text so source decimal precision survives round trips; JSON null means
+-- unknown while [] means a source explicitly reported no schedule/restriction.
+CREATE TABLE IF NOT EXISTS mf_scheme_commercial_terms (
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR NOT NULL,
+    option          VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,
+    ter_percent     VARCHAR,
+    aum_inr         VARCHAR,
+    exit_loads_json VARCHAR,
+    charge_schedule_json VARCHAR,
+    minimum_initial_inr VARCHAR,
+    minimum_additional_inr VARCHAR,
+    minimum_redemption_inr VARCHAR,
+    exit_restrictions_json VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Permission-gated, append-only IDCW and unit/scheme transition facts for MF paper
+-- accounting and total-return reconstruction. All per-unit amounts and ratios retain
+-- source decimal precision as text.
+CREATE TABLE IF NOT EXISTS mf_scheme_flows (
+    event_id        VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    isin            VARCHAR NOT NULL,
+    kind            VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,
+    cash_per_unit   VARCHAR,
+    reinvestment_nav VARCHAR,
+    unit_ratio      VARCHAR,
+    successor_scheme_code VARCHAR,
+    successor_isin   VARCHAR,
+    source_id       VARCHAR NOT NULL,
+    source_ref       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    published_at     TIMESTAMPTZ NOT NULL,
+    observed_at      TIMESTAMPTZ NOT NULL
+);
+
+-- Source-hashed monthly/quarterly portfolio rows, available only after both
+-- publication and observation clocks. Decimal weights and debt metrics retain their
+-- exact source representation; the same disclosure date can have later corrections.
 CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
-    scheme_code VARCHAR NOT NULL,
-    portfolio_as_of DATE NOT NULL,
-    instrument_id VARCHAR NOT NULL,
+    record_id       VARCHAR PRIMARY KEY,
+    scheme_code     VARCHAR NOT NULL,
+    plan            VARCHAR,
+    option          VARCHAR,
+    scheme_isin     VARCHAR,
+    disclosure_date DATE,
+    asset_class     VARCHAR,
+    weight_percent  VARCHAR,
+    asset_id        VARCHAR,
+    asset_name      VARCHAR,
+    sector          VARCHAR,
+    credit_rating   VARCHAR,
+    modified_duration_years VARCHAR,
+    yield_to_maturity_percent VARCHAR,
+    source_id       VARCHAR,
+    source_ref       VARCHAR,
+    source_sha256    VARCHAR,
+    published_at     TIMESTAMPTZ,
+    observed_at      TIMESTAMPTZ NOT NULL,
+    -- Normalized AMC CSV import fields retained alongside the richer disclosure rows.
+    portfolio_as_of DATE,
+    instrument_id VARCHAR,
     underlying_scheme_code VARCHAR,
     holding_name VARCHAR,
-    asset_type VARCHAR NOT NULL,
-    sector VARCHAR,
+    asset_type VARCHAR,
     weight_pct DECIMAL(12, 8),
     market_value_inr DECIMAL(24, 2),
     quantity DECIMAL(24, 8),
-    credit_rating VARCHAR,
     maturity_date DATE,
-    modified_duration_years DECIMAL(16, 8),
-    yield_to_maturity_pct DECIMAL(12, 8),
-    observed_on DATE NOT NULL,
-    observed_at TIMESTAMPTZ NOT NULL,
-    source_url VARCHAR NOT NULL,
-    source_document_sha256 VARCHAR NOT NULL,
-    source_published_at TIMESTAMPTZ NOT NULL,
-    lake_key VARCHAR NOT NULL,
-    PRIMARY KEY (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)
+    observed_on DATE,
+    source_url VARCHAR,
+    source_document_sha256 VARCHAR,
+    source_published_at TIMESTAMPTZ,
+    lake_key VARCHAR,
+    yield_to_maturity_pct DECIMAL(12, 8)
 );
 
--- Rejected candidates and forward observations are counterfactual research, never fills/P&L.
-CREATE TABLE IF NOT EXISTS rejected_signal_counterfactuals (
-    signal_id VARCHAR PRIMARY KEY,
-    reason_code VARCHAR NOT NULL,
-    rejected_at TIMESTAMPTZ NOT NULL,
-    decision_sha256 VARCHAR NOT NULL,
-    record_sha256 VARCHAR NOT NULL,
-    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL'
+-- Durable paper mutual-fund accounting. Exit-load terms are frozen per purchase lot
+-- so a later schedule revision cannot rewrite an existing lot's redemption economics.
+CREATE TABLE IF NOT EXISTS mf_paper_accounts (
+    account_id VARCHAR PRIMARY KEY,
+    cash_inr DECIMAL(38, 18) NOT NULL CHECK (cash_inr >= 0),
+    created_at TIMESTAMPTZ NOT NULL
 );
-CREATE TABLE IF NOT EXISTS counterfactual_outcomes (
-    signal_id VARCHAR NOT NULL,
-    horizon_sessions INTEGER NOT NULL,
-    observed_on DATE NOT NULL,
-    realized_return DOUBLE NOT NULL,
-    benchmark_return DOUBLE,
-    outcome_source_sha256 VARCHAR NOT NULL,
-    record_sha256 VARCHAR NOT NULL,
-    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL',
-    PRIMARY KEY (signal_id, horizon_sessions)
+
+-- Balanced paper MF cash/investment journal. Legacy balances are not backfilled:
+-- their opening source is unknown and must be reconciled explicitly.
+CREATE TABLE IF NOT EXISTS mf_paper_ledger_entries (
+    account_id VARCHAR NOT NULL,
+    transaction_id VARCHAR NOT NULL,
+    line_no INTEGER NOT NULL CHECK (line_no > 0),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    account_code VARCHAR NOT NULL CHECK (account_code IN (
+        'CASH', 'MF_INVESTMENTS', 'REDEMPTION_RECEIVABLE',
+        'OWNER_EQUITY', 'OWNER_WITHDRAWALS', 'EXIT_LOAD_EXPENSE',
+        'OTHER_CHARGES_EXPENSE', 'IDCW_INCOME', 'REALIZED_GAIN', 'REALIZED_LOSS',
+        'SIP_PAYMENT_PENDING', 'MF_UNITS', 'UNITS_CLEARING'
+    )),
+    debit_inr DECIMAL(38, 18) NOT NULL CHECK (debit_inr >= 0),
+    credit_inr DECIMAL(38, 18) NOT NULL CHECK (credit_inr >= 0),
+    folio_id VARCHAR,
+    instrument_id VARCHAR,
+    debit_units DECIMAL(38, 18) NOT NULL DEFAULT 0 CHECK (debit_units >= 0),
+    credit_units DECIMAL(38, 18) NOT NULL DEFAULT 0 CHECK (credit_units >= 0),
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, transaction_id, line_no),
+    CHECK (
+        (debit_inr > 0 AND credit_inr = 0 AND debit_units = 0 AND credit_units = 0
+            AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NULL AND instrument_id IS NULL)
+        OR (credit_inr > 0 AND debit_inr = 0 AND debit_units = 0 AND credit_units = 0
+            AND account_code NOT IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NULL AND instrument_id IS NULL)
+        OR (debit_inr = 0 AND credit_inr = 0 AND debit_units > 0 AND credit_units = 0
+            AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+        OR (debit_inr = 0 AND credit_inr = 0 AND debit_units = 0 AND credit_units > 0
+            AND account_code IN ('MF_UNITS', 'UNITS_CLEARING')
+            AND folio_id IS NOT NULL AND instrument_id IS NOT NULL)
+    ),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+            AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+            AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_external_cash_events (
+    account_id VARCHAR NOT NULL,
+    event_id VARCHAR NOT NULL,
+    amount_inr DECIMAL(38, 18) NOT NULL CHECK (amount_inr > 0),
+    direction VARCHAR NOT NULL CHECK (direction IN ('CONTRIBUTION', 'WITHDRAWAL')),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, event_id),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+            AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+            AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
+-- Immutable MF requests and append-only platform/simulation lifecycle receipts.
+CREATE TABLE IF NOT EXISTS mf_paper_orders (
+    order_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    transaction_type VARCHAR NOT NULL CHECK (transaction_type IN (
+        'PURCHASE', 'REDEMPTION', 'SWITCH_IN', 'SWITCH_OUT'
+    )),
+    requested_at TIMESTAMPTZ NOT NULL,
+    amount_inr DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    request_basis VARCHAR NOT NULL CHECK (request_basis IN (
+        'SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE'
+    )),
+    request_sha256 VARCHAR NOT NULL,
+    valid_through DATE NOT NULL,
+    current_state VARCHAR NOT NULL CHECK (current_state IN (
+        'REQUESTED', 'ACKNOWLEDGED', 'ACCEPTED', 'REJECTED'
+    )),
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    CHECK ((amount_inr IS NOT NULL AND amount_inr > 0 AND units IS NULL)
+        OR (units IS NOT NULL AND units > 0 AND amount_inr IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_order_transitions (
+    order_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REQUESTED', 'ACKNOWLEDGED', 'ACCEPTED', 'REJECTED'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    reason VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (order_id, sequence),
+    UNIQUE (order_id, event_sha256)
+);
+
+-- Ordinary MF purchase payment milestones and derived, immutable eligible-NAV state.
+CREATE TABLE IF NOT EXISTS mf_paper_purchase_payment_events (
+    order_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    milestone_kind VARCHAR NOT NULL CHECK (milestone_kind IN (
+        'INITIATED', 'CREDITED_TO_SCHEME', 'AVAILABLE_FOR_UTILIZATION'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    received_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    permission_evidence_json VARCHAR NOT NULL DEFAULT '[]',
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (order_id, sequence),
+    UNIQUE (order_id, milestone_kind),
+    UNIQUE (order_id, event_sha256),
+    CHECK (received_at >= effective_at),
+    CHECK ((basis='OBSERVED_EVIDENCE' AND source_id IS NOT NULL
+        AND source_ref IS NOT NULL AND source_sha256 IS NOT NULL)
+        OR (basis='SIMULATED_ASSUMPTION' AND source_id IS NULL
+        AND source_ref IS NULL AND source_sha256 IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_purchase_eligibility (
+    order_id VARCHAR PRIMARY KEY,
+    state VARCHAR NOT NULL CHECK (state IN ('NAV_PENDING', 'ALLOTTED', 'CANCELLED')),
+    eligible_nav_date DATE NOT NULL,
+    transaction_at TIMESTAMPTZ NOT NULL,
+    decision_at TIMESTAMPTZ NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    eligibility_sha256 VARCHAR NOT NULL,
+    nav_observation_id VARCHAR,
+    nav_per_unit DECIMAL(38, 18),
+    units_allotted DECIMAL(38, 18),
+    allotment_sha256 VARCHAR,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    CHECK ((state='NAV_PENDING' AND nav_observation_id IS NULL
+        AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL)
+        OR (state='ALLOTTED' AND nav_observation_id IS NOT NULL
+        AND nav_per_unit > 0 AND units_allotted > 0 AND allotment_sha256 IS NOT NULL)
+        OR (state='CANCELLED' AND nav_observation_id IS NULL
+        AND nav_per_unit IS NULL AND units_allotted IS NULL AND allotment_sha256 IS NULL))
+);
+
+-- Scheduled MF SIP debits are independent installments with terminal missed outcomes.
+CREATE TABLE IF NOT EXISTS mf_paper_sip_plans (
+    plan_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    plan_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_sip_installments (
+    installment_id VARCHAR PRIMARY KEY,
+    plan_id VARCHAR NOT NULL,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    scheduled_for DATE NOT NULL,
+    amount_inr DECIMAL(38, 18) NOT NULL CHECK (amount_inr > 0),
+    current_state VARCHAR NOT NULL CHECK (current_state IN (
+        'SCHEDULED', 'PAYMENT_INITIATED', 'FUNDS_AVAILABLE', 'NAV_PENDING', 'MISSED', 'ALLOTTED'
+    )),
+    payment_initiated_at TIMESTAMPTZ,
+    funds_available_at TIMESTAMPTZ,
+    missed_at TIMESTAMPTZ,
+    miss_reason VARCHAR,
+    nav_date DATE,
+    nav_per_unit DECIMAL(38, 18),
+    nav_published_at TIMESTAMPTZ,
+    nav_available_at TIMESTAMPTZ,
+    allotted_at TIMESTAMPTZ,
+    units_allotted DECIMAL(38, 18),
+    state_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (plan_id, scheduled_for)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_sip_transitions (
+    installment_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    from_state VARCHAR,
+    to_state VARCHAR NOT NULL,
+    effective_at TIMESTAMPTZ,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (installment_id, sequence),
+    UNIQUE (installment_id, event_sha256)
+);
+
+-- Durable SWP/STP instructions; events record settlement and any target purchase
+-- independently so unsettled redemption proceeds are never made spendable early.
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_plans (
+    plan_id VARCHAR PRIMARY KEY,
+    account_id VARCHAR NOT NULL,
+    plan_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_instructions (
+    instruction_id VARCHAR PRIMARY KEY,
+    plan_id VARCHAR NOT NULL,
+    account_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN ('SWP', 'STP')),
+    scheduled_for DATE NOT NULL,
+    source_scheme VARCHAR NOT NULL,
+    source_plan VARCHAR NOT NULL,
+    source_option VARCHAR NOT NULL,
+    source_isin VARCHAR NOT NULL,
+    amount_inr DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    target_scheme VARCHAR,
+    target_plan VARCHAR,
+    target_option VARCHAR,
+    target_isin VARCHAR,
+    current_stage VARCHAR NOT NULL,
+    state_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (plan_id, scheduled_for),
+    CHECK ((amount_inr IS NOT NULL AND amount_inr > 0 AND units IS NULL)
+        OR (units IS NOT NULL AND units > 0 AND amount_inr IS NULL))
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_events (
+    instruction_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    event_id VARCHAR NOT NULL,
+    kind VARCHAR NOT NULL CHECK (kind IN (
+        'REDEMPTION_REQUESTED', 'VALUE_CONFIRMED', 'PAYOUT_AVAILABLE',
+        'PURCHASE_FUNDS_APPLIED', 'ALLOTMENT_CONFIRMED', 'PURCHASE_CANCELLED', 'MISSED'
+    )),
+    effective_at TIMESTAMPTZ NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    basis VARCHAR NOT NULL CHECK (basis IN ('SIMULATED_ASSUMPTION', 'OBSERVED_EVIDENCE')),
+    amount_inr DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    other_charges_inr DECIMAL(38, 18),
+    nav_per_unit DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    reason VARCHAR,
+    source_id VARCHAR,
+    source_ref VARCHAR,
+    source_sha256 VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (instruction_id, sequence),
+    UNIQUE (instruction_id, event_id),
+    UNIQUE (instruction_id, event_sha256)
+);
+
+-- Fixed-INR SWP/STP requests retain accepted-order NAV eligibility until the
+-- eligible NAV is published and the resulting units can be reserved precisely.
+CREATE TABLE IF NOT EXISTS mf_paper_systematic_redemption_eligibility (
+    instruction_id VARCHAR PRIMARY KEY,
+    order_id VARCHAR NOT NULL UNIQUE,
+    requested_at TIMESTAMPTZ NOT NULL,
+    eligible_nav_date DATE NOT NULL,
+    transaction_at TIMESTAMPTZ NOT NULL,
+    decision_at TIMESTAMPTZ NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    eligibility_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_lots (
+    account_id VARCHAR NOT NULL,
+    lot_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    allotted_on DATE NOT NULL,
+    lock_in_until DATE,
+    units_original DECIMAL(38, 18) NOT NULL CHECK (units_original > 0),
+    units_remaining DECIMAL(38, 18) NOT NULL CHECK (units_remaining >= 0),
+    purchase_nav DECIMAL(38, 18) NOT NULL CHECK (purchase_nav > 0),
+    exit_loads_json VARCHAR,
+    exit_loads_sha256 VARCHAR,
+    subscription_event_id VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, lot_id),
+    UNIQUE (account_id, subscription_event_id)
+);
+
+-- Legacy paper lots keep folio_id NULL until an operator records supporting
+-- ownership evidence. Reconciliation is append-only at the API layer.
+CREATE TABLE IF NOT EXISTS mf_paper_folio_reconciliations (
+    account_id VARCHAR NOT NULL,
+    lot_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    evidence_ref VARCHAR NOT NULL,
+    evidence_sha256 VARCHAR NOT NULL,
+    reconciled_by VARCHAR NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, lot_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_events (
+    account_id VARCHAR NOT NULL,
+    event_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
+    kind VARCHAR NOT NULL CHECK (kind IN ('SUBSCRIBE', 'REDEEM')),
+    scheme_code VARCHAR,
+    plan VARCHAR,
+    option VARCHAR,
+    isin VARCHAR,
+    event_date DATE,
+    nav_per_unit DECIMAL(38, 18),
+    units DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    other_charges_inr DECIMAL(38, 18) DEFAULT 0,
+    net_inr DECIMAL(38, 18),
+    event_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, event_id)
+);
+
+-- MF redemption requests reserve units at submission, realize value only after the
+-- eligible NAV is known, and keep proceeds unavailable until the payout transition.
+CREATE TABLE IF NOT EXISTS mf_paper_redemption_settlements (
+    account_id VARCHAR NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    folio_id VARCHAR,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    requested_units DECIMAL(38, 18) NOT NULL CHECK (requested_units > 0),
+    requested_on DATE NOT NULL,
+    requested_at TIMESTAMPTZ NOT NULL,
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REDEMPTION_PENDING', 'VALUE_CONFIRMED', 'PAYOUT_PENDING', 'CASH_AVAILABLE'
+    )),
+    redemption_event_id VARCHAR,
+    eligible_nav_date DATE,
+    order_id VARCHAR,
+    eligibility_sha256 VARCHAR,
+    eligibility_evidence_json VARCHAR,
+    nav_observation_id VARCHAR,
+    nav_per_unit DECIMAL(38, 18),
+    gross_inr DECIMAL(38, 18),
+    exit_load_inr DECIMAL(38, 18),
+    other_charges_inr DECIMAL(38, 18) DEFAULT 0,
+    net_inr DECIMAL(38, 18),
+    payout_due_date DATE,
+    payout_available_at TIMESTAMPTZ,
+    payout_basis VARCHAR,
+    payout_evidence_ref VARCHAR,
+    payout_source_id VARCHAR,
+    payout_source_sha256 VARCHAR,
+    request_sha256 VARCHAR NOT NULL,
+    value_sha256 VARCHAR,
+    payout_sha256 VARCHAR,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, settlement_id),
+    UNIQUE (account_id, redemption_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_redemption_transitions (
+    account_id VARCHAR NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REDEMPTION_PENDING', 'VALUE_CONFIRMED', 'PAYOUT_PENDING', 'CASH_AVAILABLE'
+    )),
+    transitioned_at TIMESTAMPTZ NOT NULL,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, settlement_id, sequence),
+    UNIQUE (account_id, settlement_id, state)
+);
+
+-- A switch is a durable link between the source redemption settlement and the target
+-- switch-in purchase. Proceeds are not eligible to fund the target leg until the
+-- source settlement is CASH_AVAILABLE at a strictly earlier timestamp.
+CREATE TABLE IF NOT EXISTS mf_paper_switches (
+    account_id VARCHAR NOT NULL,
+    switch_id VARCHAR NOT NULL,
+    folio_id VARCHAR NOT NULL,
+    source_scheme VARCHAR NOT NULL,
+    source_plan VARCHAR NOT NULL,
+    source_option VARCHAR NOT NULL,
+    source_isin VARCHAR NOT NULL,
+    target_scheme VARCHAR NOT NULL,
+    target_plan VARCHAR NOT NULL,
+    target_option VARCHAR NOT NULL,
+    target_isin VARCHAR NOT NULL,
+    requested_units DECIMAL(38,18) NOT NULL CHECK (requested_units > 0),
+    requested_at TIMESTAMPTZ NOT NULL,
+    settlement_id VARCHAR NOT NULL,
+    source_order_id VARCHAR,
+    target_order_id VARCHAR,
+    state VARCHAR NOT NULL CHECK (state IN (
+        'REQUESTED', 'SWITCH_OUT_VALUE_CONFIRMED', 'SWITCH_OUT_PROCEEDS_AVAILABLE',
+        'SWITCH_IN_FUNDS_APPLIED', 'SWITCH_IN_ALLOTMENT_CONFIRMED'
+    )),
+    source_net_inr DECIMAL(38,18),
+    proceeds_available_at TIMESTAMPTZ,
+    funds_applied_inr DECIMAL(38,18),
+    target_units DECIMAL(38,18),
+    target_nav DECIMAL(38,18),
+    request_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, switch_id),
+    UNIQUE (account_id, settlement_id)
+);
+
+CREATE TABLE IF NOT EXISTS mf_paper_switch_transitions (
+    account_id VARCHAR NOT NULL,
+    switch_id VARCHAR NOT NULL,
+    sequence INTEGER NOT NULL CHECK (sequence > 0),
+    state VARCHAR NOT NULL,
+    effective_at TIMESTAMPTZ NOT NULL,
+    amount_inr DECIMAL(38,18),
+    related_id VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    evidence_json VARCHAR NOT NULL,
+    PRIMARY KEY (account_id, switch_id, sequence),
+    UNIQUE (account_id, switch_id, state),
+    UNIQUE (account_id, switch_id, event_sha256)
+);
+
+-- Durable paper-book application of already-attested, point-in-time MF economic
+-- flows. The source event remains in mf_scheme_flows; this account-scoped journal
+-- makes unit/cash adjustments idempotent and auditable across restart.
+CREATE TABLE IF NOT EXISTS mf_paper_flow_events (
+    account_id VARCHAR NOT NULL,
+    source_flow_id VARCHAR NOT NULL,
+    flow_kind VARCHAR NOT NULL,
+    scheme_code VARCHAR NOT NULL,
+    plan VARCHAR NOT NULL,
+    option VARCHAR NOT NULL,
+    isin VARCHAR NOT NULL,
+    target_scheme_code VARCHAR NOT NULL,
+    target_plan VARCHAR NOT NULL,
+    target_option VARCHAR NOT NULL,
+    target_isin VARCHAR NOT NULL,
+    effective_date DATE NOT NULL,
+    units_before DECIMAL(38, 18) NOT NULL,
+    units_after DECIMAL(38, 18) NOT NULL,
+    cash_delta_inr DECIMAL(38, 18) NOT NULL,
+    nav_before DECIMAL(38, 18) NOT NULL,
+    nav_after DECIMAL(38, 18) NOT NULL,
+    value_before_inr DECIMAL(38, 18) NOT NULL,
+    value_after_inr DECIMAL(38, 18) NOT NULL,
+    total_return_percent DECIMAL(38, 18) NOT NULL,
+    reinvestment_lot_id VARCHAR,
+    terms_record_id VARCHAR,
+    event_sha256 VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (account_id, source_flow_id)
 );
 
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
@@ -1286,4 +1742,152 @@ CREATE TABLE IF NOT EXISTS monthly_updates (
     kind            VARCHAR,
     headline        VARCHAR,
     attachment      VARCHAR
+);
+
+-- Feature-side append-only research and ETF reference records.
+CREATE TABLE IF NOT EXISTS counterfactual_outcomes (
+    signal_id VARCHAR NOT NULL,
+    horizon_sessions INTEGER NOT NULL,
+    observed_on DATE NOT NULL,
+    realized_return DOUBLE NOT NULL,
+    benchmark_return DOUBLE,
+    outcome_source_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL',
+    PRIMARY KEY (signal_id, horizon_sessions)
+);
+
+CREATE TABLE IF NOT EXISTS etf_product_disclosures (
+    observed_on             DATE NOT NULL,
+    isin                    VARCHAR NOT NULL,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    inception_date          DATE,
+    listing_date            DATE,
+    nav                     DECIMAL(20, 8),
+    nav_as_of               DATE,
+    indicative_nav          DECIMAL(20, 8),
+    indicative_nav_at       TIMESTAMPTZ,
+    expense_ratio_pct       DECIMAL(12, 8),
+    expense_effective_from  DATE,
+    expense_effective_to    DATE,
+    tracking_error_pct      DECIMAL(12, 8),
+    tracking_difference_pct DECIMAL(12, 8),
+    tracking_period_start   DATE,
+    tracking_period_end     DATE,
+    -- Issuer/market-maker primary-market context only; never a retail redemption route.
+    creation_units          BIGINT,
+    redemption_units        BIGINT,
+    creation_unit_size      BIGINT,
+    flow_period_start       DATE,
+    flow_period_end         DATE,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, isin, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS etf_reference_observations (
+    observed_on      DATE NOT NULL,
+    exchange         VARCHAR NOT NULL,
+    symbol           VARCHAR NOT NULL,
+    isin             VARCHAR NOT NULL,
+    security_name    VARCHAR NOT NULL,
+    underlying       VARCHAR,
+    listing_date     DATE,
+    market_lot       INTEGER NOT NULL,
+    face_value       DECIMAL(20, 6),
+    exposure_class   VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
+    exposure_rule    VARCHAR NOT NULL DEFAULT 'NO_EXPOSURE_LABEL',
+    exposure_confidence VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
+    exposure_match   VARCHAR,
+    status           VARCHAR NOT NULL,
+    source           VARCHAR NOT NULL,
+    source_url       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    record_sha256    VARCHAR NOT NULL,
+    retrieved_at     TIMESTAMPTZ NOT NULL,
+    lake_key         VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, exchange, isin)
+);
+
+CREATE TABLE IF NOT EXISTS mf_scheme_master_observations (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    isin_growth             VARCHAR,
+    isin_reinvest           VARCHAR,
+    scheme_name             VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    scheme_type             VARCHAR,
+    plan_type               VARCHAR NOT NULL,
+    payout_type             VARCHAR NOT NULL,
+    structure_type          VARCHAR NOT NULL,
+    management_type         VARCHAR NOT NULL,
+    asset_class             VARCHAR NOT NULL,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    nav_as_of               DATE NOT NULL,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS mf_scheme_profile_disclosures (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    isin                    VARCHAR,
+    riskometer              VARCHAR,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    manager                 VARCHAR,
+    objective               VARCHAR,
+    effective_from          DATE,
+    effective_to            DATE,
+    scheme_status           VARCHAR,
+    status_effective_from   DATE,
+    successor_scheme_code   VARCHAR,
+    status_reason           VARCHAR,
+    expense_ratio_pct       DECIMAL(12, 8),
+    expense_ratio_plan      VARCHAR,
+    expense_effective_from DATE,
+    expense_effective_to   DATE,
+    aum_inr                 DECIMAL(24, 2),
+    aum_as_of               DATE,
+    minimum_initial_inr     DECIMAL(20, 2),
+    minimum_additional_inr  DECIMAL(20, 2),
+    minimum_effective_from  DATE,
+    minimum_effective_to    DATE,
+    exit_load_schedule      VARCHAR,
+    exit_load_effective_from DATE,
+    exit_load_effective_to   DATE,
+    exit_restrictions       VARCHAR,
+    restriction_effective_from DATE,
+    restriction_effective_to DATE,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS rejected_signal_counterfactuals (
+    signal_id VARCHAR PRIMARY KEY,
+    reason_code VARCHAR NOT NULL,
+    rejected_at TIMESTAMPTZ NOT NULL,
+    decision_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL'
 );
