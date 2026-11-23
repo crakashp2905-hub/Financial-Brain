@@ -3617,17 +3617,19 @@
         "tests/test_decision_first.py and src/financial_brain/paper/terminal.py (read-only display only; no APPROVE/REJECT/WATCH/NO_TRADE workflow for paper sleeves)",
         "docs/edge-program/manual-paper-sleeve-decisions-audit-2026-11-24.md records the backend decision contract and integration gaps.",
         "src/financial_brain/forward_edge/manual_paper_decisions.py provides four human actions bound to a frozen candidate hash and TTL; the journal serializes PAPER_ONLY and physical_orders_authorized=false.",
-        "Approval is a journal decision only; no order submission or physical broker capability is exposed."
+        "Approval is a journal decision only; no order submission or physical broker capability is exposed.",
+        "src/financial_brain/cli.py::cmd_manual_paper_decision and the fb paper-decision command provide a local record path for all four choices; output remains PAPER_ONLY with physical_orders=false."
       ],
-      "blocker": "Partial: typed, durable paper-only decision journal is implemented, but no cockpit/CLI capture flow, separate human-approved paper book, or ForwardSessionRunner consumption exists yet.",
-      "last_audited_at_utc": "2026-11-23T23:40:35+00:00",
+      "blocker": "Partial: durable paper-only decisions and a CLI capture path exist, but no cockpit capture flow, identity provider, separate human-approved paper book, or ForwardSessionRunner consumption exists.",
+      "last_audited_at_utc": "2026-11-24T08:30:00+00:00",
       "commit": "ce3b44cc",
       "test_evidence": [
-        "tests/test_forward_edge_manual_paper_decisions.py covers APPROVE/REJECT/WATCH/NO_TRADE, frozen candidate hash, human-only actor, expiry/staleness, eligibility, idempotent restart-safe journal and immutable rows.",
-        "python -m pytest tests/test_forward_edge_manual_paper_decisions.py -q --basetemp=.pytest-checklist-manual-approval-rerun: 8 passed.",
-        "Ruff and scoped mypy passed for the module and test."
+        "tests/test_forward_edge_manual_paper_decisions.py covers APPROVE/REJECT/WATCH/NO_TRADE, frozen candidate hash, human-only actor, expiry/staleness, eligibility, idempotent restart-safe journal, immutable rows and CLI persistence.",
+        "python -m pytest tests/test_forward_edge_manual_paper_decisions.py -q --basetemp=.pytest-checklist-manual-approval-cli: 9 passed.",
+        "Ruff passed for manual_paper_decisions.py, cli.py and the test; scoped mypy passed for manual_paper_decisions.py.",
+        "Whole-file mypy for cli.py reports 12 errors in other existing functions (lines 636, 641, 646, 1023, 1273, 1279, 1567, 1769, 1804, 1866, 1914, 2252); no diagnostic points to cmd_manual_paper_decision."
       ],
-      "test_result": "Eight focused tests pass for the manual paper-decision contract and durable journal. Approval resolves only to APPROVED_PAPER_ONLY and records physical_orders_authorized=false. Cockpit/CLI flow and paper-book/runner integration remain incomplete."
+      "test_result": "Nine focused tests pass for the manual paper-decision contract, immutable journal and CLI path. Approval resolves only to APPROVED_PAPER_ONLY and records physical_orders_authorized=false. Scoped mypy passes for the new module; the legacy CLI file has unrelated whole-file typing errors. Cockpit, identity and runner/book integration remain incomplete."
     },
     {
       "id": "FB-1105",
@@ -15678,7 +15680,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T23:40:35Z",
+    "as_of_utc": "2026-11-24T08:30:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16005,7 +16007,7 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration."
   },
   "counts_by_status": {
     "UNASSESSED": 1132,

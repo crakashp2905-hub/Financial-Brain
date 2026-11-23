@@ -225,6 +225,7 @@
         "features",
         "financial_brain.patterns.cli",
         "forward_edge.cli",
+        "forward_edge.manual_paper_decisions",
         "graph",
         "ingest",
         "ingest.announcements",
@@ -269,7 +270,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "983f170f1bab9c6764277da9f495190a85bdbbafa1f0b91b5071bc15ab4d2944",
+      "source_sha256": "ade2fda988b9af858394c8e218715a0ffb406bd6d8c275a4cba3dd8f71ba871d",
       "test_paths": []
     },
     {

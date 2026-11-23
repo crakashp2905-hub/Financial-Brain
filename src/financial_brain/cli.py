@@ -876,6 +876,37 @@ def cmd_paper(args) -> int:
     return 0
 
 
+def cmd_manual_paper_decision(args) -> int:
+    """Record a candidate-bound human choice; this command never submits an order."""
+    from pathlib import Path
+
+    from .forward_edge.manual_paper_decisions import (
+        ManualPaperAction, ManualPaperDecision, ManualPaperDecisionJournal,
+    )
+
+    try:
+        decision = ManualPaperDecision(
+            decision_id=args.decision_id, session_id=args.session_id,
+            candidate_id=args.candidate_id, candidate_sha256=args.candidate_sha256,
+            actor_id=args.actor_id, actor_type=args.actor_type,
+            action=ManualPaperAction(args.action), reason=args.reason,
+            decided_at=datetime.fromisoformat(args.decided_at),
+            expires_at=datetime.fromisoformat(args.expires_at),
+            candidate_expires_at=datetime.fromisoformat(args.candidate_expires_at),
+        )
+        journal = ManualPaperDecisionJournal(Path(args.journal))
+        try:
+            inserted = journal.append(decision)
+        finally:
+            journal.close()
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "physical_orders": False}))
+        return 2
+    print(json.dumps({"ok": True, "inserted": inserted, "decision": decision.body(),
+                      "decision_sha256": decision.digest(), "physical_orders": False}, sort_keys=True))
+    return 0
+
+
 def cmd_models(args) -> int:
     """Tiered models (ADR-0002): registry, benchmark on labelled tasks, router plan."""
     from .evaluation import models as bench
@@ -2724,6 +2755,21 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("action", choices=["open", "mark", "list"])
     g.add_argument("decision_id", nargs="?")
     g.set_defaults(fn=cmd_paper)
+
+    g = sub.add_parser("paper-decision", help="record a human choice for a frozen paper candidate; no orders")
+    g.add_argument("--action", required=True, choices=["APPROVE", "REJECT", "WATCH", "NO_TRADE"])
+    g.add_argument("--decision-id", required=True)
+    g.add_argument("--session-id", required=True)
+    g.add_argument("--candidate-id", required=True)
+    g.add_argument("--candidate-sha256", required=True)
+    g.add_argument("--actor-id", required=True, help="named human operator (self-declared by this local CLI)")
+    g.add_argument("--actor-type", choices=["human", "agent"], default="human")
+    g.add_argument("--reason", required=True)
+    g.add_argument("--decided-at", required=True, help="ISO-8601 timestamp with timezone")
+    g.add_argument("--expires-at", required=True, help="decision expiry, no later than candidate expiry")
+    g.add_argument("--candidate-expires-at", required=True, help="candidate signal TTL boundary")
+    g.add_argument("--journal", default="data/forward-edge/manual-paper-decisions.sqlite3")
+    g.set_defaults(fn=cmd_manual_paper_decision)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
+from argparse import Namespace
 from datetime import datetime, timedelta, timezone
+import json
 
 import pytest
 
@@ -82,3 +84,22 @@ def test_manual_decision_rejects_agents_and_naive_times():
         _decision(actor_id="agent:stock", actor_type="human")
     with pytest.raises(ManualPaperDecisionError, match="timezone aware"):
         _decision(decided_at=datetime(2026, 11, 24, 10))
+
+
+def test_cli_records_explicit_action_and_only_reports_paper_scope(tmp_path, capsys):
+    from financial_brain.cli import cmd_manual_paper_decision
+
+    args = Namespace(
+        decision_id="cli-decision", session_id="cli-session", candidate_id="cli-candidate",
+        candidate_sha256=HASH, actor_id="Ramesh", actor_type="human", action="APPROVE",
+        reason="reviewed evidence", decided_at=NOW.isoformat(),
+        expires_at=(NOW + timedelta(minutes=2)).isoformat(),
+        candidate_expires_at=(NOW + timedelta(minutes=3)).isoformat(),
+        journal=str(tmp_path / "cli-paper.sqlite3"),
+    )
+
+    assert cmd_manual_paper_decision(args) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["ok"] and output["inserted"]
+    assert output["decision"]["execution_scope"] == "PAPER_ONLY"
+    assert output["physical_orders"] is False
