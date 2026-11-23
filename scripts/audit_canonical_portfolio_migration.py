@@ -13,7 +13,7 @@ from financial_brain.portfolio.legacy_migration import audit_legacy_migration
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, required=True,
-                        help="directory containing paper_live.duckdb, paper_book.duckdb and optional options_paper_forward.duckdb")
+                        help="directory containing paper_live.duckdb, paper_book.duckdb and optional options_paper_forward.duckdb/financial_brain.duckdb")
     parser.add_argument("--ledger", type=Path, required=True, help="canonical SQLite ledger to audit")
     parser.add_argument("--output", type=Path, help="optional path for sanitized JSON report (no trade-level values)")
     args = parser.parse_args()

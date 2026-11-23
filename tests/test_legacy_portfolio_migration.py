@@ -4,7 +4,7 @@ import hashlib
 import duckdb
 
 from financial_brain.portfolio.legacy_migration import (
-    intraday_row_events, option_outcome_row_events, swing_row_events,
+    intraday_row_events, mf_paper_event_row_events, option_outcome_row_events, swing_row_events,
 )
 from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger, EventKind
 from financial_brain.portfolio.legacy_migration import audit_legacy_migration, migrate_legacy_paper_books
@@ -89,8 +89,34 @@ def test_options_outcomes_preserve_quote_fills_charges_and_missing_exit():
     assert unresolved[1].quantity == Decimal("50")
 
 
-def test_opt_migration(tmp_path):
-    data_dir = tmp_path / "source"
+def test_mf_paper_events_preserve_nav_units_and_charges():
+    common = {
+        "account_id": "mf-account", "folio_id": "folio-1", "scheme_code": "12345",
+        "plan": "DIRECT", "option": "GROWTH", "isin": "INF123A01011",
+        "event_date": "2026-11-20", "event_sha256": "a" * 64,
+    }
+    subscription = mf_paper_event_row_events({
+        **common, "event_id": "sub-1", "kind": "SUBSCRIBE", "nav_per_unit": "100",
+        "units": "10", "gross_inr": "1005", "exit_load_inr": "0",
+        "other_charges_inr": "5", "net_inr": "1000",
+    })
+    assert [event.event_kind for event in subscription] == [EventKind.FILL, EventKind.FEE]
+    assert subscription[0].side == "BUY" and subscription[0].asset_class.value == "MUTUAL_FUND"
+    assert subscription[0].quantity == Decimal("10") and subscription[0].price == Decimal("100")
+    assert subscription[1].cash_delta == Decimal("-5")
+
+    redemption = mf_paper_event_row_events({
+        **common, "event_id": "red-1", "kind": "REDEEM", "nav_per_unit": "110",
+        "units": "10", "gross_inr": "1100", "exit_load_inr": "10",
+        "other_charges_inr": "5", "net_inr": "1085",
+    })
+    assert [event.event_kind for event in redemption] == [EventKind.FILL, EventKind.FEE]
+    assert redemption[0].side == "SELL" and redemption[0].price == Decimal("110")
+    assert redemption[1].cash_delta == Decimal("-15")
+
+
+def test_migrate(tmp_path):
+    data_dir = tmp_path / "s"
     data_dir.mkdir()
     path = data_dir / "options_paper_forward.duckdb"
     con = duckdb.connect(str(path))
@@ -112,18 +138,39 @@ def test_opt_migration(tmp_path):
         result, _digest(result)])
     con.close()
 
+    mf_path = data_dir / "financial_brain.duckdb"
+    con = duckdb.connect(str(mf_path))
+    con.execute("""CREATE TABLE mf_paper_events (
+        account_id VARCHAR, event_id VARCHAR, folio_id VARCHAR, kind VARCHAR, scheme_code VARCHAR,
+        plan VARCHAR, option VARCHAR, isin VARCHAR, event_date DATE, nav_per_unit DECIMAL(38,18),
+        units DECIMAL(38,18), gross_inr DECIMAL(38,18), exit_load_inr DECIMAL(38,18),
+        other_charges_inr DECIMAL(38,18), net_inr DECIMAL(38,18), event_sha256 VARCHAR,
+        created_at TIMESTAMPTZ)""")
+    con.execute("""INSERT INTO mf_paper_events VALUES
+        ('mf-account','sub-1','folio-1','SUBSCRIBE','12345','DIRECT','GROWTH','INF123A01011',
+         DATE '2026-11-19',100,10,1005,0,5,1000,?,TIMESTAMPTZ '2026-11-19 10:00:00+05:30'),
+        ('mf-account','red-1','folio-1','REDEEM','12345','DIRECT','GROWTH','INF123A01011',
+         DATE '2026-11-20',110,10,1100,10,5,1085,?,TIMESTAMPTZ '2026-11-20 10:00:00+05:30')""",
+        ["b" * 64, "c" * 64])
+    con.close()
+
     output = tmp_path / "canonical.sqlite"
     first = migrate_legacy_paper_books(data_dir, output)
     second = migrate_legacy_paper_books(data_dir, output)
     assert first["sources"]["options"]["events"]["added"] == 3
     assert second["sources"]["options"]["events"]["added"] == 0
-    assert first["unavailable_desks"] == ["ETF-specific", "mutual_fund"]
+    assert first["unavailable_desks"] == ["ETF-specific"]
     audit = audit_legacy_migration(data_dir, output, captured_at_utc="2026-11-21T00:00:00+00:00")
     assert audit["sources"]["options"]["verification"] == {"verified": 3, "missing": 0, "mismatched": 0}
     ledger = CanonicalPortfolioLedger(output)
     snapshot = ledger.snapshot("options:cohort-a:rule-v1")
     assert snapshot["positions"][0]["quantity"] == 0
     assert snapshot["positions"][0]["realized_pnl"] == Decimal("500")
+    assert audit["sources"]["mutual_fund"]["verification"] == {"verified": 4, "missing": 0, "mismatched": 0}
+    mf_snapshot = ledger.snapshot("mutual_fund:mf-account")
+    assert mf_snapshot["positions"][0]["quantity"] == 0
+    assert mf_snapshot["positions"][0]["realized_pnl"] == Decimal("100")
+    assert mf_snapshot["cash"]["INR"] == Decimal("80")
 
 
 def test_migrated_fill_projection_uses_chronology_and_historical_source_mark(tmp_path):
