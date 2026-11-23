@@ -350,8 +350,8 @@
         "src/financial_brain/forward_edge/pipeline.py::_validate_fixture_financial_units rejects fractional order/depth units and invalid INR execution prices before coercion."
       ],
       "blocker": "Partial: fixture pipeline now validates whole-unit quantities and INR prices before coercion. Other provider adapters, full OMS/accounting serialized state, typed event outputs and remaining repository quantity/price interfaces still require a boundary audit.",
-      "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
-      "commit": "a1afd784",
+      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
+      "commit": "5e5dd8ab",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
@@ -404,7 +404,8 @@
         "Checklist audit export and deterministic evidence bundle freshness checks passed.",
         "tests/test_forward_edge_pipeline_compat.py::test_fixture_pipeline_rejects_invalid_order_units_before_execution and ::test_fixture_pipeline_rejects_fractional_quote_depth_before_execution.",
         "python -m pytest tests/test_forward_edge_pipeline_compat.py tests/test_forward_edge_integrity_gates.py -q --basetemp=.pytest-checklist-forward-units-rerun: 19 passed; legacy fixture golden signatures unchanged.",
-        "Ruff and scoped mypy passed for forward_edge/pipeline.py and tests/test_forward_edge_pipeline_compat.py."
+        "Ruff and scoped mypy passed for forward_edge/pipeline.py and tests/test_forward_edge_pipeline_compat.py.",
+        "Commit 5e5dd8ab adds typed risk-sizing results and fails closed on invalid/fractional fixture OMS inputs."
       ],
       "test_result": "Focused fixture-pipeline and integrity-gate suites pass (19 passed), including fail-closed tests for fractional order/depth units and invalid prices. Historical valid fixture signatures remain unchanged. Broader provider, OMS and accounting unit-contract coverage remains outstanding."
     },
@@ -445,15 +446,16 @@
         "docs/edge-program/kite-live-clock-preservation-audit-2026-11-24.md records the adapter fix and remaining timestamp lineage scope."
       ],
       "blocker": "Partial: the Kite adapter now preserves source, exchange, receipt, availability and explicitly provided publication clocks. Kite provides no independent publication timestamp in this quote path; other provider, filing, NAV, replay and export paths still need repository-wide lineage audit. Missing historical clocks cannot be reconstructed.",
-      "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
-      "commit": "cfdd5ad1",
+      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
+      "commit": "9a6dfd95",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
         "ruff check on changed market-event and Kite-normalization modules/tests: passed",
         "targeted mypy for market_events.py and market_data.py: passed",
         "tests/test_kite_live_forward_events.py::test_forward_events_preserves_executable_depth_ohlc_status_and_source_hash now verifies all available clock fields and round-trip preservation.",
         "python -m pytest tests/test_kite_live_forward_events.py tests/test_forward_edge_kite_market_data.py -q --basetemp=.pytest-checklist-kite-clocks: 22 passed.",
-        "Ruff and scoped mypy passed for ingest/kite_live.py and tests/test_kite_live_forward_events.py."
+        "Ruff and scoped mypy passed for ingest/kite_live.py and tests/test_kite_live_forward_events.py.",
+        "Commit 9a6dfd95 preserves source/exchange clocks through the read-only Kite ingestion adapter."
       ],
       "test_result": "Focused Kite adapter and quote-normalization suites pass (22 passed); tests verify source/exchange/receipt/availability clock retention and round-trip serialization. Publication is left unset when the source does not provide it; full repository coverage remains incomplete."
     },
@@ -2241,7 +2243,7 @@
         "The ranker requires source hashes at each selected return endpoint and emits a deterministic per-candidate input digest."
       ],
       "blocker": "Partial: the pre-registered candidate ranker is implemented and contract-tested, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
-      "last_audited_at_utc": "2026-11-24T00:00:00Z",
+      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
       "commit": "1ce81e1b",
       "test_result": "Four focused tests pass for the frozen ranker contract, including deterministic ordering, exposure/index grouping, no data filling and no use of future metadata. These are implementation tests only; they provide no evidence of profitable alpha.",
       "test_evidence": [
@@ -15665,7 +15667,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T23:25:22Z",
+    "as_of_utc": "2026-11-23T23:27:43Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15992,7 +15994,7 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501."
   },
   "counts_by_status": {
     "UNASSESSED": 1132,
