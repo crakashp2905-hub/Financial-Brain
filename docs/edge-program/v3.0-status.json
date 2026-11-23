@@ -5503,12 +5503,24 @@
     {
       "id": "PA-01-02",
       "text": "Compare the forward-edge runner implementation in `main` versus PR #40; produce a per-public-contract `KEEP/MERGE/REIMPLEMENT/REJECT` reconciliation table.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/pr40-main-contract-reconciliation-2026-11-23.md maps all ten canonical public contracts to KEEP or MERGE with a decision rationale, owner source paths, and current focused test paths.",
+        "The table records PR #40 head 39817e98dea70640c26d7530dcf51a23d0cce2bb and main 3c99b5dddc775db888822b4cec1849e5ebca56c8; PR #40 merge is an ancestor of captured main.",
+        "scripts/validate_pr40_main_contract_reconciliation.py verifies every contract against exact PR #40/main Git blob IDs and checks cited test paths; no public contract is silently removed or assigned duplicate ownership.",
+        "PR #40/main exact Git object comparison and the focused reconciliation tests validate the report artifact. The cited subsystem suites were not all rerun here and are not claimed as passing or as proof of end-to-end equivalence."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T17:08:45Z",
+      "commit": null,
+      "test_evidence": [
+        "python scripts/validate_pr40_main_contract_reconciliation.py: passed; all ten contract owner blobs match pinned PR #40 and main Git objects.",
+        "python -m pytest tests/test_pr40_main_contract_reconciliation.py -q: 2 passed.",
+        "python -m ruff check scripts/validate_pr40_main_contract_reconciliation.py tests/test_pr40_main_contract_reconciliation.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "The per-public-contract KEEP/MERGE disposition table is complete and hash-checked. This reconciles source ownership; it does not establish end-to-end behavioral equivalence or profitability."
     },
     {
       "id": "PA-01-03",
@@ -15356,7 +15368,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:55:13Z",
+    "as_of_utc": "2026-11-23T17:08:45Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15598,6 +15610,7 @@
       "PA-00-11",
       "PA-00-12",
       "PA-01-01",
+      "PA-01-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15620,15 +15633,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 261,
+    "audited_count": 262,
     "status_counts": {
-      "COMPLETE": 39,
+      "COMPLETE": 40,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 205,
-      "UNASSESSED": 1117
+      "UNASSESSED": 1116
     },
-    "verified_complete_count": 39,
+    "verified_complete_count": 40,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15729,13 +15742,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-01 records the live exact-SHA PR chain #37 -> #36 -> #38 and requires rebase/current green CI gates before merging."
+    "evidence_update": "PA-01-02 reconciles ten public contracts against PR #40 and main source blobs; behavior and profitability are not inferred from source ancestry."
   },
   "counts_by_status": {
-    "COMPLETE": 39,
+    "COMPLETE": 40,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 205,
-    "UNASSESSED": 1117
+    "UNASSESSED": 1116
   }
 }

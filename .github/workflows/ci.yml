@@ -63,6 +63,8 @@ jobs:
         run: python scripts/validate_pr_dependency_snapshot.py
       - name: Verify canonical PR merge sequence
         run: python scripts/validate_merge_sequence.py
+      - name: Verify PR 40 to main public-contract reconciliation
+        run: python scripts/validate_pr40_main_contract_reconciliation.py
       - name: Verify v1.4 checklist traceability index
         run: python scripts/validate_v1_4_traceability_index.py
       - name: Verify frozen historical research result notes
