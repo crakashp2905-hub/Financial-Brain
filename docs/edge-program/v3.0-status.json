@@ -37,7 +37,7 @@
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
       "last_audited_at_utc": "2026-11-23T02:29:15Z",
-      "commit": "77ac95ca"
+      "commit": "8ca47e03"
     },
     {
       "id": "FB-0003",
@@ -354,11 +354,11 @@
       "evidence": [
         "src/financial_brain/providers/etf_disclosures.py parses source-attributed ETF product facts and requires an explicit benchmark return type; it does not infer TRI, AMC, dates, NAV or iNAV from labels.",
         "src/financial_brain/ingest/reference.py::ingest_etf_product_disclosures archives the import bytes and persists document URL/hash/publication time, benchmark, fund house, inception/listing dates, NAV and timezone-aware iNAV with idempotent hashes.",
-        "`fb etf-disclosures --file <csv> --observed-on YYYY-MM-DD` exposes the importer; `tests/test_etf_disclosures.py` plus ETF provider and migration tests: 24 passed; scoped Ruff and CLI help passed."
+      "`fb etf-disclosures --file <csv> --observed-on YYYY-MM-DD` exposes the importer; `tests/test_etf_disclosures.py` plus ETF provider and migration tests: 26 passed; scoped Ruff and CLI help passed."
       ],
       "blocker": "No verified, populated official disclosure export yet covers the listed ETF universe; iNAV availability is source-specific, and TRI benchmark mapping must still be reconciled to official index identifiers and observation coverage.",
       "last_audited_at_utc": "2026-11-23T02:22:32Z",
-      "commit": "05968a32"
+      "commit": "8ca47e03"
     },
     {
       "id": "FB-0204",
@@ -442,7 +442,7 @@
       ],
       "blocker": "No permission-reviewed, populated ETF facts dataset has been imported; licensing/retention basis and broad AMC/exchange coverage remain external evidence requirements.",
       "last_audited_at_utc": "2026-11-23T03:00:06Z",
-      "commit": null
+      "commit": "8ca47e03"
     },
     {
       "id": "FB-0210",
@@ -14111,6 +14111,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 49 of 1,378 items audited; 8 COMPLETE, 38 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,329 UNASSESSED. ETF reference, product disclosure metrics, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0209; latest implementation commit 77ac95ca. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 49 of 1,378 items audited; 8 COMPLETE, 38 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,329 UNASSESSED. ETF reference, product disclosure metrics, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0209; latest implementation commit 8ca47e03. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
