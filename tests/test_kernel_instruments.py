@@ -6,6 +6,8 @@ from decimal import Decimal
 import pytest
 
 from financial_brain.kernel.instruments import (
+    AssetClass,
+    Desk,
     Instrument,
     InstrumentError,
     InstrumentId,
@@ -79,6 +81,12 @@ def test_invalid_asset_class_and_rules_rejected() -> None:
         InstrumentId("NSE", "CRYPTOX", "ABC")
     with pytest.raises(InstrumentError):
         RuleVersion(date(2026, 1, 1), tick=Decimal("0"))
+
+
+def test_asset_class_and_desk_are_independent_taxonomies() -> None:
+    assert InstrumentId("NSE", AssetClass.ETF, "NIFTYBEES").asset_class == "ETF"
+    assert {item.value for item in AssetClass} >= {"EQUITY", "ETF", "OPTION", "MUTUAL_FUND"}
+    assert {item.value for item in Desk} == {"SWING", "INTRADAY", "OPTIONS", "ETF", "MUTUAL_FUND"}
 
 
 def test_fx_pip_conventions_differ_for_jpy() -> None:

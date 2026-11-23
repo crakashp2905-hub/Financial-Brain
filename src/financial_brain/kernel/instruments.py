@@ -13,7 +13,29 @@ from enum import Enum
 
 from financial_brain.kernel.units import to_decimal
 
-ASSET_CLASSES = frozenset({"EQUITY", "INDEX", "FUTURE", "OPTION", "FX", "ETF"})
+class AssetClass(str, Enum):
+    """Instrument kind, kept independent from the strategy desk using it."""
+
+    EQUITY = "EQUITY"
+    ETF = "ETF"
+    OPTION = "OPTION"
+    MUTUAL_FUND = "MUTUAL_FUND"
+    INDEX = "INDEX"
+    FUTURE = "FUTURE"
+    FX = "FX"
+
+
+class Desk(str, Enum):
+    """Decision workflow. ETFs, for example, can be traded by either equity desk."""
+
+    SWING = "SWING"
+    INTRADAY = "INTRADAY"
+    OPTIONS = "OPTIONS"
+    ETF = "ETF"
+    MUTUAL_FUND = "MUTUAL_FUND"
+
+
+ASSET_CLASSES = frozenset(item.value for item in AssetClass)
 
 
 class Status(str, Enum):

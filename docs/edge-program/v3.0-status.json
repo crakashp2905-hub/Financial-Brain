@@ -179,101 +179,125 @@
     {
       "id": "FB-0101",
       "text": "Build canonical `InstrumentId` with `asset_class`, `market`, `exchange`, `symbol`, `isin`, `provider_token`, `effective_from/to`, and underlying lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::InstrumentId contains venue, asset_class and symbol only; Instrument carries optional ISIN/expiry/strike outside identity."
+      ],
+      "blocker": "Required canonical market/exchange/ISIN/provider-token/effective interval/underlying lineage identity and alias-overlap controls are absent.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0102",
       "text": "Add `AssetClass = EQUITY | ETF | OPTION | MUTUAL_FUND` and `Desk = SWING | INTRADAY | OPTIONS | ETF | MUTUAL_FUND` independently (ETF trades can be swing/intraday).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::AssetClass contains the requested EQUITY, ETF, OPTION and MUTUAL_FUND values (plus existing market instrument kinds).",
+        "src/financial_brain/kernel/instruments.py::Desk defines SWING, INTRADAY, OPTIONS, ETF and MUTUAL_FUND independently.",
+        "tests/test_kernel_instruments.py::test_asset_class_and_desk_are_independent_taxonomies (passes)."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0103",
       "text": "Enforce financial unit types: INR notional, currency, equity/ETF whole units, option lots, MF fractional units, NAV per unit, premiums per unit, basis points.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/units.py provides Decimal Money, Price and generic Quantity with currency-safe arithmetic."
+      ],
+      "blocker": "There are no distinct INR notional, equity/ETF whole-unit, option-lot, mutual-fund fractional-unit, NAV/unit, premium/unit or basis-point types.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0104",
       "text": "Canonical `TradingClock`: exchange session vs scheme business day vs bank settlement day vs NAV publication time; timezone Asia/Kolkata with holiday calendars.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/clock.py normalizes aware instants to UTC and validates event/ingest/availability/decision ordering.",
+        "src/financial_brain/kernel/closures_n.py::MarketCalendar is weekday-minus-holidays only."
+      ],
+      "blocker": "No unified Asia/Kolkata TradingClock separates exchange sessions, scheme business days, bank settlement days and NAV publication times; scheme and exchange holiday calendars are not complete.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0105",
       "text": "Store source timestamp, exchange timestamp when present, receipt timestamp, available-to-strategy timestamp, published-at and ingested-at.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/clock.py::Instants stores event_time, ingest_time, available_time and decision_time.",
+        "src/financial_brain/pit/observations.py has published_at and observed_at fields."
+      ],
+      "blocker": "The required source, exchange, receipt, strategy-availability, published-at and ingested-at timestamps are scattered and are not enforced together in a canonical observation contract.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0106",
       "text": "Add point-in-time versions for listings, tick sizes, lot sizes, contract expiry, ETF underlying index and MF scheme/plan metadata.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::RuleVersion and Instrument provide effective-from rules, expiry, ISIN and strike; tests/test_kernel_instruments.py covers dated rule lookup."
+      ],
+      "blocker": "Listings, rules and contract metadata lack a complete point-in-time version model with effective-to intervals; ETF index and MF scheme/plan metadata are not covered end to end.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0107",
       "text": "Add instrument state: LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::Status supports ACTIVE, SUSPENDED, EXPIRED and DELISTED; tradability fails closed for non-ACTIVE status."
+      ],
+      "blocker": "HALTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION and RESTRICTED are not modeled.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0108",
       "text": "Preserve ticker changes, corporate actions, renamed/merged schemes and ISIN changes without silently changing historical signals.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing security_lineage and corporate_actions data paths preserve some equity/security continuity."
+      ],
+      "blocker": "No verified canonical instrument identity history handles ticker changes, scheme rename/merger and ISIN changes without historical signal identity drift across all desks.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0109",
       "text": "Implement effective-dated transaction calendars and fund-specific overrides from the relevant SID/KIM/AMC notice; a universal cutoff is not sufficient.",
-      "source_checked": false,
-      "status": "UNASSESSED",
+      "source_checked": true,
+      "status": "NOT_STARTED",
       "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "blocker": "No effective-dated, fund-specific transaction calendar overrides sourced from SID/KIM/AMC notices were found; the current generic calendar cannot represent those terms.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
       "id": "FB-0110",
       "text": "Add semantic data lineage; reject unknown instrument identity, overlapping active identities and future-published data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/instruments.py::InstrumentMaster rejects unknown and duplicate current keys.",
+        "src/financial_brain/kernel/clock.py::assert_not_future rejects future timestamps.",
+        "src/financial_brain/committee/dossier.py and PIT observations carry partial lineage/time provenance."
+      ],
+      "blocker": "There is no end-to-end semantic lineage contract that rejects overlapping effective identities and future-published data across all inputs and consumers.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {
