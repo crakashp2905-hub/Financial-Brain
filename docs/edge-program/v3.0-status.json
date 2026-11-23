@@ -6011,22 +6011,42 @@
     {
       "id": "PA-02-11",
       "text": "Probe suspected ex-dividend artifacts in H056/H068 without treating a repaired dataset as a valid new holdout; log changed labels and original trial verdicts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/h056-h068-exdividend-probe-availability-audit-2026-11-24.md records the repository and protected-artifact search; no source rows, mapping, labels, or verdicts were modified.",
+        "docs/trials/ledger.jsonl and docs/edge-program/trial-count-reconciliation.v1.json contain 13 protected Q4 trials with FAIL verdicts but no H056/H068 identifiers.",
+        "docs/edge-program/trial-preservation-baseline.v1.json pins the protected ledger/manifests; docs/edge-program/research-outcome-freeze.v1.json documents 42 result-note byte freezes and missing run/period/cost/exposure metadata.",
+        "Audit finding commit: d0d1d466."
+      ],
+      "blocker": "The authoritative definitions and source-data mapping for H056/H068 are absent from the repository. Cannot identify the affected rows, compare changed labels, or report original trial verdicts without inventing identity or provenance.",
+      "last_audited_at_utc": "2026-11-23T20:04:07Z",
+      "commit": "d0d1d466",
+      "test_evidence": [],
+      "test_result": "Repository/protected-artifact audit completed; the requested empirical probe is not reproducible from available artifacts, and original protected outcomes remain untouched."
     },
     {
       "id": "PA-02-12",
       "text": "Build data quality reports by instrument/day: coverage, late tick rate, inconsistent OHLC, bid/ask depth validity, quote age and strike selection error.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/instrument-session-feed-quality-metrics-audit-2026-11-24.md describes the metrics, denominators, validity rules, fixture evidence, and production-integration gaps.",
+        "src/financial_brain/forward_edge/feed_quality.py::audit_feed returns session-keyed coverage, late-tick rate, quote-age percentiles, depth validity, OHLC consistency, and relative strike-selection error; unavailable events are excluded from metric denominators.",
+        "tests/test_forward_edge_feed_quality.py includes a fixture covering all new metrics and invalid OHLC exclusion from coverage.",
+        "Implementation/audit commit: d0d1d466."
+      ],
+      "blocker": "The report remains an in-memory helper, is not persisted or enforced by ForwardSessionRunner or provider adapters, and lacks representative authorized market/depth data. Invalid raw packets rejected before MarketEvent creation must be counted at ingestion; strike error requires explicit selected_strike and target_strike metadata.",
+      "last_audited_at_utc": "2026-11-23T20:04:07Z",
+      "commit": "d0d1d466",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_feed_quality.py -q: 8 passed.",
+        "python -m pytest tests/test_forward_edge_feed_quality.py tests/test_forward_edge_market_events.py tests/test_forward_edge_quote_archive.py -q: 37 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/feed_quality.py tests/test_forward_edge_feed_quality.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/feed_quality.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Instrument/session summary metrics and existing feed-integrity behavior pass scoped tests, lint, and typing; live integration and sourced data evidence remain incomplete."
     },
     {
       "id": "PA-02-13",
@@ -15614,7 +15634,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T19:53:54Z",
+    "as_of_utc": "2026-11-23T20:04:07Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15881,6 +15901,8 @@
       "PA-02-08",
       "PA-02-09",
       "PA-02-10",
+      "PA-02-11",
+      "PA-02-12",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15903,13 +15925,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 286,
+    "audited_count": 288,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 222,
-      "UNASSESSED": 1092
+      "PARTIAL": 224,
+      "UNASSESSED": 1090
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16030,7 +16052,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 222,
-    "UNASSESSED": 1092
+    "PARTIAL": 224,
+    "UNASSESSED": 1090
   }
 }
