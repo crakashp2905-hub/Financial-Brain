@@ -2,6 +2,8 @@
 
 Checklist item: `PA-02-07` — preserve exchange, receipt, availability, publication, and computation clocks across relevant feeds, and prevent unavailable facts from reaching a signal.
 
+Implementation commit: `793860e9` (`Add computation time to market fact contract`).
+
 ## Implemented
 
 - `kernel.clock.MarketFactTimes` already represented optional source/exchange/publication clocks plus required receipt, strategy-availability, and ingestion clocks.

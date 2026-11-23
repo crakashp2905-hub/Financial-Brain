@@ -7256,7 +7256,7 @@
       "owner_role_hint": "Core",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/clock.py",
-      "source_sha256": "6ac3a846d2352aec12aa9fd74b3b03f51f6772c79fc613ac6574a59f68d54245",
+      "source_sha256": "ce5813c14c56fd8515cd1f4959a73cf56b9f66960b78c8be57daa4877fffc4bf",
       "test_paths": []
     },
     {
