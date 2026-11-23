@@ -6096,6 +6096,7 @@
         "evidence",
         "hashlib",
         "json",
+        "kernel.units",
         "lake.store",
         "providers.amfi"
       ],
@@ -6103,7 +6104,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/mfnav.py",
-      "source_sha256": "e65b7718889b4afcdaff36b519dac9c2db5333c3f78d0a2f0bf7190e1794d880",
+      "source_sha256": "7bb38c611828fda24ded1eaf7bd48b08ef34545be740a8c3d71767aef5f66205",
       "test_paths": []
     },
     {

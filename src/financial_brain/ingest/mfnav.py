@@ -13,6 +13,7 @@ import json
 from datetime import date, datetime, timezone
 
 from ..evidence import ledger
+from ..kernel.units import NavPerUnit
 from ..lake.store import RawLake
 from ..providers.amfi import AmfiNav, parse_quality_report
 
@@ -75,11 +76,14 @@ def ingest(
                  obj.content_type])
     observations = []
     for row_number, row in enumerate(rows, start=1):
+        # AMFI NAV is an INR price per fractional fund unit. Validate its nominal
+        # unit before it enters the as-known observation and legacy projection.
+        row["nav"] = NavPerUnit(row["nav"]).amount
         fields = {
             "scheme_code": row["scheme_code"], "isin_growth": row["isin_growth"],
             "isin_reinvest": row["isin_reinvest"], "scheme_name": row["scheme_name"],
             "fund_house": row["fund_house"], "scheme_type": row["scheme_type"],
-            "plan": row["plan"], "option": row["option"], "nav": row["nav"],
+            "plan": row["plan"], "option": row["option"], "nav": str(row["nav"]),
             "nav_date": row["nav_date"].isoformat(),
         }
         row_digest = hashlib.sha256(
