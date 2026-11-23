@@ -315,7 +315,7 @@
       ],
       "blocker": "The semantic lineage contract is implemented at the kernel boundary, but ingestion, persistence and all trading/research consumers do not yet require it.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "57d56b3f8adb78adaa07a135e59b393dac76f90f"
     },
     {
       "id": "FB-0201",
