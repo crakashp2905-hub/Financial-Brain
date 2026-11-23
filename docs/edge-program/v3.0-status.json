@@ -8585,18 +8585,19 @@
         "src/financial_brain/forward_edge/session_runner.py (attaches provenance to append-only audit records for quotes, decisions, risk verdicts, manifests, intents and simulated fills)",
         "tests/test_forward_edge_provenance.py",
         "tests/test_forward_edge_session_runner.py::test_trading_audit_rows_bind_source_commit_and_executable_runner",
-        "docs/edge-program/source-inventory.v2.json (622 Python files)",
+        "docs/edge-program/source-inventory.v2.json (716 Python files; 701 remain unassessed and 425 remain role-unassigned)",
         "docs/edge-program/forward-engine-dependency-graph.v1.json"
       ],
       "blocker": "New prospective-session trading audit records carry source provenance, but lineage is not yet proven for every historical policy, experiment, quote and simulated trade across all paper engines; dirty source trees are labeled rather than content-snapshotted, and Git ancestry/HEAD is local evidence rather than independent attestation.",
-      "last_audited_at_utc": "2026-11-21T16:05:00+05:30",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-23T00:00:00Z",
+      "commit": "63bb6fe143c5fdb7cf165f1c6a955237b7547b92",
       "test_evidence": [
         "tests/test_forward_edge_provenance.py",
         "tests/test_forward_edge_session_runner.py",
-        "tests/test_decision_manifest.py"
+        "tests/test_decision_manifest.py",
+        "python -m pytest --basetemp .pytest-tmp-sl0009 tests/test_forward_edge_provenance.py tests/test_forward_edge_session_runner.py tests/test_decision_manifest.py -q: 77 passed in 314.62 seconds"
       ],
-      "test_result": "70 focused tests passed; Ruff clean; mypy clean for provenance.py and session_runner.py; source inventory and forward-engine graph freshness checks passed; git diff --check clean."
+      "test_result": "Current focused provenance/session-runner/manifest tests passed (77). Prospective-session audit records carry source provenance, but historical lineage across all policies, experiments, quotes and simulated trades is not established; working-tree hashes and local Git ancestry are not independent attestations."
     },
     {
       "id": "SL-00-10",
