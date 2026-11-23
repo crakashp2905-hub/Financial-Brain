@@ -330,7 +330,7 @@
       ],
       "blocker": "Automated collection/retention rights remain UNVERIFIED; BSE/AMC reference sources and complete effective-dated status transitions (especially delisting) are not implemented.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
-      "commit": null
+      "commit": "2f622aa8f8f64a30da2436696c6cf6aac004a39c"
     },
     {
       "id": "FB-0202",
