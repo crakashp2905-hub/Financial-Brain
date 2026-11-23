@@ -9082,6 +9082,7 @@
         "ingest.mfnav",
         "json",
         "kernel.trading_clock",
+        "kernel.units",
         "mf_account_ledger",
         "mf_exit_loads",
         "mf_redemption_constraints",
@@ -9093,7 +9094,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_lot_book.py",
-      "source_sha256": "61a963a1a10507f84dea3ad48209b13d3d0902516ac5f6611d930e6d34f4012e",
+      "source_sha256": "f52db26d76f0c6ed3159ad8978697df314966925ce0d3fda5ea03036d4764794",
       "test_paths": []
     },
     {
@@ -9152,6 +9153,7 @@
         "kernel.mf_purchase_eligibility",
         "kernel.mf_purchase_payment",
         "kernel.trading_clock",
+        "kernel.units",
         "mf_lot_book",
         "providers.mf_scheme_terms",
         "typing"
@@ -9160,7 +9162,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_purchase_book.py",
-      "source_sha256": "e11e6e5aa150b1c664f13603ca49e66e9679098ecfeb4aba1569a54812ed7f68",
+      "source_sha256": "bed34b5c2081e3d02e43a69bb9ca9e609dd67ed41bbdb0d32b82b8199f028674",
       "test_paths": []
     },
     {

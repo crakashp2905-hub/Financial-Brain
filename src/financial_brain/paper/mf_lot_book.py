@@ -17,6 +17,7 @@ from typing import Any
 from ..forward_edge.data_permissions import DataPermission, DataUse
 from ..ingest.mf_scheme_terms import as_known_on as mf_terms_as_known_on
 from ..kernel.trading_clock import IST
+from ..kernel.units import INRNotional, MutualFundUnits, NavPerUnit, UnitError
 from ..providers.mf_scheme_terms import (
     ExitLoadBand,
     ExitRestriction,
@@ -227,8 +228,8 @@ def subscribe(
     isin: str,
     allotted_on: date,
     lock_in_until: date | None = None,
-    investment_inr: Decimal | str | int,
-    nav_per_unit: Decimal | str | int,
+    investment_inr: Decimal | str | int | INRNotional,
+    nav_per_unit: Decimal | str | int | NavPerUnit,
     exit_loads: tuple[ExitLoadBand, ...] | None,
     exit_loads_sha256: str | None,
     terms: SchemeCommercialTerms,
@@ -253,7 +254,15 @@ def subscribe(
             raise MfPaperBookError(f"{label} is required")
     if lock_in_until is not None and lock_in_until < allotted_on:
         raise MfPaperBookError("lock_in_until precedes lot allotment")
-    amount, nav = _decimal(investment_inr, "investment"), _decimal(nav_per_unit, "NAV")
+    try:
+        amount_unit = (investment_inr if isinstance(investment_inr, INRNotional)
+                       else INRNotional(_decimal(investment_inr, "investment", positive=False)))
+        nav_unit = (nav_per_unit if isinstance(nav_per_unit, NavPerUnit)
+                    else NavPerUnit(_decimal(nav_per_unit, "NAV")))
+    except UnitError as exc:
+        raise MfPaperBookError(f"invalid subscription financial units: {exc}") from exc
+    amount = _decimal(amount_unit.amount, "investment")
+    nav = _decimal(nav_unit.amount, "NAV")
     if funding_account_code not in {"CASH", "SIP_PAYMENT_PENDING"}:
         raise MfPaperBookError("unsupported subscription funding account")
     decision_at = _aware(decision_at)
@@ -296,7 +305,12 @@ def subscribe(
         schedule_hash = _sha256(exit_loads_sha256, "exit-load source hash")
         if schedule_hash != terms.source_sha256:
             raise MfPaperBookError("exit-load hash differs from the source terms hash")
-    units = (invested_amount / nav).quantize(UNIT_QUANTUM, rounding=ROUND_HALF_UP)
+    try:
+        units = MutualFundUnits(
+            (invested_amount / nav).quantize(UNIT_QUANTUM, rounding=ROUND_HALF_UP)
+        ).units
+    except UnitError as exc:
+        raise MfPaperBookError(f"invalid allotted MF units: {exc}") from exc
     payload = {
         "kind": "SUBSCRIBE",
         "account_id": account_id,
@@ -472,8 +486,8 @@ def redeem(
     option: str,
     isin: str,
     redemption_date: date,
-    redemption_units: Decimal | str | int,
-    nav_per_unit: Decimal | str | int,
+    redemption_units: Decimal | str | int | MutualFundUnits,
+    nav_per_unit: Decimal | str | int | NavPerUnit,
     terms: SchemeCommercialTerms,
     permissions: tuple[DataPermission, ...],
     decision_at: datetime,
@@ -503,8 +517,16 @@ def redeem(
     ):
         if not value.strip():
             raise MfPaperBookError(f"{label} is required")
-    units = _decimal(redemption_units, "redemption units")
-    nav = _decimal(nav_per_unit, "NAV")
+    try:
+        unit_quantity = (redemption_units if isinstance(redemption_units, MutualFundUnits)
+                         else MutualFundUnits(_decimal(redemption_units, "redemption units",
+                                                       positive=False)))
+        nav_unit = (nav_per_unit if isinstance(nav_per_unit, NavPerUnit)
+                    else NavPerUnit(_decimal(nav_per_unit, "NAV")))
+    except UnitError as exc:
+        raise MfPaperBookError(f"invalid redemption financial units: {exc}") from exc
+    units = _decimal(unit_quantity.units, "redemption units")
+    nav = _decimal(nav_unit.amount, "NAV")
     minimum_redemption = terms.minimum_redemption_inr
     if minimum_redemption is None:
         raise MfPaperBookError("sourced redemption minimum is unknown")
