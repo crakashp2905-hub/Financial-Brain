@@ -17,6 +17,8 @@ def test_inventory_covers_all_python_sources_without_inventing_owners():
     assert all((row['human_owner'] is None for row in rows))
     assert all((row['parse_status'] == 'ok' for row in rows))
     assert report['unassessed_count'] > 0
+    evidence_contract = next(row for row in rows if row['source'] == 'src/financial_brain/kernel/evidence.py')
+    assert evidence_contract['owner_role_hint'] == 'Core'
 
 def test_curated_source_has_exact_existing_tests_and_stable_serialization():
     one = build(ROOT)

@@ -18,6 +18,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Iterator
 
+from financial_brain.kernel.evidence import EvidenceClass
+
 
 class CanonicalLedgerError(ValueError):
     """An event is invalid, conflicting, or cannot be applied to the portfolio."""
@@ -40,6 +42,7 @@ class EventKind(StrEnum):
 
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
+_EVIDENCE_CLASSES = {item.value for item in EvidenceClass} | {"BROKER_EXECUTION_RECEIPT"}
 
 
 def _decimal(value: Decimal | str | int, field: str) -> Decimal:
@@ -88,8 +91,8 @@ class PortfolioEvent:
             raise CanonicalLedgerError("source_sha256 must be a lowercase SHA-256 hex digest")
         if not _CURRENCY.fullmatch(self.currency):
             raise CanonicalLedgerError("currency must be a three-letter uppercase code")
-        if not isinstance(self.evidence_class, str) or not self.evidence_class.strip():
-            raise CanonicalLedgerError("evidence_class is required")
+        if not isinstance(self.evidence_class, str) or self.evidence_class.strip().upper() not in _EVIDENCE_CLASSES:
+            raise CanonicalLedgerError("evidence_class must be a recognized, non-empty evidence class")
         try:
             timestamp = datetime.fromisoformat(self.occurred_at.replace("Z", "+00:00"))
         except (TypeError, ValueError) as exc:
@@ -109,13 +112,18 @@ class PortfolioEvent:
             "price": format(_decimal(self.price, "price"), "f") if self.price is not None else None,
             "multiplier": format(_decimal(self.multiplier, "multiplier"), "f"),
             "cash_delta": format(_decimal(self.cash_delta, "cash_delta"), "f") if self.cash_delta is not None else None,
-            "evidence_class": self.evidence_class.strip(),
+            "evidence_class": self.evidence_class.strip().upper(),
             "metadata": self.metadata or {},
         }
         if not isinstance(row["metadata"], dict):
             raise CanonicalLedgerError("metadata must be an object")
 
         kind = EventKind(str(row["event_kind"]))
+        broker_receipt = row["evidence_class"] == "BROKER_EXECUTION_RECEIPT"
+        if broker_receipt != (self.source_system.strip() == "BROKER_EXECUTION_RECEIPT" and kind is EventKind.FILL):
+            raise CanonicalLedgerError(
+                "broker execution receipt evidence is reserved for broker-sourced fill events"
+            )
         if kind is EventKind.FILL:
             if not row["asset_class"] or not row["instrument_id"] or row["side"] not in {"BUY", "SELL"}:
                 raise CanonicalLedgerError("a fill needs asset class, instrument id and BUY/SELL side")

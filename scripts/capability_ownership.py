@@ -129,6 +129,7 @@ def module_inventory() -> list[dict[str, str]]:
         "src/financial_brain/portfolio/legacy_migration.py", "src/financial_brain/kernel/oms.py",
         "src/financial_brain/kernel/paper_account.py", "src/financial_brain/kernel/fills.py",
         "src/financial_brain/kernel/batch20c_strategies.py", "src/financial_brain/kernel/batch20e_strategies.py",
+        "src/financial_brain/kernel/evidence.py",
         "src/financial_brain/kernel/strategy_primitives.py", "src/financial_brain/kernel/strategy_sdk.py",
         "src/financial_brain/kernel/strategy_state.py", "src/financial_brain/kernel/execution_model.py",
         "src/financial_brain/kernel/execution_tools.py", "src/financial_brain/kernel/ledger.py",

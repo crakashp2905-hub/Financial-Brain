@@ -2326,6 +2326,12 @@
       "module_owner": "src/financial_brain/kernel/candidate_publication.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/evidence.py",
+      "path": "src/financial_brain/kernel/evidence.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/evidence.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/execution_model.py",
       "path": "src/financial_brain/kernel/execution_model.py",
       "module_role": "canonical_contract_or_signal_output",

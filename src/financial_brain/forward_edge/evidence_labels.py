@@ -5,22 +5,12 @@ attested forward sessions are distinct classes. This module labels evidence; it 
 """
 from __future__ import annotations
 
-from enum import Enum
-
 from financial_brain.forward_edge.custody import CustodyStatus
+from financial_brain.kernel.evidence import EvidenceClass
 
 
 class EvidenceLabelError(ValueError):
     pass
-
-
-class EvidenceClass(str, Enum):
-    EXPLORATORY_SHADOW = "EXPLORATORY_SHADOW"
-    HISTORICAL_REPLAY = "HISTORICAL_REPLAY"
-    DETERMINISTIC_FIXTURE = "DETERMINISTIC_FIXTURE"
-    LOCAL_PAPER = "LOCAL_PAPER"
-    PROSPECTIVELY_OBSERVED_SESSION = "PROSPECTIVELY_OBSERVED_SESSION"
-    INDEPENDENTLY_ATTESTED_FORWARD = "INDEPENDENTLY_ATTESTED_FORWARD"
 
 
 _FORWARD_CLAIMS = {

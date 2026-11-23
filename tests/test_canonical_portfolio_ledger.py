@@ -19,7 +19,7 @@ def event(event_id, kind, **kwargs):
     account_id = kwargs.pop("account_id", "paper-main")
     sleeve_id = kwargs.pop("sleeve_id", "intraday")
     return PortfolioEvent(
-        account_id=account_id, sleeve_id=sleeve_id, source_system="fixture-source",
+        account_id=account_id, sleeve_id=sleeve_id, source_system=kwargs.pop("source_system", "fixture-source"),
             source_event_id=event_id, source_sha256=kwargs.pop("source_sha256", HASH), event_kind=kind,
             occurred_at=kwargs.pop("occurred_at", "2026-11-20T10:00:00+05:30"), **kwargs,
     )
@@ -195,3 +195,18 @@ def test_events_refuse_missing_provenance_naive_time_and_bad_trade_fields(tmp_pa
         ledger.append(event("naive", EventKind.CASH_FLOW, cash_delta="1", occurred_at="2026-11-20T10:00:00"))
     with pytest.raises(CanonicalLedgerError, match="fill needs"):
         ledger.append(event("not-fill", EventKind.FILL, side="BUY", quantity="1", price="10"))
+
+
+def test_canonical_ledger_rejects_unknown_or_conflicting_evidence_labels(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    with pytest.raises(CanonicalLedgerError, match="recognized.*evidence class"):
+        ledger.append(event("unsupported-label", EventKind.CASH_FLOW, cash_delta="1",
+                            evidence_class="CONFIRMED"))
+    with pytest.raises(CanonicalLedgerError, match="reserved for broker-sourced fill"):
+        ledger.append(event("forged-receipt", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                            instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+                            evidence_class="BROKER_EXECUTION_RECEIPT"))
+    with pytest.raises(CanonicalLedgerError, match="reserved for broker-sourced fill"):
+        ledger.append(event("mislabelled-broker", EventKind.FILL, source_system="BROKER_EXECUTION_RECEIPT",
+                            asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                            side="BUY", quantity="1", price="100", evidence_class="LOCAL_PAPER"))
