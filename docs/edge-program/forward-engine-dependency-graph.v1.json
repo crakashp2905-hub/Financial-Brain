@@ -9,6 +9,7 @@
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
+      "financial_brain.forward_edge.feed_quality",
       "financial_brain.forward_edge.instrument_rules",
       "financial_brain.forward_edge.intent_timing",
       "financial_brain.forward_edge.market_data",
@@ -84,6 +85,10 @@
       "target": "financial_brain.costs.india"
     },
     {
+      "source": "financial_brain.forward_edge.feed_quality",
+      "target": "financial_brain.forward_edge.market_events"
+    },
+    {
       "source": "financial_brain.forward_edge.intent_timing",
       "target": "financial_brain.forward_edge.market_events"
     },
@@ -150,6 +155,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.execution_scenario"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.feed_quality"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -379,5 +388,5 @@
     "financial_brain.forward_edge.quote_archive"
   ],
   "source_count": 720,
-  "source_tree_sha256": "d2cdd74d812388956194cea10164732c2e21cc562f41eb1a23029a48885cc8f6"
+  "source_tree_sha256": "496e6449dcef97734b6db66e6643416d3af75cb546d0c27c0078c0d3807478dc"
 }

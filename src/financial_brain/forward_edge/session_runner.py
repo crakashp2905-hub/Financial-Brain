@@ -1,6 +1,7 @@
 """Durable normalized-event, manifest, risk and paper execution session runner."""
 from __future__ import annotations
 
+from dataclasses import asdict
 import hashlib
 import json
 import re
@@ -19,6 +20,7 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_depth_scenario,
     evaluate_passive_scenario,
 )
+from financial_brain.forward_edge.feed_quality import audit_feed
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.data_permissions import (
     DEFAULT_PERMISSION_REGISTRY,
@@ -1543,6 +1545,7 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("terminal session has no persisted close report")
         if state not in {SessionState.OPEN, SessionState.DRAINING}:
             raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
+        feed_quality = self.session_feed_quality(session_id, as_of=now)
         if complete:
             self._require_resolved_paper_intents(session_id)
             accounting = self.records(session_id)["accounting"]
@@ -1567,7 +1570,8 @@ class ForwardSessionRunner:
                 "event_count": len(records["events"]), "decision_count": len(records["decisions"]),
                 "intent_count": len(records["intents"]),
                 "execution_receipt_count": len(records["execution_receipts"]),
-                "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
+                "reason": reason, "feed_quality": feed_quality,
+                "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         report = body | {"report_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest()}
@@ -1577,6 +1581,62 @@ class ForwardSessionRunner:
         self._append_audit("session_report", session_id, session_id, now, report)
         self._con.commit()
         return report
+
+    def session_feed_quality(self, session_id: str, *, as_of: datetime) -> dict[str, Any]:
+        """Create a deterministic, per-instrument quality snapshot from persisted session events."""
+        if as_of.tzinfo is None or as_of.utcoffset() is None:
+            raise ForwardSessionRunnerError("feed-quality report cutoff must be timezone aware")
+        plan_row = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'",
+            [session_id],
+        ).fetchone()
+        if plan_row is None:
+            return {"status": "UNAVAILABLE", "reason": "sourced calendar plan is missing", "instruments": []}
+        plan = json.loads(plan_row[0])
+        if plan.get("outcome") != "OPEN" or not plan.get("opens_at") or not plan.get("closes_at"):
+            return {"status": "UNAVAILABLE", "reason": "calendar plan has no open-session bounds", "instruments": []}
+        session_open = datetime.fromisoformat(plan["opens_at"])
+        session_close = datetime.fromisoformat(plan["closes_at"])
+        cutoff = min(as_of.astimezone(timezone.utc), session_close)
+        config = self.state_store.config(session_id)
+        event_rows = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? "
+            "AND kind NOT IN ('preflight','calendar_plan') ORDER BY available_at,event_id",
+            [session_id],
+        ).fetchall()
+        events = [MarketEvent.from_dict(json.loads(row[0])) for row in event_rows]
+        event_hashes = sorted((event.event_id, event.sha256()) for event in events)
+        instruments: list[dict[str, Any]] = []
+        for instrument_id in sorted(config.instrument_universe):
+            report = audit_feed(
+                events, venue=plan["venue"], instrument_id=instrument_id,
+                session_open=session_open, session_close=session_close, as_of=cutoff,
+            )
+            findings_by_code: dict[str, int] = {}
+            for finding in report.findings:
+                findings_by_code[finding.code] = findings_by_code.get(finding.code, 0) + 1
+            instruments.append({
+                "venue": report.venue,
+                "instrument_id": report.instrument_id,
+                "session_date": report.session_date.isoformat(),
+                "ready": report.ready,
+                "metrics": asdict(report.metrics),
+                "findings_by_code": dict(sorted(findings_by_code.items())),
+                "finding_samples": [asdict(finding) for finding in report.findings[:20]],
+            })
+        body = {
+            "schema": "fb.forward_session_feed_quality.v1",
+            "session_id": session_id,
+            "exchange_date": config.exchange_date.isoformat(),
+            "as_of": cutoff.isoformat(),
+            "source_event_count": len(events),
+            "source_events_sha256": hashlib.sha256(json.dumps(
+                event_hashes, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest(),
+            "instruments": instruments,
+        }
+        digest = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        return body | {"status": "AVAILABLE", "report_sha256": digest}
 
     def _require_resolved_paper_intents(self, session_id: str) -> None:
         intents = self._con.execute("SELECT order_id FROM paper_intents WHERE session_id=?",

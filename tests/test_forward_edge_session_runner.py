@@ -255,6 +255,35 @@ def test_calendar_planning_distinguishes_holiday_from_missing_source_coverage(tm
     runner.close()
 
 
+def test_close_report_binds_feed_quality_metrics_to_persisted_market_events(tmp_path):
+    runner = make_runner(tmp_path)
+    calendar = _calendar(date(2026, 11, 13))
+    assert runner.plan_calendar_day(
+        "quality", make_config(), venue="NSE", calendar=calendar, now=NOW,
+        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True},
+    ) is SessionState.OPEN
+    session_open, _ = calendar.session_bounds_utc("NSE", date(2026, 11, 13))
+    bar = MarketEvent(
+        "quality-bar", EventKind.BAR, "NSE", "NSE:INFY", session_open,
+        session_open + timedelta(minutes=1), session_open + timedelta(minutes=1),
+        {"open": 100, "high": 102, "low": 99, "close": 101, "volume": 10}, "FIXTURE")
+    runner.ingest("quality", make_config(), [bar],
+                  ingest_metadata={bar.event_id: (bar.available_at, "FIXTURE_CLOCK")})
+    report = runner.close_session("quality", now=NOW, complete=False, reason="fixture session end")
+    quality = report["feed_quality"]
+    assert quality["status"] == "AVAILABLE"
+    assert quality["source_event_count"] == 1
+    instrument = quality["instruments"][0]
+    assert instrument["session_date"] == "2026-11-13"
+    assert instrument["metrics"]["expected_bars"] == 60
+    assert instrument["metrics"]["complete_bars"] == 1
+    assert instrument["metrics"]["bar_coverage_fraction"] == pytest.approx(1 / 60)
+    assert instrument["findings_by_code"]["MISSING_MINUTE"] == 59
+    assert len(quality["report_sha256"]) == 64
+    assert runner.close_session("quality", now=NOW, complete=False) == report
+    runner.close()
+
+
 def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(tmp_path):
     calendar = _calendar(date(2026, 11, 13), session_type="SPECIAL",
                          opens=time(10, 0), closes=time(13, 0))
