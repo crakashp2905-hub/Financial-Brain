@@ -256,11 +256,13 @@
       "id": "FB-0107",
       "text": "Add instrument state: LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/kernel/instruments.py::Status supports ACTIVE, SUSPENDED, EXPIRED and DELISTED; tradability fails closed for non-ACTIVE status."
+        "src/financial_brain/kernel/instruments.py::Status now contains LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION and RESTRICTED (legacy ACTIVE and EXPIRED values remain for compatibility).",
+        "Instrument.tradable accepts only LISTED/legacy ACTIVE and fails closed for all other lifecycle states.",
+        "tests/test_kernel_instruments.py lifecycle-state tests (19 focused tests pass)."
       ],
-      "blocker": "HALTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION and RESTRICTED are not modeled.",
+      "blocker": null,
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

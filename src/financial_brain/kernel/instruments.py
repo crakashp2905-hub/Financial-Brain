@@ -39,10 +39,16 @@ ASSET_CLASSES = frozenset(item.value for item in AssetClass)
 
 
 class Status(str, Enum):
+    LISTED = "LISTED"
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
+    HALTED = "HALTED"
     EXPIRED = "EXPIRED"
+    MATURED = "MATURED"
     DELISTED = "DELISTED"
+    CLOSED_FOR_PURCHASE = "CLOSED_FOR_PURCHASE"
+    CLOSED_FOR_REDEMPTION = "CLOSED_FOR_REDEMPTION"
+    RESTRICTED = "RESTRICTED"
 
 
 class Phase(str, Enum):
@@ -170,7 +176,7 @@ class Instrument:
         if self.expiry is not None and day > self.expiry:
             return False, "EXPIRED_BY_DATE"
         status = self.status_on(day)
-        if status is not Status.ACTIVE:
+        if status not in {Status.ACTIVE, Status.LISTED}:
             return False, f"STATUS_{status.value}"
         if phase is not Phase.CONTINUOUS:
             return False, f"PHASE_{phase.value}"

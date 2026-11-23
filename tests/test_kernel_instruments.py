@@ -49,6 +49,38 @@ def test_suspended_status_blocks_trading_fail_closed() -> None:
     assert ok is False and reason == "STATUS_SUSPENDED"
 
 
+@pytest.mark.parametrize(
+    "status",
+    [
+        Status.SUSPENDED,
+        Status.HALTED,
+        Status.DELISTED,
+        Status.MATURED,
+        Status.CLOSED_FOR_PURCHASE,
+        Status.CLOSED_FOR_REDEMPTION,
+        Status.RESTRICTED,
+    ],
+)
+def test_non_listed_instrument_lifecycle_states_fail_closed(status: Status) -> None:
+    item = Instrument(
+        InstrumentId("NSE", "EQUITY", "ABC"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        status_history=[(date(2026, 1, 1), status)],
+    )
+    ok, reason = item.tradable(date(2026, 1, 2), Phase.CONTINUOUS)
+    assert not ok
+    assert reason == f"STATUS_{status.value}"
+
+
+def test_listed_instrument_is_tradable_during_continuous_phase() -> None:
+    item = Instrument(
+        InstrumentId("NSE", "EQUITY", "ABC"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        status_history=[(date(2026, 1, 1), Status.LISTED)],
+    )
+    assert item.tradable(date(2026, 1, 2), Phase.CONTINUOUS) == (True, "OK")
+
+
 def test_non_continuous_phase_blocks_trading() -> None:
     ok, reason = _equity().tradable(date(2026, 3, 2), Phase.PREOPEN)
     assert ok is False and reason == "PHASE_PREOPEN"
