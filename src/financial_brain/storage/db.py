@@ -70,6 +70,11 @@ class Database:
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS creation_unit_size BIGINT",
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_start DATE",
         "ALTER TABLE etf_product_disclosures ADD COLUMN IF NOT EXISTS flow_period_end DATE",
+        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS plan_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS payout_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS structure_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS management_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS asset_class VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
     ]
 
     def migrate(self) -> None:

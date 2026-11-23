@@ -41,6 +41,18 @@ def test_nav_parse_carries_house_and_type_down_the_file():
     assert rows[1]["isin_reinvest"] == "INF846K01WQ6" and rows[0]["isin_reinvest"] is None
 
 
+def test_scheme_classification_is_explicit_and_unknown_when_not_proven():
+    rows = amfi.parse(NAV_FILE)
+    direct = amfi.classify_scheme(rows[0])
+    idcw = amfi.classify_scheme(rows[1])
+    assert direct == {"plan_type": "DIRECT", "payout_type": "GROWTH",
+                      "structure_type": "OPEN_ENDED", "management_type": "UNCLASSIFIED",
+                      "asset_class": "EQUITY"}
+    assert idcw["plan_type"] == "REGULAR"
+    assert idcw["payout_type"] == "IDCW_UNSPECIFIED"
+    assert idcw["management_type"] == "UNCLASSIFIED"
+
+
 def test_a_scheme_with_no_declared_nav_is_absent_not_null():
     assert all(r["scheme_name"] != "Dormant Scheme" for r in amfi.parse(NAV_FILE))
 
@@ -75,9 +87,10 @@ def test_nav_ingest_is_idempotent(tmp_path):
         assert con.execute("SELECT count(*) FROM mf_nav").fetchone()[0] == 3
         master = con.execute("""SELECT COUNT(*), COUNT(DISTINCT identity_key),
                                       MIN(observed_on), MIN(nav_as_of),
-                                      COUNT(DISTINCT source_document_sha256)
+                                      COUNT(DISTINCT source_document_sha256),
+                                      COUNT(DISTINCT plan_type), COUNT(DISTINCT asset_class)
                                FROM mf_scheme_master_observations""").fetchone()
-        assert master == (3, 3, date(2026, 9, 20), date(2018, 7, 2), 1)
+        assert master == (3, 3, date(2026, 9, 20), date(2018, 7, 2), 1, 2, 1)
         assert con.execute("""SELECT count(*) FROM evidence
                               WHERE kind = 'mf_nav_file'""").fetchone()[0] == 1
 

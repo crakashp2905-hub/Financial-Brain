@@ -14,7 +14,7 @@ from datetime import date, datetime, timezone
 
 from ..evidence import ledger
 from ..lake.store import RawLake
-from ..providers.amfi import AmfiNav, parse
+from ..providers.amfi import AmfiNav, classify_scheme, parse
 
 SOURCE, DATASET = "AMFI", "mf_nav"
 
@@ -49,6 +49,7 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
 
     master_rows = []
     for row in rows:
+        classification = classify_scheme(row)
         identity = "|".join((row["scheme_code"], row["plan"] or "", row["option"] or "",
                              row["isin_growth"] or "", row["isin_reinvest"] or ""))
         identity_key = hashlib.sha256(identity.encode("utf-8")).hexdigest()
@@ -57,19 +58,24 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
                 "scheme_name": row["scheme_name"], "fund_house": row["fund_house"],
                 "scheme_type": row["scheme_type"], "plan": row["plan"],
                 "option": row["option"], "nav_as_of": row["nav_date"].isoformat(),
+                **classification,
                 "observed_on": d.isoformat(), "observed_at": now.isoformat(),
                 "source_document_sha256": obj.sha256, "lake_key": obj.key}
         record_sha = hashlib.sha256(json.dumps(
             body, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         master_rows.append([identity_key, row["scheme_code"], row["isin_growth"],
                             row["isin_reinvest"], row["scheme_name"], row["fund_house"],
-                            row["scheme_type"], row["plan"], row["option"], row["nav_date"],
+                            row["scheme_type"], classification["plan_type"],
+                            classification["payout_type"], classification["structure_type"],
+                            classification["management_type"], classification["asset_class"],
+                            row["plan"], row["option"], row["nav_date"],
                             d, now, obj.sha256, record_sha, obj.key])
     con.executemany("""INSERT INTO mf_scheme_master_observations
         (identity_key, scheme_code, isin_growth, isin_reinvest, scheme_name, fund_house,
-         scheme_type, plan, option, nav_as_of, observed_on, observed_at,
+         scheme_type, plan_type, payout_type, structure_type, management_type, asset_class,
+         plan, option, nav_as_of, observed_on, observed_at,
          source_document_sha256, record_sha256, lake_key)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT (identity_key, observed_on, source_document_sha256) DO NOTHING""",
         master_rows)
 

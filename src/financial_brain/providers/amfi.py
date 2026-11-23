@@ -17,6 +17,7 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 from __future__ import annotations
 
 from datetime import date, datetime
+import re
 
 from .base import FetchError, FetchResult, Provider
 
@@ -88,3 +89,57 @@ def parse(payload: bytes) -> list[dict]:
                     "scheme_type": scheme_type, "plan": plan or None,
                     "option": option or None, "nav": value, "nav_date": on})
     return out
+
+
+def classify_scheme(row: dict) -> dict[str, str]:
+    """Conservatively normalize AMFI descriptors without filling unknown attributes by guess."""
+    plan_text = " ".join(str(row.get(k) or "") for k in ("plan", "scheme_name")).upper()
+    if re.search(r"\bDIRECT\b", plan_text):
+        plan_type = "DIRECT"
+    elif re.search(r"\bREGULAR\b", plan_text):
+        plan_type = "REGULAR"
+    else:
+        plan_type = "UNCLASSIFIED"
+
+    option_text = " ".join(str(row.get(k) or "") for k in ("option", "scheme_name")).upper()
+    if "REINVEST" in option_text:
+        payout_type = "IDCW_REINVESTMENT"
+    elif re.search(r"\b(PAYOUT|DIVIDEND)\b|\bIDCW\b", option_text):
+        payout_type = "IDCW_PAYOUT" if "PAYOUT" in option_text or "DIVIDEND" in option_text else "IDCW_UNSPECIFIED"
+    elif re.search(r"\bGROWTH\b", option_text):
+        payout_type = "GROWTH"
+    else:
+        payout_type = "UNCLASSIFIED"
+
+    text = " ".join(str(row.get(k) or "") for k in ("scheme_type", "scheme_name")).upper()
+    if "INTERVAL" in text:
+        structure_type = "INTERVAL"
+    elif "CLOSE ENDED" in text or "CLOSED ENDED" in text:
+        structure_type = "CLOSED_ENDED"
+    elif "OPEN ENDED" in text:
+        structure_type = "OPEN_ENDED"
+    else:
+        structure_type = "UNCLASSIFIED"
+
+    if "FUND OF FUNDS" in text or re.search(r"\bFOF\b", text):
+        asset_class = "FUND_OF_FUNDS"
+    elif re.search(r"\b(EQUITY|LARGE CAP|MID CAP|SMALL CAP|ELSS)\b", text):
+        asset_class = "EQUITY"
+    elif re.search(r"\b(DEBT|GILT|BOND|LIQUID|MONEY MARKET|FIXED INCOME)\b", text):
+        asset_class = "DEBT"
+    elif "HYBRID" in text or "BALANCED" in text:
+        asset_class = "HYBRID"
+    elif re.search(r"\b(GOLD|SILVER|COMMODITY)\b", text):
+        asset_class = "COMMODITY"
+    else:
+        asset_class = "UNCLASSIFIED"
+
+    if re.search(r"\b(INDEX|PASSIVE|ETF|EXCHANGE TRADED)\b", text):
+        management_type = "PASSIVE"
+    elif "ACTIVELY MANAGED" in text:
+        management_type = "ACTIVE"
+    else:
+        management_type = "UNCLASSIFIED"
+    return {"plan_type": plan_type, "payout_type": payout_type,
+            "structure_type": structure_type, "management_type": management_type,
+            "asset_class": asset_class}
