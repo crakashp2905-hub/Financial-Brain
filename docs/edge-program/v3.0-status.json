@@ -5598,7 +5598,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T17:21:10Z",
-      "commit": null,
+      "commit": "c2b5c96ca01fb929ba8c6c69d5631a9b0a655599",
       "test_evidence": [
         "python scripts/trial_preservation_audit.py --check with PYTHONPATH=src: passed.",
         "python -m pytest --basetemp .pytest-tmp-pa0106 tests/test_trial_preservation_audit.py tests/test_forward_edge_f00.py::test_protected_hashes_are_stable_across_lf_and_crlf_checkouts tests/test_forward_edge_f00.py::test_charter_hash_is_deterministic_and_sensitive_to_every_field -q: 7 passed.",
