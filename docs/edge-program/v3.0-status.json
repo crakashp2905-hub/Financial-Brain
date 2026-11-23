@@ -489,11 +489,15 @@
     {
       "id": "FB-0213",
       "text": "Keep ETF price-return series, NAV-return series and underlying total-return benchmarks separate and clearly labelled.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/etf_returns.py::separate_returns calculates independent, labelled ETF market-price, ETF NAV and underlying benchmark returns over a required common date window.",
+        "An underlying PRICE index remains labelled UNDERLYING_PRICE_RETURN; only an explicitly declared TRI is labelled UNDERLYING_TRI_RETURN. Missing observations are not substituted across series.",
+        "tests/test_etf_returns.py: 3 passed; scoped Ruff passed."
+      ],
+      "blocker": "Continuous source-attributed ETF market-price/NAV and matched benchmark datasets are not yet populated and consumed by research or paper-performance reports; the current work is an explicit calculation contract.",
+      "last_audited_at_utc": "2026-11-23T07:00:00Z",
       "commit": null
     },
     {
@@ -14091,6 +14095,7 @@
       "FB-0210",
       "FB-0211",
       "FB-0212",
+      "FB-0213",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14110,10 +14115,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 52,
+    "audited_count": 53,
     "status_counts": {
-      "UNASSESSED": 1326,
-      "PARTIAL": 41,
+      "UNASSESSED": 1325,
+      "PARTIAL": 42,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14126,6 +14131,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 52 of 1,378 items audited; 8 COMPLETE, 41 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,326 UNASSESSED. ETF reference, product disclosures, primary-market flow context, price history, Kite quotes, sampled bars, valuation health, historical corporate-action adjustment and liquidity analytics are recorded under FB-0201 through FB-0212; latest implementation commit 14b4f4d1. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 53 of 1,378 items audited; 8 COMPLETE, 42 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,325 UNASSESSED. ETF reference, product disclosures, primary-market flow context, price history, Kite quotes, sampled bars, valuation health, distinct ETF price/NAV/benchmark return calculations, historical corporate-action adjustment and liquidity analytics are recorded under FB-0201 through FB-0213; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
