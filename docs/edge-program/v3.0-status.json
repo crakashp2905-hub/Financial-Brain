@@ -3622,7 +3622,7 @@
       ],
       "blocker": "Partial: durable paper-only decisions and a CLI capture path exist, but no cockpit capture flow, identity provider, separate human-approved paper book, or ForwardSessionRunner consumption exists.",
       "last_audited_at_utc": "2026-11-24T08:30:00+00:00",
-      "commit": "ce3b44cc",
+      "commit": "c77d2519",
       "test_evidence": [
         "tests/test_forward_edge_manual_paper_decisions.py covers APPROVE/REJECT/WATCH/NO_TRADE, frozen candidate hash, human-only actor, expiry/staleness, eligibility, idempotent restart-safe journal, immutable rows and CLI persistence.",
         "python -m pytest tests/test_forward_edge_manual_paper_decisions.py -q --basetemp=.pytest-checklist-manual-approval-cli: 9 passed.",
