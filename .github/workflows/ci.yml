@@ -61,6 +61,8 @@ jobs:
         run: python scripts/forward_engine_graph.py --check
       - name: Verify current checklist PR dependency and overlap snapshot
         run: python scripts/validate_pr_dependency_snapshot.py
+      - name: Verify canonical PR merge sequence
+        run: python scripts/validate_merge_sequence.py
       - name: Verify v1.4 checklist traceability index
         run: python scripts/validate_v1_4_traceability_index.py
       - name: Verify frozen historical research result notes

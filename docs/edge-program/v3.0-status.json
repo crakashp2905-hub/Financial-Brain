@@ -5481,12 +5481,24 @@
     {
       "id": "PA-01-01",
       "text": "Establish a canonical merge sequence by graph-based dependency audit; PR #37 precedes #36, and #38 depends on #36 unless deliberately rebased with a test-backed change log.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/canonical-merge-sequence.v1.json records live GitHub API metadata captured 2026-11-23 16:53 UTC for PRs #37, #36 and #38 and main SHA 3c99b5dddc775db888822b4cec1849e5ebca56c8.",
+        "Exact branch and commit ancestry establishes #36 base=PR #37 head and #38 base=PR #36 head; canonical order is #37 -> #36 -> #38.",
+        "The artifact records that #37 targets a stale main SHA and is behind; it requires rebase and green hosted CI before merge. A deliberate #38 rebase requires a test-backed change log; validation is never inherited across PR heads.",
+        "scripts/validate_merge_sequence.py and its CI step verify the exact edges, order, current-main drift and merge gates."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T16:55:13Z",
+      "commit": null,
+      "test_evidence": [
+        "python scripts/validate_merge_sequence.py: passed.",
+        "python -m pytest tests/test_canonical_merge_sequence.py -q: 2 passed.",
+        "python -m ruff check scripts/validate_merge_sequence.py tests/test_canonical_merge_sequence.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Live PR metadata and exact base/head branch and SHA relationships establish the dependency order. Required rebase and CI gates are explicitly preserved; no merge is claimed."
     },
     {
       "id": "PA-01-02",
@@ -15344,7 +15356,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:50:00Z",
+    "as_of_utc": "2026-11-23T16:55:13Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15585,6 +15597,7 @@
       "PA-00-10",
       "PA-00-11",
       "PA-00-12",
+      "PA-01-01",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15607,15 +15620,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 260,
+    "audited_count": 261,
     "status_counts": {
-      "COMPLETE": 38,
+      "COMPLETE": 39,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 205,
-      "UNASSESSED": 1118
+      "UNASSESSED": 1117
     },
-    "verified_complete_count": 38,
+    "verified_complete_count": 39,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15716,13 +15729,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-00-12 now derives RED/AMBER/GREEN readiness gates from hashed repository evidence and CI rejects hand-edited output; overall readiness remains RED."
+    "evidence_update": "PA-01-01 records the live exact-SHA PR chain #37 -> #36 -> #38 and requires rebase/current green CI gates before merging."
   },
   "counts_by_status": {
-    "COMPLETE": 38,
+    "COMPLETE": 39,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 205,
-    "UNASSESSED": 1118
+    "UNASSESSED": 1117
   }
 }

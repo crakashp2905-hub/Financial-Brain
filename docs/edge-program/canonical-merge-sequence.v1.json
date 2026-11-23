@@ -1,0 +1,59 @@
+{
+  "schema": "fb.canonical_merge_sequence.v1",
+  "captured_at_utc": "2026-11-23T16:53:32Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "main_sha_at_capture": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+  "sequence": [37, 36, 38],
+  "nodes": {
+    "37": {
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/37",
+      "state": "open",
+      "merged": false,
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "head": "feature/five-desk-d1-instruments",
+      "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "mergeable_state": "behind",
+      "depends_on": []
+    },
+    "36": {
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/36",
+      "state": "open",
+      "merged": false,
+      "base": "feature/five-desk-d1-instruments",
+      "base_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "head": "feature/five-desk-d2-data-parity",
+      "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "mergeable_state": "unstable",
+      "depends_on": [37]
+    },
+    "38": {
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/38",
+      "state": "open",
+      "merged": false,
+      "base": "feature/five-desk-d2-data-parity",
+      "base_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "head": "feature/four-node-variants",
+      "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+      "mergeable_state": "clean",
+      "depends_on": [36]
+    }
+  },
+  "merge_gates": [
+    "Rebase PR 37 onto current main 3c99b5dddc775db888822b4cec1849e5ebca56c8 and obtain green hosted checks before merging it; its captured base is stale and GitHub reports it behind.",
+    "Merge PR 37 before PR 36 because PR 36's exact base branch and SHA match PR 37's head branch and SHA.",
+    "Merge PR 36 before PR 38 because PR 38's exact base branch and SHA match PR 36's head branch and SHA.",
+    "If PR 38 is deliberately rebased to another base, record a test-backed change log and revalidate affected contracts; shared paths do not transfer CI or review validation.",
+    "Refresh PR metadata and checks immediately before each merge; this artifact is a timestamped snapshot, not authorization to merge."
+  ],
+  "sources": [
+    "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/pulls/37",
+    "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/pulls/36",
+    "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/pulls/38",
+    "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/commits/main"
+  ],
+  "limitations": [
+    "No PR in this dependency chain was merged at capture time.",
+    "The sequence proves ancestry order only; it does not imply passing CI, approval, or production capability."
+  ]
+}
