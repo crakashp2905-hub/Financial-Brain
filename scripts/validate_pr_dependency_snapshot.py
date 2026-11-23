@@ -7,7 +7,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "docs/edge-program/v3.0-pr-graph-2026-11-23-r3.json"
+OPEN_PR_SNAPSHOT = ROOT / "docs/edge-program/open-pr-snapshot-2026-11-23.json"
 EXPECTED = {"34", "36", "37", "38", "39", "40", "87"}
+HEX40 = set("0123456789abcdef")
 
 
 def validate_snapshot(graph: dict[str, Any]) -> list[str]:
@@ -79,6 +81,76 @@ def validate_snapshot(graph: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_open_pr_snapshot(snapshot: dict[str, Any]) -> list[str]:
+    """Validate all-open-PR ancestry, check-run, and protected-file evidence."""
+    errors: list[str] = []
+    if snapshot.get("schema") != "fb.open_pr_snapshot.v1":
+        return ["unsupported all-open-PR snapshot schema"]
+    prs = snapshot.get("pull_requests")
+    if (not isinstance(prs, list) or not prs
+            or snapshot.get("open_pr_count") != len(prs)):
+        return ["all-open-PR snapshot count does not match its rows"]
+    seen: set[int] = set()
+    for pr in prs:
+        if not isinstance(pr, dict):
+            errors.append("PR entry must be an object")
+            continue
+        number = pr.get("number")
+        if type(number) is not int or number <= 0 or number in seen:
+            errors.append("PR number is invalid or duplicated")
+            continue
+        seen.add(number)
+        for key in ("base_sha", "head_sha"):
+            value = pr.get(key)
+            if not isinstance(value, str) or len(value) != 40 or set(value) - HEX40:
+                errors.append(f"PR {number} {key} must be a full lowercase Git SHA")
+        if pr.get("state") != "open":
+            errors.append(f"PR {number} is not recorded as open")
+        if pr.get("compare_status") not in {"ahead", "behind", "diverged", "identical"}:
+            errors.append(f"PR {number} ancestry comparison is missing")
+        for key in ("ahead_by", "behind_by"):
+            if type(pr.get(key)) is not int or pr[key] < 0:
+                errors.append(f"PR {number} {key} must be a nonnegative integer")
+        checks = pr.get("check_runs")
+        if not isinstance(checks, list):
+            errors.append(f"PR {number} check-run evidence is missing")
+            continue
+        for check in checks:
+            if (not isinstance(check, dict) or check.get("head_sha") != pr.get("head_sha")
+                    or check.get("status") not in {"completed", "in_progress", "queued", "pending"}
+                    or check.get("conclusion") not in {
+                        None, "success", "failure", "cancelled", "skipped", "neutral", "timed_out",
+                        "action_required", "stale", "startup_failure"}):
+                errors.append(f"PR {number} has malformed or differently pinned CI evidence")
+
+    protected = snapshot.get("protected_artifacts")
+    if not isinstance(protected, dict):
+        return errors + ["protected artifact hash inventory is missing"]
+    for pr_number, files in protected.items():
+        if not pr_number.startswith("PR-") or not isinstance(files, dict):
+            errors.append("protected artifact group identity is malformed")
+            continue
+        for path, record in files.items():
+            if path not in {"docs/trials/ledger.jsonl", "docs/forward-edge/protected-pins.json"}:
+                errors.append(f"unexpected protected path {path}")
+                continue
+            if not isinstance(record, dict) or type(record.get("changed")) is not bool:
+                errors.append(f"{pr_number} {path} protected record is malformed")
+                continue
+            if record["changed"]:
+                for key in ("base_blob_sha", "head_blob_sha"):
+                    value = record.get(key)
+                    if not isinstance(value, str) or len(value) != 40 or set(value) - HEX40:
+                        errors.append(f"{pr_number} {path} {key} is invalid")
+                if record.get("base_blob_sha") == record.get("head_blob_sha"):
+                    errors.append(f"{pr_number} {path} is marked changed but blob hashes match")
+            elif record.get("base_blob_sha") != record.get("head_blob_sha"):
+                errors.append(f"{pr_number} {path} is marked unchanged but blob hashes differ")
+    if not any("unmerged" in text.lower() for text in snapshot.get("limitations", [])):
+        errors.append("snapshot must say unmerged code is not production capability")
+    return errors
+
+
 def main() -> int:
     try:
         graph = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
@@ -86,11 +158,17 @@ def main() -> int:
         print(f"FAIL cannot read PR dependency snapshot: {exc}")
         return 1
     errors = validate_snapshot(graph)
+    try:
+        open_prs = json.loads(OPEN_PR_SNAPSHOT.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"cannot read all-open-PR snapshot: {exc}")
+    else:
+        errors.extend(validate_open_pr_snapshot(open_prs))
     if errors:
         for error in errors:
             print(f"FAIL {error}")
         return 1
-    print("PR dependency and overlap snapshot is internally consistent; validation is not inherited across heads.")
+    print("PR dependency and all-open-PR snapshots are internally consistent; validation is not inherited across heads.")
     return 0
 
 

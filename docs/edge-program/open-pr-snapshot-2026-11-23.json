@@ -1,0 +1,1055 @@
+{
+  "schema": "fb.open_pr_snapshot.v1",
+  "captured_at_utc": "2026-11-23 15:46:59 UTC",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "api_url": "https://api.github.com/repos/crakashp2905-hub/Financial-Brain/pulls?state=open&per_page=100",
+  "open_pr_count": 13,
+  "pull_requests": [
+    {
+      "number": 87,
+      "title": "Advance Financial-Brain unified checklist implementation",
+      "head": "feature/forward-edge-f00-f01",
+      "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+      "base": "main",
+      "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "compare_status": "ahead",
+      "ahead_by": 143,
+      "behind_by": 0,
+      "protected_paths": [
+        "docs/forward-edge/protected-pins.json"
+      ],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-23T15:43:14Z",
+          "completed_at": null,
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208349640/job/137810113185"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:14Z",
+          "completed_at": "2026-11-23T15:45:13Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208349640/job/137810113162"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:14Z",
+          "completed_at": "2026-11-23T15:44:07Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208349640/job/137810113057"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-23T15:43:14Z",
+          "completed_at": null,
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208349640/job/137810112982"
+        },
+        {
+          "name": "forecasting-coverage",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:13Z",
+          "completed_at": "2026-11-23T15:44:37Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208349640/job/137810112652"
+        },
+        {
+          "name": "forecasting-coverage",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:09Z",
+          "completed_at": "2026-11-23T15:44:25Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208333280/job/137810057530"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:09Z",
+          "completed_at": "2026-11-23T15:45:14Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208333280/job/137810057008"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-23T15:43:09Z",
+          "completed_at": "2026-11-23T15:44:02Z",
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208333280/job/137810056818"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-23T15:43:09Z",
+          "completed_at": null,
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208333280/job/137810056799"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-23T15:43:09Z",
+          "completed_at": null,
+          "head_sha": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45208333280/job/137810056374"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "updated_at": "2026-11-23T15:43:04Z",
+      "review_count": 0,
+      "commits": 143,
+      "changed_files": 179
+    },
+    {
+      "number": 86,
+      "title": "FB-0807: point-in-time option contract routing",
+      "head": "codex/v3-0807-options",
+      "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+      "base": "main",
+      "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "compare_status": "ahead",
+      "ahead_by": 83,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-22T23:42:17Z",
+          "completed_at": "2026-11-22T23:44:58Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084665183/job/137400440693"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T23:42:18Z",
+          "completed_at": "2026-11-22T23:43:07Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084665183/job/137400440678"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-22T23:42:17Z",
+          "completed_at": "2026-11-22T23:43:11Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084665183/job/137400440666"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T23:42:17Z",
+          "completed_at": "2026-11-22T23:44:19Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084665183/job/137400440445"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-22T23:42:15Z",
+          "completed_at": "2026-11-22T23:44:34Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084661391/job/137400429427"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T23:42:15Z",
+          "completed_at": "2026-11-22T23:43:05Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084661391/job/137400429419"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T23:42:14Z",
+          "completed_at": "2026-11-22T23:44:17Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084661391/job/137400429360"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-22T23:42:14Z",
+          "completed_at": "2026-11-22T23:43:15Z",
+          "head_sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45084661391/job/137400429134"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "updated_at": "2026-11-22T23:42:10Z",
+      "review_count": 0,
+      "commits": 83,
+      "changed_files": 69
+    },
+    {
+      "number": 39,
+      "title": "Momentum shadow books, monthly-book freeze fix, live-v1 feed-outage close-out",
+      "head": "feature/momentum-shadow-abort-closeout",
+      "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "compare_status": "ahead",
+      "ahead_by": 1,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T15:12:36Z",
+          "completed_at": "2026-11-18T15:20:52Z",
+          "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44332936987/job/134901861727"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T15:12:35Z",
+          "completed_at": "2026-11-18T15:27:33Z",
+          "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44332936987/job/134901861451"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T15:12:19Z",
+          "completed_at": "2026-11-18T15:19:40Z",
+          "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44332884676/job/134901680059"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T15:12:19Z",
+          "completed_at": "2026-11-18T15:26:58Z",
+          "head_sha": "a1cdb2ce7b7b29facbf3da1630dd17e73076ba50",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44332884676/job/134901679738"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "behind",
+      "updated_at": "2026-11-18T15:12:17Z",
+      "review_count": 0,
+      "commits": 1,
+      "changed_files": 6
+    },
+    {
+      "number": 38,
+      "title": "Four-Node 128-variant study, legacy-runner bridge, licence and Kite checks",
+      "head": "feature/four-node-variants",
+      "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+      "base": "feature/five-desk-d2-data-parity",
+      "base_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "compare_status": "ahead",
+      "ahead_by": 4,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T14:49:59Z",
+          "completed_at": "2026-11-18T14:58:43Z",
+          "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44328601523/job/134886545658"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T14:49:59Z",
+          "completed_at": "2026-11-18T15:01:48Z",
+          "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44328601523/job/134886544434"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T14:49:53Z",
+          "completed_at": "2026-11-18T15:04:04Z",
+          "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44328588098/job/134886493167"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T14:49:53Z",
+          "completed_at": "2026-11-18T14:56:02Z",
+          "head_sha": "bdfb292ae2f45fc83e698084b2ac4fb1d6966842",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44328588098/job/134886493142"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "updated_at": "2026-11-18T14:49:49Z",
+      "review_count": 0,
+      "commits": 4,
+      "changed_files": 30
+    },
+    {
+      "number": 37,
+      "title": "Five-desk D1: instrument foundation (FB-0101 to FB-0110)",
+      "head": "feature/five-desk-d1-instruments",
+      "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "compare_status": "diverged",
+      "ahead_by": 1,
+      "behind_by": 4,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:35:02Z",
+          "completed_at": "2026-11-18T13:49:55Z",
+          "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44315164700/job/134839233050"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:35:02Z",
+          "completed_at": "2026-11-18T13:43:32Z",
+          "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44315164700/job/134839232354"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-17T12:49:28Z",
+          "completed_at": "2026-11-17T12:49:31Z",
+          "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44086757447/job/134051079662"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-17T12:49:28Z",
+          "completed_at": "2026-11-17T12:49:31Z",
+          "head_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44086757447/job/134051079153"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "behind",
+      "updated_at": "2026-11-18T13:34:53Z",
+      "review_count": 0,
+      "commits": 1,
+      "changed_files": 12
+    },
+    {
+      "number": 36,
+      "title": "Five-desk D2: data parity, signals, paper engine and control room",
+      "head": "feature/five-desk-d2-data-parity",
+      "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+      "base": "feature/five-desk-d1-instruments",
+      "base_sha": "8b0b12cef3e3cfa8afbd886d8d6892b942ebabf8",
+      "compare_status": "ahead",
+      "ahead_by": 53,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-18T03:33:19Z",
+          "completed_at": "2026-11-18T03:33:22Z",
+          "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44231236180/job/134556526923"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-18T03:33:19Z",
+          "completed_at": "2026-11-18T03:33:22Z",
+          "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44231236180/job/134556526846"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-18T03:33:17Z",
+          "completed_at": "2026-11-18T03:33:20Z",
+          "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44231231825/job/134556513061"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-18T03:33:17Z",
+          "completed_at": "2026-11-18T03:33:19Z",
+          "head_sha": "3b858d1ce573e659d89f903d0bc8b648d5e1a4e3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44231231825/job/134556512552"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "unstable",
+      "updated_at": "2026-11-18T03:33:16Z",
+      "review_count": 0,
+      "commits": 53,
+      "changed_files": 100
+    },
+    {
+      "number": 35,
+      "title": "Add cryptography to the dev extra so custody tests run in CI",
+      "head": "claude/dev-extra-cryptography",
+      "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+      "base": "main",
+      "base_sha": "50248f1474f8f3476d723584da410a6fac7e4219",
+      "compare_status": "ahead",
+      "ahead_by": 2,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:22Z",
+          "completed_at": "2026-11-21T12:57:45Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905465285/job/136849969563"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:23Z",
+          "completed_at": "2026-11-21T12:46:09Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905465285/job/136849969519"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:22Z",
+          "completed_at": "2026-11-21T12:54:46Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905465285/job/136849969470"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:22Z",
+          "completed_at": "2026-11-21T12:47:40Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905465285/job/136849969298"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:20Z",
+          "completed_at": "2026-11-21T13:02:36Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905462004/job/136849960333"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:20Z",
+          "completed_at": "2026-11-21T12:46:13Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905462004/job/136849960326"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:20Z",
+          "completed_at": "2026-11-21T12:52:03Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905462004/job/136849960284"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-21T12:45:20Z",
+          "completed_at": "2026-11-21T12:47:39Z",
+          "head_sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44905462004/job/136849960170"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "behind",
+      "updated_at": "2026-11-21T12:45:15Z",
+      "review_count": 0,
+      "commits": 2,
+      "changed_files": 1
+    },
+    {
+      "number": 34,
+      "title": "Accept ADR-0007 dynamic evidence standard; register P3 momentum out of sample",
+      "head": "feature/dynamic-evidence-standard",
+      "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+      "base": "main",
+      "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "compare_status": "ahead",
+      "ahead_by": 48,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:18Z",
+          "completed_at": "2026-11-22T17:27:45Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048576166/job/137288468142"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:17Z",
+          "completed_at": "2026-11-22T17:19:29Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048576166/job/137288468138"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:18Z",
+          "completed_at": "2026-11-22T17:40:26Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048576166/job/137288468109"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:17Z",
+          "completed_at": "2026-11-22T17:18:02Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048576166/job/137288467985"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:15Z",
+          "completed_at": "2026-11-22T17:18:04Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048572122/job/137288455777"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:15Z",
+          "completed_at": "2026-11-22T17:23:29Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048572122/job/137288455724"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:15Z",
+          "completed_at": "2026-11-22T17:19:17Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048572122/job/137288455677"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:15Z",
+          "completed_at": "2026-11-22T17:33:22Z",
+          "head_sha": "88153cd1cbae31b6070b3ab47bb80709226c23de",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048572122/job/137288455508"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "updated_at": "2026-11-22T17:17:11Z",
+      "review_count": 0,
+      "commits": 48,
+      "changed_files": 36
+    },
+    {
+      "number": 33,
+      "title": "Consolidate local branches into one pipeline (draft)",
+      "head": "integrate/clean-branches-20261114",
+      "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "compare_status": "ahead",
+      "ahead_by": 157,
+      "behind_by": 0,
+      "protected_paths": [
+        "docs/forward-edge/protected-pins.json",
+        "docs/trials/ledger.jsonl"
+      ],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:05Z",
+          "completed_at": "2026-11-18T14:06:22Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318963353/job/134852499509"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:05Z",
+          "completed_at": "2026-11-18T14:16:48Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318963353/job/134852499418"
+        },
+        {
+          "name": "locked",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:05Z",
+          "completed_at": "2026-11-18T14:04:42Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318963353/job/134852498900"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:01Z",
+          "completed_at": "2026-11-18T14:08:57Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318952936/job/134852459572"
+        },
+        {
+          "name": "locked",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:01Z",
+          "completed_at": "2026-11-18T14:03:27Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318952936/job/134852459512"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-18T13:57:01Z",
+          "completed_at": "2026-11-18T14:13:10Z",
+          "head_sha": "0393da6c01485bc7631d368efe299585f9b4baf9",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/44318952936/job/134852459092"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "mergeable_state": "dirty",
+      "updated_at": "2026-11-18T13:56:56Z",
+      "review_count": 0,
+      "commits": 157,
+      "changed_files": 304
+    },
+    {
+      "number": 32,
+      "title": "Add checklist evidence and source capability audits",
+      "head": "codex/branch-protection-evidence-20261113",
+      "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba",
+      "base": "main",
+      "base_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1",
+      "compare_status": "ahead",
+      "ahead_by": 269,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-15T07:32:18Z",
+          "completed_at": "2026-11-15T07:40:33Z",
+          "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43690380062/job/132739581684"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-15T07:32:17Z",
+          "completed_at": "2026-11-15T07:47:19Z",
+          "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43690380062/job/132739581439"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-15T07:32:13Z",
+          "completed_at": "2026-11-15T07:40:33Z",
+          "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43690375277/job/132739566835"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-15T07:32:13Z",
+          "completed_at": "2026-11-15T07:47:33Z",
+          "head_sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/43690375277/job/132739566603"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "mergeable_state": "dirty",
+      "updated_at": "2026-11-15T07:32:10Z",
+      "review_count": 0,
+      "commits": 269,
+      "changed_files": 649
+    },
+    {
+      "number": 18,
+      "title": "Source notes for Nison and Bulkowski, testability synthesis, pattern catalogue",
+      "head": "codex/source-notes-pattern-books",
+      "head_sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3",
+      "base": "main",
+      "base_sha": "6321153165b62de068d1e69f89aa6676fdc0e3e0",
+      "compare_status": "ahead",
+      "ahead_by": 3,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-09T19:26:46Z",
+          "completed_at": "2026-11-09T19:35:27Z",
+          "head_sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/42683391348/job/129383636362"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-09T19:26:46Z",
+          "completed_at": "2026-11-09T19:40:42Z",
+          "head_sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/42683391348/job/129383635808"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-09T19:26:42Z",
+          "completed_at": "2026-11-09T19:38:32Z",
+          "head_sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/42683380038/job/129383603190"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-09T19:26:42Z",
+          "completed_at": "2026-11-09T19:34:59Z",
+          "head_sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/42683380038/job/129383602639"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "behind",
+      "updated_at": "2026-11-09T19:26:38Z",
+      "review_count": 0,
+      "commits": 3,
+      "changed_files": 3
+    },
+    {
+      "number": 17,
+      "title": "Preflight, verified backups, tested lockfile, venv-based nightly refresh",
+      "head": "codex/ops-reliability-20261104",
+      "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+      "base": "main",
+      "base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+      "compare_status": "ahead",
+      "ahead_by": 42,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:18:06Z",
+          "completed_at": "2026-11-22T17:20:35Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048622655/job/137288609510"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:47Z",
+          "completed_at": "2026-11-22T17:27:52Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048622655/job/137288609473"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:47Z",
+          "completed_at": "2026-11-22T17:18:44Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048622655/job/137288609444"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:18:05Z",
+          "completed_at": "2026-11-22T17:34:11Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048622655/job/137288609403"
+        },
+        {
+          "name": "locked",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:46Z",
+          "completed_at": "2026-11-22T17:25:24Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048622655/job/137288609218"
+        },
+        {
+          "name": "locked",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:43Z",
+          "completed_at": "2026-11-22T17:25:21Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048616936/job/137288592379"
+        },
+        {
+          "name": "test (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:43Z",
+          "completed_at": "2026-11-22T17:26:58Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048616936/job/137288592306"
+        },
+        {
+          "name": "reproducibility (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:43Z",
+          "completed_at": "2026-11-22T17:20:06Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048616936/job/137288592292"
+        },
+        {
+          "name": "reproducibility (ubuntu-24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:42Z",
+          "completed_at": "2026-11-22T17:18:29Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048616936/job/137288592266"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-22T17:17:43Z",
+          "completed_at": "2026-11-22T17:33:58Z",
+          "head_sha": "82d1b7e7eb0d440981f86edd77b72cca2757a4d2",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45048616936/job/137288592047"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "clean",
+      "updated_at": "2026-11-22T17:17:39Z",
+      "review_count": 0,
+      "commits": 42,
+      "changed_files": 25
+    },
+    {
+      "number": 16,
+      "title": "Reject malformed protocol schedule dates",
+      "head": "codex/protocol-date-validation-20261103",
+      "head_sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a",
+      "base": "main",
+      "base_sha": "a2130ba8160231ec84133e04fc22ba69723aecbd",
+      "compare_status": "ahead",
+      "ahead_by": 2,
+      "behind_by": 0,
+      "protected_paths": [],
+      "check_runs": [
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-03T14:11:07Z",
+          "completed_at": "2026-11-03T14:19:17Z",
+          "head_sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/41651177676/job/125969426062"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-03T14:11:07Z",
+          "completed_at": "2026-11-03T14:26:09Z",
+          "head_sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/41651177676/job/125969425800"
+        },
+        {
+          "name": "test (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-03T14:11:04Z",
+          "completed_at": "2026-11-03T14:19:25Z",
+          "head_sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/41651168717/job/125969393919"
+        },
+        {
+          "name": "test (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-03T14:11:03Z",
+          "completed_at": "2026-11-03T14:25:16Z",
+          "head_sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a",
+          "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/41651168717/job/125969393287"
+        }
+      ],
+      "checks_error": null,
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "mergeable_state": "behind",
+      "updated_at": "2026-11-03T14:10:59Z",
+      "review_count": 0,
+      "commits": 2,
+      "changed_files": 2
+    }
+  ],
+  "protected_artifacts": {
+    "PR-87": {
+      "docs/forward-edge/protected-pins.json": {
+        "base_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "base_blob_sha": "e6a28bb4f3aa0620be5477976ce0ff1cf834a79a",
+        "head_commit": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+        "head_blob_sha": "46f9aac424678883799497029249d09108e1bbc2",
+        "changed": true
+      },
+      "docs/trials/ledger.jsonl": {
+        "base_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+        "base_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+        "head_commit": "4e5f8b706acb9699b2f61d866d359bc267cc05a6",
+        "head_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+        "changed": false
+      }
+    },
+    "PR-33": {
+      "docs/forward-edge/protected-pins.json": {
+        "base_commit": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+        "base_blob_sha": "6e878700a6d1fcdcaef38ba29e8501bc2eab90ee",
+        "head_commit": "0393da6c01485bc7631d368efe299585f9b4baf9",
+        "head_blob_sha": "36f014c9d3d6b5a8b951643de8fd5e6d1ab5b8c0",
+        "changed": true
+      },
+      "docs/trials/ledger.jsonl": {
+        "base_commit": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+        "base_blob_sha": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+        "head_commit": "0393da6c01485bc7631d368efe299585f9b4baf9",
+        "head_blob_sha": "9210dcdfd6cc0132ed087675aa442668039042ba",
+        "changed": true,
+        "diff_summary": "two trial/history JSONL rows added; must be reviewed against protected-trial authorization before merge"
+      }
+    }
+  },
+  "limitations": [
+    "Snapshot is point-in-time GitHub API evidence; check-run arrays can include prior attempts.",
+    "PRs remain unmerged; none of their code is counted as mainline capability.",
+    "Pull request file lists show PR-87 changes protected-pins and PR-33 changes protected-pins plus docs/trials/ledger.jsonl."
+  ]
+}
