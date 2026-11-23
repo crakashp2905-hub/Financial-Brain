@@ -344,7 +344,7 @@
       ],
       "blocker": "Classification is currently a deterministic label heuristic over one NSE snapshot, not validated holdings/benchmark exposure. BSE/AMC universe coverage, source-backed mappings, and completeness review are still missing.",
       "last_audited_at_utc": "2026-11-23T02:13:02Z",
-      "commit": null
+      "commit": "8ba69024"
     },
     {
       "id": "FB-0203",
