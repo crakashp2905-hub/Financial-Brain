@@ -309,11 +309,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/instruments.py::InstrumentMaster rejects unknown and duplicate current keys.",
-        "src/financial_brain/kernel/clock.py::assert_not_future rejects future timestamps.",
-        "src/financial_brain/committee/dossier.py and PIT observations carry partial lineage/time provenance."
+        "src/financial_brain/kernel/instruments.py::InstrumentObservation binds dated identity, source id, record digest and MarketFactTimes.",
+        "InstrumentMaster.resolve_observation rejects unknown aliases, alias overlap is rejected during identity registration, and not-yet-available/future-stamped observations fail closed.",
+        "tests/test_kernel_instruments.py: 25 passed; tests/test_kernel_units_clock.py exercises timestamp ordering."
       ],
-      "blocker": "There is no end-to-end semantic lineage contract that rejects overlapping effective identities and future-published data across all inputs and consumers.",
+      "blocker": "The semantic lineage contract is implemented at the kernel boundary, but ingestion, persistence and all trading/research consumers do not yet require it.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

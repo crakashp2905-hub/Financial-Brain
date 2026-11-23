@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
@@ -14,12 +14,14 @@ from financial_brain.kernel.instruments import (
     InstrumentId,
     InstrumentMaster,
     InstrumentMetadataVersion,
+    InstrumentObservation,
     Phase,
     RuleVersion,
     Status,
     fx_pip_size,
     fx_pip_value,
 )
+from financial_brain.kernel.clock import MarketFactTimes
 
 
 def _equity() -> Instrument:
@@ -256,3 +258,66 @@ def test_fx_pip_conventions_differ_for_jpy() -> None:
 def test_bad_fx_pair_rejected() -> None:
     with pytest.raises(InstrumentError):
         fx_pip_size("eurusd")
+
+
+def test_semantic_observation_resolution_rejects_unknown_and_future_data() -> None:
+    start = datetime(2026, 11, 9, 3, 45, tzinfo=timezone.utc)
+    decision = start + timedelta(seconds=5)
+    item = Instrument(
+        InstrumentId("NSE", "EQUITY", "ABC", underlying_lineage="issuer-abc"),
+        rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
+        identity_versions=[
+            InstrumentIdentityVersion(date(2026, 1, 1), "IN", "NSE", "ABC", "INE000A01011")
+        ],
+    )
+    master = InstrumentMaster()
+    master.add(item)
+    observation = InstrumentObservation(
+        market="IN",
+        exchange="NSE",
+        asset_class="EQUITY",
+        symbol="ABC",
+        as_of=date(2026, 11, 9),
+        times=MarketFactTimes(
+            received_at=start,
+            available_at=start + timedelta(seconds=1),
+            ingested_at=start + timedelta(seconds=2),
+            source_at=start,
+            exchange_at=start,
+            published_at=start,
+        ),
+        source_id="fixture-feed-1",
+        record_sha256="d" * 64,
+    )
+    assert master.resolve_observation(observation, decision) is item
+
+    unknown = InstrumentObservation(
+        market="IN",
+        exchange="NSE",
+        asset_class="EQUITY",
+        symbol="UNKNOWN",
+        as_of=date(2026, 11, 9),
+        times=observation.times,
+        source_id="fixture-feed-1",
+        record_sha256="e" * 64,
+    )
+    with pytest.raises(InstrumentError, match="unknown instrument identity"):
+        master.resolve_observation(unknown, decision)
+
+    future = InstrumentObservation(
+        market="IN",
+        exchange="NSE",
+        asset_class="EQUITY",
+        symbol="ABC",
+        as_of=date(2026, 11, 9),
+        times=MarketFactTimes(
+            received_at=start,
+            available_at=decision + timedelta(seconds=1),
+            ingested_at=decision + timedelta(seconds=2),
+            source_at=decision + timedelta(seconds=1),
+        ),
+        source_id="fixture-feed-1",
+        record_sha256="f" * 64,
+    )
+    with pytest.raises(InstrumentError, match="not yet available"):
+        master.resolve_observation(future, decision)

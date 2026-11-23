@@ -6843,14 +6843,16 @@
         "datetime",
         "decimal",
         "enum",
+        "financial_brain.kernel.clock",
         "financial_brain.kernel.market_rules",
-        "financial_brain.kernel.units"
+        "financial_brain.kernel.units",
+        "re"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "eb69e8b1a8ec801555153927fcfe23e95090dab0eb497af59d1094e2163e172d",
+      "source_sha256": "58d78be4ca2973752fbcbeb7e73eb6194da23beaa29f4ffe77375bacb64d9c9a",
       "test_paths": []
     },
     {

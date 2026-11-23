@@ -6,12 +6,15 @@ outside the trading phase all make the instrument non-tradable; the caller must 
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
+from financial_brain.kernel.clock import ClockError, MarketFactTimes, utc
 from financial_brain.kernel.units import to_decimal
+
 
 class AssetClass(str, Enum):
     """Instrument kind, kept independent from the strategy desk using it."""
@@ -173,6 +176,29 @@ class InstrumentIdentityVersion:
             value = getattr(self, name)
             if value is not None and not value.strip():
                 raise InstrumentError(f"identity {name} cannot be blank")
+
+
+@dataclass(frozen=True)
+class InstrumentObservation:
+    """Source-bound market fact that must resolve to one dated instrument identity."""
+
+    market: str
+    exchange: str
+    asset_class: str
+    symbol: str
+    as_of: date
+    times: MarketFactTimes
+    source_id: str
+    record_sha256: str
+
+    def __post_init__(self) -> None:
+        for name in ("market", "exchange", "asset_class", "symbol", "source_id"):
+            if not getattr(self, name).strip():
+                raise InstrumentError(f"observation {name} is required")
+        if self.asset_class not in ASSET_CLASSES:
+            raise InstrumentError(f"unknown asset class {self.asset_class!r}")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", self.record_sha256):
+            raise InstrumentError("observation record needs a SHA-256 digest")
 
 
 @dataclass
@@ -342,6 +368,26 @@ class InstrumentMaster:
         if len(matches) != 1:
             raise InstrumentError(f"ambiguous instrument identity {alias_key} on {as_of}")
         return matches[0]
+
+    def resolve_observation(
+        self, observation: InstrumentObservation, decision_time: datetime
+    ) -> Instrument:
+        """Resolve identity and timestamp provenance together, refusing look-ahead facts."""
+        decision = utc(decision_time)
+        try:
+            observation.times.assert_usable_at(decision)
+        except ClockError as exc:
+            raise InstrumentError(f"unusable observation: {exc}") from exc
+        for value in (observation.times.source_at, observation.times.exchange_at):
+            if value is not None and value > decision:
+                raise InstrumentError("observation carries a future source or exchange timestamp")
+        return self.resolve(
+            observation.market,
+            observation.exchange,
+            observation.asset_class,
+            observation.symbol,
+            observation.as_of,
+        )
 
     def __len__(self) -> int:
         return len(self._items)
