@@ -36,7 +36,7 @@
         "docs/edge-program/capability-ownership.v1.json still provides broad domains rather than reviewed individual ownership for every strategy, feed, OMS, ledger, renderer and output."
       ],
       "blocker": "Still partial: inventory covers Python sources only, 701 files remain unassessed, 425 have no role assignment, and every capability lacks a reviewed canonical owner mapping.",
-      "last_audited_at_utc": "2026-11-23T10:00:00Z",
+      "last_audited_at_utc": "2026-11-23T09:43:07Z",
       "commit": "46efd66e70996b2495fdb462cb3f9a533092bb0c",
       "artifact_sha256": "5432cc3ddeae87785b95bb805dbe910a02a9e80ab5935560e8a9e591f3802f26",
       "test_evidence": [
@@ -8432,16 +8432,24 @@
     {
       "id": "SL-00-02",
       "text": "Generate machine-readable dependency graph of PR #34 and PR #36–#40; reconcile stacked branches without replaying overwritten files as if newly validated.",
-      "source_checked": false,
+      "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/forward-engine-dependency-graph.v1.json",
-        "docs/edge-program/current-baseline.json",
-        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (GitHub API PR ancestry, open states, CI runs and declared omissions)"
+        "docs/edge-program/v3.0-pr-graph-2026-11-23-r3.json captures current GitHub state and full changed-file lists for PRs #34 and #36-#40 plus integration PR #87.",
+        "Current exact stack: PR #36 is based on PR #37 head; PR #38 is based on PR #36 head. PR #40 is merged and its merge commit is an ancestor of current main; PRs #34, #36, #37, #38 and #39 remain open and are not ancestors of the integration head.",
+        "The graph records 644 changed-file entries, 9 exact path-overlap edges, including 38 shared paths between merged PR #40 and PR #87; it explicitly assigns no validation transfer by path overlap or branch dependency.",
+        "scripts/validate_pr_dependency_snapshot.py verifies exact base-ref dependency edges, changed-path intersections, merged-state consistency, all required PR IDs and the no-inherited-validation rule."
       ],
-      "blocker": "A dependency graph exists, but the required current PR #34/#36–#40 ancestry and overwritten-file reconciliation is not proven for this checkout.",
-      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
-      "commit": null
+      "blocker": "The graph resolves metadata and overlap, but the independent open branches #34 and #36-#39 are not merged into current main; exact content reconciliation for overlapping files and review/CI on their current heads is still outstanding.",
+      "last_audited_at_utc": "2026-11-23T09:43:07Z",
+      "commit": "a8d3cead",
+      "test_evidence": [
+        "tests/test_pr_dependency_snapshot.py (3 tests)",
+        "python scripts/validate_pr_dependency_snapshot.py: passed",
+        "GitHub current PR metadata, changed-file lists and review-list APIs captured 2026-11-23T09:41:11Z",
+        "git merge-base --is-ancestor confirmed PR #40 merge commit is in origin/main; PR #87 head descends from origin/main"
+      ],
+      "test_result": "The snapshot confirms the exact stacked bases and all recorded overlaps; no validation claim is inherited across branches or shared files."
     },
     {
       "id": "SL-00-03",
@@ -15093,7 +15101,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T09:36:07Z",
+    "as_of_utc": "2026-11-23T09:43:07Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15355,6 +15363,7 @@
     "verified_complete_count": 26,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
+      ".github/workflows/ci.yml",
       "docs/RUNBOOK-LIVE.md",
       "docs/adr/0005-broker-path-behind-stages.md",
       "docs/edge-program/PROGRESS.md",
@@ -15382,6 +15391,7 @@
       "docs/edge-program/v3.0-baseline-2026-11-23-r3.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/edge-program/v3.0-pr-graph-2026-11-23-r3.json",
       "docs/forward-edge/TRACKER.md",
       "docs/forward-edge/capability-matrix.json",
       "docs/forward-edge/reference-candidates.v1.json",
@@ -15389,6 +15399,7 @@
       "scripts/capability_ownership.py",
       "scripts/export_checklist_audit.py",
       "scripts/validate_launch_gates.py",
+      "scripts/validate_pr_dependency_snapshot.py",
       "scripts/validate_product_charter.py",
       "src/financial_brain/execution/oms/engine.py",
       "src/financial_brain/execution/oms/kite_broker.py",
@@ -15426,6 +15437,7 @@
       "tests/test_mf_folio_book.py",
       "tests/test_mf_scheme_master.py",
       "tests/test_oms.py",
+      "tests/test_pr_dependency_snapshot.py",
       "tests/test_product_charter.py"
     ],
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
