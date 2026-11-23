@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 611,
+  "source_count": 612,
   "sources": [
     {
       "capability_ids": [],
@@ -220,6 +220,7 @@
         "docintel",
         "duckdb",
         "etf_bars",
+        "etf_valuation",
         "evaluation",
         "events",
         "events.classify",
@@ -273,7 +274,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "e5cf30d2ae2ad279e889b1d7be3dfb14d52532f1d6b88be7825ed608d470f70d",
+      "source_sha256": "92a0dfc872864fe1da832fd44c4518c9462adbbe745829ca51e2fe5ace7b5418",
       "test_paths": []
     },
     {
@@ -1141,6 +1142,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/etf_history.py",
       "source_sha256": "7fa568f6edbcb1f9a7494b127265c2b4fc9df7e2ba77c56cbcb5e27e184acc7e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "forward_edge.market_events",
+        "re",
+        "urllib.parse",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/etf_valuation.py",
+      "source_sha256": "fa80e1dea5999d83565ac445b14836a7a5ee0c06a79531eeb91de50467c0b538",
       "test_paths": []
     },
     {
@@ -10610,6 +10631,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 596,
-  "unassigned_role_count": 359
+  "unassessed_count": 597,
+  "unassigned_role_count": 360
 }

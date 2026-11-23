@@ -442,6 +442,38 @@ def cmd_etf_bars(args) -> int:
     return 0
 
 
+def cmd_etf_valuation(args) -> int:
+    """Compare the latest available ETF quote to point-in-time iNAV, if synchronized."""
+    from dataclasses import asdict
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_valuation import compare_latest_for_quote
+    from .forward_edge.quote_archive import QuoteArchive
+
+    decision_time = datetime.fromisoformat(args.decision_time.replace("Z", "+00:00"))
+    if decision_time.tzinfo is None or decision_time.utcoffset() is None:
+        raise ValueError("--decision-time must include a timezone")
+    session = decision_time.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(
+            session, venue="NSE", source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    candidates = [event for event in events
+                  if event.instrument_id == f"NSE:{args.symbol}"
+                  and event.available_at <= decision_time]
+    if not candidates:
+        print(json.dumps({"status": "REFUSED", "reason": "QUOTE_NOT_AVAILABLE"}))
+        return 1
+    quote = max(candidates, key=lambda event: event.available_at)
+    with Database(load()).connect() as con:
+        result = compare_latest_for_quote(con, quote, decision_time=decision_time)
+    print(json.dumps(asdict(result), indent=2, default=str))
+    return 0 if result.status == "COMPARABLE" else 1
+
+
 def cmd_index(args) -> int:
     """Ingest NSE index closes - the benchmark history."""
     Database(load()).migrate()
@@ -3231,6 +3263,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--as-of", help="timezone-aware ISO timestamp; defaults to current IST time")
     g.add_argument("--archive", default="data/etf-market-events.sqlite")
     g.set_defaults(fn=cmd_etf_bars)
+
+    g = sub.add_parser("etf-valuation", help="compare an archived ETF quote with source-backed iNAV")
+    g.add_argument("--symbol", required=True)
+    g.add_argument("--decision-time", required=True, help="timezone-aware ISO timestamp")
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_valuation)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

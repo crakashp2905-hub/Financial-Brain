@@ -30,8 +30,8 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (611 Python source files; 596 remain unassessed; 359 role-unassigned; regenerated inventory SHA-256 8983012f76990e7225138192677059dcbd2a04aa382926249982d6b7c6341600)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, history, quote and bar changes)",
+        "docs/edge-program/source-inventory.v2.json (612 Python files; 597 unassessed; 360 role-unassigned; regenerated inventory SHA-256 5ecf223da5289dea845438d127ee65109aca7b2ffc7c856dad8c1a7577dbe8d1)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, history, quote, bar and valuation changes)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
@@ -405,11 +405,15 @@
     {
       "id": "FB-0207",
       "text": "Implement `iNAV` freshness, source, timestamp, quote-vs-iNAV premium/discount and refusal to compare asynchronous values.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/etf_valuation.py resolves the latest source-attributed iNAV as of the decision clock and computes bid/ask-mid premium or discount only when quote/iNAV ages and timestamp skew satisfy configured limits.",
+        "Missing provenance, stale values, future/unavailable observations, asynchronous clocks and invalid prices produce explicit refusal reasons with no comparison value; `fb etf-valuation` reads the existing quote archive and reference database.",
+        "tests/test_etf_valuation.py, tests/test_etf_bars.py and tests/test_etf_feed.py (10 passed); scoped Ruff and CLI help passed."
+      ],
+      "blocker": "No live iNAV observation feed has been collected or freshness-calibrated; the source-attributed import interface exists but populated real-time coverage remains outstanding.",
+      "last_audited_at_utc": "2026-11-23T02:47:49Z",
       "commit": null
     },
     {
@@ -14031,7 +14035,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T02:41:06Z",
+    "as_of_utc": "2026-11-23T02:47:49Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14061,6 +14065,7 @@
       "FB-0204",
       "FB-0205",
       "FB-0206",
+      "FB-0207",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14080,10 +14085,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 46,
+    "audited_count": 47,
     "status_counts": {
-      "UNASSESSED": 1332,
-      "PARTIAL": 35,
+      "UNASSESSED": 1331,
+      "PARTIAL": 36,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14096,6 +14101,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 46 of 1,378 items audited; 8 COMPLETE, 35 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,332 UNASSESSED. FB-0202 was implemented in 8ba69024, FB-0203 in 05968a32, FB-0204 in 0c59a39d, FB-0205 in 0af86673 and FB-0206 in a7b4e4a5. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 47 of 1,378 items audited; 8 COMPLETE, 36 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,331 UNASSESSED. ETF reference, product disclosure, price history, Kite quote, sampled bar and iNAV comparison work is recorded under FB-0201 through FB-0207. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
