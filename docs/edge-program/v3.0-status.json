@@ -184,9 +184,11 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/instruments.py::InstrumentId contains venue, asset_class and symbol only; Instrument carries optional ISIN/expiry/strike outside identity."
+        "src/financial_brain/kernel/instruments.py::InstrumentId now exposes market, exchange, symbol, ISIN, provider token, effective dates and stable underlying lineage; identity fields are optional for legacy callers.",
+        "InstrumentIdentityVersion and InstrumentMaster.resolve provide dated alias resolution and reject overlapping active aliases.",
+        "tests/test_kernel_instruments.py covers stable lineage across ticker/ISIN changes and overlapping-alias refusal (24 focused tests pass)."
       ],
-      "blocker": "Required canonical market/exchange/ISIN/provider-token/effective interval/underlying lineage identity and alias-overlap controls are absent.",
+      "blocker": "Canonical fields and aliases are not yet mandatory, persisted, or integrated with every feed and order/position consumer.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
@@ -280,9 +282,10 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing security_lineage and corporate_actions data paths preserve some equity/security continuity."
+        "src/financial_brain/kernel/instruments.py::InstrumentIdentityVersion stores dated ticker/ISIN/provider-token aliases and successor-lineage metadata; historical aliases resolve to the stable canonical instrument.",
+        "tests/test_kernel_instruments.py::test_dated_ticker_and_isin_changes_resolve_to_stable_canonical_lineage and overlapping-identity test pass."
       ],
-      "blocker": "No verified canonical instrument identity history handles ticker changes, scheme rename/merger and ISIN changes without historical signal identity drift across all desks.",
+      "blocker": "Corporate-action and MF merger records are not ingested into this identity history; portfolio holdings, tax lots and cost basis are not yet transformed or verified across those events.",
       "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },

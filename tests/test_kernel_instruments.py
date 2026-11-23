@@ -10,6 +10,7 @@ from financial_brain.kernel.instruments import (
     Desk,
     Instrument,
     InstrumentError,
+    InstrumentIdentityVersion,
     InstrumentId,
     InstrumentMaster,
     InstrumentMetadataVersion,
@@ -93,6 +94,72 @@ def test_metadata_lookup_refuses_pre_effective_and_overlap() -> None:
                 InstrumentMetadataVersion(date(2026, 1, 1), effective_to=date(2026, 5, 1)),
                 InstrumentMetadataVersion(date(2026, 4, 1)),
             ],
+        )
+
+
+def test_dated_ticker_and_isin_changes_resolve_to_stable_canonical_lineage() -> None:
+    canonical_id = InstrumentId(
+        "NSE",
+        "EQUITY",
+        "OLDCO",
+        market="IN",
+        exchange="NSE",
+        underlying_lineage="issuer-42",
+    )
+    item = Instrument(
+        canonical_id,
+        rules=[RuleVersion(date(2020, 1, 1), tick=Decimal("0.05"))],
+        identity_versions=[
+            InstrumentIdentityVersion(
+                effective_from=date(2020, 1, 1),
+                effective_to=date(2025, 1, 1),
+                market="IN",
+                exchange="NSE",
+                symbol="OLDCO",
+                isin="INE000A01011",
+                provider_token="old-token",
+                underlying_lineage="issuer-42",
+            ),
+            InstrumentIdentityVersion(
+                effective_from=date(2025, 1, 1),
+                market="IN",
+                exchange="NSE",
+                symbol="NEWCO",
+                isin="INE000A01029",
+                provider_token="new-token",
+                underlying_lineage="issuer-42",
+            ),
+        ],
+    )
+    master = InstrumentMaster()
+    master.add(item)
+    assert master.resolve("IN", "NSE", "EQUITY", "OLDCO", date(2024, 12, 31)) is item
+    assert master.resolve("IN", "NSE", "EQUITY", "NEWCO", date(2025, 1, 1)) is item
+    assert item.instrument.key() == "LINEAGE:EQUITY:issuer-42"
+    with pytest.raises(InstrumentError, match="unknown instrument identity"):
+        master.resolve("IN", "NSE", "EQUITY", "OLDCO", date(2025, 1, 1))
+
+
+def test_overlapping_identity_aliases_are_rejected_across_instruments() -> None:
+    master = InstrumentMaster()
+    master.add(
+        Instrument(
+            InstrumentId("NSE", "EQUITY", "ONE"),
+            rules=[RuleVersion(date(2020, 1, 1), tick=Decimal("0.05"))],
+            identity_versions=[
+                InstrumentIdentityVersion(date(2020, 1, 1), "IN", "NSE", "DUPLICATE")
+            ],
+        )
+    )
+    with pytest.raises(InstrumentError, match="overlapping active identity alias"):
+        master.add(
+            Instrument(
+                InstrumentId("NSE", "EQUITY", "TWO"),
+                rules=[RuleVersion(date(2020, 1, 1), tick=Decimal("0.05"))],
+                identity_versions=[
+                    InstrumentIdentityVersion(date(2021, 1, 1), "IN", "NSE", "DUPLICATE")
+                ],
+            )
         )
 
 

@@ -65,19 +65,36 @@ class InstrumentError(ValueError):
 
 @dataclass(frozen=True)
 class InstrumentId:
-    """Canonical identity: venue, asset class, symbol. Aliases are resolved elsewhere, never merged here."""
+    """Canonical identity with optional stable lineage and dated provider identity."""
 
     venue: str
     asset_class: str
     symbol: str
+    market: str | None = None
+    exchange: str | None = None
+    isin: str | None = None
+    provider_token: str | None = None
+    effective_from: date | None = None
+    effective_to: date | None = None
+    underlying_lineage: str | None = None
 
     def __post_init__(self) -> None:
         if not self.venue or not self.symbol:
             raise InstrumentError("venue and symbol are required")
         if self.asset_class not in ASSET_CLASSES:
             raise InstrumentError(f"unknown asset class {self.asset_class!r}")
+        for name in ("market", "exchange", "provider_token", "underlying_lineage"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"{name} cannot be blank")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        if self.effective_from and self.effective_to and self.effective_to <= self.effective_from:
+            raise InstrumentError("identity effective_to must be later than effective_from")
 
     def key(self) -> str:
+        if self.underlying_lineage:
+            return f"LINEAGE:{self.asset_class}:{self.underlying_lineage}"
         return f"{self.venue}:{self.asset_class}:{self.symbol}"
 
 
@@ -130,6 +147,34 @@ class InstrumentMetadataVersion:
                 raise InstrumentError(f"{name} cannot be blank")
 
 
+@dataclass(frozen=True)
+class InstrumentIdentityVersion:
+    """Dated external identity alias attached to one stable instrument lineage."""
+
+    effective_from: date
+    market: str
+    exchange: str
+    symbol: str
+    isin: str | None = None
+    provider_token: str | None = None
+    effective_to: date | None = None
+    underlying_lineage: str | None = None
+    successor_lineage: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("identity effective_to must be later than effective_from")
+        for name in ("market", "exchange", "symbol"):
+            if not getattr(self, name).strip():
+                raise InstrumentError(f"identity {name} is required")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        for name in ("provider_token", "underlying_lineage", "successor_lineage"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"identity {name} cannot be blank")
+
+
 @dataclass
 class Instrument:
     instrument: InstrumentId
@@ -140,6 +185,7 @@ class Instrument:
     strike: Decimal | None = None
     rights_status: str = "unverified"
     metadata_versions: list[InstrumentMetadataVersion] = field(default_factory=list)
+    identity_versions: list[InstrumentIdentityVersion] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.rules:
@@ -156,6 +202,20 @@ class Instrument:
         for previous, current in zip(self.metadata_versions, self.metadata_versions[1:]):
             if previous.effective_to is not None and current.effective_from < previous.effective_to:
                 raise InstrumentError("overlapping metadata effective intervals")
+        self.identity_versions = sorted(self.identity_versions, key=lambda item: item.effective_from)
+        for index, current in enumerate(self.identity_versions):
+            for other in self.identity_versions[index + 1 :]:
+                same_alias = (current.market, current.exchange, current.symbol) == (
+                    other.market,
+                    other.exchange,
+                    other.symbol,
+                )
+                if not same_alias:
+                    continue
+                current_end = current.effective_to or date.max
+                other_end = other.effective_to or date.max
+                if current.effective_from < other_end and other.effective_from < current_end:
+                    raise InstrumentError("overlapping active instrument identities")
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
@@ -239,18 +299,49 @@ class Instrument:
 class InstrumentMaster:
     def __init__(self) -> None:
         self._items: dict[str, Instrument] = {}
+        self._aliases: dict[tuple[str, str, str, str], list[tuple[date, date | None, Instrument]]] = {}
 
     def add(self, item: Instrument) -> None:
         key = item.instrument.key()
         if key in self._items:
             raise InstrumentError(f"duplicate instrument {key}")
+        for identity in item.identity_versions:
+            alias_key = (identity.market, identity.exchange, item.instrument.asset_class, identity.symbol)
+            for start, end, _existing in self._aliases.get(alias_key, []):
+                new_end = identity.effective_to or date.max
+                old_end = end or date.max
+                if identity.effective_from < old_end and start < new_end:
+                    raise InstrumentError(
+                        f"overlapping active identity alias {identity.market}:{identity.exchange}:{identity.symbol}"
+                    )
         self._items[key] = item
+        for identity in item.identity_versions:
+            alias_key = (identity.market, identity.exchange, item.instrument.asset_class, identity.symbol)
+            self._aliases.setdefault(alias_key, []).append(
+                (identity.effective_from, identity.effective_to, item)
+            )
 
     def get(self, instrument: InstrumentId) -> Instrument:
         item = self._items.get(instrument.key())
         if item is None:
             raise InstrumentError(f"unknown instrument {instrument.key()}; no trade is possible")
         return item
+
+    def resolve(
+        self, market: str, exchange: str, asset_class: str, symbol: str, as_of: date
+    ) -> Instrument:
+        """Resolve a point-in-time alias to its stable canonical instrument; ambiguity refuses."""
+        alias_key = (market, exchange, asset_class, symbol)
+        matches = [
+            instrument
+            for start, end, instrument in self._aliases.get(alias_key, [])
+            if start <= as_of and (end is None or as_of < end)
+        ]
+        if not matches:
+            raise InstrumentError(f"unknown instrument identity {alias_key} on {as_of}; no trade is possible")
+        if len(matches) != 1:
+            raise InstrumentError(f"ambiguous instrument identity {alias_key} on {as_of}")
+        return matches[0]
 
     def __len__(self) -> int:
         return len(self._items)
