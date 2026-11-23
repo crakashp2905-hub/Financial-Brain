@@ -5569,12 +5569,21 @@
     {
       "id": "PA-01-05",
       "text": "Merge equivalent order/cash reconciliation implementations into one canonical API; prohibit two simultaneous ledgers from both claiming ownership of capital.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/ledger-authority-reconciliation-2026-11-23.md maps broker OMS, prospective simulated events, canonical portfolio projection and legacy source books to their current scoped owners and states the remaining integration requirements.",
+        "src/financial_brain/portfolio/canonical_ledger.py provides an append-only canonical portfolio projection; docs/edge-program/authoritative-contracts.v1.json assigns it that scoped owner.",
+        "docs/edge-program/state-ownership.v1.json explicitly marks the forward session canonical net ledger and durable position snapshot as not established; forward paper accounting remains gross replay and separate from transactional canonical portfolio events.",
+        "The ledger migration docs/audit describe source books as migration inputs, but no enforced unique account/domain writer lease prevents a second writable view or double counting."
+      ],
+      "blocker": "OMS, forward-session receipts and legacy books do not yet share one canonical transactional order/cash API. Runtime exclusive account/domain ownership, complete opening-cash coverage, and cross-system restart/concurrent-writer reconciliation remain required.",
+      "last_audited_at_utc": "2026-11-23T17:19:03Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-tmp-pa0105 tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py tests/test_forward_edge_ledger_reconcile.py tests/test_forward_edge_session_runner.py::test_restart_restores_risk_positions_and_cash_without_repeating_paper_fill -q: 22 passed."
+      ],
+      "test_result": "Canonical projection, source migration and runner restart tests pass, but they do not test a single atomic ledger across OMS, session receipts and legacy books. Item remains PARTIAL."
     },
     {
       "id": "PA-01-06",
@@ -15392,7 +15401,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:15:46Z",
+    "as_of_utc": "2026-11-23T17:19:03Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15637,6 +15646,7 @@
       "PA-01-02",
       "PA-01-03",
       "PA-01-04",
+      "PA-01-05",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15659,13 +15669,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 264,
+    "audited_count": 265,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 205,
-      "UNASSESSED": 1114
+      "PARTIAL": 206,
+      "UNASSESSED": 1113
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15768,13 +15778,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-04 confirms the ADR-authorized Q4 13-trial budget, exhausted-cap refusal, exact charter/cohort scope and owner-gated amendments; Q1 remains unauthorized."
+    "evidence_update": "PA-01-05 is PARTIAL: canonical portfolio projections exist, but forward-session, OMS, and legacy source-book events are not unified through a single enforced account/cash authority."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 205,
-    "UNASSESSED": 1114
+    "PARTIAL": 206,
+    "UNASSESSED": 1113
   }
 }
