@@ -16,7 +16,8 @@ from .corpactions import detect as ca_detect
 from .costs.india import DEFAULT as COSTS, Segment
 from .ingest.job import BhavcopyIngestJob
 from .ingest.prefetch import prefetch
-from .ingest.reference import ETFReferenceJob, EquityListJob, FnoEligibilityJob, IndexCloseJob
+from .ingest.reference import (ETFReferenceJob, EquityListJob, FnoEligibilityJob,
+                               IndexCloseJob, ingest_etf_product_disclosures)
 from .pit.observations import PITStore, close_price_observations
 from .securities import master as sec
 from .storage.db import Database
@@ -391,6 +392,16 @@ def cmd_reference(args) -> int:
     print(EquityListJob().run())
     print(ETFReferenceJob().run())
     print(FnoEligibilityJob().run())
+    return 0
+
+
+def cmd_etf_disclosures(args) -> int:
+    """Import a CSV of official ETF product facts with source-document provenance."""
+    from pathlib import Path
+
+    result = ingest_etf_product_disclosures(
+        Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
     return 0
 
 
@@ -3165,6 +3176,11 @@ def main(argv: list[str] | None = None) -> int:
     g.set_defaults(fn=cmd_check)
 
     sub.add_parser("reference", help="sync equity, ETF and F&O reference data").set_defaults(fn=cmd_reference)
+
+    g = sub.add_parser("etf-disclosures", help="import source-attributed ETF AMC disclosures")
+    g.add_argument("--file", required=True, help="UTF-8 CSV containing official disclosure facts")
+    g.add_argument("--observed-on", required=True, help="import date, YYYY-MM-DD")
+    g.set_defaults(fn=cmd_etf_disclosures)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

@@ -30,8 +30,8 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (607 Python source files; 592 remain unassessed; 356 role-unassigned; regenerated inventory SHA-256 09a1917595c4b01a3872541ed0db03595391cb4fcf6352b416b9923f90780b03)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after kernel ETF-classification and ingestion changes)",
+        "docs/edge-program/source-inventory.v2.json (608 Python source files; 593 remain unassessed; 356 role-unassigned; regenerated inventory SHA-256 a930925ce6f8a1dbfc86ae34e2025f2a58217cfa989fab0ac1efbdfd58788a31)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure and disclosure ingestion changes)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
@@ -349,11 +349,15 @@
     {
       "id": "FB-0203",
       "text": "Map ETF → underlying benchmark (prefer total-return index), fund house, inception/listing dates, NAV and indicative NAV if available.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_disclosures.py parses source-attributed ETF product facts and requires an explicit benchmark return type; it does not infer TRI, AMC, dates, NAV or iNAV from labels.",
+        "src/financial_brain/ingest/reference.py::ingest_etf_product_disclosures archives the import bytes and persists document URL/hash/publication time, benchmark, fund house, inception/listing dates, NAV and timezone-aware iNAV with idempotent hashes.",
+        "`fb etf-disclosures --file <csv> --observed-on YYYY-MM-DD` exposes the importer; `tests/test_etf_disclosures.py` plus ETF provider and migration tests: 24 passed; scoped Ruff and CLI help passed."
+      ],
+      "blocker": "No verified, populated official disclosure export yet covers the listed ETF universe; iNAV availability is source-specific, and TRI benchmark mapping must still be reconciled to official index identifiers and observation coverage.",
+      "last_audited_at_utc": "2026-11-23T02:22:32Z",
       "commit": null
     },
     {
@@ -14015,7 +14019,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T00:37:27+00:00",
+    "as_of_utc": "2026-11-23T02:22:32Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14029,6 +14033,19 @@
       "FB-0010",
       "FB-0011",
       "FB-0012",
+      "FB-0101",
+      "FB-0102",
+      "FB-0103",
+      "FB-0104",
+      "FB-0105",
+      "FB-0106",
+      "FB-0107",
+      "FB-0108",
+      "FB-0109",
+      "FB-0110",
+      "FB-0201",
+      "FB-0202",
+      "FB-0203",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14048,20 +14065,22 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 30,
+    "audited_count": 43,
     "status_counts": {
-      "UNASSESSED": 1348,
-      "PARTIAL": 21,
+      "UNASSESSED": 1335,
+      "PARTIAL": 32,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
-      "COMPLETE": 6
+      "COMPLETE": 8
     },
-    "verified_complete_count": 6,
+    "verified_complete_count": 8,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
-      "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
+      "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/edge-program/source-inventory.v2.json",
+      "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "30 items audited. SL-00-18, FB-0001, FB-0004 and FB-0006 COMPLETE. ADR-0007 and commit 0b82c53be1d06196375b1d992c2a27f374921e4d normalize protected record hashes without editing the ledger; 55 focused tests and clean-tree validators pass locally. Hosted CI retest pending; FB-0008 remains EXTERNAL_BLOCKED."
+    "evidence_update": "Current snapshot: 43 of 1,378 items audited; 8 COMPLETE, 32 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,335 UNASSESSED. The latest audit covers FB-0203 ETF product disclosure import contracts; implementation commit will be linked after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

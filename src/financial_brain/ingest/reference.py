@@ -15,6 +15,7 @@ from ..config import Config, load
 from ..lake.store import RawLake
 from ..providers.base import FetchError, NotPublished
 from ..providers.etf_reference import NSEETFReferenceProvider, parse as parse_etf_reference
+from ..providers.etf_disclosures import parse as parse_etf_disclosures, sha256 as payload_sha256
 from ..kernel.etf_exposure import classify_etf
 from ..providers.reference import (NSEEquityListProvider, NSEFnoLotsProvider,
                                    NSEIndexCloseProvider)
@@ -254,6 +255,59 @@ class ETFReferenceJob(_RefJobBase):
                 obj,
                 "etf_reference",
             )
+
+
+def ingest_etf_product_disclosures(payload: bytes, observed_on: date,
+                                   cfg: Config | None = None) -> dict:
+    """Archive and ingest an authorized, source-attributed disclosure export."""
+    cfg = cfg or load()
+    db, lake = Database(cfg), RawLake(cfg.lake)
+    db.migrate()
+    rows = parse_etf_disclosures(payload, observed_on)
+    digest = payload_sha256(payload)
+    obj = lake.put(
+        source="LOCAL_IMPORT", dataset="etf_product_disclosures",
+        business_date=observed_on, filename=f"etf-product-facts-{digest[:12]}.csv",
+        payload=payload, url="local-import://official-etf-disclosure-csv",
+        content_type="text/csv", retrieved_at=datetime.now(timezone.utc),
+    )
+    with db.connect() as con:
+        con.execute(
+            """INSERT INTO lake_manifest
+               (key, source, dataset, business_date, filename, url, retrieved_at,
+                sha256, size_bytes, http_status, content_type)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (key) DO NOTHING""",
+            [obj.key, obj.source, obj.dataset, obj.business_date, obj.filename, obj.url,
+             obj.retrieved_at, obj.sha256, obj.size_bytes, obj.http_status, obj.content_type],
+        )
+        con.execute("BEGIN TRANSACTION")
+        try:
+            for row in rows:
+                canonical = {key: (str(value) if value is not None else None)
+                             for key, value in row.items()}
+                record_hash = hashlib.sha256(
+                    json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()
+                con.execute(
+                    """INSERT INTO etf_product_disclosures
+                       (observed_on, isin, benchmark_name, benchmark_return_type, fund_house,
+                        inception_date, listing_date, nav, nav_as_of, indicative_nav,
+                        indicative_nav_at, source_url, source_document_sha256,
+                        source_published_at, import_sha256, record_sha256, lake_key)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       ON CONFLICT (observed_on, isin, source_document_sha256) DO NOTHING""",
+                    [observed_on, row["isin"], row["benchmark_name"],
+                     row["benchmark_return_type"], row["fund_house"], row["inception_date"],
+                     row["listing_date"], row["nav"], row["nav_as_of"],
+                     row["indicative_nav"], row["indicative_nav_at"], row["source_url"],
+                     row["source_document_sha256"], row["source_published_at"], digest,
+                     record_hash, obj.key],
+                )
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
+    return {"rows": len(rows), "import_sha256": digest, "lake_key": obj.key}
 
 
 class FnoEligibilityJob(_RefJobBase):

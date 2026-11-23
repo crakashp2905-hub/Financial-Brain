@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 607,
+  "source_count": 608,
   "sources": [
     {
       "capability_ids": [],
@@ -269,7 +269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "7b5617342f9e1cd442ff30ba9f9af69bbb597cf65e8a58b8aafa46c72c029ff3",
+      "source_sha256": "49a578202521563af4ec922ce135a94e15aa0e927c3540919306dd3e3c93bd25",
       "test_paths": []
     },
     {
@@ -5798,6 +5798,7 @@
         "kernel.etf_exposure",
         "lake.store",
         "providers.base",
+        "providers.etf_disclosures",
         "providers.etf_reference",
         "providers.reference",
         "storage.db",
@@ -5807,7 +5808,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/reference.py",
-      "source_sha256": "a61770a44c9ee398d1679e6c7d3d538d9c6b8b8fca4635c287bae4f8f64aa738",
+      "source_sha256": "b0c2d3642e84f1718c84dfe98c6a68074099ab3305988bfe79becab727cbb761",
       "test_paths": []
     },
     {
@@ -9134,6 +9135,27 @@
         "csv",
         "datetime",
         "decimal",
+        "hashlib",
+        "io",
+        "re",
+        "urllib.parse"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/etf_disclosures.py",
+      "source_sha256": "8d707846332cbf6655affeefb9be4bad7a08ba7887c11f5a1baf12887764ae17",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base",
+        "csv",
+        "datetime",
+        "decimal",
         "io",
         "re"
       ],
@@ -10531,6 +10553,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 592,
+  "unassessed_count": 593,
   "unassigned_role_count": 356
 }

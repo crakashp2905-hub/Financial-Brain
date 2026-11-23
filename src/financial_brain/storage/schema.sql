@@ -87,6 +87,29 @@ CREATE TABLE IF NOT EXISTS etf_reference_observations (
     PRIMARY KEY (observed_on, exchange, isin)
 );
 
+-- Source-attributed ETF product facts transcribed from official AMC/index-provider
+-- disclosures. A missing field remains NULL; the disclosed return type must be explicit.
+CREATE TABLE IF NOT EXISTS etf_product_disclosures (
+    observed_on             DATE NOT NULL,
+    isin                    VARCHAR NOT NULL,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    inception_date          DATE,
+    listing_date            DATE,
+    nav                     DECIMAL(20, 8),
+    nav_as_of               DATE,
+    indicative_nav          DECIMAL(20, 8),
+    indicative_nav_at       TIMESTAMPTZ,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, isin, source_document_sha256)
+);
+
 -- Symbol history. One row per (isin, exchange, ticker, series) span actually observed
 -- in the data - this is how a symbol change becomes a fact rather than a guess.
 CREATE TABLE IF NOT EXISTS security_listings (
