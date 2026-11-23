@@ -17,6 +17,7 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 from __future__ import annotations
 
 from datetime import date, datetime
+from math import isfinite
 import re
 
 from .base import FetchError, FetchResult, Provider
@@ -60,6 +61,7 @@ def parse(payload: bytes) -> list[dict]:
     """
     fund_house = scheme_type = None
     out: list[dict] = []
+    seen: set[tuple[str, date]] = set()
     for raw in _decode(payload).splitlines():
         line = raw.strip()
         if not line or line.startswith(HEADER):
@@ -83,11 +85,37 @@ def parse(payload: bytes) -> list[dict]:
             on = datetime.strptime(nav_date, "%d-%b-%Y").date()
         except ValueError:
             continue
+        if not code or not isfinite(value) or value <= 0:
+            continue
+        identity = (code, on)
+        if identity in seen:
+            raise FetchError(f"duplicate AMFI scheme/date row: {code} on {on}", retryable=False)
+        seen.add(identity)
         out.append({"scheme_code": code, "isin_growth": isin_g if isin_g != "-" else None,
                     "isin_reinvest": isin_r if isin_r != "-" else None,
                     "scheme_name": name, "fund_house": fund_house,
                     "scheme_type": scheme_type, "plan": plan or None,
                     "option": option or None, "nav": value, "nav_date": on})
+    return out
+
+
+def nav_coverage(rows: list[dict], expected_scheme_codes: list[str], *, as_of: date,
+                 stale_after_days: int = 7) -> list[dict]:
+    """Classify expected schemes by their latest NAV date without relabelling old rows."""
+    if stale_after_days < 0:
+        raise ValueError("stale_after_days must be non-negative")
+    latest: dict[str, date] = {}
+    for row in rows:
+        code, day = str(row.get("scheme_code", "")), row.get("nav_date")
+        if code and isinstance(day, date) and day <= as_of:
+            latest[code] = max(day, latest.get(code, day))
+    out = []
+    for code in sorted(set(str(value) for value in expected_scheme_codes)):
+        day = latest.get(code)
+        age = (as_of - day).days if day is not None else None
+        out.append({"scheme_code": code, "latest_nav_date": day, "age_days": age,
+                    "status": "UNAVAILABLE" if day is None else
+                    "STALE" if age > stale_after_days else "CURRENT"})
     return out
 
 

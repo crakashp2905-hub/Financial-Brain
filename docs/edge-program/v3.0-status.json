@@ -354,7 +354,7 @@
       "evidence": [
         "src/financial_brain/providers/etf_disclosures.py parses source-attributed ETF product facts and requires an explicit benchmark return type; it does not infer TRI, AMC, dates, NAV or iNAV from labels.",
         "src/financial_brain/ingest/reference.py::ingest_etf_product_disclosures archives the import bytes and persists document URL/hash/publication time, benchmark, fund house, inception/listing dates, NAV and timezone-aware iNAV with idempotent hashes.",
-      "`fb etf-disclosures --file <csv> --observed-on YYYY-MM-DD` exposes the importer; `tests/test_etf_disclosures.py` plus ETF provider and migration tests: 26 passed; scoped Ruff and CLI help passed."
+        "`fb etf-disclosures --file <csv> --observed-on YYYY-MM-DD` exposes the importer; `tests/test_etf_disclosures.py` plus ETF provider and migration tests: 26 passed; scoped Ruff and CLI help passed."
       ],
       "blocker": "No verified, populated official disclosure export yet covers the listed ETF universe; iNAV availability is source-specific, and TRI benchmark mapping must still be reconciled to official index identifiers and observation coverage.",
       "last_audited_at_utc": "2026-11-23T02:22:32Z",
@@ -642,171 +642,239 @@
     {
       "id": "FB-0310",
       "text": "Track fund benchmark TRI changes and category peers, with equal-risk and same-category comparisons; prohibit comparing small-cap funds to overnight debt funds as a performance edge.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`mf_peer_comparison.compare_same_category()` refuses cross-category rankings, aligns common return dates, de-risks both NAV return paths to the lower observed annualized volatility without levering either, and flags non-TRI benchmark inputs.",
+        "Published NAV returns are treated as expense-net; TER is not subtracted again. TRI comparability is explicit in the returned result.",
+        "tests/test_mf_peer_comparison.py: 3 passed; scoped Ruff passed."
+      ],
+      "blocker": "Effective-dated benchmark/category observations and populated scheme NAV/benchmark series are not yet connected to this comparison policy; TRI identities and peer coverage remain external data requirements.",
+      "last_audited_at_utc": "2026-11-23T17:00:00Z",
       "commit": null
     },
     {
       "id": "FB-0311",
       "text": "Ingest monthly/quarterly portfolio disclosures as availability permits, plus top holdings, sectors, concentration, style, duration and credit quality where applicable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `fb mf-portfolio --file ... --observed-on YYYY-MM-DD` normalized AMC portfolio disclosure import; source CSV is archived in the raw lake and rows retain portfolio as-of, observation, publication, source URL, source SHA-256, scheme, holding, sector, and optional weights/value/quantity.",
+        "Schema and parser preserve absent attributes as NULL; no top holdings, concentration, style, or sector aggregates are inferred from partial rows.",
+        "tests/test_mf_portfolio_disclosure.py: 6 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Portfolio-disclosure coverage is not measured against the complete scheme universe; source-format adapters, holdings concentration/style aggregations, and real AMC data import remain outstanding.",
+      "last_audited_at_utc": "2026-11-23T04:15:35Z",
       "commit": null
     },
     {
       "id": "FB-0312",
       "text": "Add debt-fund metrics: duration, yield to maturity, maturity ladder, credit rating mix, downgrade and liquidity risk; label absent fields.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The normalized disclosure contract stores optional credit rating, maturity date, modified duration, and yield-to-maturity fields with source provenance; absent fields remain NULL.",
+        "No downgrade history, maturity ladder aggregation, liquidity risk model, scheme-level coverage report, or populated AMC debt portfolio disclosure set is integrated; status remains PARTIAL.",
+        "tests/test_mf_portfolio_disclosure.py: 6 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Debt metrics are accepted as source fields only; temporal downgrade tracking, maturity ladder/credit mix aggregation, liquidity risk analytics, and populated historical debt disclosures remain outstanding.",
+      "last_audited_at_utc": "2026-11-23T04:15:35Z",
       "commit": null
     },
     {
       "id": "FB-0313",
       "text": "Add fund-of-funds lookthrough / asset-overlap estimates with double-count prevention and coverage scores.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `mf_lookthrough.lookthrough()` to recursively expand fund holdings using `underlying_scheme_code`, consolidate repeated leaf assets, report expanded/opaque weights and coverage, and stop cycles/depth overflow as opaque exposure.",
+        "Added overlap estimate with per-asset minimum weights and explicit source coverage fields; missing allocations and unclassified assets are retained as opaque mass rather than silently discarded.",
+        "tests/test_mf_lookthrough.py: 4 passed; combined portfolio/lookup tests: 10 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "The calculation is not yet wired to historical database snapshots or a populated, complete FoF underlying-scheme mapping; coverage quality and overlap outputs have not been validated against official AMC data.",
+      "last_audited_at_utc": "2026-11-23T04:18:01Z",
       "commit": null
     },
     {
       "id": "FB-0314",
       "text": "Record exit-load schedules as time-dependent **per purchase lot**; distinguish full and partial redemption.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `mf_exit_load.PurchaseLot`, source-hashed `ExitLoadBand`, and FIFO partial/full redemption estimate that calculates exit load from each consumed lot age and its own effective terms.",
+        "Unknown schedules yield null charge rather than zero; over-redemption, future purchase date, and malformed bands are rejected.",
+        "tests/test_mf_exit_load.py: 3 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "AMC schedule text is not parsed into verified structured terms, terms are not automatically snapshotted onto the purchase-lot ledger, and redemption allocations are returned but not durably recorded or reconciled to an account.",
+      "last_audited_at_utc": "2026-11-23T04:25:08Z",
       "commit": null
     },
     {
       "id": "FB-0315",
       "text": "Add schemes with ELSS lock-in, segregated portfolios, gating, special redemption restrictions, and closed-end windows; disallow impossible redemptions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added fail-closed redemption eligibility for source-declared scheme status/date, lot lock-in dates, closed-end maturity, redemption windows, segregated units, available holdings, and gating limits.",
+        "Unknown redemption-window or gating facts produce REVIEW_REQUIRED; impossible, locked, closed, or over-gated requests are rejected.",
+        "tests/test_mf_redemption.py: 3 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Eligibility is not wired to imported AMC restriction disclosures or the portfolio/lot ledger; restriction changes, SEBI-specific scheme terms, and gated redemption execution have no populated evidence path.",
+      "last_audited_at_utc": "2026-11-23T04:26:15Z",
       "commit": null
     },
     {
       "id": "FB-0316",
       "text": "Treat dividends/IDCW payouts, reinvestments, splits and scheme mergers as economic flows for total return rather than apparent NAV crashes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `mf_total_return.total_return_path()` accounting for explicit source-attributed cash IDCW, reinvestment, split and scheme-merger events, with effective dates, unique same-day sequence, and required successor NAV/conversion evidence.",
+        "Payouts remain in account cash unless explicit reinvestment NAV is supplied; splits modify units; mergers transfer units into the successor. NAV-only paths without events remain unchanged.",
+        "tests/test_mf_total_return.py: 3 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Event facts are not ingested into a persistent MF corporate-action ledger, source publication/availability is not modeled, and total-return output is not joined to historical AMFI NAV data or validated on actual IDCW/merger cases.",
+      "last_audited_at_utc": "2026-11-23T04:28:27Z",
       "commit": null
     },
     {
       "id": "FB-0317",
       "text": "Do not double-deduct expense ratio from returns derived from published MF NAV (TER is reflected in NAV); disclose TER for comparison and future projections separately.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Peer comparison explicitly treats NAV returns as expense-net and does not subtract TER a second time.",
+        "Added optional, visible left/right TER fields to the comparison result for disclosure; TER input is separately validated and never changes the NAV return calculation.",
+        "tests/test_mf_peer_comparison.py and tests/test_mf_total_return.py: 6 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "TER facts are not yet retrieved as-of each comparison date from effective-dated scheme disclosures, and future cost projection UI/reporting is not implemented.",
+      "last_audited_at_utc": "2026-11-23T04:29:23Z",
       "commit": null
     },
     {
       "id": "FB-0318",
       "text": "Validate raw AMFI file `NAVAll.txt` mixed-dated rows and repeated scheme codes: keep each row at its own NAV date and identify stale/unavailable schemes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "AMFI parser preserves each source row's embedded NAV date, allows repeated scheme code across distinct dates, rejects duplicate scheme/date rows that would overwrite one another, and drops non-positive/non-finite/unavailable NAV values.",
+        "Added `nav_coverage()` to report CURRENT, STALE, or UNAVAILABLE for an expected scheme-code set without relabelling a stale NAV as current.",
+        "AMFI source regression and coverage suite: 24 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Coverage classification is currently a helper over an expected-scheme list; stale/unavailable status is not persisted or published in routine daily ingestion, and full universe data coverage remains unverified.",
+      "last_audited_at_utc": "2026-11-23T04:34:01Z",
       "commit": null
     },
     {
       "id": "FB-0401",
       "text": "Create immutable typed `Signal` with `signal_id, desk_id, strategy_id/version/hash, instrument_id, side, as_of, decision_at, expires_at, evidence_tier, source_hash`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added immutable `signals.contract.Signal` with signal/desk/strategy identity, version/hash, instrument, side, as-of/decision/expiry timestamps, evidence tier, and source hash.",
+        "Contract validates timezone-aware chronology and SHA-256 provenance and provides stable field serialization.",
+        "tests/test_signal_contract.py: 6 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Existing strategy and scanner signal types are not yet adapted to this contract; source hashes and strategy identity are not auto-derived from each generating pipeline, and no persistence/event lifecycle integration exists.",
+      "last_audited_at_utc": "2026-11-23T04:35:19Z",
       "commit": null
     },
     {
       "id": "FB-0402",
       "text": "Add decision-time features and evidence, expected distribution with uncertainty, benchmark, costs, risk/return estimates and contraindications.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added immutable `SignalAssessment` with availability-timestamped source-hashed features, p10/p50/p90 return distribution and horizon, benchmark estimate, transaction cost, risk fraction, contraindications, and explicit median expected net return.",
+        "Assessment rejects features available after signal decision time; estimated costs are deducted once from the forecast and TER is not double-deducted.",
+        "tests/test_signal_assessment.py: 2 passed; scoped Ruff passed."
+      ],
+      "blocker": "Assessment is not yet automatically built from the feature store, calibrated forecast distributions, benchmark series, execution costs or portfolio risk engine; evidence lineage has not been validated end-to-end.",
+      "last_audited_at_utc": "2026-11-23T04:36:23Z",
       "commit": null
     },
     {
       "id": "FB-0403",
       "text": "Add execution intent types: `EXCHANGE_LIMIT`, `EXCHANGE_MARKETABLE_SIMULATION`, `MF_SUBSCRIBE`, `MF_REDEEM`, `MF_SWITCH`, `MF_SIP`, `NO_TRADE`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added typed intent enum for exchange limit, quote-priced marketable simulation, MF subscribe/redeem/switch/SIP, and NO_TRADE.",
+        "All intents are paper-only; marketable simulation cannot carry a broker-submitted limit, NO_TRADE cannot carry order fields, and MF_SWITCH requires a target scheme.",
+        "tests/test_signal_intents.py: 8 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Intent types are not yet produced by signal lifecycle adapters or consumed by the unified OMS/MF paper order simulator; price/units precision and eligibility remain downstream integration requirements.",
+      "last_audited_at_utc": "2026-11-23T04:37:29Z",
       "commit": null
     },
     {
       "id": "FB-0404",
       "text": "Carry entry conditions, stop/exit/invalidation, intended holding window, tick/lot/unit precision and paper execution eligibility.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `SignalPlan` with typed entry/invalidation predicates, stop-loss/take-profit return thresholds, holding-window sessions, paper execution eligibility and mandatory exclusion reason.",
+        "Added decimal tick/quantity steps, minimum quantity, and explicit quantization helpers.",
+        "tests/test_signal_plan.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Plans are not yet generated from existing strategy adapters or validated against exchange/derivative instrument master precision and OMS fill/exit behavior.",
+      "last_audited_at_utc": "2026-11-23T04:38:38Z",
       "commit": null
     },
     {
       "id": "FB-0405",
       "text": "Enforce signal lifecycle `DETECTED -> ELIGIBLE/REJECTED -> APPROVED/SHADOW -> SUBMITTED -> FILLED/PARTIAL/MISSED -> EXITED/EXPIRED`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added signal lifecycle states DETECTED, ELIGIBLE, REJECTED, APPROVED, SHADOW, SUBMITTED, PARTIAL, FILLED, MISSED, EXITED and EXPIRED with explicit legal transitions.",
+        "Lifecycle rejects event-time regressions, invalid transitions and event-ID reuse with changed content; exact duplicate events are idempotent.",
+        "tests/test_signal_lifecycle.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Lifecycle remains an in-memory model; it is not persisted to the durable event store or wired to paper OMS fills, signal expiry scheduler, or exit manager.",
+      "last_audited_at_utc": "2026-11-23T04:39:45Z",
       "commit": null
     },
     {
       "id": "FB-0406",
       "text": "Deduplicate repeated alerts without erasing new rule versions or materially changed prices; ensure event-time ordering.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added version-aware alert deduplication keyed by strategy/version/instrument/side and decision time.",
+        "Suppresses only same-version repeats inside configured time/price bands; new rule versions and material price changes remain distinct, and out-of-order event time is rejected.",
+        "tests/test_signal_deduplicate.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Deduplication is a pure in-memory policy and is not integrated with persisted alert/signal history, exchange event sequencing, or alert delivery retries.",
+      "last_audited_at_utc": "2026-11-23T04:40:46Z",
       "commit": null
     },
     {
       "id": "FB-0407",
       "text": "Publish up to five DAILY swing candidates and independent ETF candidate ranks; publish intraday/options signals event-driven without a compulsory trade quota.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added deterministic publication policy that caps daily swing candidates at five, ranks ETF candidates independently, and publishes intraday/options only when event-triggered, with no minimum trade quota.",
+        "Ineligible, non-positive-net, and future-dated candidates are excluded; deterministic score/net/ticker ordering is stable.",
+        "tests/test_signal_publication.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Policy is not wired to production scanners or an alert scheduler; rankings are policy outputs only and no prospective usefulness/freshness metrics are recorded.",
+      "last_audited_at_utc": "2026-11-23T04:42:02Z",
       "commit": null
     },
     {
       "id": "FB-0408",
       "text": "Publish daily/weekly MF **allocation recommendations**, not misleading `instant executions`; include cutoffs, lot-level fees, benchmark and unconfirmed NAV status.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added separate MF allocation recommendation contract distinct from execution intents, with recommendation action/amount, transaction cutoff, benchmark, NAV status and explicit transaction-fee/exit-load coverage.",
+        "Unconfirmed, stale, and unavailable NAV states can be shown without pretending to have an executable current NAV; missing exit-load evidence prevents complete cost status.",
+        "tests/test_mf_allocation_recommendation.py: 2 passed; scoped Ruff and compileall passed."
+      ],
+      "blocker": "Recommendation contract is not populated from cutoff calendars, effective-dated fees, lot loads, benchmark TRI or NAV services, and no daily/weekly allocation scheduler or consumer view is integrated.",
+      "last_audited_at_utc": "2026-11-23T04:43:01Z",
       "commit": null
     },
     {
@@ -7502,7 +7570,7 @@
         "docs/edge-program/v3.0-baseline-2026-11-21.json (captures local HEAD/tree, dependencies, data inventory, CI and explicit unknowns)"
       ],
       "blocker": "Existing baseline is stale; scheduled checkout, current dependency/data versions and current owner approvals were not captured in one immutable manifest.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
+      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
       "commit": null
     },
     {
@@ -7516,7 +7584,7 @@
         "docs/edge-program/v3.0-pr-graph-2026-11-21.json (GitHub API PR ancestry, open states, CI runs and declared omissions)"
       ],
       "blocker": "A dependency graph exists, but the required current PR #34/#36–#40 ancestry and overwritten-file reconciliation is not proven for this checkout.",
-      "last_audited_at_utc": "2026-11-21T06:02:13.655717+00:00",
+      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
       "commit": null
     },
     {
@@ -7529,7 +7597,7 @@
         "docs/edge-program/state-ownership.v1.json"
       ],
       "blocker": "Existing dependency and ownership inventories cover selected implementations/scopes, not all listed domains with one authoritative contract per domain.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7543,7 +7611,7 @@
         "python -m financial_brain.forward_edge.audit --json (protected_pins GREEN)"
       ],
       "blocker": "Protected pins verify, but this does not prove byte-for-byte preservation of every specified Q4 ledger field and historical read window.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7564,7 +7632,7 @@
         ".github/workflows/ci.yml (matrix freshness check)"
       ],
       "blocker": "F17 gates and F13 capability matrix now have tested local replacements; the remaining PR #40 regression is charter/cohort enforcement on the protected-trial admission path, and hosted CI has not yet run on this change.",
-      "last_audited_at_utc": "2026-11-21T06:15:08.398246+00:00",
+      "last_audited_at_utc": "2026-11-21T11:45:08.398246+05:30",
       "commit": null
     },
     {
@@ -7576,7 +7644,7 @@
         "docs/edge-program/state-ownership.v1.json"
       ],
       "blocker": "Ownership manifest identifies separate forward, broker and swing scopes; a canonical migrated multi-asset portfolio ledger was not evidenced.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7589,7 +7657,7 @@
         "docs/forward-edge/BLOCKERS.md"
       ],
       "blocker": "The historical 51-position issue is recorded as a limitation, but an instrument-level reconciliation with UNRESOLVED states and promotion block was not found.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7603,7 +7671,7 @@
         "src/financial_brain/forward_edge/data_gate.py"
       ],
       "blocker": "Source inventory and data gates exist; specific current Kite/exchange permission objects and approved-use evidence are absent.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7616,7 +7684,7 @@
         "src/financial_brain/forward_edge/evidence_bundle.py"
       ],
       "blocker": "Decision/evidence lineage mechanisms exist, but source commit and executable entry-point coverage for every policy, experiment, quote and simulated trade is not proven.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7630,7 +7698,7 @@
         "src/financial_brain/forward_edge/fixtures.py"
       ],
       "blocker": "Modes and claim tiers exist; all requested evidence categories are not proven as distinct types end to end.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7644,7 +7712,7 @@
         "tests/test_algo_final.py"
       ],
       "blocker": "Build-time disablement and selected isolation tests exist; the full import/runtime/network-transport/integration-test acceptance was not established.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7662,7 +7730,7 @@
         "Commit 0b82c53be1d06196375b1d992c2a27f374921e4d: canonical CRLF_TO_LF hash contract, revised pin manifests, and tests/test_forward_edge_f00.py (55 passed); clean-tree source inventory, dependency graph and trial-program validator pass locally. Hosted rerun pending."
       ],
       "blocker": "Latest hosted run 45092672230 failed at protected-trial pin validation on both OSes due checkout-specific newline hashing. Commit 0b82c53be1d06196375b1d992c2a27f374921e4d fixes the hash contract and passes local clean-tree validation; a new green hosted run is still required. Full-suite, critical-module coverage and remaining adversarial/property acceptance are not yet verified.",
-      "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
+      "last_audited_at_utc": "2026-11-23T06:07:27+05:30",
       "commit": "01a3bffb",
       "test_evidence": [
         "tests/test_source_inventory.py (5 passed in clean committed-tree fixture checkout)",
@@ -7681,7 +7749,7 @@
         "GitHub branch-protection API evidence recorded in baseline"
       ],
       "blocker": "Current branch protection and required checks cannot be verified from available repository/API evidence; do not infer settings.",
-      "last_audited_at_utc": "2026-11-21T05:58:46.406728+00:00",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
       "commit": null
     },
     {
@@ -7697,7 +7765,7 @@
         "3f3f3e43"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T06:36:44+00:00",
+      "last_audited_at_utc": "2026-11-21T12:06:44+05:30",
       "commit": "61af4825",
       "test_evidence": [
         "tests/test_learning_audit.py",
@@ -7717,7 +7785,7 @@
         "tests/test_capability_ownership.py (2 passed; domain coverage and no fabricated human owner claims)"
       ],
       "blocker": "Named GitHub users/teams are not established in repository evidence, so active CODEOWNERS assignments and reviewer routing remain pending.",
-      "last_audited_at_utc": "2026-11-23T00:17:45+00:00",
+      "last_audited_at_utc": "2026-11-23T05:47:45+05:30",
       "commit": "2b402395",
       "test_evidence": [
         "tests/test_capability_ownership.py",
@@ -7742,7 +7810,7 @@
         "76fd9a0b"
       ],
       "blocker": "Original strategy implementations are not independently run through both paper engines; the integrated fixture adapter records the legacy outcome supplied to it. This proves fixture lifecycle compatibility, not independent strategy parity.",
-      "last_audited_at_utc": "2026-11-23T00:17:11+00:00",
+      "last_audited_at_utc": "2026-11-23T05:47:11+05:30",
       "commit": "76fd9a0b",
       "test_evidence": [
         "tests/test_forward_edge_pipeline_compat.py (10 passed)",
@@ -7768,7 +7836,7 @@
         "6623197a"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-23T00:35:34+00:00",
+      "last_audited_at_utc": "2026-11-23T06:05:34+05:30",
       "commit": "6623197a",
       "test_evidence": [
         "tests/test_historical_strategy_pins.py (1 passed)",
@@ -7793,7 +7861,7 @@
         "Cross-platform CRLF simulation reproduced the LF evidence bundle byte-for-byte; implementation commit ac5942360477ede0dde906fb8d5b833a51c09b46"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
+      "last_audited_at_utc": "2026-11-23T06:07:27+05:30",
       "commit": "ac5942360477ede0dde906fb8d5b833a51c09b46"
     },
     {
@@ -14098,7 +14166,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T03:00:06Z",
+    "as_of_utc": "2026-11-23T04:43:01Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14145,6 +14213,7 @@
       "FB-0307",
       "FB-0308",
       "FB-0309",
+      "FB-0310",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14162,12 +14231,28 @@
       "SL-00-15",
       "SL-00-16",
       "SL-00-17",
-      "SL-00-18"
+      "SL-00-18",
+      "FB-0311",
+      "FB-0312",
+      "FB-0313",
+      "FB-0314",
+      "FB-0315",
+      "FB-0316",
+      "FB-0317",
+      "FB-0318",
+      "FB-0401",
+      "FB-0402",
+      "FB-0403",
+      "FB-0404",
+      "FB-0405",
+      "FB-0406",
+      "FB-0407",
+      "FB-0408"
     ],
-    "audited_count": 63,
+    "audited_count": 80,
     "status_counts": {
-      "UNASSESSED": 1315,
-      "PARTIAL": 51,
+      "UNASSESSED": 1298,
+      "PARTIAL": 68,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 9
@@ -14180,6 +14265,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 63 of 1,378 items audited; 9 COMPLETE, 51 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,315 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, profile and lifecycle facts, economic disclosure import fields, NAV revisions, 90-day history guard and as-known NAV availability under FB-0301 through FB-0309 have evidence; latest implementation commit 520d013b. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 80 of 1,378 items audited; 9 COMPLETE, 68 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,298 UNASSESSED. MF allocation recommendations now have a separate cutoff/NAV/cost contract but are not populated or scheduled from live sources."
   }
 }

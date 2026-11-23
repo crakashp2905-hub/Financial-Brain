@@ -416,6 +416,17 @@ def cmd_mf_scheme_profile(args) -> int:
     return 0
 
 
+def cmd_mf_portfolio(args) -> int:
+    """Import source-attributed AMC portfolio disclosure rows from CSV."""
+    from pathlib import Path
+
+    from .ingest.mf_portfolio_disclosure import ingest
+
+    result = ingest(Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_mfnav_history(args) -> int:
     """Import an already downloaded AMFI NAV history file within its 90-day limit."""
     from pathlib import Path
@@ -3230,6 +3241,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--file", required=True)
     g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
     g.set_defaults(fn=cmd_mf_scheme_profile)
+
+    g = sub.add_parser("mf-portfolio", help="import source-attributed AMC portfolio disclosures")
+    g.add_argument("--file", required=True)
+    g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_portfolio)
 
     g = sub.add_parser("mfnav-history", help="import an official AMFI NAV history export (max 90 days)")
     g.add_argument("--file", required=True)

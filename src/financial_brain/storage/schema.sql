@@ -711,6 +711,31 @@ CREATE TABLE IF NOT EXISTS mf_scheme_profile_disclosures (
     PRIMARY KEY (identity_key, observed_on, source_document_sha256)
 );
 
+-- Monthly/quarterly AMC portfolio snapshots. Unknown fields remain NULL rather than inferred.
+CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
+    scheme_code VARCHAR NOT NULL,
+    portfolio_as_of DATE NOT NULL,
+    instrument_id VARCHAR NOT NULL,
+    underlying_scheme_code VARCHAR,
+    holding_name VARCHAR,
+    asset_type VARCHAR NOT NULL,
+    sector VARCHAR,
+    weight_pct DECIMAL(12, 8),
+    market_value_inr DECIMAL(24, 2),
+    quantity DECIMAL(24, 8),
+    credit_rating VARCHAR,
+    maturity_date DATE,
+    modified_duration_years DECIMAL(16, 8),
+    yield_to_maturity_pct DECIMAL(12, 8),
+    observed_on DATE NOT NULL,
+    observed_at TIMESTAMPTZ NOT NULL,
+    source_url VARCHAR NOT NULL,
+    source_document_sha256 VARCHAR NOT NULL,
+    source_published_at TIMESTAMPTZ NOT NULL,
+    lake_key VARCHAR NOT NULL,
+    PRIMARY KEY (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)
+);
+
 -- NSE security-wise delivery position (providers/nse_delivery.py): the share of each day's traded quantity that
 -- went to delivery. Filed under the trade date the file's header states.
 CREATE TABLE IF NOT EXISTS delivery (

@@ -95,6 +95,7 @@ class Database:
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS exit_restrictions VARCHAR",
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_from DATE",
         "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS restriction_effective_to DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS underlying_scheme_code VARCHAR",
     ]
 
     def migrate(self) -> None:
