@@ -5491,7 +5491,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:55:13Z",
-      "commit": null,
+      "commit": "0d395f088f9930ebb3271dabb3eef38ef3b28454",
       "test_evidence": [
         "python scripts/validate_merge_sequence.py: passed.",
         "python -m pytest tests/test_canonical_merge_sequence.py -q: 2 passed.",
