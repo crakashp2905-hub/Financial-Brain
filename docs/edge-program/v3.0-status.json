@@ -5427,7 +5427,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:41:53Z",
-      "commit": null,
+      "commit": "c6c05567",
       "artifact_sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239",
       "test_evidence": [
         "python scripts/validate_product_charter.py --check: passed with required objective, full costs and NOT_DEMONSTRATED gate.",
