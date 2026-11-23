@@ -30,14 +30,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (613 Python files; 598 unassessed; 361 role-unassigned; regenerated inventory SHA-256 2f7e28b5688d64116751b77994cf5a73e5ff423912fa37ec3c4fb478420144c4)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF disclosure ingestion updates)",
-        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
+        "docs/edge-program/source-inventory.v2.json (638 Python files; 623 unassessed; 381 role-unassigned; canonical SHA-256 a0fc3307f8ca78cfedaf5b5b9b7c202dc3d9ae3a80c7ffc4594f4676385d3427; generated from clean PR tree and committed in 3b3f124b)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json generated and verified from the same clean PR tree (commit 3b3f124b)",
+        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check pass in the clean PR tree; tests/test_source_inventory.py: 5 passed",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T02:29:15Z",
-      "commit": "8ca47e03"
+      "last_audited_at_utc": "2026-11-23T05:18:47Z",
+      "commit": "3b3f124b"
     },
     {
       "id": "FB-0003",
@@ -8402,37 +8402,32 @@
     {
       "id": "SL-00-01",
       "text": "Capture `main` SHA, dependencies, data versions, active scheduled checkout, CI jobs and current owner approvals into an immutable baseline manifest.",
-      "source_checked": true,
+      "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json (fresh main/work-branch SHAs, dependency fingerprints, current workflow/job matrix, PR review counts, data snapshot freshness, and explicit unknowns)",
-        "docs/edge-program/v3.0-baseline-2026-11-21-r2.json.sha256 (detached local integrity checksum)",
-        "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json (current PR metadata and changed-file graph)",
-        "GitHub API: main SHA 5c7ae82a314b1e547d345e7b988e90f77d57224b; integration head c0059bbc10bf0d9df6eae1658c94b0b1e7a5af39; PR #34/#36-#40 review counts all zero; PR #40 CI run 44883135745 in progress",
-        "git ls-remote: feature/forward-edge-f00-f01 at d97dacc78d36e36e1130f94547a5dab691ce12dc"
+        "docs/edge-program/current-baseline.json (captured 2026-11-16)",
+        "git rev-parse HEAD at audit: 93acc1b3590c5c557deb9c206634d9ece31bcf13",
+        "pyproject.toml",
+        " .github/workflows/ci.yml",
+        "docs/edge-program/v3.0-baseline-2026-11-21.json (captures local HEAD/tree, dependencies, data inventory, CI and explicit unknowns)"
       ],
-      "blocker": "Actual scheduled paper-runner checkout and external owner approvals remain unverified. Main branch protection and required checks are now verified separately in docs/edge-program/main-branch-protection.v1.md.",
-      "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
-      "commit": "8037c1f2",
-      "artifact_sha256": "b94345baf3c680171f419dd15c542690bce2a4a0ec00347b1a5ff0612b8c5341",
-      "test_result": "Baseline JSON schema parsed; detached checksum created. Snapshot records CI as in progress, not green, and records absent local market data rather than reusing a stale data claim."
+      "blocker": "Existing baseline is stale; scheduled checkout, current dependency/data versions and current owner approvals were not captured in one immutable manifest.",
+      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-02",
       "text": "Generate machine-readable dependency graph of PR #34 and PR #36–#40; reconcile stacked branches without replaying overwritten files as if newly validated.",
-      "source_checked": true,
+      "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json (six live PR records, full changed-file lists, six overlap groups, stack and declaration edges)",
-        "PR #37 -> #36 is confirmed by #36 base branch matching #37 head; #36 -> #38 is confirmed by #38 base branch matching #36 head.",
-        "PR #34 and #39 are independent base-main PRs; #39 overlaps #40 in all six of its changed paths.",
-        "PR #40 description declares #39 fixes included, but commit ancestry was not established; overlap and PR text are explicitly labeled as declarations, not ancestry."
+        "docs/edge-program/forward-engine-dependency-graph.v1.json",
+        "docs/edge-program/current-baseline.json",
+        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (GitHub API PR ancestry, open states, CI runs and declared omissions)"
       ],
-      "blocker": "The stacked base-ref graph is captured and file overlaps are enumerated, but #39-to-#40 commit ancestry and content-level resolution for all overwritten files have not been independently reconciled.",
-      "last_audited_at_utc": "2026-11-21T08:10:36+00:00",
-      "commit": "8037c1f2",
-      "artifact_sha256": "f2711506358f95200f3f2aee4fd3aaea917305db6be7278a9c9f337312d2e4be",
-      "test_result": "Live GitHub PR metadata and changed-filename pages fetched for #34 and #36-#40; graph structure and path overlaps serialized. No code/test result was transferred from one PR head to another."
+      "blocker": "A dependency graph exists, but the required current PR #34/#36–#40 ancestry and overwritten-file reconciliation is not proven for this checkout.",
+      "last_audited_at_utc": "2026-11-21T11:32:13.655717+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-03",
@@ -8457,126 +8452,76 @@
     {
       "id": "SL-00-04",
       "text": "Preserve original protected Q4 2026 trial ledger, registration timestamps, failure outcomes, input hashes and historical read windows byte-for-byte.",
-      "source_checked": true,
+      "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "docs/forward-edge/protected-pins.json (ledger and available original manifests match their protected SHA-256 pins)",
-        "docs/edge-program/trial-preservation-audit.v1.json (per-trial record hashes and provenance coverage)",
-        "scripts/trial_preservation_audit.py --check (recomputable preservation/coverage report)",
-        "tests/test_trial_preservation_audit.py (pin equality, 13 timestamps/verdicts, and explicit missing-provenance cases)",
-        "Audit result: 13/13 registration timestamps and failure outcomes preserved; 3/13 input hashes and historical read windows present; missing historical facts are not backfilled."
+        "docs/forward-edge/protected-pins.json",
+        "docs/trials/ledger.jsonl",
+        "python -m financial_brain.forward_edge.audit --json (protected_pins GREEN)"
       ],
-      "blocker": "Ten historical trial rows have no matching dataset-hash/read-window manifest in the committed source. Their original data access cannot be reconstructed byte-for-byte from this repository.",
-      "last_audited_at_utc": "2026-11-21T08:13:54+00:00",
-      "commit": "bd4ab91b",
-      "test_evidence": [
-        "tests/test_trial_preservation_audit.py",
-        "tests/test_forward_edge_f00.py"
-      ],
-      "artifact_sha256": "5e58275ce2f9bcc344ec52131eec37cd778fdd63349bf2f2a20a941896ee3139",
-      "test_result": "Trial preservation audit tests 2 passed; protected pin validator reports no errors. Coverage gaps remain as listed."
+      "blocker": "Protected pins verify, but this does not prove byte-for-byte preservation of every specified Q4 ledger field and historical read window.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-05",
       "text": "Investigate PR #40 omissions: restore F17 instrument/data gates, F13 renderer, charter/cohort enforcement or document explicit tested replacements.",
-      "source_checked": true,
-      "status": "COMPLETE",
+      "source_checked": false,
+      "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/pipeline.py (_integrity_gate_codes applies F17 instrument/data gates)",
-        "tests/test_forward_edge_integrity_gates.py (gate rejects and stable reason codes)",
-        "src/financial_brain/forward_edge/tracker.py and scripts/forward_edge_capability_matrix.py (F13 tracker-derived capability matrix)",
-        "tests/test_forward_edge_tracker.py and CI freshness check for generated matrix",
-        "src/financial_brain/forward_edge/trials.py (protected trial admission binds charter and cohort schedule hashes)",
-        "tests/test_forward_edge_f00.py and tests/test_forward_edge_pipeline_compat.py (charter/cohort enforcement and fixture behavior)",
-        "Combined regression evidence on PR #40: prior full suite 3,698 passed/1 skipped; current focused F00/F13/F17 set 60 passed after workspace-local pytest temp configuration"
+        "PR #40 description and current source search; F17/F13 references in docs/forward-edge/fe-items.json",
+        "docs/edge-program/v3.0-pr-graph-2026-11-21.json (PR #40 declared F13/F17/charter omissions; PR remains open)",
+        "src/financial_brain/forward_edge/pipeline.py::_integrity_gate_codes",
+        "src/financial_brain/forward_edge/data_gate.py",
+        "src/financial_brain/forward_edge/instrument_rules.py",
+        "tests/test_forward_edge_integrity_gates.py (4 regression cases)",
+        "src/financial_brain/forward_edge/tracker.py::render_capability_matrix",
+        "scripts/forward_edge_capability_matrix.py --check",
+        "docs/forward-edge/capability-matrix.json",
+        ".github/workflows/ci.yml (matrix freshness check)"
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T08:02:12+00:00",
-      "commit": "2e420cc4",
-      "test_evidence": [
-        "tests/test_forward_edge_integrity_gates.py",
-        "tests/test_forward_edge_tracker.py",
-        "tests/test_forward_edge_f00.py",
-        "tests/test_forward_edge_pipeline_compat.py"
-      ],
-      "test_result": "F17/F13/F00 local focused suite 60 passed; prior full suite 3,698 passed, 1 skipped, 0 failed on PR #40 integration branch. Current hosted CI run remains queued and is not represented as green."
+      "blocker": "F17 gates and F13 capability matrix now have tested local replacements; the remaining PR #40 regression is charter/cohort enforcement on the protected-trial admission path, and hosted CI has not yet run on this change.",
+      "last_audited_at_utc": "2026-11-21T11:45:08.398246+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-06",
       "text": "Migrate legacy intraday, swing, options, ETF and MF books to a canonical portfolio ledger without inventing fills or changing past marks.",
-      "source_checked": true,
-      "status": "PARTIAL",
+      "source_checked": false,
+      "status": "NOT_STARTED",
       "evidence": [
-        "src/financial_brain/portfolio/canonical_ledger.py (append-only cross-asset event store and deterministic as-of projection for explicit cash flows, fills, fees and marks)",
-        "UNRESOLVED_POSITION events preserve source-reported positions without creating fills and force projection_complete=false",
-        "src/financial_brain/portfolio/legacy_migration.py plus scripts/migrate_legacy_paper_books.py (read-only intraday/swing source adapters and separate idempotent SQLite destination)",
-        "scripts/audit_canonical_portfolio_migration.py verifies exact event payloads against DuckDB sources and writes only aggregate counts, file hashes and unresolved totals; it reports zero missing, mismatched or unscanned ledger events",
-        "docs/edge-program/canonical-migration-audit.v1.json: 1,631 intraday and 6,334 swing rows; 23,479/23,479 source events match exact stored payloads; 0 rejected rows",
-        "Local ignored data/canonical_portfolio.sqlite: 18 virtual book/run accounts; 51 intraday rows without exits and five swing rows with missing entry facts remain unresolved; no fills were invented",
-        "All 18 accounts lack recorded opening cash; 406 open positions are across run books and include replay/challenger overlap, not unique live holdings",
-        "tests/test_canonical_portfolio_ledger.py and tests/test_legacy_portfolio_migration.py (11 synthetic ledger, adapter, idempotency and source verification tests)",
-        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified against current source"
+        "docs/edge-program/state-ownership.v1.json"
       ],
-      "blocker": "The local intraday/swing migration is implemented and exact-source-audited, but scanned sources contain no options, ETF-specific or mutual-fund book records; all 18 migrated accounts lack opening cash; 51 intraday rows with missing exits and five swing rows with incomplete entry facts remain unresolved. Settlement, tax, corporate actions, FX, margin, option lifecycle, fund allotment and external reconciliation remain outside the current ledger contract.",
-      "last_audited_at_utc": "2026-11-21T08:59:18+00:00",
-      "commit": "d9a2fde7",
-      "test_evidence": [
-        "tests/test_canonical_portfolio_ledger.py",
-        "tests/test_legacy_portfolio_migration.py"
-      ],
-      "test_result": "13 focused canonical-ledger/migration tests pass after receipt-gate additions; Ruff, mypy, source inventory and dependency graph freshness checks pass. Local source audit verifies 23,479/23,479 source event payloads with zero rejected, missing, mismatched or unscanned rows. The audit shows 56 unresolved source records, 18 books without opening cash, and no options/ETF-specific/MF book rows in scanned sources."
+      "blocker": "Ownership manifest identifies separate forward, broker and swing scopes; a canonical migrated multi-asset portfolio ledger was not evidenced.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-07",
       "text": "Reconcile the 51 reported historical positions with missing recorded exits; label `UNRESOLVED` and block promoted P&L unless supported by actual execution evidence.",
-      "source_checked": true,
+      "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/portfolio/legacy_migration.py: every intraday source row without both recorded exit timestamp and price becomes an UNRESOLVED_POSITION event; no exit is synthesized",
-        "src/financial_brain/portfolio/canonical_ledger.py: unresolved positions make projection incomplete and pnl_promotion_gate BLOCKED with UNRESOLVED_LEGACY_POSITIONS",
-        "src/financial_brain/portfolio/canonical_ledger.py::append_execution_receipt_resolution accepts only broker receipt fills with matching unresolved ID, instrument, closing side and full quantity; snapshot removes UNRESOLVED only after the complete receipt set is present",
-        "tests/test_canonical_portfolio_ledger.py::test_complete_broker_receipt_set_resolves_unresolved_exit_and_rechecks_gate and ::test_local_paper_exit_cannot_resolve_unresolved_position",
-        "tests/test_legacy_portfolio_migration.py::test_source_book_migration_is_read_only_idempotent_and_reports_unavailable_desks verifies fail-closed account P&L report gate",
-        "docs/edge-program/canonical-migration-audit.v1.json (SHA-256 b41590765d3c8d3ef8b285744e0e123be45c9fb3da67559a71d28fa4bee9ee78)"
+        "docs/edge-program/current-baseline.json (known unresolved exits limitation)",
+        "docs/forward-edge/BLOCKERS.md"
       ],
-      "blocker": "The required UNRESOLVED labels and P&L promotion block are implemented, but the 51 source rows contain no recorded exit and no actual Kite/broker execution receipts were available to reconcile them. Keep them unresolved; resolve only after receipt-backed execution facts are added and re-audited.",
-      "last_audited_at_utc": "2026-11-21T09:27:23+00:00",
-      "commit": "b4b3fae4",
-      "test_evidence": [
-        "tests/test_canonical_portfolio_ledger.py",
-        "tests/test_legacy_portfolio_migration.py"
-      ],
-      "test_result": "20 focused learning-audit/canonical-ledger/migration tests pass. Tests prove missing exits remain unresolved and P&L-blocked, local-paper fills cannot clear the block, exact complete broker receipts idempotently resolve their linked position, and the learning-readiness CLI rejects unresolved or stale portfolio reports. Current local data has no actual receipts for the 51 missing-exit records."
+      "blocker": "The historical 51-position issue is recorded as a limitation, but an instrument-level reconciliation with UNRESOLVED states and promotion block was not found.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-08",
       "text": "Keep Kite/exchange data licensing status as separate permission objects; do not infer paper/synthetic use rights from quote API success.",
-      "source_checked": true,
+      "source_checked": false,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/data-permissions.v1.json",
-        "docs/edge-program/data-permission-operations.md",
-        "docs/edge-program/market-data-sources.v1.json (Kite runtime source alias)",
-        "src/financial_brain/forward_edge/data_permissions.py",
-        "src/financial_brain/forward_edge/data_gate.py",
-        "src/financial_brain/forward_edge/session_runner.py",
-        "src/financial_brain/forward_edge/pipeline.py",
-        "src/financial_brain/paper/intraday_runner.py::run_live",
-        "src/financial_brain/cli.py::cmd_paper_intraday",
-        "tests/test_forward_edge_data_gate.py",
-        "tests/test_forward_edge_session_runner.py",
-        "tests/test_phase5_intraday_runner.py"
+        "docs/edge-program/market-data-sources.v1.json",
+        "docs/edge-program/current-baseline.json (rights UNVERIFIED)",
+        "src/financial_brain/forward_edge/data_gate.py"
       ],
-      "blocker": "Source-scoped, effective-dated runtime permissions now cover the normalized forward runner and legacy live Kite runner, but no provider/account terms or reviewed approved-use evidence are present to move Kite/exchange permissions from UNKNOWN_RIGHTS to USE_ALLOWED. Other data adapters still need full rights-gate inventory.",
-      "last_audited_at_utc": "2026-11-21T09:56:29Z",
-      "commit": null,
-      "test_evidence": [
-        "tests/test_forward_edge_data_gate.py",
-        "tests/test_forward_edge_session_runner.py",
-        "tests/test_phase5_intraday_runner.py",
-        "tests/test_forward_edge_pipeline_compat.py"
-      ],
-      "test_result": "Full permission/session/pipeline/intraday focused run initially had 93 passing tests and one enum-vs-string registry expectation failure; that assertion was fixed. The registry test and data-gate module then pass (11 tests), six focused end-to-end regressions pass including a full live-paper day and broker isolation. Ruff clean, six changed production modules pass mypy, \fb paper-intraday --help exposes permission file, inventory/dependency graph freshness checks pass. The corrected complete 94-test aggregate was not rerun."
+      "blocker": "Source inventory and data gates exist; specific current Kite/exchange permission objects and approved-use evidence are absent.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-09",
@@ -8604,54 +8549,30 @@
     {
       "id": "SL-00-10",
       "text": "Separate historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward evidence in types, not dashboard text.",
-      "source_checked": true,
-      "status": "COMPLETE",
+      "source_checked": false,
+      "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/evidence_labels.py (EvidenceClass now defines distinct historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward types)",
-        "src/financial_brain/forward_edge/evidence_stats.py (export rows derive evidence class from execution mode and facts; historical and local-paper claim tiers preserve the more specific class)",
-        "src/financial_brain/evaluation/evidence_tiers.py (fixtures remain historical/research claims and cannot be upgraded by observed or custody fields)",
-        "tests/test_evidence_labels.py (mode separation, complete prospective session, custody gate, replay/fixture non-promotion, and export consistency)",
-        "tests/test_evidence_claims.py (source-aware claim promotion only for complete observed sessions; fixtures stay replicated)",
-        "docs/edge-program/source-inventory.v2.json refreshed and verified with scripts/source_inventory.py --check (621 Python files)",
-        "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy and git diff --check passed"
+        "src/financial_brain/forward_edge/modes.py",
+        "src/financial_brain/forward_edge/claim_tier.py",
+        "src/financial_brain/forward_edge/fixtures.py"
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T08:23:02+00:00",
-      "commit": "11dad209",
-      "test_evidence": [
-        "tests/test_evidence_labels.py",
-        "tests/test_evidence_claims.py",
-        "tests/test_forward_edge_cli.py",
-        "tests/test_paper_execution_audit.py",
-        "tests/test_paper_options_runner.py",
-        "tests/test_paper_options_forward.py",
-        "tests/test_forward_edge_f08.py",
-        "tests/test_forward_edge_falsification.py"
-      ],
-      "test_result": "58 focused evidence-label, claim, CLI, paper-report/export and statistical-evidence tests passed; Ruff, mypy, source-inventory freshness, dependency-graph freshness, and git diff --check passed. Hosted runs first exposed stale generated inventory and then stale dependency-graph snapshots; both have since been refreshed. Run 44885143362 failed at dependency-graph freshness; a new CI run is expected after the next push."
+      "blocker": "Modes and claim tiers exist; all requested evidence categories are not proven as distinct types end to end.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-11",
       "text": "Enforce broker isolation at import, runtime, network transport and integration-test layers; no automated policy writes to physical order endpoints.",
-      "source_checked": true,
-      "status": "COMPLETE",
+      "source_checked": false,
+      "status": "PARTIAL",
       "evidence": [
-        "scripts/forward_engine_graph.py and tests/test_source_inventory.py (static import closures exclude execution.oms.kite_broker from both paper entrypoints)",
-        "src/financial_brain/forward_edge/modes.py and tests/test_forward_edge_f00.py (every session mode denies physical orders; only LIVE_PAPER may emit simulated fills)",
-        "tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags (forged flags, broker method, request transport, and HTTP opener traps)",
-        "tests/test_phase5_intraday_runner.py::test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags (live-paper/replay broker and transport traps)",
-        "8 targeted import/runtime/network/integration tests passed; Ruff and git diff --check passed"
-      ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T08:17:51+00:00",
-      "commit": "89cf052f",
-      "test_evidence": [
-        "tests/test_source_inventory.py",
+        "src/financial_brain/forward_edge/modes.py (PHYSICAL_ORDERS_ENABLED=False)",
         "tests/test_forward_edge_f00.py",
-        "tests/test_forward_edge_session_runner.py",
-        "tests/test_phase5_intraday_runner.py"
+        "tests/test_algo_final.py"
       ],
-      "test_result": "8 targeted broker-isolation and source-graph tests passed with forged flags; physical broker place/request methods and urllib HTTP transport were trapped."
+      "blocker": "Build-time disablement and selected isolation tests exist; the full import/runtime/network-transport/integration-test acceptance was not established.",
+      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
+      "commit": null
     },
     {
       "id": "SL-00-12",
@@ -8701,23 +8622,17 @@
         "src/financial_brain/cli.py (`fb learning audit`; concise output and --json full result)",
         "tests/test_learning_audit.py (positive, negative, missing-artifact, missing-test, stale-snapshot and CLI cases)",
         "tests/test_forward_edge_f00.py (protected trial charter/cohort scope governance)",
-        "2e420cc4",
-        "docs/edge-program/source-inventory.v2.json (refreshed for the new module)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (verified current)",
-        "src/financial_brain/learning_audit.py: portfolio_pnl_integrity check requires a fresh migration audit, zero unresolved/incomplete/missing-opening-balance counts, zero source-integrity errors, and ELIGIBLE_FOR_REVIEW gate"
+        "3f3f3e43"
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-21T09:27:23+00:00",
-      "commit": "b4b3fae4",
+      "last_audited_at_utc": "2026-11-21T12:06:44+05:30",
+      "commit": "61af4825",
       "test_evidence": [
-        "tests/test_forward_edge_f00.py",
-        "tests/test_forward_edge_integrity_gates.py",
-        "tests/test_forward_edge_tracker.py",
         "tests/test_learning_audit.py",
+        "tests/test_forward_edge_f00.py",
         "tests/test_standard.py"
       ],
-      "artifact_sha256": "57053b59ea85e4eecb32467d58f45bdc9d4850f73451034ed1e4ad361b1c4f9c",
-      "test_result": "7 learning-audit tests pass, including unresolved-P&L blocking and stale canonical-audit rejection; CLI fails closed on blocked evidence."
+      "artifact_sha256": "7ae416944fedbda0b2081cfdf714af8b8d85b0c7bc10c9a2445d74d02c3e1f88"
     },
     {
       "id": "SL-00-15",
@@ -15382,13 +15297,13 @@
     ],
     "audited_count": 246,
     "status_counts": {
-      "COMPLETE": 29,
+      "COMPLETE": 26,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 16,
-      "PARTIAL": 200,
+      "NOT_STARTED": 17,
+      "PARTIAL": 202,
       "UNASSESSED": 1132
     },
-    "verified_complete_count": 29,
+    "verified_complete_count": 26,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -15461,10 +15376,10 @@
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
   "counts_by_status": {
-    "COMPLETE": 29,
+    "COMPLETE": 26,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 16,
-    "PARTIAL": 200,
+    "NOT_STARTED": 17,
+    "PARTIAL": 202,
     "UNASSESSED": 1132
   }
 }
