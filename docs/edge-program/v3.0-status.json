@@ -5440,22 +5440,43 @@
     {
       "id": "PA-00-11",
       "text": "Create a signed/hashable execution charter with owner capital budget, hard loss limits, execution mode, and permitted instruments; the model must not self-approve real cash.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/execution_charter.py binds owner, PAPER/SHADOW mode, sorted permitted instruments, and the full CapitalRiskProposal to one canonical SHA-256 scope.",
+        "The charter requires a matching unexpired human CAPITAL approval for its exact digest; missing, stale, non-human, mismatched-owner and LIVE-mode cases fail closed.",
+        "docs/forward-edge/capital-risk-proposal-template.md and docs/edge-program/product-charter.v1.json retain actual approval as pending and physical orders disabled."
+      ],
+      "blocker": "No owner-signed charter with actual approved capital and hard-loss values is present. The code and template cannot supply or imply the owner's authorization; a real human must complete the proposal and issue a separately scoped, expiring approval.",
+      "last_audited_at_utc": "2026-11-23T16:46:56Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_execution_charter.py tests/test_forward_edge_capital_proposal.py -q: 6 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/execution_charter.py tests/test_execution_charter.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Hash-bound charter behavior and fail-closed human-approval validation are implemented and tested. Production values and owner authorization are absent, so the checklist item is PARTIAL."
     },
     {
       "id": "PA-00-12",
       "text": "Emit a machine-readable `profit_readiness.json` listing current `RED/AMBER/GREEN` gates and links to exact evidence; reject hand-edited status percentages.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "scripts/profit_readiness.py deterministically derives a machine-readable report from the product charter, protected trial program/ledger, protected pins and capital proposal template.",
+        "docs/edge-program/profit_readiness.json reports exact evidence paths and SHA-256 digests for each RED/AMBER/GREEN gate; current overall state is RED.",
+        ".github/workflows/ci.yml checks the generated report; regeneration-and-byte-comparison rejects hand edits and any percentage fields are prohibited."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T16:50:00Z",
+      "commit": null,
+      "test_evidence": [
+        "python scripts/profit_readiness.py --check: passed.",
+        "python -m pytest tests/test_profit_readiness.py -q: passed.",
+        "python -m ruff check scripts/profit_readiness.py tests/test_profit_readiness.py: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Gate statuses and evidence digests are generated from repository sources; hand-edited/stale output fails CI. The report currently denies a profitability claim."
     },
     {
       "id": "PA-01-01",
@@ -15323,7 +15344,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T16:41:53Z",
+    "as_of_utc": "2026-11-23T16:50:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15562,6 +15583,8 @@
       "PA-00-08",
       "PA-00-09",
       "PA-00-10",
+      "PA-00-11",
+      "PA-00-12",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15584,15 +15607,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 258,
+    "audited_count": 260,
     "status_counts": {
-      "COMPLETE": 37,
+      "COMPLETE": 38,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 204,
-      "UNASSESSED": 1120
+      "PARTIAL": 205,
+      "UNASSESSED": 1118
     },
-    "verified_complete_count": 37,
+    "verified_complete_count": 38,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15693,13 +15716,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-00-10 now machine-checks the risk-adjusted prospective net-value objective and full cost basis while explicitly retaining NOT_DEMONSTRATED."
+    "evidence_update": "PA-00-12 now derives RED/AMBER/GREEN readiness gates from hashed repository evidence and CI rejects hand-edited output; overall readiness remains RED."
   },
   "counts_by_status": {
-    "COMPLETE": 37,
+    "COMPLETE": 38,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 204,
-    "UNASSESSED": 1120
+    "PARTIAL": 205,
+    "UNASSESSED": 1118
   }
 }
