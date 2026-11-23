@@ -317,11 +317,13 @@
         "src/financial_brain/kernel/paper_account.py now normalizes cash-equity compatibility calls through WholeUnits, Price and Money, and exposes typed submit_typed_intent/record_typed_fill boundaries that enforce positive whole units and account-currency consistency.",
         "tests/test_paper_account.py::test_typed_cash_order_and_fill_units_are_enforced covers typed order/fill execution, currency mismatch refusal, and fractional quantity refusal.",
         "src/financial_brain/paper/options.py::option_lot_count enforces OptionLots or strict positive integer inputs at option fill/cost boundaries; the option plan and replay use the same validation before quantity calculation and durable scalar serialization.",
-        "docs/edge-program/financial-units-options-paper-audit-2026-11-24.md records option path coverage and remaining MF/shared OMS/risk gaps."
+        "docs/edge-program/financial-units-options-paper-audit-2026-11-24.md records option path coverage and remaining MF/shared OMS/risk gaps.",
+        "src/financial_brain/paper/mf_lot_book.py normalizes subscriptions through INRNotional and NavPerUnit, computes holdings as MutualFundUnits, and accepts typed MutualFundUnits/NavPerUnit at redemptions; mf_purchase_book.apply_allotment carries NavPerUnit into the allotment path.",
+        "docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md records the MF paper-book unit boundary and remaining systematic-flow/ledger/forward-pipeline integration."
       ],
-      "blocker": "Partial: the cash-equity paper account now enforces typed quantities, prices and currency at its API boundary, but option lots, MF fractional-unit/NAV paths, risk sizing and the shared forward order/accounting pipeline still exchange generic numeric values. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
+      "blocker": "Partial: cash-equity paper accounts, long-option plan/replay, and MF lot purchase/allotment/redemption boundaries now validate nominal units. SIP/systematic-flow, MF account-ledger, risk-sizing and shared forward OMS/accounting paths still exchange generic numeric values; end-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
-      "commit": "67e1f7a0",
+      "commit": "ca818aec",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
@@ -331,9 +333,13 @@
         "python -m mypy src/financial_brain/kernel/paper_account.py --follow-imports=silent: passed",
         "python -m pytest tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q --basetemp=.pytest-checklist-options: 19 passed",
         "python -m ruff check src/financial_brain/paper/options.py src/financial_brain/paper/options_plan.py src/financial_brain/paper/options_runner.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py: passed",
-        "python -m mypy src/financial_brain/paper/options.py src/financial_brain/paper/options_plan.py src/financial_brain/paper/options_runner.py --follow-imports=silent: passed"
+        "python -m mypy src/financial_brain/paper/options.py src/financial_brain/paper/options_plan.py src/financial_brain/paper/options_runner.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_mf_lot_book.py tests/test_mf_purchase_book.py -q --basetemp=.pytest-checklist-mf-units-rerun: 21 passed",
+        "python -m pytest tests/test_mf_flow_book.py tests/test_mf_sip_book.py tests/test_mf_systematic_flow_book.py -q --basetemp=.pytest-checklist-mf-callers: 23 passed",
+        "python -m ruff check src/financial_brain/paper/mf_lot_book.py src/financial_brain/paper/mf_purchase_book.py tests/test_mf_lot_book.py tests/test_mf_purchase_book.py: passed",
+        "python -m mypy src/financial_brain/paper/mf_lot_book.py src/financial_brain/paper/mf_purchase_book.py --follow-imports=silent: passed"
       ],
-      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. The cash paper account integration rejects incompatible currencies and fractional quantities; the option paper path validates typed lots in fill, plan, cost and replay operations. MF, sizing and shared forward-pipeline integration remains outstanding, so this is partial."
+      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. Cash paper accounts enforce typed whole units, price and currency; option paper paths validate typed lots; MF lot purchase/allotment/redemption paths validate INRNotional, NavPerUnit and MutualFundUnits. SIP/systematic-flow, account-ledger, sizing and shared forward-pipeline integration remain outstanding, so this is partial."
     },
     {
       "id": "FB-0104",

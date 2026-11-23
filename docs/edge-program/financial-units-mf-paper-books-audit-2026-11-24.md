@@ -16,6 +16,7 @@ The MF lot book now normalizes subscription amounts through `INRNotional`, NAV t
 - `tests/test_mf_lot_book.py::test_effective_dated_transaction_charges_reduce_units_and_redemption_proceeds`
 - `tests/test_mf_purchase_book.py::test_purchase_freezes_eligible_date_stays_nav_pending_then_allots_exact_nav`
 - `python -m pytest tests/test_mf_lot_book.py tests/test_mf_purchase_book.py -q --basetemp=.pytest-checklist-mf-units-rerun` — 21 passed.
+- `python -m pytest tests/test_mf_flow_book.py tests/test_mf_sip_book.py tests/test_mf_systematic_flow_book.py -q --basetemp=.pytest-checklist-mf-callers` — 23 passed through existing MF callers.
 - Ruff and scoped mypy passed for both MF modules and tests.
 
 ## Remaining scope
