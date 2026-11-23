@@ -30,11 +30,13 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (605 Python source files; 590 unassessed; 355 role-unassigned)",
-        "docs/edge-program/capability-ownership.v1.json (8 broad engineering domains mapped; named owners unset)"
+        "docs/edge-program/source-inventory.v2.json (605 Python source files; 590 remain unassessed; 355 role-unassigned; regenerated SHA-256 07e6c2845e2f0cd0146bddb4402e6c24271ea86bda12547dc036c630dbe61cb7)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated to include current kernel imports)",
+        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check (pass); tests/test_source_inventory.py (5 passed)",
+        "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T00:56:25Z",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
     },
     {

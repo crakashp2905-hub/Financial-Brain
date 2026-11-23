@@ -17,6 +17,7 @@
       "financial_brain.forward_edge.session_state",
       "financial_brain.forward_edge.venue_calendar",
       "financial_brain.kernel.clock",
+      "financial_brain.kernel.closures_n",
       "financial_brain.kernel.events",
       "financial_brain.kernel.ledger",
       "financial_brain.kernel.oms",
@@ -181,6 +182,10 @@
       "target": "financial_brain.providers.kite_data"
     },
     {
+      "source": "financial_brain.kernel.clock",
+      "target": "financial_brain.kernel.closures_n"
+    },
+    {
       "source": "financial_brain.kernel.events",
       "target": "financial_brain.kernel.clock"
     },
@@ -343,5 +348,5 @@
     "financial_brain.forward_edge.quote_archive"
   ],
   "source_count": 605,
-  "source_tree_sha256": "24500194ea17b55016c9f8083a024ef498f646c64d3800ec27e051a521fe55b1"
+  "source_tree_sha256": "cb8f8f6c8e76a23f461636d5c5c3fab63f8e60422ec3aca30204110dd7f6f293"
 }
