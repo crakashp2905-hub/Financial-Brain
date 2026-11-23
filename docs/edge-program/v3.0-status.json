@@ -5317,7 +5317,7 @@
       ],
       "blocker": "Current result notes can be content-frozen, but historical source snapshots, run parameters, explicit cost schedules, split manifests, exposure records and post-hoc rescore lineage are absent for the legacy corpus. Preserve this gap; do not reconstruct or backfill the missing facts.",
       "last_audited_at_utc": "2026-11-23T16:13:53Z",
-      "commit": null,
+      "commit": "d90b283b",
       "artifact_sha256": "7ab1ff6c6a86d475d28e663789343f825619c8500236176434f26f9b6fe871f9",
       "test_evidence": [
         "python scripts/research_outcome_freeze.py --check: passed for 42 result notes.",
