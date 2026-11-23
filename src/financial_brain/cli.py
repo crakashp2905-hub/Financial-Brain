@@ -474,6 +474,58 @@ def cmd_etf_valuation(args) -> int:
     return 0 if result.status == "COMPARABLE" else 1
 
 
+def cmd_etf_liquidity(args) -> int:
+    """Report ETF quote depth, historical liquidity and intended-size paper costs."""
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_history import ETFHistoryUnavailable, history
+    from .etf_liquidity import report
+    from .forward_edge.quote_archive import QuoteArchive
+
+    as_of = datetime.fromisoformat(args.as_of.replace("Z", "+00:00")) if args.as_of else datetime.now(
+        ZoneInfo("Asia/Kolkata"))
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise ValueError("--as-of must include a timezone")
+    session = as_of.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(
+            session, venue="NSE", source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    events = [event for event in events if event.instrument_id == f"NSE:{args.symbol}"]
+    events = [event for event in events if event.available_at <= as_of]
+    history_as_of = session - timedelta(days=1)
+    with Database(load()).connect() as con:
+        ref = con.execute(
+            """SELECT isin FROM etf_reference_observations
+               WHERE exchange='NSE' AND symbol=? AND observed_on<=?
+               ORDER BY observed_on DESC LIMIT 1""", [args.symbol, session],
+        ).fetchone()
+        if not ref:
+            print(json.dumps({"status": "UNAVAILABLE", "reason": "ETF_REFERENCE_MISSING"}))
+            return 1
+        try:
+            bars = history(con, ref[0], history_as_of, reference_as_of=session,
+                           limit=args.lookback)
+            history_error = None
+        except ETFHistoryUnavailable as exc:
+            bars, history_error = [], str(exc)
+        sessions = [row[0] for row in con.execute(
+            """SELECT DISTINCT business_date FROM eod_prices
+               WHERE exchange='NSE' AND business_date<=?
+               ORDER BY business_date DESC LIMIT ?""", [history_as_of, args.lookback],
+        ).fetchall()]
+    result = report(events=events, bars=bars, intended_units=args.units,
+                    expected_sessions=reversed(sessions),
+                    expected_poll_seconds=args.expected_poll_seconds)
+    result.update({"symbol": args.symbol, "as_of": as_of.isoformat(),
+                   "history_error": history_error})
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
 def cmd_index(args) -> int:
     """Ingest NSE index closes - the benchmark history."""
     Database(load()).migrate()
@@ -3269,6 +3321,15 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--decision-time", required=True, help="timezone-aware ISO timestamp")
     g.add_argument("--archive", default="data/etf-market-events.sqlite")
     g.set_defaults(fn=cmd_etf_valuation)
+
+    g = sub.add_parser("etf-liquidity", help="report ETF spread/depth, history and size-aware costs")
+    g.add_argument("--symbol", required=True)
+    g.add_argument("--units", required=True, type=int)
+    g.add_argument("--as-of", help="timezone-aware ISO timestamp; defaults to current IST")
+    g.add_argument("--lookback", type=int, default=20)
+    g.add_argument("--expected-poll-seconds", type=int, default=60)
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_liquidity)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

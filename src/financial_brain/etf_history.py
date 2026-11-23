@@ -24,20 +24,23 @@ class ETFPriceBar:
     evidence_key: str
 
 
-def history(con, isin: str, as_of: date, *, limit: int | None = None) -> list[ETFPriceBar]:
+def history(con, isin: str, as_of: date, *, reference_as_of: date | None = None,
+            limit: int | None = None) -> list[ETFPriceBar]:
     """Return NSE EQ ETF OHLCV with corporate-action-adjusted prices and source keys.
 
     The ETF identity must have an exchange reference observation available on or before
-    ``as_of``. The generic adjusted price table is joined back to EOD source rows so each
-    bar retains its immutable lake key. No missing session is synthesized.
+    ``reference_as_of`` (defaults to ``as_of``). The generic adjusted price table is joined
+    back to EOD source rows so each bar retains its immutable lake key. No missing session
+    is synthesized.
     """
     if limit is not None and limit < 1:
         raise ValueError("limit must be positive")
+    ref_as_of = reference_as_of or as_of
     ref = con.execute(
         """SELECT listing_date, status FROM etf_reference_observations
            WHERE isin = ? AND exchange = 'NSE' AND observed_on <= ?
            ORDER BY observed_on DESC LIMIT 1""",
-        [isin, as_of],
+        [isin, ref_as_of],
     ).fetchone()
     if not ref or ref[1] != "LISTED":
         raise ETFHistoryUnavailable(f"no point-in-time NSE ETF reference for {isin} on {as_of}")

@@ -30,8 +30,8 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (612 Python files; 597 unassessed; 360 role-unassigned; regenerated inventory SHA-256 5ecf223da5289dea845438d127ee65109aca7b2ffc7c856dad8c1a7577dbe8d1)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, history, quote, bar and valuation changes)",
+        "docs/edge-program/source-inventory.v2.json (613 Python files; 598 unassessed; 361 role-unassigned; regenerated inventory SHA-256 e30b3e3dc6f4fbe72ab8457811a0ae91939ee9ac12225804e90dd819d59613b9)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after ETF exposure, disclosure, history, quote, bar, valuation and liquidity changes)",
         "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check both pass; the existing tests/test_source_inventory.py suite passed 5 tests in its previous audit",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
@@ -419,11 +419,15 @@
     {
       "id": "FB-0208",
       "text": "Compute effective spread, depth, median traded value, stale-quote rate, illiquidity, volatility, trading gaps, halted periods and costs at intended size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/etf_liquidity.py computes quoted spread, displayed depth, intended-unit depth sweeps, statutory/broker costs, stale quote intervals, halted quote fraction, median turnover, annualized volatility, Amihud proxy and missing expected sessions.",
+        "Insufficient displayed depth yields residual units and no full-order fee estimate; missing history/quotes remain null. `effective_spread_bps` is explicitly unavailable without synchronized trade-side observations.",
+        "CLI `fb etf-liquidity` joins as-of archived quotes with prior-session adjusted ETF history; tests/test_etf_liquidity.py, tests/test_etf_history.py and tests/test_etf_valuation.py (11 passed); scoped Ruff and CLI help passed."
+      ],
+      "blocker": "Effective spread requires synchronized trade-side data; halt duration, live quote coverage and validated intended-size impact across real sessions remain unmeasured.",
+      "last_audited_at_utc": "2026-11-23T02:55:09Z",
       "commit": null
     },
     {
@@ -14035,7 +14039,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T02:47:49Z",
+    "as_of_utc": "2026-11-23T02:55:09Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -14066,6 +14070,7 @@
       "FB-0205",
       "FB-0206",
       "FB-0207",
+      "FB-0208",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14085,10 +14090,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 47,
+    "audited_count": 48,
     "status_counts": {
-      "UNASSESSED": 1331,
-      "PARTIAL": 36,
+      "UNASSESSED": 1330,
+      "PARTIAL": 37,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14101,6 +14106,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 47 of 1,378 items audited; 8 COMPLETE, 36 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,331 UNASSESSED. FB-0202 through FB-0207 implementations are linked from the per-item ledger; the latest implementation commit is 377e48c0. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 48 of 1,378 items audited; 8 COMPLETE, 37 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,330 UNASSESSED. ETF reference, product disclosure, price history, Kite quote, sampled bars, iNAV comparison and liquidity analytics are recorded under FB-0201 through FB-0208. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

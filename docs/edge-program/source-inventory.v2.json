@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 612,
+  "source_count": 613,
   "sources": [
     {
       "capability_ids": [],
@@ -220,6 +220,8 @@
         "docintel",
         "duckdb",
         "etf_bars",
+        "etf_history",
+        "etf_liquidity",
         "etf_valuation",
         "evaluation",
         "events",
@@ -274,7 +276,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "92a0dfc872864fe1da832fd44c4518c9462adbbe745829ca51e2fe5ace7b5418",
+      "source_sha256": "b7497cf444afa39da97ce3841dd253fdf892159487224f51bb2652505a540b29",
       "test_paths": []
     },
     {
@@ -1141,7 +1143,28 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/etf_history.py",
-      "source_sha256": "7fa568f6edbcb1f9a7494b127265c2b4fc9df7e2ba77c56cbcb5e27e184acc7e",
+      "source_sha256": "15eabd2f017035ff7425aba0b02617f610ab79c0b87df7208e36566a6046068b",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
+        "dataclasses",
+        "datetime",
+        "etf_history",
+        "forward_edge.market_events",
+        "math",
+        "statistics",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/etf_liquidity.py",
+      "source_sha256": "a3a8668552051ff33e60189f52442de872d8d63a6aa7aa23c805dd7afe92cf2f",
       "test_paths": []
     },
     {
@@ -10631,6 +10654,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 597,
-  "unassigned_role_count": 360
+  "unassessed_count": 598,
+  "unassigned_role_count": 361
 }
