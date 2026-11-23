@@ -5895,7 +5895,7 @@
       ],
       "blocker": "The repository has no authorized retained provider instrument-master snapshots or historical source ingestion/reconciliation path; applicable retention/replay rights remain UNKNOWN_RIGHTS.",
       "last_audited_at_utc": "2026-11-23T18:49:49Z",
-      "commit": null,
+      "commit": "578fe6ea1bd1c94d73b7c1166742a2b19e784799",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_instrument_master.py -q --basetemp=.pytest-tmp-pa0204c: 12 passed, including JSON schema validation and exact option expiry behavior.",
         "python -m ruff check src/financial_brain/forward_edge/instrument_master.py tests/test_forward_edge_instrument_master.py: passed.",
@@ -5916,7 +5916,7 @@
       ],
       "blocker": "No authorized point-in-time 15-minute index-member universe or retained source-backed options master is available to demonstrate coverage against currently listed contracts.",
       "last_audited_at_utc": "2026-11-23T18:49:49Z",
-      "commit": null,
+      "commit": "578fe6ea1bd1c94d73b7c1166742a2b19e784799",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_instrument_master.py -q --basetemp=.pytest-tmp-pa0204c: 12 passed; tests assert listed underlyings are OPTIONABLE and missing/expired contracts are NO_OPTION_TRADE.",
         "Scoped Ruff and mypy passed; source and forward-engine inventory checks were regenerated."
