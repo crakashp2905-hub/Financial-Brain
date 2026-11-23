@@ -5385,7 +5385,7 @@
       ],
       "blocker": "The canonical paper-ledger projections are labeled, but legacy broker-book views, reports, archived P&L documents and local databases have not all been reconciled or classified. Their provenance cannot be safely inferred or backfilled from the numeric value alone.",
       "last_audited_at_utc": "2026-11-23T16:36:27Z",
-      "commit": null,
+      "commit": "4a4be1c8",
       "test_evidence": [
         "python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py -q: 18 passed.",
         "python -m mypy src/financial_brain/portfolio/canonical_ledger.py --ignore-missing-imports: passed.",
