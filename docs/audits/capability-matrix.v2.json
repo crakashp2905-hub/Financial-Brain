@@ -123,6 +123,17 @@
       "source": ["src/financial_brain/forward_edge/modes.py"],
       "tests": ["tests/test_forward_edge_f00.py"],
       "blockers": ["Physical orders are disabled by build policy and no human/compliance approval is recorded"]
+    },
+    {
+      "id": "etf-trend-mean-reversion-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 ETF trend, mean-reversion and volatility-target candidate calculator over exact caller-sourced closes; implementation contract only, not performance evidence or trade authorization.",
+      "evidence": ["tests/test_etf_trend_rules.py"],
+      "source": ["src/financial_brain/features/etf_trend_rules.py"],
+      "tests": ["tests/test_etf_trend_rules.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No benchmark, costs, capacity, tax, turnover, drawdown or prospective evidence evaluated"]
     }
   ]
 }

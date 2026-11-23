@@ -2259,14 +2259,21 @@
       "id": "FB-0502",
       "text": "Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive tests.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Generic equity indicators and ranking infrastructure exist, but no ETF-specific, pre-registered trend, moving-average, mean-reversion and volatility-sizing strategy family was found."
+        "Frozen v1.0.0 candidate contract in docs/edge-program/etf-trend-mean-reversion-v1.md defines trend continuation, moving-average continuation, medium-horizon mean reversion and volatility-target sizing before any performance evaluation.",
+        "src/financial_brain/features/etf_trend_rules.py implements 50/200 and 20/50 trend flags, a fixed 20-session z-score threshold, 20-session volatility sizing target, exact sourced close requirements, frozen strategy/input hashes, and candidate-only/no-order output.",
+        "Research governance remains closed: Q4-2026 is exhausted and Q1-2027 is not authorized. No decisive test, backtest, prospective cohort, parameter search, or profitability claim was made."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "blocker": "Partial: candidate family is frozen and contract-tested, but no authorized performance evaluation, realistic cost/capacity/tax/benchmark controls, or prospective paper evidence exists. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T10:00:00+00:00",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "test_result": "Four focused contract tests pass for deterministic rules and hashes, exact sourced history/no-fill policy, calendar and SHA validation, volatility sizing bounds, and the no-order candidate boundary. These are software tests only; profitability is untested.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_trend_rules.py -q: 4 passed.",
+        "python -m pytest tests/test_etf_trend_rules.py tests/test_etf_momentum.py -q: 9 passed.",
+        "Ruff passed for the new module and tests; scoped mypy passed for the new module."
+      ]
     },
     {
       "id": "FB-0503",
@@ -15680,7 +15687,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T08:30:00Z",
+    "as_of_utc": "2026-11-24T10:00:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15931,11 +15938,11 @@
     ],
     "audited_count": 246,
     "status_counts": {
-      "UNASSESSED": 1132,
-      "NOT_STARTED": 14,
-      "PARTIAL": 189,
       "COMPLETE": 42,
-      "EXTERNAL_BLOCKED": 1
+      "EXTERNAL_BLOCKED": 1,
+      "NOT_STARTED": 13,
+      "PARTIAL": 190,
+      "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16007,13 +16014,13 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made."
   },
   "counts_by_status": {
-    "UNASSESSED": 1132,
-    "NOT_STARTED": 14,
-    "PARTIAL": 189,
     "COMPLETE": 42,
-    "EXTERNAL_BLOCKED": 1
+    "EXTERNAL_BLOCKED": 1,
+    "NOT_STARTED": 13,
+    "PARTIAL": 190,
+    "UNASSESSED": 1132
   }
 }

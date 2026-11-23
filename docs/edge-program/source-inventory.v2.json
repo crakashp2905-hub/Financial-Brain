@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 684,
+  "source_count": 685,
   "sources": [
     {
       "capability_ids": [],
@@ -3000,6 +3000,29 @@
       "source": "src/financial_brain/features/etf_pricing.py",
       "source_sha256": "a4b71054dda047312e43f6d49aa89777eb203c6c81ad9161274fc433cf7fe91e",
       "test_paths": []
+    },
+    {
+      "capability_ids": [
+        "etf-trend-mean-reversion-candidate"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_trend_rules.py",
+      "source_sha256": "287fafc872c91117af2ac1bd20d498d9fed317da515b62ebdc0d770ab1c25750",
+      "test_paths": [
+        "tests/test_etf_trend_rules.py"
+      ]
     },
     {
       "capability_ids": [],
