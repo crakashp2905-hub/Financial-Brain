@@ -39,7 +39,7 @@
       ],
       "blocker": "The inventory now covers 490 trader-core modules, 24 owner/symbol capability contracts, and 31 historical/external strategy source records. Internal executable strategy functions and families are not yet reconciled one-to-one with the StrategySpec and AlgorithmSpec lifecycle registries, so a complete per-strategy ownership claim remains premature.",
       "last_audited_at_utc": "2026-11-23T17:24:47Z",
-      "commit": "b4158612",
+      "commit": "19a5eec904e902131be0d26583b8dc37b5c42214",
       "artifact_sha256": "5432cc3ddeae87785b95bb805dbe910a02a9e80ab5935560e8a9e591f3802f26",
       "test_evidence": [
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed",
@@ -5620,7 +5620,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T17:24:47Z",
-      "commit": null,
+      "commit": "19a5eec904e902131be0d26583b8dc37b5c42214",
       "test_evidence": [
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed; 718 Python sources.",
         "python scripts/forward_engine_graph.py --check: passed.",
