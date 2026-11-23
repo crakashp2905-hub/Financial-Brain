@@ -55,6 +55,27 @@ def test_explicit_source_exchange_and_publication_timestamps_roundtrip() -> None
     assert event.as_dict()["available_at"] == event.available_at.isoformat()
 
 
+def test_source_dedupe_hash_ignores_local_delivery_clocks_but_binds_source_identity() -> None:
+    event = _event(EventKind.QUOTE, {"bid": 100, "ask": 101},
+                   source_at=T0 - timedelta(seconds=1))
+    redelivery = _event(EventKind.QUOTE, {"bid": 100, "ask": 101},
+                        source_at=T0 - timedelta(seconds=1),
+                        received_at=T0 + timedelta(seconds=3),
+                        available_at=T0 + timedelta(seconds=4),
+                        decision_time=T0 + timedelta(seconds=5))
+    changed_payload = _event(EventKind.QUOTE, {"bid": 100, "ask": 102},
+                             source_at=T0 - timedelta(seconds=1))
+    assert event.dedupe_sha256() == redelivery.dedupe_sha256()
+    assert event.dedupe_sha256() != changed_payload.dedupe_sha256()
+
+
+def test_revision_reference_roundtrips_and_rejects_self_reference() -> None:
+    event = _event(EventKind.QUOTE, {"bid": 100, "ask": 101}, revision_of="evt-0")
+    assert MarketEvent.from_dict(event.as_dict()) == event
+    with pytest.raises(MarketEventError, match="different non-empty"):
+        _event(EventKind.QUOTE, {"bid": 100, "ask": 101}, revision_of="evt-1")
+
+
 def test_publication_cannot_follow_strategy_availability() -> None:
     with pytest.raises(MarketEventError, match="before publication"):
         _event(EventKind.TICK, {"price": 10}, published_at=T0 + timedelta(seconds=4))

@@ -60,6 +60,7 @@ class MarketEvent:
     source_at: datetime | None = None
     exchange_at: datetime | None = None
     published_at: datetime | None = None
+    revision_of: str | None = None
 
     def __post_init__(self) -> None:
         if not all(isinstance(x, str) and x.strip() for x in
@@ -78,6 +79,12 @@ class MarketEvent:
                 object.__setattr__(self, name, _utc(value, name))
         if self.published_at is not None and self.published_at > self.available_at:
             raise MarketEventError("event cannot be available to strategy before publication")
+        if self.revision_of is not None and (
+            not isinstance(self.revision_of, str)
+            or not self.revision_of.strip()
+            or self.revision_of == self.event_id
+        ):
+            raise MarketEventError("revision_of must identify a different non-empty event ID")
         if self.sequence is not None and (type(self.sequence) is not int or self.sequence < 0):
             raise MarketEventError("sequence must be a non-negative integer")
         if not isinstance(self.payload, dict):
@@ -137,10 +144,30 @@ class MarketEvent:
             value = getattr(self, name)
             if value is not None:
                 result[name] = value.isoformat()
+        if self.revision_of is not None:
+            result["revision_of"] = self.revision_of
         return result
 
     def sha256(self) -> str:
         raw = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def dedupe_sha256(self) -> str:
+        """Hash source identity and payload, excluding local receipt/availability clocks."""
+        payload = json.dumps(self.payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        source_clock = self.source_at or self.exchange_at or self.event_time
+        body = {
+            "event_id": self.event_id,
+            "kind": self.kind.value,
+            "venue": self.venue,
+            "instrument_id": self.instrument_id,
+            "source": self.source,
+            "sequence": self.sequence,
+            "source_clock": source_clock.isoformat(),
+            "payload_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+            "revision_of": self.revision_of,
+        }
+        raw = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     @classmethod
