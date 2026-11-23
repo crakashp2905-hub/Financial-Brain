@@ -2962,7 +2962,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_momentum.py",
-      "source_sha256": "91900e3e0e8eb4487935827eeb8e40b2f56b1409829a5b74b83c892fb6cb2dd2",
+      "source_sha256": "bfb35c9e7da7b0822d094f005b4752a680bd20842ad4c598cc6d084e9c5506c9",
       "test_paths": []
     },
     {

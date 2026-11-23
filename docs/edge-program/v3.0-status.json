@@ -2239,18 +2239,19 @@
         "docs/edge-program/etf-momentum-cross-sectional-v1.md freezes the rule before any performance evaluation and explicitly requires research authorization.",
         "src/financial_brain/features/etf_momentum.py::rank_etf_momentum implements 21/63/126/252-session equal-weight cross-sectional percentile ranks with source-backed underlying/exposure/exchange grouping, point-in-time reference checks and missing-endpoint refusal.",
         "The ranker emits research candidates only; no order path or profitability claim is included.",
-        "src/financial_brain/features/etf_momentum.py tags candidates with ETF_CS_MOMENTUM v1.0.0 and a deterministic frozen-spec SHA-256.",
-        "The ranker requires source hashes at each selected return endpoint and emits a deterministic per-candidate input digest."
+        "src/financial_brain/features/etf_momentum.py tags candidates with ETF_CS_MOMENTUM v1.1.0 and a deterministic frozen-spec SHA-256.",
+        "The ranker requires source hashes at each selected return endpoint and emits a deterministic per-candidate input digest.",
+        "Version 1.1.0 requires ordered unique sourced sessions, timezone-aware price availability no later than as_of, and SHA-256 source hashes for every selected return endpoint."
       ],
-      "blocker": "Partial: the pre-registered candidate ranker is implemented and contract-tested, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
-      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
+      "blocker": "Partial: the v1.1.0 pre-registered ranker is implemented and contract-tested with point-in-time sourced inputs, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
+      "last_audited_at_utc": "2026-11-23T23:32:39+00:00",
       "commit": "1ce81e1b",
-      "test_result": "Four focused tests pass for the frozen ranker contract, including deterministic ordering, exposure/index grouping, no data filling and no use of future metadata. These are implementation tests only; they provide no evidence of profitable alpha.",
+      "test_result": "Five focused contract tests pass for fixed horizons, deterministic ordering, exposure/index grouping, point-in-time reference and close availability, source hashes, duplicate-session rejection, missing-data refusal and invalid prices. Tests establish implementation behavior only and provide no evidence of profitable alpha.",
       "test_evidence": [
-        "tests/test_etf_momentum.py covers fixed horizons, tie-stable deterministic ranking, point-in-time reference eligibility, exposure grouping, missing endpoint exclusion, invalid price refusal and future-session rejection.",
-        "python -m pytest tests/test_etf_momentum.py -q --basetemp=.pytest-checklist-etf-momentum: 4 passed.",
+        "tests/test_etf_momentum.py covers fixed horizons, tie-stable ranking, point-in-time reference and close availability, exposure grouping, endpoint source hashes, missing data, invalid prices, duplicate/future sessions and deterministic hashes.",
+        "python -m pytest tests/test_etf_momentum.py -q --basetemp=.pytest-checklist-etf-momentum-v1_1-final: 5 passed.",
         "Ruff and scoped mypy passed for etf_momentum.py and tests/test_etf_momentum.py.",
-        "Repeatability test verifies fixed strategy-spec and endpoint-input hashes on the same sourced inputs."
+        "Repeatability test verifies v1.1.0 fixed strategy-spec and endpoint-input hashes on the same sourced inputs."
       ]
     },
     {
@@ -15667,7 +15668,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T23:27:43Z",
+    "as_of_utc": "2026-11-23T23:32:39Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15994,7 +15995,7 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending."
   },
   "counts_by_status": {
     "UNASSESSED": 1132,

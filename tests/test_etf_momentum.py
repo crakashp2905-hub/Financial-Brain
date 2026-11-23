@@ -30,6 +30,11 @@ def _hashes(isins: list[str], sessions: list[date]) -> dict[str, dict[date, str]
     return {isin: {day: (f"{index + 1:064x}") for index, day in enumerate(sessions)} for isin in isins}
 
 
+def _availability(isins: list[str], sessions: list[date]) -> dict[str, dict[date, datetime]]:
+    return {isin: {day: datetime.combine(day, time(22), timezone.utc) for day in sessions}
+            for isin in isins}
+
+
 def test_fixed_horizon_rank_is_deterministic_and_within_comparable_exposure() -> None:
     sessions = [date(2025, 1, 1) + timedelta(days=i) for i in range(260)]
     as_of = datetime.combine(sessions[-1], time(23, 59), timezone.utc)
@@ -48,8 +53,10 @@ def test_fixed_horizon_rank_is_deterministic_and_within_comparable_exposure() ->
     }
 
     hashes = _hashes(list(prices), sessions)
+    availability = _availability(list(prices), sessions)
     ranked = rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                                closes_by_isin=prices, source_hashes_by_isin=hashes,
+                               available_at_by_isin=availability,
                                references=records)
 
     assert [row.symbol for row in ranked] == ["ETFHI", "ETFMID", "ETFLOW"]
@@ -59,6 +66,7 @@ def test_fixed_horizon_rank_is_deterministic_and_within_comparable_exposure() ->
     assert all(len(row.strategy_spec_sha256) == len(row.price_input_sha256) == 64 for row in ranked)
     assert rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                              closes_by_isin=prices, source_hashes_by_isin=hashes,
+                             available_at_by_isin=availability,
                              references=records) == ranked
 
 
@@ -71,17 +79,20 @@ def test_missing_horizon_endpoint_and_not_yet_observed_reference_are_excluded() 
     prices = {row.isin: _prices(sessions, 0.05 + i * 0.02) for i, row in enumerate(records)}
     del prices["INE000A01001"][sessions[-1 - HORIZONS_SESSIONS[0]]]
 
+    hashes = _hashes(list(prices), sessions)
+    availability = _availability(list(prices), sessions)
     ranked = rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                                closes_by_isin=prices,
-                               source_hashes_by_isin=_hashes(list(prices), sessions),
+                               source_hashes_by_isin=hashes,
+                               available_at_by_isin=availability,
                                references=records)
 
     assert [row.symbol for row in ranked] == ["THREE", "TWO"]
 
-    hashes = _hashes(list(prices), sessions)
     del hashes["INE000A01002"][sessions[-1 - HORIZONS_SESSIONS[-1]]]
     assert rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                              closes_by_isin=prices, source_hashes_by_isin=hashes,
+                             available_at_by_isin=availability,
                              references=records) == []
 
 
@@ -96,6 +107,7 @@ def test_unverified_and_stale_reference_exposure_categories_do_not_form_a_cohort
 
     assert rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                              closes_by_isin=prices, source_hashes_by_isin=_hashes(list(prices), sessions),
+                             available_at_by_isin=_availability(list(prices), sessions),
                              references=records) == []
 
 
@@ -108,9 +120,30 @@ def test_invalid_prices_and_future_sessions_fail_closed() -> None:
     with pytest.raises(ValueError, match="finite positive"):
         rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
                           closes_by_isin=prices, source_hashes_by_isin=_hashes(list(prices), sessions),
+                          available_at_by_isin=_availability(list(prices), sessions),
                           references=records)
 
     with_future = sessions + [sessions[-1] + timedelta(days=1)]
     with pytest.raises(ValueError, match="cannot follow as_of"):
         rank_etf_momentum(as_of=as_of, expected_sessions=with_future,
-                          closes_by_isin={}, source_hashes_by_isin={}, references=[])
+                          closes_by_isin={}, source_hashes_by_isin={}, available_at_by_isin={}, references=[])
+    with pytest.raises(ValueError, match="unique, ordered"):
+        rank_etf_momentum(as_of=as_of, expected_sessions=sessions + [sessions[-1]],
+                          closes_by_isin={}, source_hashes_by_isin={}, available_at_by_isin={}, references=[])
+
+
+def test_price_endpoint_not_yet_available_at_as_of_is_excluded() -> None:
+    sessions = [date(2025, 1, 1) + timedelta(days=i) for i in range(260)]
+    as_of = datetime.combine(sessions[-1], time(23, 59), timezone.utc)
+    records = [_record("ONE", "INE000A01001"), _record("TWO", "INE000A01002"),
+               _record("THREE", "INE000A01004")]
+    prices = {row.isin: _prices(sessions, 0.05 + i * 0.02) for i, row in enumerate(records)}
+    availability = _availability(list(prices), sessions)
+    availability["INE000A01001"][sessions[-1]] = as_of + timedelta(seconds=1)
+
+    ranked = rank_etf_momentum(as_of=as_of, expected_sessions=sessions,
+                               closes_by_isin=prices,
+                               source_hashes_by_isin=_hashes(list(prices), sessions),
+                               available_at_by_isin=availability, references=records)
+
+    assert [row.symbol for row in ranked] == ["THREE", "TWO"]
