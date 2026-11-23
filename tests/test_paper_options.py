@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 
 from financial_brain.paper.options import Quote, OptionPaperError, cost_hurdle, long_round_trip
+from financial_brain.kernel.units import OptionLots
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -34,3 +35,12 @@ def test_missing_liquidity_or_contract_mismatch_cannot_be_paper_filled():
 def test_option_cost_hurdle_requires_executable_reward():
     assert not cost_hurdle(quote(), lots=1, expected_exit_bid=101.01)["passes"]
     assert cost_hurdle(quote(), lots=1, expected_exit_bid=110)["passes"]
+
+
+def test_option_lot_unit_is_enforced_at_fill_and_cost_boundaries():
+    result = long_round_trip(quote(), quote(hour=11, bid=106, ask=107), lots=OptionLots(2))
+    assert result["lots"] == 2 and result["quantity"] == 130
+    assert cost_hurdle(quote(), lots=OptionLots(1), expected_exit_bid=110)["passes"]
+    for invalid in (True, 1.0, 0, -1):
+        with pytest.raises(OptionPaperError, match="lots"):
+            long_round_trip(quote(), quote(hour=11, bid=106, ask=107), lots=invalid)

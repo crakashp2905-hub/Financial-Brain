@@ -9,10 +9,23 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from ..costs.india import CostModel, Segment, Side
+from ..kernel.units import OptionLots, UnitError
 
 
 class OptionPaperError(ValueError):
     pass
+
+
+def option_lot_count(value: int | OptionLots) -> int:
+    """Normalize option-lot inputs; bools and non-integer numbers are never lots."""
+    if isinstance(value, OptionLots):
+        return value.lots
+    if type(value) is not int:
+        raise OptionPaperError("lots must be a positive OptionLots value or integer")
+    try:
+        return OptionLots(value).lots
+    except UnitError as exc:
+        raise OptionPaperError("lots must be a positive OptionLots value or integer") from exc
 
 
 @dataclass(frozen=True)
@@ -34,16 +47,17 @@ class Quote:
             raise OptionPaperError("option quote needs an aware timestamp before expiry")
 
 
-def long_round_trip(entry: Quote, exit: Quote, *, lots: int = 1,
+def long_round_trip(entry: Quote, exit: Quote, *, lots: int | OptionLots = 1,
                     costs: CostModel | None = None) -> dict:
     """Buy at observed ask; close at later observed bid, before expiry."""
     entry.validate()
     exit.validate()
     if (entry.token, entry.symbol, entry.expiry, entry.lot_size) != (exit.token, exit.symbol, exit.expiry, exit.lot_size):
         raise OptionPaperError("entry and exit must be the same contract")
-    if exit.observed_at <= entry.observed_at or lots <= 0:
+    lot_count = option_lot_count(lots)
+    if exit.observed_at <= entry.observed_at:
         raise OptionPaperError("exit must follow entry and lots must be positive")
-    qty = lots * entry.lot_size
+    qty = lot_count * entry.lot_size
     if entry.ask_qty < qty or exit.bid_qty < qty:
         raise OptionPaperError("visible top-of-book quantity cannot fill the paper order")
     model = costs or CostModel()
@@ -54,20 +68,21 @@ def long_round_trip(entry: Quote, exit: Quote, *, lots: int = 1,
                              include_impact=False)["total"]
     gross = exit_value - entry_value
     return {"contract": entry.symbol, "token": entry.token, "expiry": entry.expiry,
-            "entry_at": entry.observed_at, "exit_at": exit.observed_at, "lots": lots,
+            "entry_at": entry.observed_at, "exit_at": exit.observed_at, "lots": lot_count,
             "quantity": qty, "entry_premium_inr": entry_value, "exit_premium_inr": exit_value,
             "gross_pnl_inr": gross, "charges_inr": buy_fee + sell_fee,
             "net_pnl_inr": gross - buy_fee - sell_fee,
             "spread_paid_in_prices": True, "settlement_modelled": False}
 
 
-def cost_hurdle(entry: Quote, *, lots: int, expected_exit_bid: float,
+def cost_hurdle(entry: Quote, *, lots: int | OptionLots, expected_exit_bid: float,
                 costs: CostModel | None = None) -> dict:
     """Reject a proposed option buy unless expected executable exit pays charges."""
     entry.validate()
-    if lots <= 0 or expected_exit_bid <= 0:
+    lot_count = option_lot_count(lots)
+    if expected_exit_bid <= 0:
         raise OptionPaperError("positive lots and expected exit bid required")
-    qty = lots * entry.lot_size
+    qty = lot_count * entry.lot_size
     if entry.ask_qty < qty:
         return {"passes": False, "reason": "insufficient visible ask quantity"}
     model = costs or CostModel()

@@ -9318,13 +9318,14 @@
         "__future__",
         "costs.india",
         "dataclasses",
-        "datetime"
+        "datetime",
+        "kernel.units"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options.py",
-      "source_sha256": "afd6d05c3dc743b25eb193a9beb11d1d00838e73e59f9a78c1aa34e1fbedb696",
+      "source_sha256": "54fff47562ba06366483b65eec8112e5205177fca7825111fd14ac0223be118e",
       "test_paths": []
     },
     {
@@ -9356,6 +9357,7 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "kernel.units",
         "math",
         "options",
         "typing"
@@ -9364,7 +9366,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_plan.py",
-      "source_sha256": "c49d9077b66232402ac41703486cd2f6f39a0626b368e9751b7cedc20d66e357",
+      "source_sha256": "1fa3dc5b50360cbc36720a34c5dd4925701009e275f62acc8d273db0438aabc1",
       "test_paths": []
     },
     {
@@ -9376,13 +9378,14 @@
         "dataclasses",
         "datetime",
         "financial_brain.forward_edge.evidence_labels",
+        "kernel.units",
         "options"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_runner.py",
-      "source_sha256": "271f14fb703ee3e0e6dd9cae3b59b8d0e3aa0ba67daaae1dd1001713b2696706",
+      "source_sha256": "ac8775aecdbde27718cc94b7253c3bbe015573593d9eb850a3fb1377f8a64121",
       "test_paths": []
     },
     {
