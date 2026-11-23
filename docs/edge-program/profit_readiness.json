@@ -6,7 +6,7 @@
         {
           "json_pointer": "/business_objective/current_status",
           "path": "docs/edge-program/product-charter.v1.json",
-          "sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239"
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
         }
       ],
       "id": "prospective_net_profitability",
@@ -17,12 +17,12 @@
       "evidence": [
         {
           "path": "docs/forward-edge/capital-risk-proposal-template.md",
-          "sha256": "152bf7aabd4da61a48f1ddef48966ceedd1d07d8fccf5f057465aeaeff40a446"
+          "sha256": "0c07d747bb5943da8555ad13ac3031ddc39fb10f8d4e15eb3680241ac7b7bdc1"
         },
         {
           "json_pointer": "/execution_policy/live_cash",
           "path": "docs/edge-program/product-charter.v1.json",
-          "sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239"
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
         }
       ],
       "id": "owner_approved_capital_limits",
@@ -33,7 +33,7 @@
       "evidence": [
         {
           "path": "docs/forward-edge/trial-program.v1.json",
-          "sha256": "944e1a8b5ddade66dd35c11147e11567af9d9b07a7c7f0ec1c5e5f3fbfa65f00"
+          "sha256": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e"
         },
         {
           "path": "docs/trials/ledger.jsonl",
@@ -96,7 +96,7 @@
         {
           "json_pointer": "/execution_policy/physical_orders_enabled",
           "path": "docs/edge-program/product-charter.v1.json",
-          "sha256": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239"
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
         }
       ],
       "id": "physical_order_safety",
@@ -105,10 +105,10 @@
     }
   ],
   "generated_from": {
-    "docs/edge-program/product-charter.v1.json": "3f5d2af9fa44be4f4020b858b58b7b096956f079ce889430aef9a8499dd9e239",
-    "docs/forward-edge/capital-risk-proposal-template.md": "152bf7aabd4da61a48f1ddef48966ceedd1d07d8fccf5f057465aeaeff40a446",
+    "docs/edge-program/product-charter.v1.json": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949",
+    "docs/forward-edge/capital-risk-proposal-template.md": "0c07d747bb5943da8555ad13ac3031ddc39fb10f8d4e15eb3680241ac7b7bdc1",
     "docs/forward-edge/protected-pins.json": "f5c289fc893abec6dfad84a3f55be073bbc74f4e8c349e742fdb78d29c739c1d",
-    "docs/forward-edge/trial-program.v1.json": "944e1a8b5ddade66dd35c11147e11567af9d9b07a7c7f0ec1c5e5f3fbfa65f00",
+    "docs/forward-edge/trial-program.v1.json": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e",
     "docs/trials/ledger.jsonl": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
   },
   "overall": "RED",

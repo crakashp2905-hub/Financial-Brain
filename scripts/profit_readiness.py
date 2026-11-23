@@ -27,7 +27,7 @@ def _bytes(path: Path, *, normalize_eol: bool = False) -> bytes:
     return raw.replace(b"\r\n", b"\n") if normalize_eol else raw
 
 
-def _evidence(path: Path, *, pointer: str | None = None, normalize_eol: bool = False) -> dict[str, str]:
+def _evidence(path: Path, *, pointer: str | None = None, normalize_eol: bool = True) -> dict[str, str]:
     digest = hashlib.sha256(_bytes(path, normalize_eol=normalize_eol)).hexdigest()
     result = {"path": path.as_posix(), "sha256": digest}
     if pointer:
@@ -102,7 +102,7 @@ def build_report() -> dict[str, Any]:
         "overall": overall,
         "decision": "NOT_READY_FOR_PROFITABILITY_CLAIM" if overall == "RED" else "REVIEW_REQUIRED",
         "generated_from": {
-            path.as_posix(): _evidence(path, normalize_eol=path == TRIAL_LEDGER)["sha256"]
+            path.as_posix(): _evidence(path)["sha256"]
             for path in (PRODUCT, TRIAL_PROGRAM, TRIAL_LEDGER, PINS, PROPOSAL)
         },
         "gates": gates,

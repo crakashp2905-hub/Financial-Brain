@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -28,3 +29,13 @@ def test_readiness_rejects_percentage_fields_and_check_detects_edits(tmp_path, m
     expected = profit_readiness.render()
     assert json.loads(expected)["overall"] == "RED"
     assert output.read_text(encoding="utf-8") != expected
+
+
+def test_evidence_hashes_are_independent_of_checkout_line_endings(tmp_path, monkeypatch):
+    source = tmp_path / "source.json"
+    source.write_bytes(b'{\r\n  "status": "UNKNOWN"\r\n}\r\n')
+    monkeypatch.setattr(profit_readiness, "ROOT", tmp_path)
+    crlf_digest = profit_readiness._evidence(Path("source.json"))["sha256"]
+    source.write_bytes(b'{\n  "status": "UNKNOWN"\n}\n')
+    lf_digest = profit_readiness._evidence(Path("source.json"))["sha256"]
+    assert crlf_digest == lf_digest

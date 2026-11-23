@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Normalize evidence hashes in the profitability-readiness snapshot across Windows and Linux checkout line endings, with a regression test.
 - Add a deterministic provider/product data-use matrix covering private research, retained history, realtime algorithmic use, derivatives depth, synthetic/replay, paper simulation, redistribution, and permitted retention; unknown rights remain blocked.
 - Generate per-platform release provenance and candidate-audit artifacts in CI, binding the tested source commit to JUnit/coverage hashes, portability checks, strategy-rule hashes, this changelog, and the recorded market-data rights posture.
 - Keep permissions marked `UNKNOWN_RIGHTS` as explicit unresolved evidence; the manifest must not imply those uses are authorized.
