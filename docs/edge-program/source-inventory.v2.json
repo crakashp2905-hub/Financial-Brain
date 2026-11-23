@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 718,
+  "source_count": 719,
   "sources": [
     {
       "capability_ids": [],
@@ -4516,6 +4516,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/horizon_freeze.py",
       "source_sha256": "e60c53e6e9cfef4db68a0aaecaa09f335272d7f243bb6edd37bb3d9fe4f8cc77",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "hashlib",
+        "json",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/instrument_master.py",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1",
       "test_paths": []
     },
     {
@@ -12701,6 +12721,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 703,
-  "unassigned_role_count": 320
+  "unassessed_count": 704,
+  "unassigned_role_count": 321
 }

@@ -1,6 +1,6 @@
 {
   "authority_map": "docs/edge-program/authoritative-contracts.v1.json",
-  "candidate_count": 1624,
+  "candidate_count": 1629,
   "candidates": [
     {
       "canonical_contract_ids": [],
@@ -3066,6 +3066,56 @@
       "line": 69,
       "related_role": "UNREVIEWED",
       "source_sha256": "e60c53e6e9cfef4db68a0aaecaa09f335272d7f243bb6edd37bb3d9fe4f8cc77"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/instrument_master.py::InstrumentMasterError",
+      "kind": "class",
+      "line": 17,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/instrument_master.py::NoOptionTrade",
+      "kind": "class",
+      "line": 21,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/instrument_master.py::InstrumentRecord",
+      "kind": "class",
+      "line": 57,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/instrument_master.py::InstrumentAdjustment",
+      "kind": "class",
+      "line": 162,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/instrument_master.py::InstrumentMaster",
+      "kind": "class",
+      "line": 187,
+      "related_role": "UNREVIEWED",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
     },
     {
       "canonical_contract_ids": [],
@@ -16652,7 +16702,7 @@
     "evaluation": 387,
     "execution": 91,
     "forecasting": 41,
-    "forward_edge": 633,
+    "forward_edge": 638,
     "paper": 244,
     "portfolio": 48,
     "risk": 63,
@@ -17505,7 +17555,7 @@
       "name": "write"
     }
   ],
-  "module_count": 301,
+  "module_count": 302,
   "modules": [
     {
       "domain": "forward_edge",
@@ -17791,6 +17841,11 @@
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/horizon_freeze.py",
       "source_sha256": "e60c53e6e9cfef4db68a0aaecaa09f335272d7f243bb6edd37bb3d9fe4f8cc77"
+    },
+    {
+      "domain": "forward_edge",
+      "path": "src/financial_brain/forward_edge/instrument_master.py",
+      "source_sha256": "10f43f3a67b9a7edcd940a0bf1733caf23be7e42a80f6b2778d131548eaa59d1"
     },
     {
       "domain": "forward_edge",
@@ -19016,5 +19071,5 @@
   "schema": "fb.entrypoint-inventory.v1",
   "scope": "Public top-level Python functions/classes only across the seven checklist domains plus portfolio accounting. Static candidates are not proof of shared semantics. Private names, methods, dynamically registered callables and external schedulers are excluded.",
   "unresolved_contract_owner_ids": [],
-  "unreviewed_candidate_count": 1467
+  "unreviewed_candidate_count": 1472
 }

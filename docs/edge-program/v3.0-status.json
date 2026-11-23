@@ -5885,22 +5885,43 @@
     {
       "id": "PA-02-04",
       "text": "Build a source-aware instrument master with time-varying ISIN, futures/options contract token, strike, right, lot, tick, expiry, adjustments and source timestamp.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/instrument_master.py and docs/edge-program/instrument-master.v1.schema.json define a source-aware, hash-bound effective-dated master for equity/ETF/future/option identities, provider tokens, ISINs, contract terms, corporate adjustments and source timestamps.",
+        "Exact option resolution returns NO_OPTION_TRADE when a source-backed listed contract does not exist; overlapping token history and content-hash mismatch are rejected.",
+        "src/financial_brain/forward_edge/instrument_rules.py remains a separate effective-dated order rule book for tick, lot, freeze, expiry and status.",
+        "docs/edge-program/instrument-master-design-audit-2026-11-24.md records implemented scope and missing live source records."
+      ],
+      "blocker": "The repository has no authorized retained provider instrument-master snapshots or historical source ingestion/reconciliation path; applicable retention/replay rights remain UNKNOWN_RIGHTS.",
+      "last_audited_at_utc": "2026-11-23T18:49:49Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_instrument_master.py -q --basetemp=.pytest-tmp-pa0204c: 12 passed, including JSON schema validation and exact option expiry behavior.",
+        "python -m ruff check src/financial_brain/forward_edge/instrument_master.py tests/test_forward_edge_instrument_master.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/instrument_master.py: passed.",
+        "Source, capability ownership, entry-point and forward-engine dependency snapshots were regenerated and verified."
+      ],
+      "test_result": "Instrument identity history, source timestamps, provider tokens, contract terms, corporate adjustments and exact option availability are validated; production/provider coverage is not yet established."
     },
     {
       "id": "PA-02-05",
       "text": "Reconcile 15-minute index symbols to actually optionable underlyings and currently listed contracts; unavailable contract means `NO_OPTION_TRADE`, never a generated strike.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "InstrumentMaster.reconcile_optionable_underlyings derives eligibility only from effective, unexpired OPTION records for the selected source and exact canonical underlying.",
+        "InstrumentMaster.resolve_option requires an exact listed expiry/strike/right contract; missing, expired or mismatched contract requests return NO_OPTION_TRADE and do not generate a strike.",
+        "docs/edge-program/instrument-master-design-audit-2026-11-24.md describes the contract-level gate and the missing populated market universe."
+      ],
+      "blocker": "No authorized point-in-time 15-minute index-member universe or retained source-backed options master is available to demonstrate coverage against currently listed contracts.",
+      "last_audited_at_utc": "2026-11-23T18:49:49Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_instrument_master.py -q --basetemp=.pytest-tmp-pa0204c: 12 passed; tests assert listed underlyings are OPTIONABLE and missing/expired contracts are NO_OPTION_TRADE.",
+        "Scoped Ruff and mypy passed; source and forward-engine inventory checks were regenerated."
+      ],
+      "test_result": "Exact contract lookup cannot fabricate options and fail-closes missing or expired listings; completeness against actual index constituents and provider listings remains unproven."
     },
     {
       "id": "PA-02-06",
@@ -15818,6 +15839,8 @@
       "PA-02-01",
       "PA-02-02",
       "PA-02-03",
+      "PA-02-04",
+      "PA-02-05",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15840,13 +15863,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 279,
+    "audited_count": 281,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 215,
-      "UNASSESSED": 1099
+      "PARTIAL": 217,
+      "UNASSESSED": 1097
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15967,7 +15990,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 215,
-    "UNASSESSED": 1099
+    "PARTIAL": 217,
+    "UNASSESSED": 1097
   }
 }
