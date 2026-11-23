@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from dataclasses import replace
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -21,6 +22,7 @@ from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_market_clocks
 
 IST = ZoneInfo("Asia/Kolkata")
+SYNTHETIC_FIXTURE_SOURCES = frozenset({"FIXTURE", "SYNTHETIC_FIXTURE", "SYNTHETIC_FIXTURE_REPLAY"})
 
 
 class KiteQuoteNormalizationError(ValueError):
@@ -324,6 +326,45 @@ def fixture_feed(path: Path) -> list[NormalizedEvent]:
             payload=tuple(sorted((k, str(v)) for k, v in row.get("payload", {}).items())),
         ))
     return sorted(events, key=lambda e: (e.event_utc, e.instrument, e.kind))
+
+
+def delayed_fixture_replay(events: list[MarketEvent], *, delay: timedelta) -> list[MarketEvent]:
+    """Replay only explicit synthetic events with deterministic delayed receipt/availability.
+
+    Each emitted event is visibly labeled ``SYNTHETIC_FIXTURE_REPLAY`` and carries an
+    evidence ID hashing its source event digest, replay mode, and configured delay. Real
+    provider/exchange events are refused so a replay cannot be relabeled as market data.
+    Source event clocks remain unchanged; receipt and strategy availability are delayed.
+    """
+    if not isinstance(delay, timedelta) or delay < timedelta(0):
+        raise ValueError("fixture replay delay must be a non-negative timedelta")
+    if len({event.event_id for event in events}) != len(events):
+        raise ValueError("fixture replay input contains duplicate event IDs")
+    replayed: list[MarketEvent] = []
+    for event in events:
+        if event.source.strip().upper() not in SYNTHETIC_FIXTURE_SOURCES:
+            raise ValueError("delayed fixture replay accepts synthetic fixture events only")
+        source_digest = event.sha256()
+        basis = {"schema": "fb.synthetic_fixture_replay.v1",
+                 "source_event_sha256": source_digest,
+                 "delay_microseconds": (
+                     delay.days * 86_400_000_000 + delay.seconds * 1_000_000 + delay.microseconds)}
+        evidence_id = hashlib.sha256(json.dumps(
+            basis, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        event_id = f"fixture-replay:{evidence_id[:32]}"
+        payload = json.loads(json.dumps(event.payload, sort_keys=True, separators=(",", ":"), allow_nan=False))
+        replayed.append(replace(
+            event,
+            event_id=event_id,
+            received_at=event.received_at + delay,
+            available_at=event.available_at + delay,
+            payload=payload,
+            source="SYNTHETIC_FIXTURE_REPLAY",
+            evidence_id=evidence_id,
+            decision_time=None,
+        ))
+    return sorted(replayed, key=lambda event: (
+        event.available_at, event.sequence is None, event.sequence or 0, event.event_id))
 
 
 

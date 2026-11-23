@@ -4668,7 +4668,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad",
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"

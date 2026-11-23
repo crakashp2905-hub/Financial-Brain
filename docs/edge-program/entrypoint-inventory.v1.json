@@ -1,6 +1,6 @@
 {
   "authority_map": "docs/edge-program/authoritative-contracts.v1.json",
-  "candidate_count": 1634,
+  "candidate_count": 1635,
   "candidates": [
     {
       "canonical_contract_ids": [],
@@ -3393,9 +3393,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::KiteQuoteNormalizationError",
       "kind": "class",
-      "line": 26,
+      "line": 28,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3405,9 +3405,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::executable_quote",
       "kind": "function",
-      "line": 30,
+      "line": 32,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3417,9 +3417,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote",
       "kind": "function",
-      "line": 108,
+      "line": 110,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3429,9 +3429,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::archive_kite_quote_batch",
       "kind": "function",
-      "line": 206,
+      "line": 208,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3441,9 +3441,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::archive_kite_quote_batch_to_path",
       "kind": "function",
-      "line": 223,
+      "line": 225,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3453,9 +3453,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::DataError",
       "kind": "class",
-      "line": 240,
+      "line": 242,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3465,9 +3465,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::NormalizedEvent",
       "kind": "class",
-      "line": 254,
+      "line": 256,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3477,9 +3477,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::decision_visible",
       "kind": "function",
-      "line": 280,
+      "line": 282,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3489,9 +3489,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::Calendar",
       "kind": "class",
-      "line": 286,
+      "line": 288,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3501,9 +3501,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::load_calendar",
       "kind": "function",
-      "line": 305,
+      "line": 307,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3513,9 +3513,21 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::fixture_feed",
       "kind": "function",
-      "line": 314,
+      "line": 316,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
+    },
+    {
+      "canonical_contract_ids": [],
+      "contract_ids": [
+        "simulated_forward_execution"
+      ],
+      "domain": "forward_edge",
+      "id": "src/financial_brain/forward_edge/market_data.py::delayed_fixture_replay",
+      "kind": "function",
+      "line": 331,
+      "related_role": "SUPPORTING",
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3525,9 +3537,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::FeedHealth",
       "kind": "class",
-      "line": 332,
+      "line": 373,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3537,9 +3549,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::entry_allowed",
       "kind": "function",
-      "line": 339,
+      "line": 380,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3549,9 +3561,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::DecisionSnapshot",
       "kind": "class",
-      "line": 355,
+      "line": 396,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3561,9 +3573,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::Instrument",
       "kind": "class",
-      "line": 366,
+      "line": 407,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3573,9 +3585,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::instrument_gate",
       "kind": "function",
-      "line": 376,
+      "line": 417,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3585,9 +3597,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::option_quote_executable",
       "kind": "function",
-      "line": 389,
+      "line": 430,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3597,9 +3609,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::reconcile_close",
       "kind": "function",
-      "line": 399,
+      "line": 440,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3609,9 +3621,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::data_gate",
       "kind": "function",
-      "line": 407,
+      "line": 448,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3621,9 +3633,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::feature_at",
       "kind": "function",
-      "line": 425,
+      "line": 466,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -3633,9 +3645,9 @@
       "domain": "forward_edge",
       "id": "src/financial_brain/forward_edge/market_data.py::coverage",
       "kind": "function",
-      "line": 434,
+      "line": 475,
       "related_role": "SUPPORTING",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "canonical_contract_ids": [],
@@ -16752,7 +16764,7 @@
     "evaluation": 387,
     "execution": 91,
     "forecasting": 41,
-    "forward_edge": 643,
+    "forward_edge": 644,
     "paper": 244,
     "portfolio": 48,
     "risk": 63,
@@ -17930,7 +17942,7 @@
     {
       "domain": "forward_edge",
       "path": "src/financial_brain/forward_edge/market_data.py",
-      "source_sha256": "11b27f6aa01f641b07bf747fc1e99ae11c0bc054c86d49a67110b5fd5a6816ad"
+      "source_sha256": "92e1187327dc35d0d90bfc1d99c98740b3686301415e8930e3b5916e8760b570"
     },
     {
       "domain": "forward_edge",
