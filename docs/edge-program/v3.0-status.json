@@ -33,18 +33,20 @@
         "docs/edge-program/source-inventory.v2.json now inventories 716 Python files; 701 remain unassessed and 425 remain role-unassigned.",
         "docs/edge-program/forward-engine-dependency-graph.v1.json was regenerated from the same checkout and its --check passes.",
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check pass; tests/test_source_inventory.py and tests/test_phase2_graph.py: 22 passed.",
-        "docs/edge-program/capability-ownership.v1.json still provides broad domains rather than reviewed individual ownership for every strategy, feed, OMS, ledger, renderer and output."
+        "docs/edge-program/capability-ownership.v1.json still provides broad domains rather than reviewed individual ownership for every strategy, feed, OMS, ledger, renderer and output.",
+        "Expanded scripts/capability_ownership.py to recursively inventory strategy, provider, ingestion, OMS, portfolio, paper, signal, opportunity, interface, API and command modules, plus every source module named for OMS/orders/signals/ledger/journal/strategies. docs/edge-program/capability-ownership.v1.json now lists 24 capability contracts and 490 uniquely assigned modules; each contract has one canonical owner and symbol, and each of the 31 historical/external candidates has a source-record owner distinct from its catalogue owner."
       ],
-      "blocker": "Still partial: inventory covers Python sources only, 701 files remain unassessed, 425 have no role assignment, and every capability lacks a reviewed canonical owner mapping.",
-      "last_audited_at_utc": "2026-11-23T09:43:07Z",
-      "commit": "46efd66e70996b2495fdb462cb3f9a533092bb0c",
+      "blocker": "The inventory now covers 490 trader-core modules, 24 owner/symbol capability contracts, and 31 historical/external strategy source records. Internal executable strategy functions and families are not yet reconciled one-to-one with the StrategySpec and AlgorithmSpec lifecycle registries, so a complete per-strategy ownership claim remains premature.",
+      "last_audited_at_utc": "2026-11-23T15:14:00Z",
+      "commit": "b4158612",
       "artifact_sha256": "5432cc3ddeae87785b95bb805dbe910a02a9e80ab5935560e8a9e591f3802f26",
       "test_evidence": [
         "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed",
         "python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed",
-        "python -m pytest tests/test_source_inventory.py tests/test_phase2_graph.py -q: 22 passed"
+        "python -m pytest tests/test_source_inventory.py tests/test_phase2_graph.py -q: 22 passed",
+        "python scripts/capability_ownership.py --check: passed (24 capability contracts, 490 modules); python -m pytest tests/test_capability_ownership.py -q: 6 passed; python -m ruff check scripts/capability_ownership.py tests/test_capability_ownership.py: passed; git diff --check: passed."
       ],
-      "test_result": "The refreshed inventory and graph verify against this source tree; item-level capability ownership and semantic assessment remain incomplete."
+      "test_result": "Expanded inventory and ownership contract checks pass. All required source categories and module paths have owners; strategy execution definitions remain unreconciled across lifecycle registries."
     },
     {
       "id": "FB-0003",
@@ -15188,7 +15190,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T15:04:00Z",
+    "as_of_utc": "2026-11-23T15:14:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
