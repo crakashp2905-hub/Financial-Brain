@@ -342,9 +342,12 @@
         "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records typed adapter and forward OMS input contracts with persistence/recovery gaps.",
         "src/financial_brain/forward_edge/market_data.py validates Kite last/bid/ask/OHLC/circuit prices as INR Price and quote volume/depth quantities as WholeUnits before event scalar encoding.",
         "src/financial_brain/forward_edge/market_data.py::executable_quote rejects malformed or fractional deeper displayed quantities instead of truncating them.",
-        "docs/edge-program/financial-units-kite-market-data-audit-2026-11-24.md records the quote-ingress boundary and open repository-wide scope."
+        "docs/edge-program/financial-units-kite-market-data-audit-2026-11-24.md records the quote-ingress boundary and open repository-wide scope.",
+        "src/financial_brain/kernel/risk_sizing.py exposes typed RiskSizingResult views: Quantity, INR Price, planned INR risk and position INR notional while preserving legacy Decimal fields.",
+        "docs/edge-program/financial-units-risk-sizing-output-audit-2026-11-24.md documents the typed RiskSizingResult views and remaining integration work.",
+        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified after the kernel change."
       ],
-      "blocker": "Partial: typed boundaries cover cash paper accounts, Kite quote prices/depth, option lots/premiums, MF NAV ingest/books/SIP/SWP/STP/switch/account-ledger, risk-sizing inputs, forward signal inputs and forward OMS order inputs. Other provider adapters, persisted OMS/fill/accounting states, risk-sizing result values and repository-wide boundary verification remain incomplete.",
+      "blocker": "Partial: compatibility fixture-pipeline integration and repository-wide audit of remaining provider, OMS, accounting and output unit boundaries remain outstanding.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
       "commit": "a1afd784",
       "test_evidence": [
@@ -389,9 +392,16 @@
         "python -m pytest tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-checklist-forward-runner-full: 61 passed, including typed OMS execution and existing runner lifecycle/recovery cases.",
         "python -m pytest tests/test_forward_edge_kite_market_data.py -q --basetemp=.pytest-checklist-kite-units-final: 16 passed.",
         "python -m ruff check src/financial_brain/forward_edge/market_data.py tests/test_forward_edge_kite_market_data.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/market_data.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/forward_edge/market_data.py --follow-imports=silent: passed.",
+        "tests/test_risk_sizing.py::test_sizing_result_exposes_dimensionally_typed_quantity_price_and_inr_values",
+        "tests/test_risk_sizing.py::test_ineligible_sizing_result_keeps_zero_financial_outputs_typed",
+        "python -m pytest tests/test_risk_sizing.py -q --basetemp=.pytest-checklist-risk-typed-output: 7 passed",
+        "Ruff and scoped mypy passed for risk_sizing.py and tests/test_risk_sizing.py.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed (682 Python files).",
+        "python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed.",
+        "Checklist audit export and deterministic evidence bundle freshness checks passed."
       ],
-      "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, AMFI NAV ingest, MF lot purchase/allotment/redemption, SIP, SWP/STP, MF switches, MF ledger postings and risk-sizing inputs. Risk-sizing result contract and shared forward-pipeline integration remain outstanding, so this is partial."
+      "test_result": "Typed risk-sizing output views are covered for eligible and ineligible cases; all 7 focused risk-sizing tests pass, with Ruff and scoped mypy passing. Decimal compatibility fields remain. Fixture-pipeline integration and broader serialized interface audit remain outstanding."
     },
     {
       "id": "FB-0104",

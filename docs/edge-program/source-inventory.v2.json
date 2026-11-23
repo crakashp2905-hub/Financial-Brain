@@ -8183,7 +8183,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/risk_sizing.py",
-      "source_sha256": "f9beb17507c04a04a6beb295b29cd0a4f0204dd870aa7af5c26449e9188429a6",
+      "source_sha256": "426b8f56424d8fd11d7d923a266822cd319f0b50a2c6e9dd796e45a725dadf7d",
       "test_paths": []
     },
     {

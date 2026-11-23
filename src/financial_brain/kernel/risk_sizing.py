@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_DOWN
 
 from .trader_signal import TradePlan
-from .units import BasisPoints, INRNotional, UnitError, WholeUnits
+from .units import BasisPoints, INRNotional, Price, Quantity, UnitError, WholeUnits
 
 
 class RiskSizingError(ValueError):
@@ -31,6 +31,26 @@ class RiskSizingResult:
     notional_inr: Decimal
     binding_limits: tuple[str, ...]
     reasons: tuple[str, ...]
+
+    @property
+    def quantity_units(self) -> Quantity:
+        """Typed executable quantity; callers must not infer currency from a bare Decimal."""
+        return Quantity(self.quantity)
+
+    @property
+    def entry_price_inr(self) -> Price:
+        """INR entry reference used by the sizing calculation."""
+        return Price(self.entry_reference, "INR")
+
+    @property
+    def planned_loss(self) -> INRNotional:
+        """Planned stop loss in INR, explicitly distinguished from a price or quantity."""
+        return INRNotional(self.planned_loss_inr)
+
+    @property
+    def position_notional(self) -> INRNotional:
+        """Sized position exposure in INR."""
+        return INRNotional(self.notional_inr)
 
 
 def size_trade_plan(

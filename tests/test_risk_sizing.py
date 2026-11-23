@@ -5,7 +5,7 @@ import pytest
 
 from financial_brain.kernel.risk_sizing import RiskSizingError, size_trade_plan
 from financial_brain.kernel.trader_signal import EntryCondition, ExitTrigger, PriceBasis, TradePlan
-from financial_brain.kernel.units import BasisPoints, INRNotional, WholeUnits
+from financial_brain.kernel.units import BasisPoints, INRNotional, Price, Quantity, WholeUnits
 
 
 def _plan(*, side="BUY", lot=1, precision=0, quantity=100):
@@ -80,3 +80,21 @@ def test_sizing_accepts_nominal_inr_depth_and_basis_point_limits():
     )
     assert result.quantity == Decimal("10")
     assert result.binding_limits == ("DEPTH",)
+
+
+def test_sizing_result_exposes_dimensionally_typed_quantity_price_and_inr_values():
+    result = _size(_plan())
+
+    assert result.quantity_units == Quantity(Decimal("10"))
+    assert result.entry_price_inr == Price(Decimal("100"), "INR")
+    assert result.planned_loss == INRNotional(Decimal("100"))
+    assert result.position_notional == INRNotional(Decimal("1000"))
+
+
+def test_ineligible_sizing_result_keeps_zero_financial_outputs_typed():
+    result = _size(_plan(lot=25), risk_budget_inr=Decimal("50"))
+
+    assert not result.eligible
+    assert result.quantity_units == Quantity(Decimal("0"))
+    assert result.planned_loss == INRNotional(Decimal("0"))
+    assert result.position_notional == INRNotional(Decimal("0"))
