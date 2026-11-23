@@ -9686,7 +9686,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_runner.py",
-      "source_sha256": "271f14fb703ee3e0e6dd9cae3b59b8d0e3aa0ba67daaae1dd1001713b2696706",
+      "source_sha256": "f70d5ecdfd5fec372f9265b0cb0007c53100a725be09e5af3f63398489077930",
       "test_paths": []
     },
     {
@@ -10530,6 +10530,7 @@
         "hashlib",
         "json",
         "pathlib",
+        "re",
         "typing",
         "zoneinfo"
       ],
@@ -10537,7 +10538,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/legacy_migration.py",
-      "source_sha256": "1ad429189af4743aba71f660fa37b3e8c470663cc7717f25c05a16194df2bc3c",
+      "source_sha256": "889e9c48cd88face51f668d5d6be222b00f1789dde0c5e150d688f00fbc054e1",
       "test_paths": []
     },
     {
