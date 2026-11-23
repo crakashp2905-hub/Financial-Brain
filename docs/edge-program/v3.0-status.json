@@ -5991,12 +5991,22 @@
     {
       "id": "PA-02-10",
       "text": "Audit price-return versus total-return fields; verify dividends, splits, rights, bonus and corporate actions do not create false momentum or false reversal alpha.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/price-total-return-corporate-action-audit-2026-11-24.md maps adjusted equity prices, corporate-action factors, ETF price/NAV/TRI return semantics, fixture evidence, and remaining empirical gaps.",
+        "src/financial_brain/features/prices.py::ADJUSTED_SQL feeds action-adjusted close_adj into downstream equity features; this is a price-continuity series, not a dividend-reinvested total-return series.",
+        "src/financial_brain/corpactions/actions.py applies factors for splits, bonus, rights, and dividends; dividend factor requires a valid prior close and amount.",
+        "src/financial_brain/features/etf_prices.py::separate_etf_return_series emits distinct ETF_PRICE_RETURN, ETF_NAV_RETURN, and UNDERLYING_TOTAL_RETURN_INDEX series; it does not reinvest distributions or bridge missing sessions.",
+        "Audit/test record commit: c5709240."
+      ],
+      "blocker": "Fixture tests do not prove source-backed action completeness or a dividend-reinvested equity total-return series; there is no before/after study of corrected actions on momentum/reversal labels or strategy outcomes. The H056/H068 ex-dividend probe is separately unassessed under PA-02-11.",
+      "last_audited_at_utc": "2026-11-23T19:53:54Z",
+      "commit": "c5709240",
+      "test_evidence": [
+        "python -m pytest tests/test_phase0_reference.py tests/test_etf_prices.py -k 'ActionClassification or DerivedActions or factors_compound or etf_daily_prices or separate_etf' -q: 12 passed, 51 deselected."
+      ],
+      "test_result": "Return-field separation and corporate-action factor behavior are supported by code inspection and targeted fixture tests. False-alpha impact and source completeness remain unverified; status is PARTIAL."
     },
     {
       "id": "PA-02-11",
@@ -15604,7 +15614,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T19:42:10Z",
+    "as_of_utc": "2026-11-23T19:53:54Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15870,6 +15880,7 @@
       "PA-02-07",
       "PA-02-08",
       "PA-02-09",
+      "PA-02-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15892,13 +15903,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 285,
+    "audited_count": 286,
     "status_counts": {
       "COMPLETE": 47,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 221,
-      "UNASSESSED": 1093
+      "PARTIAL": 222,
+      "UNASSESSED": 1092
     },
     "verified_complete_count": 47,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16019,7 +16030,7 @@
     "COMPLETE": 47,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 221,
-    "UNASSESSED": 1093
+    "PARTIAL": 222,
+    "UNASSESSED": 1092
   }
 }
