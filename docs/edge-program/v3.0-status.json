@@ -37,7 +37,7 @@
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
       "last_audited_at_utc": "2026-11-23T02:29:15Z",
-      "commit": "a7b4e4a5"
+      "commit": "377e48c0"
     },
     {
       "id": "FB-0003",
@@ -414,7 +414,7 @@
       ],
       "blocker": "No live iNAV observation feed has been collected or freshness-calibrated; the source-attributed import interface exists but populated real-time coverage remains outstanding.",
       "last_audited_at_utc": "2026-11-23T02:47:49Z",
-      "commit": null
+      "commit": "377e48c0"
     },
     {
       "id": "FB-0208",
@@ -14101,6 +14101,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 47 of 1,378 items audited; 8 COMPLETE, 36 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,331 UNASSESSED. ETF reference, product disclosure, price history, Kite quote, sampled bar and iNAV comparison work is recorded under FB-0201 through FB-0207. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 47 of 1,378 items audited; 8 COMPLETE, 36 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,331 UNASSESSED. FB-0202 through FB-0207 implementations are linked from the per-item ledger; the latest implementation commit is 377e48c0. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
