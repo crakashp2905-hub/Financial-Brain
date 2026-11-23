@@ -12,6 +12,8 @@ from .base import FetchError
 
 _HASH = re.compile(r"^[0-9a-fA-F]{64}$")
 _BENCHMARK_TYPES = {"TRI", "PRICE", "OTHER", "UNKNOWN"}
+_SCHEME_STATUSES = {"ACTIVE", "CLOSED_FOR_SUBSCRIPTION", "CLOSED", "WOUND_UP",
+                    "MERGED", "RENAMED", "SUSPENDED", "UNKNOWN"}
 
 
 def parse(payload: bytes, observed_on: date) -> list[dict]:
@@ -69,18 +71,30 @@ def parse(payload: bytes, observed_on: date) -> list[dict]:
             raise FetchError(f"scheme {code} benchmark requires an explicit return type",
                              retryable=False)
         dates = {}
-        for key in ("effective_from", "effective_to"):
+        for key in ("effective_from", "effective_to", "status_effective_from"):
             try:
                 dates[key] = date.fromisoformat(row[key]) if row.get(key) else None
             except ValueError as exc:
                 raise FetchError(f"scheme {code} has invalid {key}", retryable=False) from exc
         if dates["effective_from"] and dates["effective_to"] and dates["effective_to"] < dates["effective_from"]:
             raise FetchError(f"scheme {code} effective dates are reversed", retryable=False)
+        status = (row.get("scheme_status") or "").upper() or None
+        if status is not None and status not in _SCHEME_STATUSES:
+            raise FetchError(f"scheme {code} has invalid scheme_status", retryable=False)
+        successor = row.get("successor_scheme_code") or None
+        if status is not None and dates["status_effective_from"] is None:
+            raise FetchError(f"scheme {code} status requires status_effective_from",
+                             retryable=False)
+        if status == "MERGED" and successor is None:
+            raise FetchError(f"scheme {code} merged status requires successor_scheme_code",
+                             retryable=False)
         rows.append({"identity_key": identity_key, "scheme_code": code,
                      "plan": identity_values[1] or None, "option": identity_values[2] or None,
                      "isin": identity_values[3] or None, **facts,
                      "benchmark_return_type": benchmark_type,
-                     **dates, "source_url": url, "source_document_sha256": doc_hash,
+                     **dates, "scheme_status": status, "successor_scheme_code": successor,
+                     "status_reason": row.get("status_reason") or None,
+                     "source_url": url, "source_document_sha256": doc_hash,
                      "source_published_at": published})
     if not rows:
         raise FetchError("scheme profile CSV contains no rows", retryable=False)

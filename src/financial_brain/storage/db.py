@@ -75,6 +75,10 @@ class Database:
         "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS structure_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
         "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS management_type VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
         "ALTER TABLE mf_scheme_master_observations ADD COLUMN IF NOT EXISTS asset_class VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED'",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS scheme_status VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_effective_from DATE",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS successor_scheme_code VARCHAR",
+        "ALTER TABLE mf_scheme_profile_disclosures ADD COLUMN IF NOT EXISTS status_reason VARCHAR",
     ]
 
     def migrate(self) -> None:

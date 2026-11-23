@@ -41,14 +41,17 @@ def ingest(payload: bytes, observed_on: date, cfg: Config | None = None) -> dict
                 con.execute("""INSERT INTO mf_scheme_profile_disclosures
                     (identity_key, scheme_code, plan, option, isin, riskometer, benchmark_name,
                      benchmark_return_type, manager, objective, effective_from, effective_to,
+                     scheme_status, status_effective_from, successor_scheme_code, status_reason,
                      observed_on, observed_at, source_url, source_document_sha256,
                      source_published_at, import_sha256, record_sha256, lake_key)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT (identity_key, observed_on, source_document_sha256) DO NOTHING""",
                     [row["identity_key"], row["scheme_code"], row["plan"], row["option"],
                      row["isin"], row["riskometer"], row["benchmark_name"],
                      row["benchmark_return_type"], row["manager"], row["objective"],
-                     row["effective_from"], row["effective_to"], observed_on, imported_at,
+                     row["effective_from"], row["effective_to"], row["scheme_status"],
+                     row["status_effective_from"], row["successor_scheme_code"],
+                     row["status_reason"], observed_on, imported_at,
                      row["source_url"], row["source_document_sha256"],
                      row["source_published_at"], import_hash, record_hash, obj.key])
             con.execute("COMMIT")

@@ -601,11 +601,15 @@
     {
       "id": "FB-0307",
       "text": "Create survivorship-aware historical scheme universe: merged, wound-up, renamed, closed-for-subscription schemes and suspensions remain in old dates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "AMC/SID profile disclosures now carry source-attributed lifecycle status, declared status-effective date, successor scheme code and status reason in append-only observed snapshots.",
+        "The parser rejects unknown lifecycle states, status without an effective date, and merged schemes without a successor; new snapshots preserve earlier active/closed records.",
+        "tests/test_mf_scheme_profile.py: 6 passed, including an active-to-closed-for-subscription history; scoped Ruff passed."
+      ],
+      "blocker": "No permission-reviewed historical AMC/SID lifecycle exports have been loaded across merged, wound-up, renamed, suspended and closed-for-subscription schemes; source coverage is not yet complete.",
+      "last_audited_at_utc": "2026-11-23T14:00:00Z",
       "commit": null
     },
     {
@@ -14131,6 +14135,7 @@
       "FB-0304",
       "FB-0305",
       "FB-0306",
+      "FB-0307",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14150,10 +14155,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 60,
+    "audited_count": 61,
     "status_counts": {
-      "UNASSESSED": 1318,
-      "PARTIAL": 48,
+      "UNASSESSED": 1317,
+      "PARTIAL": 49,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 9
@@ -14166,6 +14171,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 60 of 1,378 items audited; 9 COMPLETE, 48 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,318 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, profile disclosures, NAV revisions and 90-day-compliant historical export ingestion under FB-0301 through FB-0306 have evidence; latest implementation commit d8ae5020. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 61 of 1,378 items audited; 9 COMPLETE, 49 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,317 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, profile disclosures, lifecycle status, NAV revisions and 90-day-compliant historical export ingestion under FB-0301 through FB-0307 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
