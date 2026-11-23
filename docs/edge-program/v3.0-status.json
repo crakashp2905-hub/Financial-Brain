@@ -568,7 +568,7 @@
       ],
       "blocker": "AMFI NAVAll does not provide a source publication timestamp; ingestion/retrieval availability is preserved, but publication-time semantics can only be filled from a source that actually declares them.",
       "last_audited_at_utc": "2026-11-23T12:00:00Z",
-      "commit": null
+      "commit": "88a5e4b7"
     },
     {
       "id": "FB-0305",
@@ -14156,6 +14156,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 58 of 1,378 items audited; 8 COMPLETE, 47 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,320 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, classification, profile facts and corrected NAV revision history under FB-0301 through FB-0304 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 58 of 1,378 items audited; 8 COMPLETE, 47 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,320 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, classification, profile facts and corrected NAV revision history under FB-0301 through FB-0304 have evidence; latest implementation commit 88a5e4b7. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
