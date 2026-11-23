@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
+import math
 
 from ..costs.india import CostModel, Segment, Side
-from ..kernel.units import OptionLots, UnitError
+from ..kernel.units import OptionLots, OptionPremiumPerUnit, UnitError
 
 
 class OptionPaperError(ValueError):
@@ -28,7 +30,7 @@ def option_lot_count(value: int | OptionLots) -> int:
         raise OptionPaperError("lots must be a positive OptionLots value or integer") from exc
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class Quote:
     token: int
     symbol: str
@@ -40,11 +42,37 @@ class Quote:
     bid_qty: int
     ask_qty: int
 
+    def __init__(
+        self, token: int, symbol: str, expiry: date, lot_size: int,
+        observed_at: datetime,
+        bid: float | Decimal | OptionPremiumPerUnit,
+        ask: float | Decimal | OptionPremiumPerUnit,
+        bid_qty: int, ask_qty: int,
+    ) -> None:
+        object.__setattr__(self, "token", token)
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "expiry", expiry)
+        object.__setattr__(self, "lot_size", lot_size)
+        object.__setattr__(self, "observed_at", observed_at)
+        object.__setattr__(self, "bid", _premium_float(bid, "bid"))
+        object.__setattr__(self, "ask", _premium_float(ask, "ask"))
+        object.__setattr__(self, "bid_qty", bid_qty)
+        object.__setattr__(self, "ask_qty", ask_qty)
+
     def validate(self) -> None:
-        if self.token <= 0 or self.lot_size <= 0 or self.bid <= 0 or self.ask < self.bid:
+        if (self.token <= 0 or self.lot_size <= 0 or not math.isfinite(self.bid)
+                or not math.isfinite(self.ask) or self.bid <= 0 or self.ask < self.bid):
             raise OptionPaperError("invalid or crossed option quote")
         if self.observed_at.tzinfo is None or self.observed_at.date() >= self.expiry:
             raise OptionPaperError("option quote needs an aware timestamp before expiry")
+
+
+def _premium_float(value: float | Decimal | OptionPremiumPerUnit, label: str) -> float:
+    raw = value.amount if isinstance(value, OptionPremiumPerUnit) else value
+    try:
+        return float(raw)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise OptionPaperError(f"option {label} premium must be numeric") from exc
 
 
 def long_round_trip(entry: Quote, exit: Quote, *, lots: int | OptionLots = 1,

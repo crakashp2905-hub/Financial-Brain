@@ -9329,13 +9329,15 @@
         "costs.india",
         "dataclasses",
         "datetime",
-        "kernel.units"
+        "decimal",
+        "kernel.units",
+        "math"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options.py",
-      "source_sha256": "54fff47562ba06366483b65eec8112e5205177fca7825111fd14ac0223be118e",
+      "source_sha256": "a5e6bdb2eb01088ad282318f1068e315c944566c06fa613966e92c227c789f65",
       "test_paths": []
     },
     {

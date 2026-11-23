@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 
 from financial_brain.paper.options import Quote, OptionPaperError, cost_hurdle, long_round_trip
-from financial_brain.kernel.units import OptionLots
+from financial_brain.kernel.units import OptionLots, OptionPremiumPerUnit
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -44,3 +45,13 @@ def test_option_lot_unit_is_enforced_at_fill_and_cost_boundaries():
     for invalid in (True, 1.0, 0, -1):
         with pytest.raises(OptionPaperError, match="lots"):
             long_round_trip(quote(), quote(hour=11, bid=106, ask=107), lots=invalid)
+
+
+def test_option_quote_accepts_nominal_inr_premium_per_unit():
+    entry = quote(bid=OptionPremiumPerUnit(Decimal("100")),
+                  ask=OptionPremiumPerUnit(Decimal("101")))
+    exit_quote = quote(hour=11, bid=OptionPremiumPerUnit(Decimal("110")),
+                       ask=OptionPremiumPerUnit(Decimal("111")))
+    result = long_round_trip(entry, exit_quote)
+    assert result["entry_premium_inr"] == 101.0 * 65
+    assert result["gross_pnl_inr"] == 9.0 * 65

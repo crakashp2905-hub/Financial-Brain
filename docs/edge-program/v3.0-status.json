@@ -332,9 +332,11 @@
         "tests/test_mf_account_ledger.py::test_journal_accepts_typed_inr_and_signed_mutual_fund_unit_deltas verifies typed journal inputs, balanced rupee totals, and normalized unit deltas.",
         "src/financial_brain/kernel/risk_sizing.py::size_trade_plan accepts typed INRNotional limits, WholeUnits depth and BasisPoints participation before sizing.",
         "src/financial_brain/ingest/mfnav.py validates each AMFI row through NavPerUnit before appending observations and updating the legacy projection; row hashes serialize the validated Decimal as text.",
-        "tests/test_mfnav_revisions.py::test_nav_ingest_rejects_nonpositive_nav_before_persisting_observation confirms invalid NAV does not enter the observation table."
+        "tests/test_mfnav_revisions.py::test_nav_ingest_rejects_nonpositive_nav_before_persisting_observation confirms invalid NAV does not enter the observation table.",
+        "src/financial_brain/paper/options.py::Quote accepts OptionPremiumPerUnit for bid and ask, normalizing the nominal INR premium before quote validation and existing float-based cost calculations.",
+        "tests/test_paper_options.py::test_option_quote_accepts_nominal_inr_premium_per_unit covers typed premium quote construction and paper round-trip valuation."
       ],
-      "blocker": "Partial: typed amount/NAV/unit boundaries cover cash equities, option lots, MF NAV ingest, lot purchase/allotment/redemption, SIP installments, SWP/STP flows, paired MF switches, MF account-ledger postings and risk-sizing inputs. Risk-sizing result values, shared forward OMS/accounting serialization, and repository-wide boundary verification remain incomplete.",
+      "blocker": "Partial: typed amount/NAV/unit boundaries cover cash equities, option lots and premiums, MF NAV ingest, lot purchase/allotment/redemption, SIP installments, SWP/STP flows, paired MF switches, MF account-ledger postings and risk-sizing inputs. Risk-sizing result values, shared forward OMS/accounting serialization, and repository-wide boundary verification remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
       "commit": "f28cf201",
       "test_evidence": [
@@ -366,7 +368,10 @@
         "python -m mypy src/financial_brain/kernel/units.py src/financial_brain/paper/mf_account_ledger.py --follow-imports=silent: passed.",
         "python -m pytest tests/test_mfnav_revisions.py -q --basetemp=.pytest-checklist-nav-units-rerun: 7 passed.",
         "python -m ruff check src/financial_brain/ingest/mfnav.py tests/test_mfnav_revisions.py: passed.",
-        "python -m mypy src/financial_brain/ingest/mfnav.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/ingest/mfnav.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q --basetemp=.pytest-checklist-option-premium-rerun: 20 passed.",
+        "python -m ruff check src/financial_brain/paper/options.py tests/test_paper_options.py: passed.",
+        "python -m mypy src/financial_brain/paper/options.py --follow-imports=silent: passed."
       ],
       "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, AMFI NAV ingest, MF lot purchase/allotment/redemption, SIP, SWP/STP, MF switches, MF ledger postings and risk-sizing inputs. Risk-sizing result contract and shared forward-pipeline integration remain outstanding, so this is partial."
     },
