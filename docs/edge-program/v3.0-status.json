@@ -615,11 +615,14 @@
     {
       "id": "FB-0308",
       "text": "Add `as_known_on()` and NAV `published_at` availability semantics; same-day after-close NAV cannot be used for a pre-cutoff decision that same day.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`mfnav.as_known_on()` returns only observations ingested by the decision timestamp, checks source_published_at when available, and refuses same-day NAV rows with no publication timestamp unless an explicit same-day cutoff is supplied and passed.",
+        "tests/test_mfnav_as_known.py and tests/test_phase2_sources.py::test_nav_ingest_is_idempotent: 3 passed, including pre/post cutoff and revision availability checks; scoped Ruff passed."
+      ],
+      "blocker": "AMFI NAVAll does not provide source publication timestamps or per-scheme transaction cutoffs; scheme-specific publication and cutoff data are needed to establish full availability semantics.",
+      "last_audited_at_utc": "2026-11-23T15:00:00Z",
       "commit": null
     },
     {
@@ -14136,6 +14139,7 @@
       "FB-0305",
       "FB-0306",
       "FB-0307",
+      "FB-0308",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14155,10 +14159,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 61,
+    "audited_count": 62,
     "status_counts": {
-      "UNASSESSED": 1317,
-      "PARTIAL": 49,
+      "UNASSESSED": 1316,
+      "PARTIAL": 50,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 9
@@ -14171,6 +14175,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 61 of 1,378 items audited; 9 COMPLETE, 49 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,317 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, profile disclosures, lifecycle status, NAV revisions and 90-day-compliant historical export ingestion under FB-0301 through FB-0307 have evidence; latest implementation commit d7ce581b. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 62 of 1,378 items audited; 9 COMPLETE, 50 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,316 UNASSESSED. ETF capabilities through FB-0214 and AMFI/AMC scheme identity, profile disclosures, lifecycle status, NAV revisions, 90-day history guard and as-known NAV availability under FB-0301 through FB-0308 have evidence; latest implementation commit to be recorded after commit. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }

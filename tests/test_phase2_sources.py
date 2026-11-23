@@ -88,6 +88,10 @@ def test_nav_ingest_is_idempotent(tmp_path):
         first = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=provider)
         first_observed = con.execute("""SELECT observed_at FROM mf_nav_observations
                                        WHERE scheme_code='135762' ORDER BY observed_at LIMIT 1""").fetchone()[0]
+        assert mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), first_observed - timedelta(seconds=1)) is None
+        assert mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), first_observed)["nav"] == pytest.approx(29.8856)
         second = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=provider)
         assert first["schemes"] == second["schemes"] == 3
         assert con.execute("SELECT count(*) FROM mf_nav").fetchone()[0] == 3

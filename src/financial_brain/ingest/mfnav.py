@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from ..evidence import ledger
 from ..lake.store import RawLake
@@ -121,18 +122,32 @@ def ingest(con, cfg, business_date: date | None = None, *, provider=None) -> dic
             "lake_key": obj.key}
 
 
-def as_known_on(con, scheme_code: str, nav_date: date, decision_time: datetime) -> dict | None:
-    """Return the latest NAV revision actually ingested by a timezone-aware decision time."""
+def as_known_on(con, scheme_code: str, nav_date: date, decision_time: datetime, *,
+                same_day_nav_cutoff: datetime | None = None) -> dict | None:
+    """Return only NAV known by decision time; same-day rows need publication evidence.
+
+    When the source supplies no publication timestamp, same-day use is refused unless the
+    caller supplies an explicit timezone-aware cutoff for that NAV date.
+    """
     if decision_time.tzinfo is None or decision_time.utcoffset() is None:
         raise ValueError("decision_time must be timezone-aware")
+    if same_day_nav_cutoff is not None:
+        if (same_day_nav_cutoff.tzinfo is None or same_day_nav_cutoff.utcoffset() is None
+                or same_day_nav_cutoff.astimezone(ZoneInfo("Asia/Kolkata")).date() != nav_date):
+            raise ValueError("same_day_nav_cutoff must be aware and fall on nav_date")
     row = con.execute("""SELECT nav, source_document_sha256, source_published_at,
                                retrieved_at, observed_at, lake_key, record_sha256
                         FROM mf_nav_observations
                         WHERE scheme_code=? AND nav_date=? AND observed_at<=?
+                          AND (source_published_at IS NULL OR source_published_at<=?)
                         ORDER BY observed_at DESC, source_document_sha256 DESC LIMIT 1""",
-                      [scheme_code, nav_date, decision_time]).fetchone()
+                      [scheme_code, nav_date, decision_time, decision_time]).fetchone()
     if row is None:
         return None
+    local_decision_date = decision_time.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    if nav_date == local_decision_date and row[2] is None:
+        if same_day_nav_cutoff is None or decision_time < same_day_nav_cutoff:
+            return None
     keys = ("nav", "source_document_sha256", "source_published_at", "retrieved_at",
             "observed_at", "lake_key", "record_sha256")
     return dict(zip(keys, row))
