@@ -27,7 +27,7 @@ class SessionEventLoopError(ValueError):
 @dataclass(frozen=True)
 class SessionLoopHandlers:
     on_open: Callable[[str], None]
-    on_market_update: EventHandler
+    on_protective_update: EventHandler
     on_completed_bar: EventHandler
     on_corporate_action: EventHandler
     on_margin_change: EventHandler
@@ -90,8 +90,9 @@ def run_forward_session(
 
     All market data is journaled through the runner before handlers see it. An
     incomplete or unmarked bar is retained as evidence but never dispatched to
-    strategy entry logic. Quotes/ticks/depth run the protective monitor before
-    any later bar-close strategy callback. Any handler failure closes the session
+    strategy entry logic. Quotes/ticks/depth run the protective monitor as they
+    arrive, independently of the completed-bar strategy cadence. A completed bar
+    also runs protection before strategy evaluation. Any handler failure closes the session
     as INCOMPLETE and propagates the original error.
     """
     opened = _utc(opened_at, "opened_at")
@@ -124,12 +125,12 @@ def run_forward_session(
             runner.ingest(session_id, config, [event])
             processed += 1
             if event.kind in {EventKind.TICK, EventKind.QUOTE, EventKind.BOOK_DEPTH, EventKind.HALT}:
-                handlers.on_market_update(event)
+                handlers.on_protective_update(event)
             elif event.kind is EventKind.BAR:
-                handlers.on_market_update(event)
                 is_complete = (event.payload.get("is_complete") is True
                                or event.payload.get("complete") is True)
                 if is_complete:
+                    handlers.on_protective_update(event)
                     handlers.on_completed_bar(event)
                     bars_dispatched += 1
             elif event.kind is EventKind.CORPORATE_ACTION:

@@ -59,7 +59,7 @@ def _handlers(calls: list[tuple[str, str]]) -> SessionLoopHandlers:
 
     return SessionLoopHandlers(
         on_open=lambda session_id: calls.append(("on_open", session_id)),
-        on_market_update=lambda event: calls.append(("market", event.event_id)),
+        on_protective_update=lambda event: calls.append(("protective", event.event_id)),
         on_completed_bar=lambda event: calls.append(("bar", event.event_id)),
         on_corporate_action=lambda event: calls.append(("corporate_action", event.event_id)),
         on_margin_change=lambda event: calls.append(("margin", event.event_id)),
@@ -107,7 +107,7 @@ def _run_with_runner(runner: _Runner, events: list[MarketEvent],
     result = run_forward_session(
         cast(ForwardSessionRunner, runner), session_id="s1",
         config=config, venue="NSE", calendar=calendar,
-        opened_at=T0, closed_at=T0 + timedelta(minutes=2), preflight={"clock": True},
+        opened_at=T0, closed_at=T0 + timedelta(minutes=20), preflight={"clock": True},
         events=events, handlers=handlers,
     )
     return result
@@ -115,10 +115,10 @@ def _run_with_runner(runner: _Runner, events: list[MarketEvent],
 
 def test_session_loop_orders_all_events_and_runs_exit_monitor_before_bar_strategy() -> None:
     result, callbacks, runner = _run(_events())
-    assert [value for kind, value in callbacks if kind in {"corporate_action", "margin", "market", "bar"}] == [
-        "action-1", "margin-1", "quote-1", "bar-partial", "bar-complete", "bar-complete",
+    assert [value for kind, value in callbacks if kind in {"corporate_action", "margin", "protective", "bar"}] == [
+        "action-1", "margin-1", "quote-1", "bar-complete", "bar-complete",
     ]
-    assert callbacks.index(("market", "quote-1")) < callbacks.index(("bar", "bar-complete"))
+    assert callbacks.index(("protective", "quote-1")) < callbacks.index(("bar", "bar-complete"))
     assert ("bar", "bar-partial") not in callbacks
     assert result["status"] == "CLOSED"
     assert result["events_processed"] == 5
@@ -141,7 +141,7 @@ def test_event_loop_rejects_duplicate_ids_and_close_before_event_availability() 
     with pytest.raises(SessionEventLoopError, match="duplicate event IDs"):
         ordered_session_events([event, event])
     with pytest.raises(SessionEventLoopError, match="close precedes"):
-        _run([_event("late", EventKind.QUOTE, T0 + timedelta(minutes=3),
+        _run([_event("late", EventKind.QUOTE, T0 + timedelta(minutes=21),
                      {"bid": 99.95, "ask": 100.05})])
 
 
@@ -153,7 +153,7 @@ def test_handler_failure_forces_incomplete_session_close() -> None:
         raise RuntimeError("handler failure")
 
     handlers = SessionLoopHandlers(
-        on_open=handlers.on_open, on_market_update=fail,
+        on_open=handlers.on_open, on_protective_update=fail,
         on_completed_bar=handlers.on_completed_bar,
         on_corporate_action=handlers.on_corporate_action,
         on_margin_change=handlers.on_margin_change,
@@ -170,6 +170,25 @@ def test_margin_change_requires_explicit_nonnegative_inr_values() -> None:
         _event("bad-margin", EventKind.MARGIN_CHANGE, T0,
                {"change_id": "m1", "margin_before_inr": 1,
                 "margin_after_inr": 2, "currency": "USD"})
+
+
+def test_protective_monitor_runs_on_each_quote_without_waiting_for_bar_close() -> None:
+    _, callbacks, _ = _run([
+        _event("quote-a", EventKind.QUOTE, T0 + timedelta(minutes=1),
+               {"bid": 99.95, "ask": 100.05}, sequence=1),
+        _event("quote-b", EventKind.QUOTE, T0 + timedelta(minutes=4),
+               {"bid": 99.90, "ask": 100.00}, sequence=2),
+        _event("quote-c", EventKind.TICK, T0 + timedelta(minutes=9),
+               {"price": 99.50}, sequence=3),
+        _event("bar-15m", EventKind.BAR, T0 + timedelta(minutes=15),
+               {"open": 100, "high": 101, "low": 99, "close": 99.5,
+                "volume": 100, "is_complete": True}, sequence=4),
+    ])
+    protective = [event_id for kind, event_id in callbacks if kind == "protective"]
+    forecasts = [event_id for kind, event_id in callbacks if kind == "bar"]
+    assert protective == ["quote-a", "quote-b", "quote-c", "bar-15m"]
+    assert forecasts == ["bar-15m"]
+    assert callbacks.index(("protective", "quote-c")) < callbacks.index(("bar", "bar-15m"))
 
 
 def test_event_loop_drives_real_runner_open_ingest_and_incomplete_close(tmp_path: Path) -> None:
@@ -192,7 +211,7 @@ def test_event_loop_drives_real_runner_open_ingest_and_incomplete_close(tmp_path
     dispatched: list[str] = []
     handlers = SessionLoopHandlers(
         on_open=lambda session_id: dispatched.append("opened"),
-        on_market_update=lambda event: dispatched.append(event.event_id),
+        on_protective_update=lambda event: dispatched.append(event.event_id),
         on_completed_bar=lambda event: pytest.fail("quote-only session dispatched a bar"),
         on_corporate_action=lambda event: pytest.fail("unexpected corporate action"),
         on_margin_change=lambda event: pytest.fail("unexpected margin event"),
