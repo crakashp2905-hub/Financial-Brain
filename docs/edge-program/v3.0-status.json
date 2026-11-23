@@ -30,14 +30,21 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (638 Python files; 623 unassessed; 381 role-unassigned; canonical SHA-256 a0fc3307f8ca78cfedaf5b5b9b7c202dc3d9ae3a80c7ffc4594f4676385d3427; generated from clean PR tree and committed in 3b3f124b)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json generated and verified from the same clean PR tree (commit 3b3f124b)",
-        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check pass in the clean PR tree; tests/test_source_inventory.py: 5 passed",
-        "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
+        "docs/edge-program/source-inventory.v2.json now inventories 714 Python files; 699 remain unassessed and 423 remain role-unassigned; inventory source-tree SHA-256 97836490bdd9ce81b744dc0e87bc259ca9141b118d17cd39ee3ff1cb76baaa6a.",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json was regenerated from the same checkout and its --check passes.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check pass; tests/test_source_inventory.py and tests/test_phase2_graph.py: 22 passed.",
+        "docs/edge-program/capability-ownership.v1.json still provides broad domains rather than reviewed individual ownership for every strategy, feed, OMS, ledger, renderer and output."
       ],
-      "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
-      "last_audited_at_utc": "2026-11-23T05:18:47Z",
-      "commit": "3b3f124b"
+      "blocker": "Still partial: inventory covers Python sources only, 699 files remain unassessed, 423 have no role assignment, and every capability lacks a reviewed canonical owner mapping.",
+      "last_audited_at_utc": "2026-11-23T09:05:00Z",
+      "commit": "46efd66e70996b2495fdb462cb3f9a533092bb0c",
+      "artifact_sha256": "5432cc3ddeae87785b95bb805dbe910a02a9e80ab5935560e8a9e591f3802f26",
+      "test_evidence": [
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed",
+        "python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed",
+        "python -m pytest tests/test_source_inventory.py tests/test_phase2_graph.py -q: 22 passed"
+      ],
+      "test_result": "The refreshed inventory and graph verify against this source tree; item-level capability ownership and semantic assessment remain incomplete."
     },
     {
       "id": "FB-0003",
@@ -15056,7 +15063,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T08:48:33Z",
+    "as_of_utc": "2026-11-23T09:05:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
