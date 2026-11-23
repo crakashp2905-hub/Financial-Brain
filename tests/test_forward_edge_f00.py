@@ -130,6 +130,14 @@ def test_protected_records_match_pinned_digests() -> None:
     assert trials.verify_pins(REPO) == []
 
 
+def test_protected_hashes_are_stable_across_lf_and_crlf_checkouts(tmp_path: Path) -> None:
+    lf = tmp_path / "ledger-lf.jsonl"
+    crlf = tmp_path / "ledger-crlf.jsonl"
+    lf.write_bytes(b'{"verdict":"FAIL"}\n{"verdict":"FAIL"}\n')
+    crlf.write_bytes(b'{"verdict":"FAIL"}\r\n{"verdict":"FAIL"}\r\n')
+    assert trials.sha256_file(lf) == trials.sha256_file(crlf)
+
+
 def test_pins_agree_with_the_existing_protected_baseline() -> None:
     pinned = json.loads((REPO / trials.PINS_REL).read_text(encoding="utf-8"))["files"]
     existing = json.loads((REPO / "docs" / "audits" / "protected-baseline.json").read_text(encoding="utf-8"))["files"]
@@ -147,7 +155,9 @@ def test_sealed_historical_record_tampering_is_detected_by_the_runtime_guard(tmp
     pins_dir = tmp_path / "docs/forward-edge"
     pins_dir.mkdir(parents=True)
     digest = trials.sha256_file(target)
-    (pins_dir / "protected-pins.json").write_text(json.dumps({"files": {rel: digest}}), encoding="utf-8")
+    (pins_dir / "protected-pins.json").write_text(
+        json.dumps({"hash_newline_normalization": "CRLF_TO_LF", "files": {rel: digest}}),
+        encoding="utf-8")
     assert trials.verify_pins(tmp_path) == []
     target.write_text(target.read_text(encoding="utf-8") + "\nunauthorized edit\n", encoding="utf-8")
     assert trials.verify_pins(tmp_path) == [f"changed: {rel}"]
@@ -159,7 +169,8 @@ def test_retrospective_edit_of_the_trial_ledger_is_detected(tmp_path: Path) -> N
     src = REPO / trials.LEDGER_REL
     dst = tmp_path / trials.LEDGER_REL
     shutil.copyfile(src, dst)
-    pins = {"files": {trials.LEDGER_REL: trials.sha256_file(src)}}
+    pins = {"hash_newline_normalization": "CRLF_TO_LF",
+            "files": {trials.LEDGER_REL: trials.sha256_file(src)}}
     (tmp_path / trials.PINS_REL).write_text(json.dumps(pins), encoding="utf-8")
     assert trials.verify_pins(tmp_path) == []
     dst.write_text(dst.read_text(encoding="utf-8").replace('"verdict": "FAIL"', '"verdict": "PASS"', 1),
@@ -542,7 +553,8 @@ def test_audit_turns_red_when_a_protected_record_changes(tmp_path: Path) -> None
     (tmp_path / "docs/forward-edge").mkdir(parents=True)
     shutil.copyfile(REPO / trials.LEDGER_REL, tmp_path / trials.LEDGER_REL)
     (tmp_path / trials.PINS_REL).write_text(
-        json.dumps({"files": {trials.LEDGER_REL: "0" * 64}}), encoding="utf-8")
+        json.dumps({"hash_newline_normalization": "CRLF_TO_LF",
+                    "files": {trials.LEDGER_REL: "0" * 64}}), encoding="utf-8")
     report = audit.run_audit(tmp_path, now=NOW)
     status = {c["name"]: c["status"] for c in report["checks"]}
     assert status["protected_pins"] == "RED"

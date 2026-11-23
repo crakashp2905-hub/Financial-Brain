@@ -54,92 +54,125 @@
     {
       "id": "FB-0004",
       "text": "Preserve previous strategies and experiment outcomes, including the 13 failed Q4 2026 protected trials. New trade rule => new version and research authorization; don't defeat the trial budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/trials/ledger.jsonl (the 13 registered Q4-2026 rows retain FAIL verdicts and reason codes; file content was not edited)",
+        "tests/test_forward_edge_f00.py::test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes",
+        "tests/test_forward_edge_f00.py::test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "tests/test_forward_edge_f00.py (55 passed: immutable pin checks, exhausted-budget refusal, ADR/owner approval gates, new charter versions and prospective clocks)",
+        "docs/forward-edge/protected-pins.json and docs/adr/0007-protected-record-hash-normalization.md (canonical newline hash representation; trial outcomes and budget unchanged)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
       "commit": null
     },
     {
       "id": "FB-0005",
       "text": "Add five-desk product charter and explicit execution scope: stocks, ETFs, long options, defined-risk option spreads, conventional open-ended MF schemes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/ARCHITECTURE.md §2 (selects a self-directed long-term Indian-equity investor as the first product/user)",
+        "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md §Product scope (declares five desks and the requested instruments)"
+      ],
+      "blocker": "The committed architecture charter still describes a single long-term equity copilot and does not reconcile that product with the five-desk execution charter and explicit product boundaries.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0006",
       "text": "Add centrally enforced policy: `PHYSICAL_ORDERS_ENABLED = false` for the new pipeline, regardless of API credential or UI toggle.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/forward_edge/modes.py (PHYSICAL_ORDERS_ENABLED=False; SessionMode.may_send_physical_order always false)",
+        "src/financial_brain/forward_edge/pipeline.py (rejects LIVE_CASH/BROKER_DRYRUN and records broker NONE)",
+        "tests/test_forward_edge_f00.py::test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders (passes even after forcibly flipping the build flag)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0007",
       "text": "Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot escape.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/execution/oms/kite_broker.py (separate physical broker transport and rollout/kill-switch locks)",
+        "src/financial_brain/forward_edge/pipeline.py (independent paper-only route)",
+        "docs/edge-program/v3.0-status.json SL-00-11 (broker isolation remains partial)"
+      ],
+      "blocker": "The legacy KiteBroker path and new forward pipeline remain separate; repository evidence does not prove hostile end-to-end denial across every service/API entry point.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0008",
       "text": "Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "docs/edge-program/market-data-sources.v1.json (Kite/exchange retention and redistribution rights remain UNVERIFIED; no owner permission artifacts are filed)"
+      ],
+      "blocker": "Requires current provider terms and owner evidence for the account/data use and retention scope; repository-only implementation cannot establish those external rights.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0009",
       "text": "Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        ".github/workflows/ci.yml (Ubuntu 24.04 and Windows 2022, pinned-lock and full-suite jobs)",
+        "GitHub Actions run 45092672230 (both reproducibility jobs passed; both test jobs failed at protected-trial pin validation before lint/type/full-suite acceptance could be established)",
+        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json (committed-tree snapshots refreshed)"
+      ],
+      "blocker": "The latest hosted run is not green; cross-platform canonical pin fixes are now in the worktree and require a new hosted run. Critical-module coverage and full suite status remain unverified.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0010",
       "text": "Activate GitHub branch governance and required checks (**owner action**), verify actual protection via API.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/FB-0001-baseline-2026-11-23.json (GitHub API confirmed main protected and listed required checks)",
+        "GitHub main branch required contexts at capture include test (windows-latest), while the current workflow job is test (windows-2022)"
+      ],
+      "blocker": "Branch protection exists, but at least one required status context does not match the pinned Windows runner name; owner/admin correction and fresh API verification remain.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0011",
       "text": "Define five-desk launch gates and independent evidence labels: FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD, BROKER_APPROVED.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/claim_tier.py (typed HISTORICAL, SHADOW, LOCAL_PAPER, INDEPENDENT_FORWARD and DEPLOYMENT_VALIDATED tiers)",
+        "src/financial_brain/forward_edge/modes.py (typed execution modes)",
+        "docs/edge-program/v3.0-status.json SL-00-10 (evidence types remain only partially integrated end to end)"
+      ],
+      "blocker": "The required FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD and BROKER_APPROVED launch gates are not defined as one validated five-desk gate set; existing tier labels differ.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0012",
       "text": "Publish an audit of each task with `{id, status, source, test, artifact_hash, blocker, commit}`; make no unsupported status claims.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/v3.0-status.json (machine-readable per-item ID, source_checked, status, evidence, blocker, audit time and commit fields)",
+        "Current v3 ledger audit summary: 30 of 1,378 tasks audited; 1,348 remain UNASSESSED"
+      ],
+      "blocker": "The ledger has no dedicated per-item source, test, artifact_hash fields, and most checklist tasks remain unaudited; free-text evidence is not a complete task audit record.",
+      "last_audited_at_utc": "2026-11-23T01:13:32Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
     },
     {
       "id": "FB-0101",
@@ -7489,9 +7522,10 @@
         "GitHub Actions run 45089617902: Ubuntu reproducibility passed; Ubuntu test job could not install pinned Python 3.13.5 on ubuntu-latest because the image had moved to Ubuntu 26.04",
         "01a3bffb pins the supported runner images and prevents the summary step from masking a skipped test suite",
         "Clean committed-tree source inventory suite: 5 passed; local newline-normalized hash tests: 2 passed",
-        "GitHub Actions run 45091533639: Ubuntu and Windows reproducibility passed; Ubuntu test failed because dev install omitted cryptography; Windows test failed because generated paper-equivalence check did not normalize CRLF; both issues fixed locally, retest pending."
+        "GitHub Actions run 45091533639: Ubuntu and Windows reproducibility passed; Ubuntu test failed because dev install omitted cryptography; Windows test failed because generated paper-equivalence check did not normalize CRLF; both issues fixed locally, retest pending.",
+        "GitHub Actions run 45092672230: reproducibility passed on both platforms; both test jobs reached trial-program validation and failed because protected-pins hashed mixed checkout newlines differently. ADR-0007 and canonical LF-normalized protected hashes now address this without modifying the ledger; hosted retest pending."
       ],
-      "blocker": "Latest hosted CI run 45091533639 failed on missing cryptography in the dev extra and Windows CRLF comparison; fixes are committed to the worktree but await hosted verification. Property/adversarial coverage and critical-module coverage also remain unverified.",
+      "blocker": "Hosted CI run 45092672230 failed at protected-trial validation on both OSes because the protected ledger pin encoded checkout-specific line endings. Canonical hashing, updated pin manifests and ADR-0007 are prepared; a green hosted rerun is still required. Full-suite, critical-module coverage and remaining adversarial/property acceptance remain unverified.",
       "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
       "commit": "01a3bffb",
       "test_evidence": [
@@ -13933,6 +13967,15 @@
       "FB-0001",
       "FB-0002",
       "FB-0003",
+      "FB-0004",
+      "FB-0005",
+      "FB-0006",
+      "FB-0007",
+      "FB-0008",
+      "FB-0009",
+      "FB-0010",
+      "FB-0011",
+      "FB-0012",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -13952,20 +13995,20 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 21,
+    "audited_count": 30,
     "status_counts": {
-      "UNASSESSED": 1357,
-      "PARTIAL": 15,
+      "UNASSESSED": 1348,
+      "PARTIAL": 21,
       "NOT_STARTED": 1,
-      "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 4
+      "EXTERNAL_BLOCKED": 2,
+      "COMPLETE": 6
     },
-    "verified_complete_count": 4,
+    "verified_complete_count": 6,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-18 COMPLETE; FB-0001 COMPLETE with exact red CI outcomes recorded; FB-0002 and FB-0003 PARTIAL. CI fixes for missing dev cryptography and CRLF report comparison await hosted verification."
+    "evidence_update": "SL-00-18, FB-0001, FB-0004 and FB-0006 COMPLETE. 30 checklist items audited. FB-0002/0003/0005/0007/0009/0010/0011/0012 PARTIAL; FB-0008 EXTERNAL_BLOCKED. Run 45092672230 confirmed reproducibility success but failed both tests at protected-trial newline-sensitive pin validation; canonical hash correction and ADR-0007 do not change protected ledger bytes."
   }
 }

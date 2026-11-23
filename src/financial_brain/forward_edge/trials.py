@@ -47,7 +47,9 @@ class BudgetStatus:
 
 
 def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Git checkouts may materialize CRLF while the committed blob uses LF.
+    # Pin the canonical text content so Windows and Linux verify the same record.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def load_rows(path: Path) -> list[dict]:
@@ -247,6 +249,8 @@ def assert_new_protected_trial_allowed(
 def verify_pins(repo_root: Path) -> list[str]:
     """Return mismatches between pinned protected files and their bytes (empty when all match)."""
     pins = json.loads((repo_root / PINS_REL).read_text(encoding="utf-8"))
+    if pins.get("hash_newline_normalization") != "CRLF_TO_LF":
+        return ["protected pin manifest must declare CRLF_TO_LF hash normalization"]
     problems = []
     for rel, expected in sorted(pins["files"].items()):
         path = repo_root / rel

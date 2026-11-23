@@ -5020,7 +5020,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/trials.py",
-      "source_sha256": "ecc338287bc90e426a6501a72bdea8bf807392f508935f9b05f630ed91f9dc24",
+      "source_sha256": "d2b531a5d10bc074aa1012446a5631b997e16f3608b71d14e4850c6bbb295138",
       "test_paths": []
     },
     {
