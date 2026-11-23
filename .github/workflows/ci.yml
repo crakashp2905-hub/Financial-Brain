@@ -68,6 +68,8 @@ jobs:
         run: python scripts/state_ownership.py
       - name: Verify protected-trial program windows and budgets
         run: python scripts/validate_trial_program.py
+      - name: Verify protected-trial byte preservation audit
+        run: python scripts/trial_preservation_audit.py --check
       - name: Validate protocol deviation register
         run: python scripts/validate_deviation_log.py
       - name: Type check (OMS, evidence standard, pre-registry)

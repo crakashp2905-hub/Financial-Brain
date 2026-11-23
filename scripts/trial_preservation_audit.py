@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +17,22 @@ LEDGER = ROOT / "docs/trials/ledger.jsonl"
 PINS = ROOT / PINS_REL
 MANIFEST_DIR = ROOT / "docs/trials/manifests"
 OUTPUT = ROOT / "docs/edge-program/trial-preservation-audit.v1.json"
+BASELINE = ROOT / "docs/edge-program/trial-preservation-baseline.v1.json"
+
+
+def verify_baseline_blobs() -> list[dict[str, str]]:
+    """Compare protected source paths to immutable blob IDs captured from main."""
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+    errors = []
+    for path, expected in baseline.get("files", {}).items():
+        result = subprocess.run(
+            ["git", "rev-parse", f"HEAD:{path}"], cwd=ROOT, capture_output=True,
+            text=True, check=False,
+        )
+        actual = result.stdout.strip() if result.returncode == 0 else ""
+        if actual != expected:
+            errors.append({"path": path, "expected_blob": expected, "actual_blob": actual})
+    return errors
 
 
 def build_report() -> dict:
@@ -77,6 +94,11 @@ def build_report() -> dict:
             "trial_count": len(trials),
             "history_rows_preserved": sum(1 for line in ledger_lines if b'"kind": "history"' in line),
         },
+        "main_baseline": {
+            "commit": json.loads(BASELINE.read_text(encoding="utf-8"))["source_commit"],
+            "protected_source_count": len(json.loads(BASELINE.read_text(encoding="utf-8"))["files"]),
+            "blob_mismatches": verify_baseline_blobs(),
+        },
         "coverage": {
             "registration_timestamps": sum(bool(row["registration_timestamp"]) for row in trials),
             "failure_outcomes": sum(bool(row["verdict"]) for row in trials),
@@ -86,7 +108,7 @@ def build_report() -> dict:
         },
         "trials": trials,
         "conclusion": (
-            "Protected ledger/manifests are byte-pinned and unchanged. The pin proves preservation of bytes, not that "
+            "Protected ledger/manifests match their original main Git blobs byte-for-byte. The pin proves preservation of bytes, not that "
             "every trial originally recorded a dataset hash or historical read window. Missing fields remain missing."
         ),
     }

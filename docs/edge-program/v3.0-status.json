@@ -8480,11 +8480,18 @@
       "evidence": [
         "docs/forward-edge/protected-pins.json",
         "docs/trials/ledger.jsonl",
-        "python -m financial_brain.forward_edge.audit --json (protected_pins GREEN)"
+        "python -m financial_brain.forward_edge.audit --json (protected_pins GREEN)",
+        "docs/edge-program/trial-preservation-baseline.v1.json (9 protected source Git blob IDs from main at 3c99b5dddc775db888822b4cec1849e5ebca56c8)",
+        "docs/edge-program/trial-preservation-audit.v1.json (all 9 source blobs match; ledger timestamps/outcomes 13/13, hashes/windows 3/13)",
+        "scripts/trial_preservation_audit.py --check; tests/test_trial_preservation_audit.py (3 passed)"
       ],
-      "blocker": "Protected pins verify, but this does not prove byte-for-byte preservation of every specified Q4 ledger field and historical read window.",
-      "last_audited_at_utc": "2026-11-21T11:28:46.406728+05:30",
-      "commit": null
+      "blocker": "All original protected source files match their main Git blobs byte-for-byte. Ten of thirteen trials never recorded input hashes or historical read windows, so those missing facts cannot be preserved or reconstructed; the task remains partial against the requested evidence completeness.",
+      "last_audited_at_utc": "2026-11-23T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_trial_preservation_audit.py -q: 3 passed",
+        "python scripts/trial_preservation_audit.py --check: passed"
+      ]
     },
     {
       "id": "SL-00-05",

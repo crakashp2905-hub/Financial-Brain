@@ -1,5 +1,5 @@
 {
-  "conclusion": "Protected ledger/manifests are byte-pinned and unchanged. The pin proves preservation of bytes, not that every trial originally recorded a dataset hash or historical read window. Missing fields remain missing.",
+  "conclusion": "Protected ledger/manifests match their original main Git blobs byte-for-byte. The pin proves preservation of bytes, not that every trial originally recorded a dataset hash or historical read window. Missing fields remain missing.",
   "coverage": {
     "failure_outcomes": 13,
     "fully_documented_trials": 3,
@@ -14,6 +14,11 @@
     "protected_pin_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
     "sha256_lf": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
     "trial_count": 13
+  },
+  "main_baseline": {
+    "blob_mismatches": [],
+    "commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "protected_source_count": 9
   },
   "schema": "fb.trial_preservation_audit.v1",
   "scope": "Audit of already-recorded Q4 2026 protected trial facts. Missing historical facts are reported as missing and are never reconstructed or backfilled.",
