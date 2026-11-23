@@ -346,7 +346,7 @@
       ],
       "blocker": "Partial: typed boundaries cover cash paper accounts, Kite quote prices/depth, option lots/premiums, MF NAV ingest/books/SIP/SWP/STP/switch/account-ledger, risk-sizing inputs, forward signal inputs and forward OMS order inputs. Other provider adapters, persisted OMS/fill/accounting states, risk-sizing result values and repository-wide boundary verification remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
-      "commit": "5401f9e8",
+      "commit": "a1afd784",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
