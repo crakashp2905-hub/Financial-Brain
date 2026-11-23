@@ -475,11 +475,15 @@
     {
       "id": "FB-0212",
       "text": "Handle splits, distributions, fund closure and lot/tick revisions in historical and forward paper ledgers.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/corpactions/actions.py records split/bonus/rights/dividend facts, derives historical adjustment factors and retains unadjusted prices alongside adjusted views.",
+        "src/financial_brain/paper/ledger.py re-reads adjusted entry/exit prices when marking a paper trade, so a later-recorded split does not appear as a loss. ETF-specific forward unit/cash action processing is not present.",
+        "tests/test_phase0.py::TestCorporateActions and tests/test_phase2_paper.py::test_a_split_during_the_trade_does_not_look_like_a_crash: 6 passed."
+      ],
+      "blocker": "Forward ETF books do not yet apply share-unit and cash-distribution events, fund-closure proceeds/unpriced states, or point-in-time lot/tick revisions. Historical price adjustment alone does not settle these ledger events.",
+      "last_audited_at_utc": "2026-11-23T06:00:00Z",
       "commit": null
     },
     {
@@ -14086,6 +14090,7 @@
       "FB-0209",
       "FB-0210",
       "FB-0211",
+      "FB-0212",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -14105,10 +14110,10 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 51,
+    "audited_count": 52,
     "status_counts": {
-      "UNASSESSED": 1327,
-      "PARTIAL": 40,
+      "UNASSESSED": 1326,
+      "PARTIAL": 41,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 2,
       "COMPLETE": 8
@@ -14121,6 +14126,6 @@
       "docs/edge-program/source-inventory.v2.json",
       "docs/edge-program/forward-engine-dependency-graph.v1.json"
     ],
-    "evidence_update": "Current snapshot: 51 of 1,378 items audited; 8 COMPLETE, 40 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,327 UNASSESSED. ETF reference, product disclosures, primary-market flow context, price history, Kite quotes, sampled bars, valuation health and liquidity analytics are recorded under FB-0201 through FB-0211; latest implementation commit 14b4f4d1. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
+    "evidence_update": "Current snapshot: 52 of 1,378 items audited; 8 COMPLETE, 41 PARTIAL, 1 NOT_STARTED, 2 EXTERNAL_BLOCKED, 1,326 UNASSESSED. ETF reference, product disclosures, primary-market flow context, price history, Kite quotes, sampled bars, valuation health, historical corporate-action adjustment and liquidity analytics are recorded under FB-0201 through FB-0212; latest implementation commit 14b4f4d1. Older phase counts in V3.0_PROGRESS.md are dated snapshots."
   }
 }
