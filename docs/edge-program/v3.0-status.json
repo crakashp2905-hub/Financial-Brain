@@ -5833,7 +5833,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T18:12:13Z",
-      "commit": null,
+      "commit": "bfafcb94c9fce4cfaadf60d5489e9c26c7c49419",
       "test_evidence": [
         "python -m pytest tests/test_data_use_matrix.py -q --basetemp=.pytest-tmp-pa0201: 3 passed.",
         "python scripts/data_use_matrix.py --check: passed.",
