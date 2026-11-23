@@ -7,8 +7,8 @@
   "exchange_timezone": "Asia/Kolkata",
   "dependency_lock": {
     "path": "requirements-lock.txt",
-    "sha256": "975c74c23711a48b02a11bf6868ac4a70982e54391cfd9a1da4ac1d0f2682681",
-    "snapshot_note": "Exact dependency snapshot recorded 2026-10-15; clean lock-install verification is run separately from the pyproject-based full CI matrix."
+    "sha256": "194d0a7d254d87b6763f780d5c1680957e41da4fcbecfe4c2c18d92c780c9cd5",
+    "snapshot_note": "Exact dependency snapshot refreshed 2026-11-23 after completing the locked full-test environment; CI verifies this normalized SHA-256 on Ubuntu and Windows."
   },
   "build_tools": {
     "pip": "25.2",

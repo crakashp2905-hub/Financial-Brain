@@ -152,17 +152,19 @@
       "evidence": [
         ".github/workflows/ci.yml now runs the full Ubuntu/Windows matrix in a pinned Python 3.13.5 environment from requirements-lock.txt, including lint, type checks, migrations, coverage reports/artifacts and dependency audit.",
         "scripts/validate_requirements_lock.py checks every declared runtime/dev direct dependency has an exact lock entry; tests/test_requirements_lock.py covers missing and unpinned packages.",
-        "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned. A green hosted rerun remains outstanding."
+        "Hosted run 45163583623 failed before pytest because the prior lock omitted cryptography (and direct-dependency audit also found coverage/jsonschema missing); all three and their transitive dependencies are now pinned.",
+        "Hosted run 45165777612 passed the lock install and dependency check but failed both OS reproducibility jobs because the lock SHA in reproducibility-contract.v1.json was stale. The contract hash is corrected in the current branch; run 45165777612's full test jobs are still in progress and a fresh run on this correction is required."
       ],
-      "blocker": "The newest hosted run used the incomplete lock and failed before pytest. A fresh Ubuntu and Windows run on the corrected lock must pass.",
-      "last_audited_at_utc": "2026-11-23T11:27:38Z",
+      "blocker": "A fresh Ubuntu and Windows hosted run must pass on the corrected lock hash and full-test environment.",
+      "last_audited_at_utc": "2026-11-23T11:33:00Z",
       "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
       "test_evidence": [
         "python scripts/validate_requirements_lock.py: passed",
         "python -m pytest tests/test_requirements_lock.py -q: 3 passed",
-        "Hosted run 45163583623 test jobs failed at reproducible evidence bundle import: ModuleNotFoundError for cryptography; no full suite result was produced."
+        "Hosted run 45163583623 test jobs failed at reproducible evidence bundle import: ModuleNotFoundError for cryptography; no full suite result was produced.",
+        "Hosted run 45165777612: lock installation passed on Ubuntu and Windows; reproducibility fingerprint step failed because the contract retained the pre-update lock hash. Local scripts/verify_reproducibility.py --integrity-only passes after updating the contract to the normalized current lock hash. The full test jobs are running but do not validate the separate reproducibility matrix."
       ],
-      "test_result": "The previously floating full suite now has a pinned, completeness-checked environment. Cross-platform green test, lint, type, migration and coverage results remain unverified after the lock correction."
+      "test_result": "The previously floating full suite now has a pinned, completeness-checked environment. The stale lock fingerprint is corrected locally; cross-platform green test, lint, type, migration and coverage results remain unverified pending a fresh run on this correction."
     },
     {
       "id": "FB-0010",
