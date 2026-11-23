@@ -174,7 +174,8 @@ def main() -> int:
         root / "docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md": markdown_data,
     }
     stale = [str(path.relative_to(root)) for path, data in targets.items()
-             if not path.is_file() or path.read_bytes() != data]
+             if not path.is_file()
+             or path.read_bytes().replace(b"\r\n", b"\n") != data]
     if args.check:
         if stale:
             raise SystemExit("stale paper-engine equivalence report: " + ", ".join(stale))

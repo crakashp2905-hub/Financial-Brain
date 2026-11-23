@@ -1,9 +1,9 @@
 {
   "bundle_path": "docs/edge-program/checklist-release-evidence-v3.0.zip",
-  "bundle_sha256": "aee11b363cd8605f35d5bf991f9cfddc0637dbfcbf86202f47f66f495b7504d3",
+  "bundle_sha256": "459135ea0eab464c7cef5124d3538b6da5f342f1d0fde43ce2602868d37311de",
   "claim": "Locally reproducible SHA-256 integrity package. It is not independently timestamped or signed.",
   "file_count": 22,
-  "manifest_sha256": "1daebf15d094d9970d1dbb799840b8d0940fa6feee4d8264e944b6b99ade1c8a",
+  "manifest_sha256": "b31b0425925087e638f1e5fd2e230d7d8dc118146e4e2bfd818e331ba0ce893f",
   "schema": "fb.checklist-release-bundle-report.v1",
   "signature_status": "UNSIGNED",
   "snapshot_commit": "30f721248c0f2b8b5323aa9565197e70c3841c18",

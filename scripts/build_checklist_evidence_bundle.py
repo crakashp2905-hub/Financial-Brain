@@ -145,8 +145,14 @@ def main() -> int:
         root / BUNDLE_PATH: expected[1],
         root / REPORT_PATH: expected[2],
     }
-    mismatches = [str(path.relative_to(root)) for path, data in targets.items()
-                  if not path.is_file() or path.read_bytes() != data]
+    text_outputs = {root / MANIFEST_PATH, root / REPORT_PATH}
+    mismatches = []
+    for path, data in targets.items():
+        current = path.read_bytes() if path.is_file() else None
+        if current is not None and path in text_outputs:
+            current = current.replace(b"\r\n", b"\n")
+        if current != data:
+            mismatches.append(str(path.relative_to(root)))
     if args.check:
         if mismatches:
             raise SystemExit("checklist evidence bundle is stale: " + ", ".join(mismatches))

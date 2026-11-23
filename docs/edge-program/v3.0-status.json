@@ -13,32 +13,43 @@
     {
       "id": "FB-0001",
       "text": "Record current commit SHA, tree, dependency lock, test count and CI results; create new feature branch and do not rewrite the protected trial ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/FB-0001-baseline-2026-11-23.json (immutable commit/tree, main/tree, branch, dependency lock hashes, 3,442 collected tests, and exact hosted CI job outcomes)",
+        "GitHub main branch API at capture: protected with required Ubuntu/Windows test and reproducibility contexts",
+        "git diff origin/main...HEAD -- docs/trials/ledger.json docs/forward-edge/protected-pins.json (no protected trial record changes)"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T01:04:25Z",
+      "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
     },
     {
       "id": "FB-0002",
       "text": "Inventory every strategy, feed, OMS, ledger, signal renderer and output; assign a single canonical owner per capability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/source-inventory.v2.json (605 Python source files; 590 unassessed; 355 role-unassigned)",
+        "docs/edge-program/capability-ownership.v1.json (8 broad engineering domains mapped; named owners unset)"
+      ],
+      "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
+      "last_audited_at_utc": "2026-11-23T00:56:25Z",
+      "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
     },
     {
       "id": "FB-0003",
       "text": "Label all pre-existing historical/replayed evaluations separately from prospective paper trading; never backfill forward evidence.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/modes.py (typed execution modes)",
+        "src/financial_brain/forward_edge/claim_tier.py (typed claim tiers and qualification gates)",
+        "docs/edge-program/v3.0-status.json SL-00-10 (end-to-end evidence category distinctions remain partial)"
+      ],
+      "blocker": "Types distinguish several modes and claim tiers, but deterministic fixture, historical replay, local paper, prospectively observed and independently attested evidence are not proven as distinct end-to-end types across every pipeline and artifact.",
+      "last_audited_at_utc": "2026-11-23T00:56:25Z",
+      "commit": "5ee452797af33a5594b0e01a3e46d3fd4685cd37"
     },
     {
       "id": "FB-0004",
@@ -7477,9 +7488,10 @@
         ".github/workflows/ci.yml (Ubuntu 24.04 and Windows 2022 matrix; lint, mypy, migrations, full tests, coverage and integrity snapshots)",
         "GitHub Actions run 45089617902: Ubuntu reproducibility passed; Ubuntu test job could not install pinned Python 3.13.5 on ubuntu-latest because the image had moved to Ubuntu 26.04",
         "01a3bffb pins the supported runner images and prevents the summary step from masking a skipped test suite",
-        "Clean committed-tree source inventory suite: 5 passed; local newline-normalized hash tests: 2 passed"
+        "Clean committed-tree source inventory suite: 5 passed; local newline-normalized hash tests: 2 passed",
+        "GitHub Actions run 45091533639: Ubuntu and Windows reproducibility passed; Ubuntu test failed because dev install omitted cryptography; Windows test failed because generated paper-equivalence check did not normalize CRLF; both issues fixed locally, retest pending."
       ],
-      "blocker": "Hosted CI has not completed on the newly pinned runner images; full Windows/Linux test, adversarial/property coverage, and critical-module coverage remain unverified.",
+      "blocker": "Latest hosted CI run 45091533639 failed on missing cryptography in the dev extra and Windows CRLF comparison; fixes are committed to the worktree but await hosted verification. Property/adversarial coverage and critical-module coverage also remain unverified.",
       "last_audited_at_utc": "2026-11-23T00:37:27+00:00",
       "commit": "01a3bffb",
       "test_evidence": [
@@ -13918,6 +13930,9 @@
   "assessment_summary": {
     "as_of_utc": "2026-11-23T00:37:27+00:00",
     "audited_ids": [
+      "FB-0001",
+      "FB-0002",
+      "FB-0003",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -13937,20 +13952,20 @@
       "SL-00-17",
       "SL-00-18"
     ],
-    "audited_count": 18,
+    "audited_count": 21,
     "status_counts": {
-      "UNASSESSED": 1360,
-      "PARTIAL": 13,
+      "UNASSESSED": 1357,
+      "PARTIAL": 15,
       "NOT_STARTED": 1,
       "EXTERNAL_BLOCKED": 1,
-      "COMPLETE": 3
+      "COMPLETE": 4
     },
-    "verified_complete_count": 3,
+    "verified_complete_count": 4,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json"
     ],
-    "evidence_update": "SL-00-18 COMPLETE: deterministic, reproducible hash-only release bundle built from immutable source commit; unsigned and without external timestamp attestation. SL-00-12 remains PARTIAL pending hosted CI on supported images."
+    "evidence_update": "SL-00-18 COMPLETE; FB-0001 COMPLETE with exact red CI outcomes recorded; FB-0002 and FB-0003 PARTIAL. CI fixes for missing dev cryptography and CRLF report comparison await hosted verification."
   }
 }
