@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 715,
+  "source_count": 716,
   "sources": [
     {
       "capability_ids": [],
@@ -3536,6 +3536,21 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
+        "datetime"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/availability.py",
+      "source_sha256": "0398512017c6fff548a57809bcb24e203bfa32eb3ec368d4528f004aed56931e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "hashlib",
         "json",
@@ -5341,6 +5356,7 @@
         "decimal",
         "financial_brain.costs.india",
         "financial_brain.evidence.decision_manifest",
+        "financial_brain.forward_edge.availability",
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.cost_schedule",
         "financial_brain.forward_edge.data_permissions",
@@ -5371,7 +5387,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "c2b9be72cd452545aa4c1fd27ee7f397dfb8e8f01bc60c952b3c40de1d2c6c7d",
+      "source_sha256": "baf39b0fbe506b580ea1a2b17db651247fe988f42163fce9e4db0e2308cf8de8",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -12647,6 +12663,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 700,
-  "unassigned_role_count": 424
+  "unassessed_count": 701,
+  "unassigned_role_count": 425
 }

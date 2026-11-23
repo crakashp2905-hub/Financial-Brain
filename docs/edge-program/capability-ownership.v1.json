@@ -105,6 +105,18 @@
       "boundary": "Normalize source packets and preserve event/receive/availability clocks; does not establish provider permission."
     },
     {
+      "id": "market_data_availability_causality",
+      "category": "feed",
+      "owner": "src/financial_brain/forward_edge/availability.py",
+      "owner_symbol": "require_inputs_available",
+      "implementations": [
+        "src/financial_brain/forward_edge/raw_observation.py",
+        "src/financial_brain/forward_edge/market_events.py",
+        "src/financial_brain/forward_edge/session_runner.py"
+      ],
+      "boundary": "Requires decisions to wait until the latest referenced input availability time; event/exchange time remains separately recorded and is never used as a substitute."
+    },
+    {
       "id": "market_data_entitlement",
       "category": "feed",
       "owner": "src/financial_brain/forward_edge/data_permissions.py",
@@ -1299,6 +1311,12 @@
       "module_owner": "src/financial_brain/forward_edge/audit.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/availability.py",
+      "path": "src/financial_brain/forward_edge/availability.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/forward_edge/availability.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/backup_restore.py",
       "path": "src/financial_brain/forward_edge/backup_restore.py",
       "module_role": "forward_trading_contract_or_support",
@@ -1789,6 +1807,12 @@
       "path": "src/financial_brain/forward_edge/quote_archive.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/forward_edge/quote_archive.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/raw_observation.py",
+      "path": "src/financial_brain/forward_edge/raw_observation.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/forward_edge/raw_observation.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/refinements.py",

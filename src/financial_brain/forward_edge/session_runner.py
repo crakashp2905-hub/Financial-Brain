@@ -13,6 +13,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
+from financial_brain.forward_edge.availability import AvailabilityError, require_inputs_available
 from financial_brain.forward_edge.execution_scenario import (
     ScenarioFill,
     evaluate_depth_scenario,
@@ -551,8 +552,12 @@ class ForwardSessionRunner:
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
         clock = decided_at.astimezone(timezone.utc)
-        if any(datetime.fromisoformat(available) > clock for _, _, available in rows):
-            raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
+        try:
+            require_inputs_available(
+                (datetime.fromisoformat(available) for _, _, available in rows), clock)
+        except AvailabilityError as exc:
+            raise ForwardSessionRunnerError(
+                "decision uses a source event unavailable at decision time") from exc
         max_quote_age = self._max_quote_age(session_id)
         stale = [event_id for event_id, kind, available in rows
                  if kind == "quote" and clock - datetime.fromisoformat(available) >

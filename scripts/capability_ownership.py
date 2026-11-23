@@ -38,6 +38,9 @@ CAPABILITIES = [
     {"id": "market_event_normalization", "category": "feed", "owner": "src/financial_brain/forward_edge/market_data.py",
      "owner_symbol": "normalize_kite_quote", "implementations": ["src/financial_brain/forward_edge/market_events.py"],
      "boundary": "Normalize source packets and preserve event/receive/availability clocks; does not establish provider permission."},
+    {"id": "market_data_availability_causality", "category": "feed", "owner": "src/financial_brain/forward_edge/availability.py",
+     "owner_symbol": "require_inputs_available", "implementations": ["src/financial_brain/forward_edge/raw_observation.py", "src/financial_brain/forward_edge/market_events.py", "src/financial_brain/forward_edge/session_runner.py"],
+     "boundary": "Requires decisions to wait until the latest referenced input availability time; event/exchange time remains separately recorded and is never used as a substitute."},
     {"id": "market_data_entitlement", "category": "feed", "owner": "src/financial_brain/forward_edge/data_permissions.py",
      "owner_symbol": "DataPermission", "implementations": ["src/financial_brain/forward_edge/data_gate.py", "src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/paper/intraday_runner.py"],
      "boundary": "Source/use-scoped permission state and runtime enforcement; provider terms are supplied and reviewed externally."},
@@ -114,6 +117,7 @@ def module_inventory() -> list[dict[str, str]]:
     explicit = [
         "src/financial_brain/forward_edge/registry.py", "src/financial_brain/forward_edge/strategy_adapter.py",
         "src/financial_brain/forward_edge/parameter_freeze.py", "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/availability.py", "src/financial_brain/forward_edge/raw_observation.py",
         "src/financial_brain/forward_edge/market_events.py", "src/financial_brain/forward_edge/quote_archive.py",
         "src/financial_brain/forward_edge/data_permissions.py", "src/financial_brain/forward_edge/data_gate.py",
         "src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/durable.py",
