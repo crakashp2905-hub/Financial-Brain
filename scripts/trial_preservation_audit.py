@@ -109,7 +109,6 @@ def build_report() -> dict:
         },
         "main_baseline": {
             "commit": json.loads(BASELINE.read_text(encoding="utf-8"))["source_commit"],
-            "compared_commit": comparison_commit(),
             "protected_source_count": len(json.loads(BASELINE.read_text(encoding="utf-8"))["files"]),
             "blob_mismatches": verify_baseline_blobs(),
         },
