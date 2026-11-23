@@ -565,4 +565,3 @@ class PaperAccount:
         if post_to_oms:
             self.oms.apply_cash_adjustment(self.account_id, -amount, adjustment_id=fee_id)
         self._fee_ids = {**prior, fee_id: amount}
-

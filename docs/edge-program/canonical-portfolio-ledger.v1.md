@@ -35,12 +35,21 @@ missing-exit records have no such receipts and remain blocked.
 
 ## Legacy paper-book migration
 
-`financial_brain.portfolio.legacy_migration` maps persisted rows from the existing intraday
-and swing paper books. The `scripts/migrate_legacy_paper_books.py` command opens those
-DuckDB sources read-only and writes a separate SQLite ledger. Intraday rows require the
+`financial_brain.portfolio.legacy_migration` maps persisted rows from the existing intraday,
+swing, forward-options and MF paper books. The `scripts/migrate_legacy_paper_books.py` command
+opens those DuckDB sources read-only and writes a separate SQLite ledger. Intraday rows require the
 recorded trade ID, side, quantity and entry; closed rows retain their stored exit and modeled
 charges. Swing rows retain their stored entry/exit/last-close marks and label modeled cost
 rates as estimates. Legacy signal snapshots without a fill remain unresolved.
+
+Options-forward outcomes are joined to their immutable pre-entry intent. `CLOSED` outcomes
+map the persisted contract, quantity, two-sided quote entry/exit and modeled charges. A
+`NO_EXIT_QUOTE` outcome maps the recorded entry plus an unresolved position; outcomes with
+no entry fill or a failed cost/liquidity gate create no position. Outcomes that do not contain
+enough contract/quantity provenance are rejected instead of guessed. The
+`options_paper_forward.duckdb` and the shared `financial_brain.duckdb` MF event table are
+optional and opened read-only. MF subscriptions/redemptions require exact unit × NAV, gross,
+loads, charges and net-cash reconciliation; inconsistent rows are rejected.
 
 The migration was run against the local `paper_live.duckdb` and `paper_book.duckdb`. The
 sanitized snapshot in `canonical-migration-audit.v1.json` fingerprints both source databases
@@ -63,25 +72,29 @@ across 18 strategy/run books; replay and challenger books overlap, so that count
 unique live holdings count. All 18 books lack a recorded opening cash balance, so the cash
 view is net event flows only. Four books have incomplete position projections.
 
-Only intraday and swing source books were present in the scanned local DBs. This does not
-establish whether an options, ETF-specific or mutual-fund book exists elsewhere. No entries
-were inferred for those desks, and no live holdings snapshot was treated as a fill.
+The source snapshot used for the audit had intraday and swing records. It had no options-forward
+database, MF paper event table, or ETF-specific book. No entries were inferred for those sources,
+and no live holdings snapshot was treated as a fill. The options and MF adapters are covered by
+fixture databases; they do not claim those real books have been migrated until source records
+exist and the audit verifies their mappings.
 
 ## Verification
 
-`tests/test_canonical_portfolio_ledger.py` and `tests/test_legacy_portfolio_migration.py`
-cover equity, ETF, option and MF units; source idempotency; conflicting and atomic imports;
-timezone-aware as-of marks; source-specific mapping; exact payload verification; missing
-provenance; and unresolved positions. Eleven tests pass. The migration audit is a local
+`tests/test_canonical_portfolio_ledger.py`, `tests/test_legacy_portfolio_migration.py`,
+`tests/test_paper_options_runner.py` and `tests/test_paper_options_forward.py` cover equity,
+ETF, option and MF units; source idempotency; conflicting and atomic imports; timezone-aware
+as-of marks; source-specific mapping; exact payload verification; missing provenance; and
+unresolved positions. Twenty-two targeted tests pass. The migration audit is a local
 paper-book reconciliation only, not a broker reconciliation or performance evaluation.
 
 ## Migration status and limits
 
-The in-repository code now includes source adapters for the two local equity paper books.
-Broader multi-asset migration remains partial: no source-book rows for options, ETF-specific
-trading or mutual-fund orders were found in the scanned databases. Opening cash, source-specific
-charge verification and external account reconciliation are also missing. Any new source row
-without fill and mark provenance must remain unresolved.
+The in-repository code now includes source adapters for the two local equity paper books,
+persisted forward-options outcomes and MF NAV events. Broader multi-asset migration remains
+partial: no ETF-specific order-book source, MF paper event table or options-forward database
+was present in the captured data directory. Opening cash, source-specific charge
+verification and external account reconciliation are also missing. Any new source row without
+fill and mark provenance must remain unresolved.
 
 The current projection also does not model settlement calendars, taxes, corporate actions,
 FX conversion, margin, exercise/assignment, option expiry, fund allotment/redemption pending

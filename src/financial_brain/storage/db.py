@@ -69,6 +69,44 @@ class Database:
         # Older MF NAV snapshots have observation time but not a separately recorded
         # local persistence time. Keep those values NULL rather than inventing history.
         "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS ingested_at TIMESTAMPTZ",
+        # Historical AMFI exports and the daily NAVAll observer share one append-only
+        # table. Keep each source's provenance columns nullable on older schemas.
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS source_document_sha256 VARCHAR",
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS retrieved_at TIMESTAMPTZ",
+        "ALTER TABLE mf_nav_observations ADD COLUMN IF NOT EXISTS record_sha256 VARCHAR",
+        # AMC-normalized holdings are stored beside the richer scheme disclosure form.
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS portfolio_as_of DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS instrument_id VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS underlying_scheme_code VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS holding_name VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS asset_type VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS weight_pct DECIMAL(12,8)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS market_value_inr DECIMAL(24,2)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS quantity DECIMAL(24,8)",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS maturity_date DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS observed_on DATE",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_url VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_document_sha256 VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS source_published_at TIMESTAMPTZ",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS lake_key VARCHAR",
+        "ALTER TABLE mf_portfolio_disclosures ADD COLUMN IF NOT EXISTS yield_to_maturity_pct DECIMAL(12,8)",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN weight_pct TYPE DECIMAL(12,8) USING TRY_CAST(weight_pct AS DECIMAL(12,8))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN market_value_inr TYPE DECIMAL(24,2) USING TRY_CAST(market_value_inr AS DECIMAL(24,2))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN quantity TYPE DECIMAL(24,8) USING TRY_CAST(quantity AS DECIMAL(24,8))",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN yield_to_maturity_pct TYPE DECIMAL(12,8) USING TRY_CAST(yield_to_maturity_pct AS DECIMAL(12,8))",
+        # The merged disclosure table holds both normalized AMC CSV rows and the
+        # richer scheme/plan disclosure form. Scheme-only fields are nullable for the
+        # AMC form; its parser and typed persistence API validate their own contracts.
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN plan DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN option DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN scheme_isin DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN disclosure_date DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN asset_class DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN weight_percent DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_id DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_ref DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN source_sha256 DROP NOT NULL",
+        "ALTER TABLE mf_portfolio_disclosures ALTER COLUMN published_at DROP NOT NULL",
         # Persist the specific effective paper-use grant that authorized each observed
         # purchase-payment milestone so its event hash can be independently reproduced.
         "ALTER TABLE mf_paper_purchase_payment_events ADD COLUMN IF NOT EXISTS permission_evidence_json VARCHAR DEFAULT '[]'",
@@ -86,6 +124,18 @@ class Database:
                     con.execute(stmt)
                 except duckdb.Error:
                     pass  # column already present on this build
+            nav_columns = {row[1] for row in con.execute(
+                "PRAGMA table_info('mf_nav_observations')").fetchall()}
+            if {"scheme_code", "nav_date", "source_document_sha256"} <= nav_columns:
+                con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS mf_nav_history_source_identity
+                    ON mf_nav_observations (scheme_code, nav_date, source_document_sha256)""")
+            portfolio_columns = {row[1] for row in con.execute(
+                "PRAGMA table_info('mf_portfolio_disclosures')").fetchall()}
+            if {"scheme_code", "portfolio_as_of", "instrument_id",
+                    "source_document_sha256"} <= portfolio_columns:
+                con.execute("""CREATE UNIQUE INDEX IF NOT EXISTS mf_portfolio_source_identity
+                    ON mf_portfolio_disclosures
+                    (scheme_code, portfolio_as_of, instrument_id, source_document_sha256)""")
             self._migrate_mf_ledger_account_codes(con)
             self._migrate_mf_purchase_eligibility_cancel(con)
             self._migrate_mf_systematic_event_cancellation(con)

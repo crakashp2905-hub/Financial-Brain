@@ -123,31 +123,61 @@ class Price:
 
 @dataclass(frozen=True)
 class CurrencyCode:
-    """Nominal ISO-style currency code for interfaces that should not accept free text."""
+    """Validated currency identity, separate from an amount denominated in it."""
 
-    value: str
+    code: str
 
     def __post_init__(self) -> None:
-        _check_currency(self.value)
+        _check_currency(self.code)
+
+    @property
+    def value(self) -> str:
+        """Compatibility name used by the canonical typed-unit API."""
+        return self.code
 
 
 @dataclass(frozen=True)
 class INRNotional:
-    """Non-negative order/position notional, explicitly denominated in INR."""
+    """Non-negative notional amount whose currency is fixed to INR."""
 
     amount: Decimal
 
     def __post_init__(self) -> None:
         amount = to_decimal(self.amount)
         if amount < 0:
-            raise UnitError("INR notional cannot be negative")
+            raise UnitError("INR notional magnitude cannot be negative")
         object.__setattr__(self, "amount", amount)
+
+    def as_money(self) -> Money:
+        return Money(self.amount, "INR")
 
     @classmethod
     def from_money(cls, amount: Money) -> INRNotional:
         if amount.currency != "INR":
             raise UnitError("INR notional requires INR currency")
         return cls(amount.amount)
+
+
+@dataclass(frozen=True)
+class EquityUnits:
+    """Signed whole-share quantity for an equity position or order delta."""
+
+    units: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.units, bool) or not isinstance(self.units, int):
+            raise UnitError("equity units must be a whole integer")
+
+
+@dataclass(frozen=True)
+class ETFUnits:
+    """Signed whole-unit quantity for an ETF position or order delta."""
+
+    units: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.units, bool) or not isinstance(self.units, int):
+            raise UnitError("ETF units must be a whole integer")
 
 
 @dataclass(frozen=True)
@@ -165,7 +195,7 @@ class WholeUnits:
 
 @dataclass(frozen=True)
 class OptionLots:
-    """Positive whole option lots; BUY/SELL side carries direction separately."""
+    """Positive integer option lots; order side carries direction separately."""
 
     lots: int
 
@@ -175,16 +205,50 @@ class OptionLots:
 
 
 @dataclass(frozen=True)
+class SignedOptionLots:
+    """Signed integer lots for position deltas; order tickets should use OptionLots."""
+
+    lots: int
+
+    def __post_init__(self) -> None:
+        if isinstance(self.lots, bool) or not isinstance(self.lots, int):
+            raise UnitError("signed option lots must be an integer")
+
+
+@dataclass(frozen=True)
 class MutualFundUnits:
-    """Non-negative fractional scheme units, kept distinct from exchange-traded lots."""
+    """Signed decimal mutual-fund units, which may be fractional."""
 
     units: Decimal
 
     def __post_init__(self) -> None:
-        units = to_decimal(self.units)
-        if units < 0:
-            raise UnitError("mutual-fund units cannot be negative")
-        object.__setattr__(self, "units", units)
+        object.__setattr__(self, "units", to_decimal(self.units))
+
+
+@dataclass(frozen=True)
+class NAVPerUnit:
+    amount: Decimal
+    currency: str = "INR"
+
+    def __post_init__(self) -> None:
+        amount = to_decimal(self.amount)
+        _check_currency(self.currency)
+        if amount <= 0:
+            raise UnitError("NAV per unit must be strictly positive")
+        object.__setattr__(self, "amount", amount)
+
+
+@dataclass(frozen=True)
+class PremiumPerUnit:
+    amount: Decimal
+    currency: str = "INR"
+
+    def __post_init__(self) -> None:
+        amount = to_decimal(self.amount)
+        _check_currency(self.currency)
+        if amount <= 0:
+            raise UnitError("premium per unit must be strictly positive")
+        object.__setattr__(self, "amount", amount)
 
 
 @dataclass(frozen=True)
@@ -216,12 +280,15 @@ class OptionPremiumPerUnit(INRPerUnit):
 
 @dataclass(frozen=True)
 class BasisPoints:
-    """Rate expressed in basis points; conversion to a decimal rate is explicit."""
+    """A signed rate in basis points; 10,000 bps equals a unit ratio."""
 
     value: Decimal
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "value", to_decimal(self.value))
+
+    def as_ratio(self) -> Decimal:
+        return self.value / Decimal(10_000)
 
     def as_rate(self) -> Decimal:
         return self.value / Decimal(10_000)

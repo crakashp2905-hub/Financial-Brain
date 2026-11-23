@@ -1,19 +1,26 @@
-# Exact environment the full suite runs in (1,428 tests: all pass, the torch LSTM test skips): a clean venv, `pip install -e .[dev]` on Windows 11, Python 3.13.5,
-# 2026-10-15. Recreate a result with: git checkout <commit>; pip install -r requirements-lock.txt; pip install -e . --no-deps
+# Exact dependency pins intended for the full test suite on Python 3.13.5, Linux and Windows.
+# `scripts/validate_requirements_lock.py` ensures all runtime and dev requirements are present.
+# Recreate a result with: pip install -r requirements-lock.txt; pip install -e ".[dev]" --no-deps --no-build-isolation
 ast_serialize==0.13.0
+attrs==26.1.0
 boolean.py==5.0
 CacheControl==0.14.4
-certifi==2026.7.22
+certifi==2026.10.18
+cffi==2.1.1
 charset-normalizer==3.5.2
 cloudpickle==3.1.2
 colorama==0.4.6
 cyclonedx-python-lib==11.12.0
+coverage==7.17.4
+cryptography==50.0.2
 defusedxml==0.7.1
 duckdb==1.5.6
-filelock==4.2.0
+filelock==4.2.1
 idna==3.20
 iniconfig==2.3.1
 joblib==1.6.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
 librt==0.16.0
 license-expression==30.4.4
 lightgbm==4.7.0
@@ -35,16 +42,19 @@ platformdirs==4.13.0
 pluggy==1.7.0
 py-serializable==2.1.0
 pyarrow==26.0.0
+pycparser==3.12
 Pygments==2.21.0
 pymupdf==1.28.2
 pyparsing==3.3.3
-pypdf==6.20.1
+pypdf==6.21.4
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 pytz==2026.5
 requests==2.34.2
+referencing==0.37.0
 rich==15.0.0
 ruff==0.17.1
+rpds-py==2026.9.1
 scikit-learn==1.9.1
 scipy==1.18.1
 six==1.17.0

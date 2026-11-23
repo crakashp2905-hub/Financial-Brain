@@ -42,33 +42,33 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 
 ## 0. Baseline and integrity freeze — P0
 
-- [x] **FB-0001** Record current commit SHA, tree, dependency lock, test count and CI results; create new feature branch and do not rewrite the protected trial ledger.
+- [ ] **FB-0001** Record current commit SHA, tree, dependency lock, test count and CI results; create new feature branch and do not rewrite the protected trial ledger.
 - [ ] **FB-0002** Inventory every strategy, feed, OMS, ledger, signal renderer and output; assign a single canonical owner per capability.
 - [ ] **FB-0003** Label all pre-existing historical/replayed evaluations separately from prospective paper trading; never backfill forward evidence.
 - [ ] **FB-0004** Preserve previous strategies and experiment outcomes, including the 13 failed Q4 2026 protected trials. New trade rule => new version and research authorization; don't defeat the trial budget.
-- [x] **FB-0005** Add five-desk product charter and explicit execution scope: stocks, ETFs, long options, defined-risk option spreads, conventional open-ended MF schemes.
-- [x] **FB-0006** Add centrally enforced policy: `PHYSICAL_ORDERS_ENABLED = false` for the new pipeline, regardless of API credential or UI toggle.
-- [x] **FB-0007** Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot escape.
+- [ ] **FB-0005** Add five-desk product charter and explicit execution scope: stocks, ETFs, long options, defined-risk option spreads, conventional open-ended MF schemes.
+- [ ] **FB-0006** Add centrally enforced policy: `PHYSICAL_ORDERS_ENABLED = false` for the new pipeline, regardless of API credential or UI toggle.
+- [ ] **FB-0007** Resolve divergent broker paths (`forward_edge/modes.py`, `execution/oms/kite_broker.py`) with hostile integration tests showing a denied order cannot escape.
 - [ ] **FB-0008** Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**).
-- [x] **FB-0009** Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.
-- [x] **FB-0010** Activate GitHub branch governance and required checks (**owner action**), verify actual protection via API.
-- [x] **FB-0011** Define five-desk launch gates and independent evidence labels: FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD, BROKER_APPROVED.
-- [x] **FB-0012** Publish an audit of each task with `{id, status, source, test, artifact_hash, blocker, commit}`; make no unsupported status claims.
+- [ ] **FB-0009** Establish clean CI on Windows/Linux with pinned dependencies, lint, type checks, per-module coverage and test artifacts.
+- [ ] **FB-0010** Activate GitHub branch governance and required checks (**owner action**), verify actual protection via API.
+- [ ] **FB-0011** Define five-desk launch gates and independent evidence labels: FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD, BROKER_APPROVED.
+- [ ] **FB-0012** Publish an audit of each task with `{id, status, source, test, artifact_hash, blocker, commit}`; make no unsupported status claims.
 
 **Acceptance:** baseline hashes preserved; guardrail tests green; orders fail closed; every desk has a capability/unsupported matrix.
 
 ## 1. Instrument master and asset-specific clocks — P0
 
-- [x] **FB-0101** Build canonical `InstrumentId` with `asset_class`, `market`, `exchange`, `symbol`, `isin`, `provider_token`, `effective_from/to`, and underlying lineage.
-- [x] **FB-0102** Add `AssetClass = EQUITY | ETF | OPTION | MUTUAL_FUND` and `Desk = SWING | INTRADAY | OPTIONS | ETF | MUTUAL_FUND` independently (ETF trades can be swing/intraday).
+- [ ] **FB-0101** Build canonical `InstrumentId` with `asset_class`, `market`, `exchange`, `symbol`, `isin`, `provider_token`, `effective_from/to`, and underlying lineage.
+- [ ] **FB-0102** Add `AssetClass = EQUITY | ETF | OPTION | MUTUAL_FUND` and `Desk = SWING | INTRADAY | OPTIONS | ETF | MUTUAL_FUND` independently (ETF trades can be swing/intraday).
 - [ ] **FB-0103** Enforce financial unit types: INR notional, currency, equity/ETF whole units, option lots, MF fractional units, NAV per unit, premiums per unit, basis points.
-- [x] **FB-0104** Canonical `TradingClock`: exchange session vs scheme business day vs bank settlement day vs NAV publication time; timezone Asia/Kolkata with holiday calendars.
+- [ ] **FB-0104** Canonical `TradingClock`: exchange session vs scheme business day vs bank settlement day vs NAV publication time; timezone Asia/Kolkata with holiday calendars.
 - [ ] **FB-0105** Store source timestamp, exchange timestamp when present, receipt timestamp, available-to-strategy timestamp, published-at and ingested-at.
 - [ ] **FB-0106** Add point-in-time versions for listings, tick sizes, lot sizes, contract expiry, ETF underlying index and MF scheme/plan metadata.
-- [x] **FB-0107** Add instrument state: LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED.
+- [ ] **FB-0107** Add instrument state: LISTED, SUSPENDED, HALTED, DELISTED, MATURED, CLOSED_FOR_PURCHASE, CLOSED_FOR_REDEMPTION, RESTRICTED.
 - [ ] **FB-0108** Preserve ticker changes, corporate actions, renamed/merged schemes and ISIN changes without silently changing historical signals.
 - [ ] **FB-0109** Implement effective-dated transaction calendars and fund-specific overrides from the relevant SID/KIM/AMC notice; a universal cutoff is not sufficient.
-- [x] **FB-0110** Add semantic data lineage; reject unknown instrument identity, overlapping active identities and future-published data.
+- [ ] **FB-0110** Add semantic data lineage; reject unknown instrument identity, overlapping active identities and future-published data.
 
 **Acceptance:** same ticker across time resolves to correct ISIN; historical ETF split and MF scheme merge preserve holdings and cost basis; time travel impossible.
 
@@ -100,7 +100,7 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 - [ ] **FB-0303** Map fund house, riskometer, benchmark index TRI, manager and objective; preserve actual dates of classification changes.
 - [ ] **FB-0304** Extend `mfnav.py` to retain NAV revision history and source publication/ingestion timestamps; do not silently backdate corrected data.
 - [ ] **FB-0305** Build compliant MF NAV history ingestion from official AMFI history exports/authorized endpoints with bounded incremental windows, retries and rate limits (**EXTERNAL data acquisition**).
-- [x] **FB-0306** Respect AMFI's historical report limit of up to 90 days per download; do not circumvent permission/technical restrictions.
+- [ ] **FB-0306** Respect AMFI's historical report limit of up to 90 days per download; do not circumvent permission/technical restrictions.
 - [ ] **FB-0307** Create survivorship-aware historical scheme universe: merged, wound-up, renamed, closed-for-subscription schemes and suspensions remain in old dates.
 - [ ] **FB-0308** Add `as_known_on()` and NAV `published_at` availability semantics; same-day after-close NAV cannot be used for a pre-cutoff decision that same day.
 - [ ] **FB-0309** Ingest effective-dated direct/regular total expense ratios, AUM, exit-load schedules, minimum initial/additional investment and exit restrictions.
@@ -111,14 +111,14 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 - [ ] **FB-0314** Record exit-load schedules as time-dependent **per purchase lot**; distinguish full and partial redemption.
 - [ ] **FB-0315** Add schemes with ELSS lock-in, segregated portfolios, gating, special redemption restrictions, and closed-end windows; disallow impossible redemptions.
 - [ ] **FB-0316** Treat dividends/IDCW payouts, reinvestments, splits and scheme mergers as economic flows for total return rather than apparent NAV crashes.
-- [x] **FB-0317** Do not double-deduct expense ratio from returns derived from published MF NAV (TER is reflected in NAV); disclose TER for comparison and future projections separately.
+- [ ] **FB-0317** Do not double-deduct expense ratio from returns derived from published MF NAV (TER is reflected in NAV); disclose TER for comparison and future projections separately.
 - [ ] **FB-0318** Validate raw AMFI file `NAVAll.txt` mixed-dated rows and repeated scheme codes: keep each row at its own NAV date and identify stale/unavailable schemes.
 
 **Acceptance:** direct and regular plans have separate P&L; an extinct scheme appears in historical results; no NAV look-ahead; IDCW and reinvestments reconcile, exit loads are lot-aware.
 
 ## 4. Unified signal and research contract — P0
 
-- [x] **FB-0401** Create immutable typed `Signal` with `signal_id, desk_id, strategy_id/version/hash, instrument_id, side, as_of, decision_at, expires_at, evidence_tier, source_hash`.
+- [ ] **FB-0401** Create immutable typed `Signal` with `signal_id, desk_id, strategy_id/version/hash, instrument_id, side, as_of, decision_at, expires_at, evidence_tier, source_hash`.
 - [ ] **FB-0402** Add decision-time features and evidence, expected distribution with uncertainty, benchmark, costs, risk/return estimates and contraindications.
 - [ ] **FB-0403** Add execution intent types: `EXCHANGE_LIMIT`, `EXCHANGE_MARKETABLE_SIMULATION`, `MF_SUBSCRIBE`, `MF_REDEEM`, `MF_SWITCH`, `MF_SIP`, `NO_TRADE`.
 - [ ] **FB-0404** Carry entry conditions, stop/exit/invalidation, intended holding window, tick/lot/unit precision and paper execution eligibility.
@@ -160,7 +160,7 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 - [ ] **FB-0465** Implement OCO-like protection in paper: the first executed stop or target cancels/reduces the sibling target/stop; do not assume a broker-native atomic OCO.
 - [ ] **FB-0466** Support configurable full exits, profit scale-outs, breakeven stop moves, trailing stops, partial TP ladders and time stops; make each a versioned rule, not an after-the-fact manual adjustment.
 - [ ] **FB-0467** On price gaps through SL/TP, use feasible first available executable bid/ask rather than the trigger price; record gap/slippage and preserve losses beyond planned stop.
-- [x] **FB-0468** On bar-only historical simulation where SL and TP are both touched in one bar and event order is unknown, use conservative adverse-first assumptions or report unresolved; never choose the profitable sequence by hindsight.
+- [ ] **FB-0468** On bar-only historical simulation where SL and TP are both touched in one bar and event order is unknown, use conservative adverse-first assumptions or report unresolved; never choose the profitable sequence by hindsight.
 - [ ] **FB-0469** On tick feeds, check source/receipt timestamps, quote age, spread, depth and circuit/halts before triggering/filling. `LTP` alone can trigger research alerts but must not fabricate executable fills.
 - [ ] **FB-0470** When stop triggers during quote outage or trading halt, persist an unresolved exit intent and alert; do not mark a fictional stop-price fill or silently delete open risk.
 - [ ] **FB-0471** Add a per-position ledger of `ENTRY_SIGNAL`, `ENTRY_INTENT`, `ENTRY_FILL`, `STOP/TP_ARMED`, `EXIT_TRIGGER`, `EXIT_INTENT`, `EXIT_FILL`, `POSITION_CLOSED`, each with idempotency key and original snapshot.
@@ -259,23 +259,23 @@ Build one quant trading platform with five **operating desks**: (1) equity swing
 
 **Critical difference:** An MF signal creates an *intent/order request*, **not** an immediate fill at a displayed NAV. Real applications and funds availability determine the applicable NAV. For typical non-liquid/non-overnight schemes, same-business-day closing NAV generally requires valid application and funds available by the relevant 3:00 p.m. cutoff; liquid and overnight funds have distinct rules. Always source effective-dated scheme/platform rule metadata.
 
-- [x] **FB-0701** Create `MFOrder` with investor account/folio (synthetic in paper), scheme/plan/option, cash amount or units, transaction type and immutable request time.
-- [x] **FB-0702** Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity.
-- [x] **FB-0703** Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately; never infer one from another.
+- [ ] **FB-0701** Create `MFOrder` with investor account/folio (synthetic in paper), scheme/plan/option, cash amount or units, transaction type and immutable request time.
+- [ ] **FB-0702** Model request acknowledgement/accepted/rejected, time-stamping at official acceptance point, and platform business-day validity.
+- [ ] **FB-0703** Model purchase payment initiation time, credited-to-scheme time and funds-available-for-utilization time separately; never infer one from another.
 - [ ] **FB-0704** Implement effective-dated cutoff engine for normal, liquid, overnight and special schemes; holidays, online-mode exceptions and scheme suspensions.
-- [x] **FB-0705** Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; reject any attempt to choose a more favorable historical NAV after the fact.
-- [x] **FB-0706** Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision.
-- [x] **FB-0707** Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.
-- [x] **FB-0708** Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.
-- [x] **FB-0709** Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.
-- [x] **FB-0710** Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.
-- [x] **FB-0711** Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.
-- [x] **FB-0712** Model SWP as redemptions with applicable loads and payouts; STP similarly as redemption and new purchase.
-- [x] **FB-0713** Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days.
-- [x] **FB-0714** Model NAV-related mark-to-market only after publication; earlier performance must display last-known value with a stale flag.
-- [x] **FB-0715** Model dividend/IDCW cash payouts and reinvestments as posted ledger events with correct units and basis.
+- [ ] **FB-0705** Determine **eligible NAV date** from accepted request + fund realization + effective cutoff; reject any attempt to choose a more favorable historical NAV after the fact.
+- [ ] **FB-0706** Use `NAV_PENDING` until eligible day's NAV is actually published/observed, then allot fractional MF units with proper precision.
+- [ ] **FB-0707** Implement redemption with cutoff, lot selection (FIFO default unless an actual platform rule specifies otherwise), units to redeem and deferred proceeds settlement.
+- [ ] **FB-0708** Book exit loads by purchase lot and holding age, stamp duties and any relevant charges by effective-dated rule.
+- [ ] **FB-0709** Implement redemption cash state `REDEMPTION_PENDING -> VALUE_CONFIRMED -> PAYOUT_PENDING -> CASH_AVAILABLE`; prohibit redeploying unsettled proceeds.
+- [ ] **FB-0710** Simulate switches as paired switch-out and switch-in with asynchronous settlement and no phantom same-minute capital redeployment.
+- [ ] **FB-0711** Model SIP installments as repeated subscriptions with independent payment outcomes and allotment NAV; missed installments must stay missed.
+- [ ] **FB-0712** Model SWP as redemptions with applicable loads and payouts; STP similarly as redemption and new purchase.
+- [ ] **FB-0713** Handle minimum subscription/redemption amounts, partial redemption, fractional units, folio restrictions, scheme lock-ins and unavailable NAV days.
+- [ ] **FB-0714** Model NAV-related mark-to-market only after publication; earlier performance must display last-known value with a stale flag.
+- [ ] **FB-0715** Model dividend/IDCW cash payouts and reinvestments as posted ledger events with correct units and basis.
 - [ ] **FB-0716** Reconcile pending application, allotment confirmation, units, external flows, cash reserve and bank payout to one canonical ledger.
-- [x] **FB-0717** Distinguish assumed simulated payment realization from independently observed payment realization; forbid fabricated certainty in reports.
+- [ ] **FB-0717** Distinguish assumed simulated payment realization from independently observed payment realization; forbid fabricated certainty in reports.
 - [ ] **FB-0718** Build an explicit **MF PAPER REALISM** score measuring eligible-NAV certainty, payment-time evidence, load completeness and redemption settlement confidence.
 
 **Acceptance:** buying after cutoff does not get same-day NAV; an accepted order with delayed money never gets premature units; today's NAV cannot be read before publication; redemption proceeds cannot be reused early.
@@ -1578,20 +1578,20 @@ An item is DONE only with: `(1) source code or explicit documented decision, (2)
 - [ ] **SL-00-02** Generate machine-readable dependency graph of PR #34 and PR #36–#40; reconcile stacked branches without replaying overwritten files as if newly validated.
 - [ ] **SL-00-03** Diff all existing `forward_edge`, `paper`, `risk`, `execution`, `evaluation`, `forecasting` and `strategies` entry points; choose one authoritative implementation per contract.
 - [ ] **SL-00-04** Preserve original protected Q4 2026 trial ledger, registration timestamps, failure outcomes, input hashes and historical read windows byte-for-byte.
-- [x] **SL-00-05** Investigate PR #40 omissions: restore F17 instrument/data gates, F13 renderer, charter/cohort enforcement or document explicit tested replacements.
+- [ ] **SL-00-05** Investigate PR #40 omissions: restore F17 instrument/data gates, F13 renderer, charter/cohort enforcement or document explicit tested replacements.
 - [ ] **SL-00-06** Migrate legacy intraday, swing, options, ETF and MF books to a canonical portfolio ledger without inventing fills or changing past marks.
 - [ ] **SL-00-07** Reconcile the 51 reported historical positions with missing recorded exits; label `UNRESOLVED` and block promoted P&L unless supported by actual execution evidence.
 - [ ] **SL-00-08** Keep Kite/exchange data licensing status as separate permission objects; do not infer paper/synthetic use rights from quote API success.
 - [ ] **SL-00-09** Add branch ancestry, source commit and executable entry point to every policy, experiment, quote and simulated trade.
-- [x] **SL-00-10** Separate historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward evidence in types, not dashboard text.
-- [x] **SL-00-11** Enforce broker isolation at import, runtime, network transport and integration-test layers; no automated policy writes to physical order endpoints.
-- [x] **SL-00-12** Require CI on Windows and Linux: source lint, mypy critical modules, unit tests, integration, property/adversarial tests and code coverage per critical learning service.
-- [x] **SL-00-13** Check main branch protection and mandatory checks through GitHub API; mark OWNER_BLOCKED rather than asserting active protections.
-- [x] **SL-00-14** Write `fb learning audit` planned CLI contract that fails closed on any unmerged dependency, missing test or source permission.
-- [x] **SL-00-15** Create CODEOWNERS-style ownership map for source adapters, simulation, RL, research governance, risk, portfolio, trader UX and accounting.
-- [x] **SL-00-16** Add migration/equivalence report: compare old versus integrated paper decisions on fixed fixture sessions; explain every divergence, including changes to no-trade decisions.
-- [x] **SL-00-17** Pin initial reference strategies H005, H003 and P3 as historical candidates; never label them confirmed prospective edges.
-- [x] **SL-00-18** Produce reproducible signed-or-hashed release evidence bundle without claiming local hashes are independently timestamped.
+- [ ] **SL-00-10** Separate historical replay, deterministic fixture, local paper, prospectively observed session and independently attested forward evidence in types, not dashboard text.
+- [ ] **SL-00-11** Enforce broker isolation at import, runtime, network transport and integration-test layers; no automated policy writes to physical order endpoints.
+- [ ] **SL-00-12** Require CI on Windows and Linux: source lint, mypy critical modules, unit tests, integration, property/adversarial tests and code coverage per critical learning service.
+- [ ] **SL-00-13** Check main branch protection and mandatory checks through GitHub API; mark OWNER_BLOCKED rather than asserting active protections.
+- [ ] **SL-00-14** Write `fb learning audit` planned CLI contract that fails closed on any unmerged dependency, missing test or source permission.
+- [ ] **SL-00-15** Create CODEOWNERS-style ownership map for source adapters, simulation, RL, research governance, risk, portfolio, trader UX and accounting.
+- [ ] **SL-00-16** Add migration/equivalence report: compare old versus integrated paper decisions on fixed fixture sessions; explain every divergence, including changes to no-trade decisions.
+- [ ] **SL-00-17** Pin initial reference strategies H005, H003 and P3 as historical candidates; never label them confirmed prospective edges.
+- [ ] **SL-00-18** Produce reproducible signed-or-hashed release evidence bundle without claiming local hashes are independently timestamped.
 
 **Wave acceptance:** No competing canonical OMS or release path; protected research remains identical; no ambiguous live/paper status; automated orders fail closed.
 

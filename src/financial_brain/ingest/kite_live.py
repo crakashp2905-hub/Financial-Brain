@@ -148,4 +148,3 @@ def _valid_level(level: dict) -> bool:
         return float(level["price"]) > 0 and int(level["quantity"]) > 0
     except (KeyError, TypeError, ValueError):
         return False
-

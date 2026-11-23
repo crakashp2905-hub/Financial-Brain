@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
 import sqlite3
+import json
 
 import duckdb
 import pytest
@@ -73,7 +74,20 @@ def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
 
 
 def make_runner(tmp_path):
-    return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    permission_path = tmp_path / "permissions.json"
+    permission_path.write_text(json.dumps({
+        "schema": "fb.data_permissions.v1",
+        "permissions": [{
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+            "status": "USE_ALLOWED", "effective_from": "2026-11-13",
+            "effective_through": None, "evidence_ref": "tests/fixture-kite-permission",
+            "reviewer": "test-fixture",
+        }],
+    }), encoding="utf-8")
+    return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
+                               tmp_path / "journal.sqlite",
+                               permission_registry_path=permission_path)
 
 
 def opened(runner, session_id="s", config=None):
@@ -122,6 +136,21 @@ def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_pat
         runner.ingest("s", config, [observed])
     assert runner.records("s")["events"] == []
     assert runner.records("s")["data_rejections"]
+    runner.close()
+
+
+def test_forged_session_permission_cannot_override_canonical_unknown_rights(tmp_path):
+    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
+                                  tmp_path / "journal.sqlite")
+    config = make_config()
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+             "depth": {"buy": [{"price": 100.0, "quantity": 50}],
+                       "sell": [{"price": 100.1, "quantity": 40}]}}
+    observed = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="does not match the canonical registry"):
+        runner.ingest("s", config, [observed])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 
@@ -223,6 +252,35 @@ def test_calendar_planning_distinguishes_holiday_from_missing_source_coverage(tm
                                          calendar=holiday_calendar, now=NOW, preflight={})
     assert uncovered is SessionState.INCOMPLETE
     assert runner.records("uncovered")["lifecycle"][0]["outcome"] == "INCOMPLETE"
+    runner.close()
+
+
+def test_close_report_binds_feed_quality_metrics_to_persisted_market_events(tmp_path):
+    runner = make_runner(tmp_path)
+    calendar = _calendar(date(2026, 11, 13))
+    assert runner.plan_calendar_day(
+        "quality", make_config(), venue="NSE", calendar=calendar, now=NOW,
+        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True},
+    ) is SessionState.OPEN
+    session_open, _ = calendar.session_bounds_utc("NSE", date(2026, 11, 13))
+    bar = MarketEvent(
+        "quality-bar", EventKind.BAR, "NSE", "NSE:INFY", session_open,
+        session_open + timedelta(minutes=1), session_open + timedelta(minutes=1),
+        {"open": 100, "high": 102, "low": 99, "close": 101, "volume": 10}, "FIXTURE")
+    runner.ingest("quality", make_config(), [bar],
+                  ingest_metadata={bar.event_id: (bar.available_at, "FIXTURE_CLOCK")})
+    report = runner.close_session("quality", now=NOW, complete=False, reason="fixture session end")
+    quality = report["feed_quality"]
+    assert quality["status"] == "AVAILABLE"
+    assert quality["source_event_count"] == 1
+    instrument = quality["instruments"][0]
+    assert instrument["session_date"] == "2026-11-13"
+    assert instrument["metrics"]["expected_bars"] == 60
+    assert instrument["metrics"]["complete_bars"] == 1
+    assert instrument["metrics"]["bar_coverage_fraction"] == pytest.approx(1 / 60)
+    assert instrument["findings_by_code"]["MISSING_MINUTE"] == 59
+    assert len(quality["report_sha256"]) == 64
+    assert runner.close_session("quality", now=NOW, complete=False) == report
     runner.close()
 
 
@@ -693,6 +751,27 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
     assert decision_inputs
     assert signal_event.event_id not in decision_inputs
     assert fill_event.event_id not in runner.records("s")["decisions"][0]["input_event_ids"]
+    runner.close()
+
+
+def test_paper_fill_is_blocked_by_available_instrument_halt_until_resume(tmp_path):
+    runner, fill_event, decided = trade_setup(tmp_path)
+    halt_at = decided + timedelta(milliseconds=150)
+    halt = MarketEvent("instrument-halt", EventKind.HALT, "NSE", "NSE:INFY",
+                       halt_at, halt_at, halt_at, {"state": "HALTED"}, "FIXTURE")
+    runner.ingest("s", make_config(), [halt], ingest_metadata={
+        halt.event_id: (halt.available_at + timedelta(milliseconds=1), "FIXTURE_CLOCK")})
+    with pytest.raises(ForwardSessionRunnerError, match="is halted at simulated time"):
+        execute(runner, fill_event, decided, order_id="halted-order", execution_offset_ms=200)
+    assert runner.records("s")["intents"] == []
+
+    resumed_at = decided + timedelta(milliseconds=250)
+    resumed = MarketEvent("instrument-resumed", EventKind.HALT, "NSE", "NSE:INFY",
+                          resumed_at, resumed_at, resumed_at, {"state": "RESUMED"}, "FIXTURE")
+    runner.ingest("s", make_config(), [resumed], ingest_metadata={
+        resumed.event_id: (resumed.available_at + timedelta(milliseconds=1), "FIXTURE_CLOCK")})
+    receipt = execute(runner, fill_event, decided, order_id="resumed-order", execution_offset_ms=300)
+    assert receipt["status"] == "FILLED"
     runner.close()
 
 
@@ -1511,8 +1590,8 @@ def test_injected_clock_supplies_decision_execution_and_close_times(tmp_path):
     executed_at = decided_at + timedelta(milliseconds=100)
     closed_at = executed_at + timedelta(seconds=1)
     clock = SequenceClock([NOW, decided_at, executed_at, closed_at])
-    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"),
-                                  tmp_path / "journal.sqlite", clock=clock)
+    runner = make_runner(tmp_path)
+    runner.clock = clock
     assert runner.begin("clock-session", make_config(),
                         preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
     signal_event = normalize_kite_quote("NSE:INFY", {

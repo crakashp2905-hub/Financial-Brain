@@ -41,6 +41,18 @@ def test_nav_parse_carries_house_and_type_down_the_file():
     assert rows[1]["isin_reinvest"] == "INF846K01WQ6" and rows[0]["isin_reinvest"] is None
 
 
+def test_scheme_classification_is_explicit_and_unknown_when_not_proven():
+    rows = amfi.parse(NAV_FILE)
+    direct = amfi.classify_scheme(rows[0])
+    idcw = amfi.classify_scheme(rows[1])
+    assert direct == {"plan_type": "DIRECT", "payout_type": "GROWTH",
+                      "structure_type": "OPEN_ENDED", "management_type": "UNCLASSIFIED",
+                      "asset_class": "EQUITY"}
+    assert idcw["plan_type"] == "REGULAR"
+    assert idcw["payout_type"] == "IDCW_UNSPECIFIED"
+    assert idcw["management_type"] == "UNCLASSIFIED"
+
+
 def test_a_scheme_with_no_declared_nav_is_absent_not_null():
     assert all(r["scheme_name"] != "Dormant Scheme" for r in amfi.parse(NAV_FILE))
 
@@ -58,23 +70,55 @@ def test_nav_ingest_is_idempotent(tmp_path):
 
     class Fake:
         source, dataset, tier = "AMFI", "mf_nav", 1
+        payload = NAV_FILE
 
         def fetch(self, d):
             from datetime import datetime, timezone
 
             from financial_brain.providers.base import FetchResult
-            return FetchResult(payload=NAV_FILE, url="https://example/NAVAll.txt",
+            return FetchResult(payload=self.payload, url="https://example/NAVAll.txt",
                                retrieved_at=datetime.now(timezone.utc),
                                filename="NAVAll.txt", content_type="text/plain")
 
     from financial_brain.ingest import mfnav
+    from datetime import datetime, timedelta, timezone
+
+    provider = Fake()
     with db.connect() as con:
-        first = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=Fake())
-        second = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=Fake())
+        first = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=provider)
+        first_observed = con.execute("""SELECT ingested_at FROM mf_nav_observations
+                                       WHERE scheme_code='135762' ORDER BY ingested_at LIMIT 1""").fetchone()[0]
+        assert mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), first_observed - timedelta(seconds=1)) is None
+        assert mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), first_observed)["nav"] == pytest.approx(29.8856)
+        second = mfnav.ingest(con, cfg, date(2026, 9, 20), provider=provider)
         assert first["schemes"] == second["schemes"] == 3
         assert con.execute("SELECT count(*) FROM mf_nav").fetchone()[0] == 3
+        assert con.execute("SELECT count(*) FROM mf_nav_observations").fetchone()[0] == 3
+        master = con.execute("""SELECT COUNT(*), COUNT(DISTINCT identity_key),
+                                      MIN(observed_on), MIN(nav_as_of),
+                                      COUNT(DISTINCT source_document_sha256),
+                                      COUNT(DISTINCT plan_type), COUNT(DISTINCT asset_class)
+                               FROM mf_scheme_master_observations""").fetchone()
+        assert master == (3, 3, date(2026, 9, 20), date(2018, 7, 2), 1, 2, 1)
         assert con.execute("""SELECT count(*) FROM evidence
                               WHERE kind = 'mf_nav_file'""").fetchone()[0] == 1
+
+        provider.payload = NAV_FILE.replace(b"29.8856", b"30.1250")
+        mfnav.ingest(con, cfg, date(2026, 9, 21), provider=provider)
+        before_correction = mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), first_observed)
+        after_correction = mfnav.as_known_on(
+            con, "135762", date(2026, 9, 18), datetime.now(timezone.utc) + timedelta(seconds=1))
+        assert before_correction["nav"] == pytest.approx(29.8856)
+        assert after_correction["nav"] == pytest.approx(30.1250)
+        assert before_correction["source_published_at"] is None
+        assert before_correction["retrieved_at"] is not None
+        assert con.execute("""SELECT nav FROM mf_nav WHERE scheme_code='135762'
+                              AND nav_date='2026-09-18'""").fetchone()[0] == pytest.approx(30.1250)
+        assert con.execute("""SELECT count(*) FROM evidence
+                              WHERE kind = 'mf_nav_file'""").fetchone()[0] == 2
 
 
 ROBOTS = """

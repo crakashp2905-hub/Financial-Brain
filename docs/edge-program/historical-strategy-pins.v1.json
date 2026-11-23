@@ -1,0 +1,72 @@
+{
+  "schema": "fb.historical-strategy-pins.v1",
+  "snapshot_commit": "bb84d5cb69cd6f26503d393cb293cfd40023d276",
+  "snapshot_ref": "feature/forward-edge-f00-f01",
+  "claim_policy": {
+    "evidence_class": "HISTORICAL_RESEARCH_CANDIDATE",
+    "prospective_profitability": "NOT_ESTABLISHED",
+    "confirmed_edge": false,
+    "live_promotion_allowed": false,
+    "rule": "A source pin fixes an implementation and its historical evidence; it does not certify expected return, prospective results, or deployment fitness."
+  },
+  "source_files": [
+    {
+      "path": "src/financial_brain/evaluation/edges.py",
+      "sha256": "21fcdbd42843a3e3ede2e7126e0d96728ff9a43b323fb87dfcb3a76156e2ca6c"
+    },
+    {
+      "path": "src/financial_brain/paper/zoo_edges.py",
+      "sha256": "c08485ecc18c05d942a43ba7bad866b9ad243828e71d73123dbcd10fd47a46a8"
+    },
+    {
+      "path": "brain/07-Research/PRE-REGISTERED edges for every mode.md",
+      "sha256": "b387ca4ec3a8a9da2809786d18bc46c9bae5b0da65f421110517269ae1de777e"
+    },
+    {
+      "path": "brain/07-Research/Result of edges for every mode.md",
+      "sha256": "666033860d1181bf842b207087313d84a5ae90372327eda500f2206ac979cb38"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "H003",
+      "version_id": "H003-historical-bb84d5cb",
+      "reference_status": "HISTORICAL_CANDIDATE_UNCONFIRMED",
+      "historical_registry_note": "CANDIDATE_SMALL under ADR-0007; source records a forward-shadow start on 2026-11-18. This is not a verified result of that shadow cohort.",
+      "entrypoint": "financial_brain.paper.zoo_edges:h_targets",
+      "selection_output": "edge_h003_riskadj_mom",
+      "formula": "Daily 12-1 momentum: close(t-21)/close(t-252)-1; divide by 250-session standard deviation of daily returns (minimum 200 observations); choose the top 20 eligible names and weight equally.",
+      "source_paths": ["src/financial_brain/paper/zoo_edges.py"],
+      "evidence_paths": ["src/financial_brain/paper/zoo_edges.py"]
+    },
+    {
+      "id": "H005",
+      "version_id": "H005-historical-bb84d5cb",
+      "reference_status": "HISTORICAL_CANDIDATE_UNCONFIRMED",
+      "historical_registry_note": "CANDIDATE_SMALL under ADR-0007; source records a forward-shadow start on 2026-11-18. This is not a verified result of that shadow cohort.",
+      "entrypoint": "financial_brain.paper.zoo_edges:h_targets",
+      "selection_output": "edge_h005_industry_mom",
+      "formula": "Within the top-500 eligible universe, rank industries by mean 126-session return, requiring at least eight eligible names; select the best three industries, then choose the top 20 names by daily 12-1 momentum and weight equally.",
+      "source_paths": ["src/financial_brain/paper/zoo_edges.py"],
+      "evidence_paths": ["src/financial_brain/paper/zoo_edges.py"]
+    },
+    {
+      "id": "P3",
+      "version_id": "P3-historical-bb84d5cb",
+      "reference_status": "HISTORICAL_CANDIDATE_FAILED_HISTORICAL_TEST",
+      "historical_registry_note": "The registered historical result failed its two-period t-statistic gate; it is retained as a historical candidate, not a confirmed edge.",
+      "entrypoint": "financial_brain.paper.zoo_edges:monthly_targets",
+      "selection_output": "edge_p3_frog_in_pan",
+      "formula": "At month end, compute 12-1 momentum and information discreteness = sign(12-1 return) x (share of down days - share of up days) over the 12-1 window; restrict to the lower half by information discreteness, choose the top 20 by momentum and weight equally.",
+      "source_paths": ["src/financial_brain/paper/zoo_edges.py", "src/financial_brain/evaluation/edges.py"],
+      "evidence_paths": ["brain/07-Research/PRE-REGISTERED edges for every mode.md", "brain/07-Research/Result of edges for every mode.md"],
+      "historical_result": {
+        "period_2016_2021_monthly_net_excess": "+1.84%",
+        "period_2016_2021_t": 3.33,
+        "period_2022_2026_monthly_net_excess": "+1.16%",
+        "period_2022_2026_t": 1.67,
+        "gate": "FAIL"
+      }
+    }
+  ]
+}

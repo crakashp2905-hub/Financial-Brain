@@ -1,107 +1,194 @@
 {
   "schema": "fb.authoritative_contracts.v1",
-  "as_of": "2026-11-21",
+  "as_of": "2026-11-23",
   "purpose": "Source-level ownership map for overlapping trading-system modules. Owners are authoritative only for the scoped contract stated here; this is not a claim of end-to-end integration, production readiness, or profitable performance.",
   "contracts": [
     {
       "id": "operator_cli",
       "scope": "Operator-facing forward-edge preflight, historical replay, and archived-data paper commands.",
-      "owner": "src/financial_brain/forward_edge/cli.py",
-      "supporting": ["src/financial_brain/cli.py"],
+      "owner": "src/financial_brain/forward_edge/cli.py::add_parser",
+      "supporting": [
+        "src/financial_brain/cli.py"
+      ],
       "alternatives": [],
       "boundary": "Does not start the prospective ForwardSessionRunner from live Kite observations; replay and archived-data paper modes are not prospective evidence.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/forward_edge/cli.py", "src/financial_brain/forward_edge/session_runner.py"]
+      "evidence": [
+        "src/financial_brain/forward_edge/cli.py",
+        "src/financial_brain/forward_edge/session_runner.py"
+      ]
     },
     {
       "id": "prospective_session_lifecycle",
       "scope": "Normalized market-event ingestion, decision/risk evidence, simulated fills, and durable session lifecycle.",
       "owner": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner",
-      "supporting": ["src/financial_brain/forward_edge/session_state.py", "src/financial_brain/forward_edge/durable.py", "src/financial_brain/forward_edge/market_events.py"],
-      "alternatives": ["src/financial_brain/paper/intraday_runner.py::run_live"],
+      "supporting": [
+        "src/financial_brain/forward_edge/session_state.py",
+        "src/financial_brain/forward_edge/durable.py",
+        "src/financial_brain/forward_edge/market_events.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/paper/intraday_runner.py::run_live"
+      ],
       "boundary": "The runner accepts normalized events and has no physical-order method; a live Kite quote-to-runner session command remains absent. The legacy paper live loop is a separate trading-day engine and not a substitute for this evidence lifecycle.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/session_state.py", "src/financial_brain/forward_edge/cli.py"]
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/session_state.py",
+        "src/financial_brain/forward_edge/cli.py"
+      ]
     },
     {
       "id": "legacy_intraday_paper",
       "scope": "Existing intraday strategy engine, Kite quote polling, replay, and legacy paper ledger.",
-      "owner": "src/financial_brain/paper/intraday_runner.py",
-      "supporting": ["src/financial_brain/paper/intraday.py", "src/financial_brain/paper/ledger.py"],
-      "alternatives": ["src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner"],
+      "owner": "src/financial_brain/paper/intraday_runner.py::run_live",
+      "supporting": [
+        "src/financial_brain/paper/intraday.py",
+        "src/financial_brain/paper/ledger.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner"
+      ],
       "boundary": "Provides a read-only Kite quote path and its own paper persistence; not an adapter into ForwardSessionRunner and not independently timestamp-attested.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/paper/intraday_runner.py", "src/financial_brain/paper/intraday.py", "src/financial_brain/paper/ledger.py"]
+      "evidence": [
+        "src/financial_brain/paper/intraday_runner.py",
+        "src/financial_brain/paper/intraday.py",
+        "src/financial_brain/paper/ledger.py"
+      ]
     },
     {
       "id": "broker_oms",
       "scope": "Broker order submission, broker acknowledgements, status and reconciliation.",
-      "owner": "src/financial_brain/execution/oms/engine.py",
-      "supporting": ["src/financial_brain/execution/oms/kite_broker.py", "src/financial_brain/execution/oms/journal.py", "src/financial_brain/execution/oms/reconcile.py"],
+      "owner": "src/financial_brain/execution/oms/engine.py::OMS",
+      "supporting": [
+        "src/financial_brain/execution/oms/kite_broker.py",
+        "src/financial_brain/execution/oms/journal.py",
+        "src/financial_brain/execution/oms/reconcile.py"
+      ],
       "alternatives": [],
       "boundary": "Broker OMS is distinct from simulated paper execution; physical-order policy and enabled broker pathways must remain separately gated.",
       "status": "SCOPED",
-      "evidence": ["src/financial_brain/execution/oms/engine.py", "src/financial_brain/execution/oms/kite_broker.py"]
+      "evidence": [
+        "src/financial_brain/execution/oms/engine.py",
+        "src/financial_brain/execution/oms/kite_broker.py"
+      ]
     },
     {
       "id": "simulated_forward_execution",
       "scope": "Quote eligibility, execution scenario evaluation, and simulated receipt persistence for prospective sessions.",
       "owner": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner",
-      "supporting": ["src/financial_brain/forward_edge/market_data.py", "src/financial_brain/forward_edge/execution_scenario.py", "src/financial_brain/forward_edge/durable.py"],
-      "alternatives": ["src/financial_brain/paper/options_runner.py::run_intent"],
+      "supporting": [
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/execution_scenario.py",
+        "src/financial_brain/forward_edge/durable.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/paper/options_runner.py::run_intent"
+      ],
       "boundary": "Options intent simulation is a separate scoped contract; this owner does not establish complete option lifecycle or live execution.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/forward_edge/session_runner.py", "src/financial_brain/forward_edge/market_data.py", "src/financial_brain/forward_edge/execution_scenario.py"]
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/forward_edge/market_data.py",
+        "src/financial_brain/forward_edge/execution_scenario.py"
+      ]
     },
     {
       "id": "risk_policy_and_sizing",
       "scope": "Research sleeve allocation based on estimated mean, uncertainty, drift state and money gate.",
       "owner": "src/financial_brain/risk/allocator.py::allocate",
-      "supporting": ["src/financial_brain/risk/sizing.py", "src/financial_brain/risk/limits.py"],
-      "alternatives": ["src/financial_brain/forward_edge/risk_allocator.py::allocate_with_risk_controls"],
+      "supporting": [
+        "src/financial_brain/risk/sizing.py",
+        "src/financial_brain/risk/limits.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/forward_edge/risk_allocator.py::allocate_with_risk_controls"
+      ],
       "boundary": "The forward-edge allocator enforces candidate-level portfolio controls; it is a separate order-intent risk gate, not a replacement for research sleeve sizing. End-to-end capital allocation across books is not established by either owner alone.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/risk/allocator.py", "src/financial_brain/risk/sizing.py", "src/financial_brain/forward_edge/risk_allocator.py"]
+      "evidence": [
+        "src/financial_brain/risk/allocator.py",
+        "src/financial_brain/risk/sizing.py",
+        "src/financial_brain/forward_edge/risk_allocator.py"
+      ]
     },
     {
       "id": "strategy_identity_and_lifecycle",
       "scope": "Frozen paper eligibility, status transitions, benchmark linkage, and strategy-version history.",
       "owner": "src/financial_brain/forward_edge/registry.py::StrategySpec",
-      "supporting": ["src/financial_brain/forward_edge/strategy_adapter.py", "src/financial_brain/forward_edge/parameter_freeze.py"],
-      "alternatives": ["src/financial_brain/strategies/specs.py::AlgorithmSpec"],
+      "supporting": [
+        "src/financial_brain/forward_edge/strategy_adapter.py",
+        "src/financial_brain/forward_edge/parameter_freeze.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/strategies/specs.py::AlgorithmSpec"
+      ],
       "boundary": "AlgorithmSpec captures algorithm clocks, costs and deterministic behavior constraints; it is not the promotion registry. Cross-registry identity/version synchronization remains unresolved.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/forward_edge/registry.py", "src/financial_brain/strategies/specs.py", "src/financial_brain/forward_edge/parameter_freeze.py"]
+      "evidence": [
+        "src/financial_brain/forward_edge/registry.py",
+        "src/financial_brain/strategies/specs.py",
+        "src/financial_brain/forward_edge/parameter_freeze.py"
+      ]
     },
     {
       "id": "prospective_promotion_evidence",
       "scope": "Forward-only champion-pick attestation and immutable pick manifests.",
-      "owner": "src/financial_brain/evaluation/prospective.py",
-      "supporting": ["src/financial_brain/forward_edge/evidence_stats.py", "src/financial_brain/forward_edge/governance.py"],
-      "alternatives": ["src/financial_brain/evaluation/champion.py"],
+      "owner": "src/financial_brain/evaluation/prospective.py::record",
+      "supporting": [
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "src/financial_brain/forward_edge/governance.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/evaluation/champion.py"
+      ],
       "boundary": "Prospective attestation records decisions; evidence_stats and governance evaluate evidence/promotion gates. No single module owns all evaluation, and specialized evaluation modules remain separate by metric or study.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/evaluation/prospective.py", "src/financial_brain/forward_edge/evidence_stats.py", "src/financial_brain/forward_edge/governance.py"]
+      "evidence": [
+        "src/financial_brain/evaluation/prospective.py",
+        "src/financial_brain/forward_edge/evidence_stats.py",
+        "src/financial_brain/forward_edge/governance.py"
+      ]
     },
     {
       "id": "forecast_path_distribution",
       "scope": "Validated sampled price paths, path-dependent risk/target questions, and empirical quantiles.",
       "owner": "src/financial_brain/forecasting/distribution.py::ForecastDistribution",
-      "supporting": ["src/financial_brain/forecasting/calibration.py", "src/financial_brain/forecasting/walkforward.py"],
-      "alternatives": ["src/financial_brain/forecasting/ensemble.py", "src/financial_brain/forecasting/kronos.py"],
+      "supporting": [
+        "src/financial_brain/forecasting/calibration.py",
+        "src/financial_brain/forecasting/walkforward.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/forecasting/ensemble.py",
+        "src/financial_brain/forecasting/kronos.py"
+      ],
       "boundary": "Distribution is the forecast-output contract; model generation, calibration, and validation remain separate components and are not interchangeable owners.",
       "status": "SCOPED",
-      "evidence": ["src/financial_brain/forecasting/distribution.py", "src/financial_brain/forecasting/calibration.py", "src/financial_brain/forecasting/walkforward.py"]
+      "evidence": [
+        "src/financial_brain/forecasting/distribution.py",
+        "src/financial_brain/forecasting/calibration.py",
+        "src/financial_brain/forecasting/walkforward.py"
+      ]
     },
     {
       "id": "canonical_portfolio_accounting",
       "scope": "Append-only canonical multi-asset portfolio events, as-of projections, and P&L promotion gate.",
-      "owner": "src/financial_brain/portfolio/canonical_ledger.py",
-      "supporting": ["src/financial_brain/portfolio/legacy_migration.py", "src/financial_brain/forward_edge/ledger_reconcile.py"],
-      "alternatives": ["src/financial_brain/paper/ledger.py"],
+      "owner": "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
+      "supporting": [
+        "src/financial_brain/portfolio/legacy_migration.py",
+        "src/financial_brain/forward_edge/ledger_reconcile.py"
+      ],
+      "alternatives": [
+        "src/financial_brain/paper/ledger.py"
+      ],
       "boundary": "Legacy paper ledgers remain source books and migration inputs; unsupported asset lifecycle facts and unresolved source rows continue to block complete consolidated accounting.",
       "status": "PARTIAL",
-      "evidence": ["src/financial_brain/portfolio/canonical_ledger.py", "src/financial_brain/portfolio/legacy_migration.py", "docs/edge-program/canonical-migration-audit.v1.json"]
+      "evidence": [
+        "src/financial_brain/portfolio/canonical_ledger.py",
+        "src/financial_brain/portfolio/legacy_migration.py",
+        "docs/edge-program/canonical-migration-audit.v1.json"
+      ]
     }
   ],
   "unresolved": [
@@ -110,5 +197,10 @@
     "Legacy intraday paper and prospective ForwardSessionRunner maintain distinct persistence/evidence paths; the migration/ownership boundary is documented but not unified.",
     "Research allocation, forward risk controls, and portfolio book-level capital allocation do not yet have one end-to-end risk budget contract.",
     "Specialist evaluation and forecasting modules are intentionally plural; only output/promotion interfaces are scoped here, not a common typed protocol across all models and studies."
-  ]
+  ],
+  "entrypoint_inventory": {
+    "path": "docs/edge-program/entrypoint-inventory.v1.json",
+    "scope": "AST inventory of public module-level functions and classes in forward_edge, paper, risk, execution, evaluation, forecasting, strategies and portfolio. A repeated name is not a shared contract; only exact owner IDs below are canonical for the stated scope.",
+    "generated_by": "scripts/entrypoint_inventory.py"
+  }
 }

@@ -25,6 +25,7 @@ class EventKind(StrEnum):
     HALT = "halt"
     AUCTION = "auction"
     CORPORATE_ACTION = "corporate_action"
+    MARGIN_CHANGE = "margin_change"
     BROKER_UPDATE = "broker_update"
 
 
@@ -60,6 +61,7 @@ class MarketEvent:
     source_at: datetime | None = None
     exchange_at: datetime | None = None
     published_at: datetime | None = None
+    revision_of: str | None = None
 
     def __post_init__(self) -> None:
         if not all(isinstance(x, str) and x.strip() for x in
@@ -78,6 +80,12 @@ class MarketEvent:
                 object.__setattr__(self, name, _utc(value, name))
         if self.published_at is not None and self.published_at > self.available_at:
             raise MarketEventError("event cannot be available to strategy before publication")
+        if self.revision_of is not None and (
+            not isinstance(self.revision_of, str)
+            or not self.revision_of.strip()
+            or self.revision_of == self.event_id
+        ):
+            raise MarketEventError("revision_of must identify a different non-empty event ID")
         if self.sequence is not None and (type(self.sequence) is not int or self.sequence < 0):
             raise MarketEventError("sequence must be a non-negative integer")
         if not isinstance(self.payload, dict):
@@ -121,7 +129,20 @@ class MarketEvent:
             if values["volume"] < 0 or values["high"] < max(values["open"], values["close"], values["low"]) or \
                     values["low"] > min(values["open"], values["close"], values["high"]):
                 raise MarketEventError("bar OHLCV is inconsistent")
-        elif self.kind in (EventKind.HALT, EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
+        elif self.kind == EventKind.HALT:
+            halt_state = str(p.get("state", p.get("status", ""))).strip().upper()
+            if halt_state not in {"HALTED", "RESUMED"}:
+                raise MarketEventError("halt event state/status must be HALTED or RESUMED")
+        elif self.kind == EventKind.MARGIN_CHANGE:
+            if not isinstance(p.get("change_id"), str) or not p["change_id"].strip():
+                raise MarketEventError("margin change requires a non-empty change_id")
+            before = _finite_number(p.get("margin_before_inr"), "margin_before_inr")
+            after = _finite_number(p.get("margin_after_inr"), "margin_after_inr")
+            if before < 0 or after < 0:
+                raise MarketEventError("margin values must be non-negative")
+            if p.get("currency") != "INR":
+                raise MarketEventError("margin change currency must be INR")
+        elif self.kind in (EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
             if not p:
                 raise MarketEventError(f"{self.kind.value} payload cannot be empty")
 
@@ -137,10 +158,30 @@ class MarketEvent:
             value = getattr(self, name)
             if value is not None:
                 result[name] = value.isoformat()
+        if self.revision_of is not None:
+            result["revision_of"] = self.revision_of
         return result
 
     def sha256(self) -> str:
         raw = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def dedupe_sha256(self) -> str:
+        """Hash source identity and payload, excluding local receipt/availability clocks."""
+        payload = json.dumps(self.payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        source_clock = self.source_at or self.exchange_at or self.event_time
+        body = {
+            "event_id": self.event_id,
+            "kind": self.kind.value,
+            "venue": self.venue,
+            "instrument_id": self.instrument_id,
+            "source": self.source,
+            "sequence": self.sequence,
+            "source_clock": source_clock.isoformat(),
+            "payload_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+            "revision_of": self.revision_of,
+        }
+        raw = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     @classmethod

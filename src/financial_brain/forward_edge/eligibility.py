@@ -159,4 +159,3 @@ def render(repo_root: Path) -> str:
 
 def write(repo_root: Path) -> None:
     (Path(repo_root) / OUT_REL).write_text(render(repo_root), encoding="utf-8", newline="\n")
-

@@ -298,4 +298,3 @@ def main(argv: list[str] | None = None) -> int:
         out, code = cmd_report(args.as_of)
     print(json.dumps(out, indent=2, sort_keys=True, default=str))
     return code
-

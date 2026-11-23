@@ -1,5 +1,5 @@
 {
-  "conclusion": "Protected ledger/manifests are byte-pinned and unchanged. The pin proves preservation of bytes, not that every trial originally recorded a dataset hash or historical read window. Missing fields remain missing.",
+  "conclusion": "Protected ledger/manifests match their original main Git blobs byte-for-byte. The pin proves preservation of bytes, not that every trial originally recorded a dataset hash or historical read window. Missing fields remain missing.",
   "coverage": {
     "failure_outcomes": 13,
     "fully_documented_trials": 3,
@@ -15,6 +15,11 @@
     "sha256_lf": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
     "trial_count": 13
   },
+  "main_baseline": {
+    "blob_mismatches": [],
+    "commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "protected_source_count": 9
+  },
   "schema": "fb.trial_preservation_audit.v1",
   "scope": "Audit of already-recorded Q4 2026 protected trial facts. Missing historical facts are reported as missing and are never reconstructed or backfilled.",
   "trials": [
@@ -24,7 +29,7 @@
         "G3"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "cb3de4551a1742cab2f7c12935f328da12e058826926f8d64b1910aac296fa60",
+      "ledger_line_sha256": "34499f99af9293c445066238b410465bd52e8b5035578a1add6c103c4559b491",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -41,7 +46,7 @@
         "G4"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "f59b2f30afa0874201f017f19e9969e7fd8cf1ef9901119da91ae248ba8dd816",
+      "ledger_line_sha256": "829d3c4bd55fa966dd60cc0cb16a27bb4f2dee35b49c01298b3ccf8547b2e8ce",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -57,7 +62,7 @@
         "G3"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "d3e364c5c91f559456fd0036dd5e1c2ea087e7cbefec3c979474e91ba9d19ae1",
+      "ledger_line_sha256": "7315fee59d4a39e3b07af0cff040254c1f88a8190d2c15c6917611bd8bf1f8be",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -74,7 +79,7 @@
         "G4"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "3de80d5423bf3f72c22c05cb9f74f8b70c4ea50e2e003ed670b000094760c925",
+      "ledger_line_sha256": "e873f4ce6b64f6d2f0ae53c914a5403ff6cbf70dc2ed9a4877e2ed73e6516734",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -91,7 +96,7 @@
         "G4"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "f9b207ca6da5212c226523845600c1b78235dfee084fa2cb29f374aaf4a2fd85",
+      "ledger_line_sha256": "e94349f36b8723d9cbfb8c611fd046da51cf86ab131fbf9be13aa20c14d22eee",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -108,7 +113,7 @@
         "G4"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "74345affac4c448358266ce8511fa8672bf4ee7596c0077c5d3dde0eb33700e4",
+      "ledger_line_sha256": "cb3c6fbe0c116a028f1bfa137f5abe25ca3a696520729e527a87c5c616f86c3a",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -124,7 +129,7 @@
         "G3"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "7b297a6aaa4d0740aa90f974d0b64ec5e386412ca9e758b6ab80743afe84d8e5",
+      "ledger_line_sha256": "5a25a8b09114336bc567ca028b09ff7df20057cf3f3f68db8e75051c9fafb63e",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -141,7 +146,7 @@
         "G4"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "4d3a4a8af7f1dc08eb879463d925d670476208834122a5f371434618a997c177",
+      "ledger_line_sha256": "62a3b91edb9fe372c57ce375e116e42f78f48488ed74892be5ed68fe306fe117",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -157,7 +162,7 @@
         "G3"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "14fd287b57df73ed19b43a51df97ac58894e16c7706f110f2c5fe471bafe7584",
+      "ledger_line_sha256": "8c355889dbaad9d3cbebbc25213baf6dea5290433cd63a873902827d2314b27c",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -173,7 +178,7 @@
         "G3"
       ],
       "historical_read_window_recorded": false,
-      "ledger_line_sha256": "827654654e479bb562086a09de6577da9a9418fdff63f8fc777bfdb2f8280abb",
+      "ledger_line_sha256": "12f3e2064716dea331cdfb6db5089c2e8c364e6a82ec5841ba77f0bc3d8fca6d",
       "manifest_path": null,
       "missing_historical_evidence": [
         "input_hashes",
@@ -211,7 +216,7 @@
         "OOS t >= 2"
       ],
       "historical_read_window_recorded": true,
-      "ledger_line_sha256": "e4f6a266c2ceaf169063de8fa88cf7e82f35b387542275f0ed502590902d6147",
+      "ledger_line_sha256": "dbe05ad6fe845502b839910b650e4344f12506ec1ac42895de049d50de4ea536",
       "manifest_path": "docs/trials/manifests/x3.json",
       "missing_historical_evidence": [],
       "name": "X3 earnings surprise drift out of sample",
@@ -246,7 +251,7 @@
         "G4"
       ],
       "historical_read_window_recorded": true,
-      "ledger_line_sha256": "5f5882947e071087183223d7d0fdb1d7b71fb4727f9d299bfcecbbf3e2e6ab77",
+      "ledger_line_sha256": "29b00c26b0e3f0bd5e21a342ab79c63efcfc85c60221a44e261c5e8566653373",
       "manifest_path": "docs/trials/manifests/mf.json",
       "missing_historical_evidence": [],
       "name": "MF multi-factor quality value low-risk book",
@@ -264,7 +269,7 @@
         "G3"
       ],
       "historical_read_window_recorded": true,
-      "ledger_line_sha256": "fb2c90927479c8bb3a1bcf9f79fe6414259c6365c8e94c3753a60dcd2995e38d",
+      "ledger_line_sha256": "81bc4b63bcbbbd29864b2d6a4c13d876208146848a6acd01cf0e03bce8a42d81",
       "manifest_path": "docs/trials/manifests/is_minute_family.json",
       "missing_historical_evidence": [],
       "name": "I/S intraday and swing family on minute bars (9 rules)",

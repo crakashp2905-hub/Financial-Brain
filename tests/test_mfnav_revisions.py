@@ -184,4 +184,3 @@ def test_migration_adds_ingestion_clock_without_backfilling_legacy_rows(tmp_path
         row = con.execute("""SELECT observed_at, ingested_at
             FROM mf_nav_observations WHERE observation_id='legacy'""").fetchone()
         assert row == (observed, None)
-

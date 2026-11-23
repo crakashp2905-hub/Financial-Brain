@@ -18,6 +18,7 @@ ROLE_BY_PACKAGE = {
     "forecasting": "Research", "evidence": "Evidence", "pit": "Evidence",
     "paper": "Paper", "execution": "Execution", "risk": "Execution",
     "providers": "Integration", "ingest": "Integration", "interfaces": "UI",
+    "kernel": "Core",
 }
 
 

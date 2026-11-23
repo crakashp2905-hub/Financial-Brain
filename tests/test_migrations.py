@@ -23,7 +23,13 @@ def test_migrate_twice_is_a_no_op_and_creates_every_table(tmp_path):
     Database(cfg).migrate()
     assert _schema(cfg.db_path) == first
     tables = {t for t, _, _ in first}
-    assert {"financial_results", "xbrl_facts", "delivery", "insider_disclosures"} <= tables
+    assert {
+        "financial_results",
+        "xbrl_facts",
+        "delivery",
+        "insider_disclosures",
+        "etf_reference_observations",
+    } <= tables
 
 
 def test_an_older_database_gains_the_added_columns(tmp_path):

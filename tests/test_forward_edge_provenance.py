@@ -14,5 +14,3 @@ def test_provenance_records_commit_branch_ancestry_and_entry_point(tmp_path):
     assert len(result["branch_ancestry_sha256"]) == 64
     assert result["source_tree_state"] == "CLEAN"
     assert result["executable_entry_point"] == "fb test-session"
-
-

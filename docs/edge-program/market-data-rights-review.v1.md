@@ -1,7 +1,7 @@
 # Market-data rights review — evidence and unresolved decisions
 
-**Research snapshot:** 2026-11-21  
-**Checklist item:** FB-0008  
+**Research snapshot:** 2026-11-21
+**Checklist item:** FB-0008
 **Disposition:** `EXTERNAL_BLOCKED` — this repository review is complete; the required account-, product-, and use-specific written approvals are not in the repository.
 
 This is a technical evidence inventory, not legal advice or a rights grant. Public policy pages do not replace the exact account agreement, product schedule, exchange permission, or written clarification applicable to this account and workflow. No permission status is upgraded by this review.

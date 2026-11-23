@@ -349,4 +349,3 @@ def restore(backup_path: Path, target: Path) -> DurableJournal:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(backup_path.read_bytes())
     return DurableJournal(target)
-

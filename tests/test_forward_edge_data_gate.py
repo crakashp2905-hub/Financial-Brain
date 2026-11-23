@@ -26,10 +26,12 @@ def _good(**changes):
 
 def test_good_observed_quote_passes_and_reason_order_is_stable() -> None:
     assert _good().decision == "TRADE"
+    assert _good().data_status == "USABLE"
     bad = _good(quote_time=None, bid=None, ask=None, volume=0, is_circuit_limited=True,
                 session_phase="AUCTION", auction_required=True, auction_data_present=False)
     assert bad.decision == "NO_TRADE"
     assert bad.reasons == tuple(sorted(bad.reasons, key=lambda r: r.value))
+    assert bad.data_status == "DATA_UNUSABLE"
     assert {GateReason.QUOTE_MISSING, GateReason.ZERO_VOLUME, GateReason.CIRCUIT_LIMIT,
             GateReason.NOT_CONTINUOUS_SESSION, GateReason.AUCTION_DATA_MISSING} <= set(bad.reasons)
 

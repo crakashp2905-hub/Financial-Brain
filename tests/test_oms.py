@@ -263,6 +263,33 @@ def test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_
     assert sent == []
 
 
+def test_oms_auto_submit_cannot_escape_physical_order_lock(tmp_path, monkeypatch):
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
+    monkeypatch.setattr(OP, "PHYSICAL_ORDERS_ENABLED", True)
+    RO._write({"stage": RO.SMALL_AUTO, "history": []}, tmp_path / "stage.json")
+    transports = []
+    broker = KB.KiteBroker(
+        "CONFIRMED", opener=lambda request, timeout: transports.append(request),
+        stage_path=tmp_path / "stage.json", ks_path=tmp_path / "ks.json",
+    )
+    broker.ltp = lambda symbols: {("NSE", "ABC"): 100.0}
+    journal = J.Journal(tmp_path / "oms-order-lock.duckdb")
+    oms = EN.OMS(journal, broker, verdicts={"s": "CONFIRMED"},
+                 stage_path=tmp_path / "stage.json", ks_path=tmp_path / "ks.json",
+                 banned=frozenset(), clock=lambda: IN_SESSION)
+    try:
+        order = oms.submit(strategy="s", day="2026-10-13", symbol="ABC", side=M.BUY,
+                           qty=1, limit_price=100.0)
+        assert order.state == M.CANCELLED
+        assert "physical broker orders are permanently disabled" in order.reason
+        assert transports == []
+        assert journal.get(order.client_id).state == M.CANCELLED
+    finally:
+        journal.close()
+
+
 # ------------------------------------------------------------------ slicing
 
 def test_vwap_respects_the_participation_cap_and_reports_the_rest():

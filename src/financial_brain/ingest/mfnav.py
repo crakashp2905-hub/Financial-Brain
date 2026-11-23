@@ -11,13 +11,15 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from ..evidence import ledger
 from ..lake.store import RawLake
-from ..providers.amfi import AmfiNav, parse_quality_report
+from ..providers.amfi import AmfiNav, classify_scheme, parse_quality_report
 
 SOURCE, DATASET = "AMFI", "mf_nav"
 DEFAULT_STALE_AFTER_DAYS = 7
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def ingest(
@@ -92,14 +94,14 @@ def ingest(
             observation_id, row["scheme_code"], row["isin_growth"], row["isin_reinvest"],
             row["scheme_name"], row["fund_house"], row["scheme_type"], row["plan"],
             row["option"], row["nav"], row["nav_date"], obj.key, row_number,
-            row_digest, source_published_at, observed_at, ingested_at,
+            row_digest, source_published_at, observed_at, observed_at, ingested_at,
         ))
 
     con.executemany("""INSERT INTO mf_nav_observations (
         observation_id, scheme_code, isin_growth, isin_reinvest, scheme_name,
         fund_house, scheme_type, plan, option, nav, nav_date, lake_key, row_number,
-        row_sha256, source_published_at, observed_at, ingested_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (observation_id) DO NOTHING""",
+        row_sha256, source_published_at, retrieved_at, observed_at, ingested_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (observation_id) DO NOTHING""",
         observations)
     # Keep the legacy table as the latest known projection. Historical/as-known queries
     # use mf_nav_observations, which is never overwritten by this update.
@@ -121,6 +123,41 @@ def ingest(
         [[r["scheme_code"], r["isin_growth"], r["isin_reinvest"], r["scheme_name"],
           r["fund_house"], r["scheme_type"], r["plan"], r["option"], r["nav"],
           r["nav_date"], obj.key, observed_at] for r in rows])
+
+    # Preserve point-in-time scheme descriptors as their own revisioned observation.
+    # AMFI's NAV file does not provide effective dates, so observed_on is retrieval day;
+    # classification falls back to UNCLASSIFIED whenever the descriptor is ambiguous.
+    master_rows = []
+    for row in rows:
+        classification = classify_scheme(row)
+        identity = "|".join((row["scheme_code"], row["plan"] or "", row["option"] or "",
+                             row["isin_growth"] or "", row["isin_reinvest"] or ""))
+        identity_key = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        body = {"identity_key": identity_key, "scheme_code": row["scheme_code"],
+                "isin_growth": row["isin_growth"], "isin_reinvest": row["isin_reinvest"],
+                "scheme_name": row["scheme_name"], "fund_house": row["fund_house"],
+                "scheme_type": row["scheme_type"], "plan": row["plan"],
+                "option": row["option"], "nav_as_of": row["nav_date"].isoformat(),
+                **classification, "observed_on": d.isoformat(),
+                "observed_at": observed_at.isoformat(), "source_document_sha256": obj.sha256,
+                "lake_key": obj.key}
+        record_sha = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+        master_rows.append([identity_key, row["scheme_code"], row["isin_growth"],
+                            row["isin_reinvest"], row["scheme_name"], row["fund_house"],
+                            row["scheme_type"], classification["plan_type"],
+                            classification["payout_type"], classification["structure_type"],
+                            classification["management_type"], classification["asset_class"],
+                            row["plan"], row["option"], row["nav_date"], d, observed_at,
+                            obj.sha256, record_sha, obj.key])
+    con.executemany("""INSERT INTO mf_scheme_master_observations
+        (identity_key, scheme_code, isin_growth, isin_reinvest, scheme_name, fund_house,
+         scheme_type, plan_type, payout_type, structure_type, management_type, asset_class,
+         plan, option, nav_as_of, observed_on, observed_at, source_document_sha256,
+         record_sha256, lake_key)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT (identity_key, observed_on, source_document_sha256) DO NOTHING""",
+        master_rows)
 
     latest = max((r["nav_date"] for r in rows), default=None)
     fresh = sum(1 for r in rows if r["nav_date"] == latest)
@@ -150,7 +187,8 @@ def ingest(
             "ingested_at": ingested_at.isoformat(), "quality": quality}
 
 
-def as_known_on(con, scheme_code: str, nav_date: date, *, known_at: datetime) -> dict | None:
+def as_known_on(con, scheme_code: str, nav_date: date, known_at: datetime | None = None,
+                *, same_day_nav_cutoff: datetime | None = None) -> dict | None:
     """Return the latest NAV observation locally available by ``known_at``.
 
     AMFI's NAVAll feed does not expose a per-row publication timestamp. In that case
@@ -160,23 +198,45 @@ def as_known_on(con, scheme_code: str, nav_date: date, *, known_at: datetime) ->
     preserved when an authorized provider supplies one, but never inferred from NAV or
     request date.
     """
+    if known_at is None:
+        raise ValueError("known_at must be timezone-aware")
     if known_at.tzinfo is None or known_at.utcoffset() is None:
         raise ValueError("known_at must be timezone-aware")
-    row = con.execute("""SELECT observation_id, scheme_code, nav, nav_date, lake_key,
-        row_number, row_sha256, source_published_at, observed_at, ingested_at,
-        COALESCE(ingested_at, observed_at) AS available_at
+    decision_utc = known_at.astimezone(timezone.utc)
+    if same_day_nav_cutoff is not None:
+        if (same_day_nav_cutoff.tzinfo is None or same_day_nav_cutoff.utcoffset() is None
+                or same_day_nav_cutoff.astimezone(IST).date() != nav_date):
+            raise ValueError("same_day_nav_cutoff must be aware and fall on nav_date")
+    columns = {row[1] for row in con.execute(
+        "PRAGMA table_info('mf_nav_observations')").fetchall()}
+    if not {"scheme_code", "nav_date", "nav", "observed_at"} <= columns:
+        raise ValueError("mf_nav_observations is missing required as-known columns")
+    # Daily NAVs are often fetched before the AMC's end-of-day publication is complete.
+    # Schemas with a separately persisted ingestion clock can answer from that exact
+    # availability evidence. Older observation tables lack that clock, so same-day
+    # results require an explicit cutoff. If a caller supplies a cutoff, enforce it in
+    # either schema.
+    if decision_utc.astimezone(IST).date() == nav_date:
+        if same_day_nav_cutoff is not None:
+            if decision_utc < same_day_nav_cutoff.astimezone(timezone.utc):
+                return None
+        elif "ingested_at" not in columns:
+            return None
+    availability_fields = [name for name in ("ingested_at", "retrieved_at", "observed_at")
+                           if name in columns]
+    available_at = "COALESCE(" + ", ".join(availability_fields) + ")"
+    ordering = [f"{name} DESC" for name in ("lake_key", "record_sha256",
+                                              "source_document_sha256") if name in columns]
+    order_sql = (", " + ", ".join(ordering)) if ordering else ""
+    row = con.execute(f"""SELECT *, {available_at} AS available_at
         FROM mf_nav_observations
-        WHERE scheme_code = ? AND nav_date = ?
-          AND COALESCE(ingested_at, observed_at) <= ?
-        ORDER BY COALESCE(ingested_at, observed_at) DESC, lake_key DESC,
-                 row_number DESC LIMIT 1""",
-        [scheme_code, nav_date, known_at.astimezone(timezone.utc)]).fetchone()
+        WHERE scheme_code = ? AND nav_date = ? AND {available_at} <= ?
+        ORDER BY {available_at} DESC{order_sql} LIMIT 1""",
+        [scheme_code, nav_date, decision_utc]).fetchone()
     if row is None:
         return None
-    keys = ("observation_id", "scheme_code", "nav", "nav_date", "lake_key",
-            "row_number", "row_sha256", "source_published_at", "observed_at",
-            "ingested_at", "available_at")
-    return dict(zip(keys, row, strict=True))
+    names = [description[0] for description in con.description]
+    return dict(zip(names, row, strict=True))
 
 
 __all__ = ["as_known_on", "ingest"]

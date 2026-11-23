@@ -1,0 +1,59 @@
+{
+  "schema": "fb.ci_validation_matrix.v1",
+  "scope": "Required static checks and test/coverage jobs in .github/workflows/ci.yml; presence does not claim the latest hosted run is green.",
+  "workflow": ".github/workflows/ci.yml",
+  "categories": {
+    "ruff": {
+      "command": "python -m ruff check src tests",
+      "status": "SEPARATE_GATE"
+    },
+    "mypy": {
+      "command": "python -m mypy",
+      "status": "SEPARATE_GATE"
+    },
+    "migrations": {
+      "command": "python -m pytest -q tests/test_migrations.py",
+      "status": "SEPARATE_GATE"
+    },
+    "invariants": {
+      "commands": [
+        "python scripts/validate_capability_matrix.py",
+        "python scripts/validate_market_data_sources.py",
+        "python scripts/validate_product_charter.py --check",
+        "python scripts/validate_launch_gates.py --check",
+        "python scripts/validate_trial_program.py",
+        "python scripts/trial_preservation_audit.py --check"
+      ],
+      "status": "SEPARATE_GATES"
+    },
+    "unit": {
+      "command": "python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml",
+      "status": "COMBINED_WITH_INTEGRATION"
+    },
+    "integration": {
+      "command": "python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml",
+      "status": "COMBINED_WITH_UNIT"
+    },
+    "coverage": {
+      "commands": [
+        "python scripts/check_critical_coverage.py critical-coverage.json",
+        "python -m coverage report --include=\"*/patterns/*\" --fail-under=85",
+        "python -m coverage xml"
+      ],
+      "status": "SEPARATE_GATES"
+    },
+    "dependency_audit": {
+      "command": "python -m pip_audit --skip-editable",
+      "status": "SEPARATE_GATE"
+    }
+  },
+  "chart_pattern_steps": {
+    "completion_matrix_step": "Chart-pattern completion matrix is current",
+    "offline_demo_step": "Chart-pattern offline demo (network denied)",
+    "expected_occurrences_each": 1
+  },
+  "limitations": [
+    "Unit and integration tests are not separately tagged or invoked; the complete pytest suite is one combined gate.",
+    "The matrix checks workflow command presence and duplicate chart-pattern steps, not job success; hosted run evidence remains commit-specific."
+  ]
+}

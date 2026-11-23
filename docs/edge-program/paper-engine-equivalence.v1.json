@@ -1,0 +1,233 @@
+{
+  "case_count": 8,
+  "cases": [
+    {
+      "classification_match": true,
+      "divergences": [
+        "net P&L differs at paise precision: legacy=-34.01, integrated=-34.00"
+      ],
+      "fixture_id": "adverse_fill",
+      "fixture_sha256": "1685a6f56fc9641b3aa61f0a47ca92a9512e8a0ec7de4a8e3369ed2400f7362f",
+      "integrated": {
+        "decision_count": 2,
+        "net_pnl_eligible": true,
+        "net_pnl_inr": "-34.001499999999999",
+        "outcome": "LOSS",
+        "paper_intent_count": 2,
+        "receipt_count": 2,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "abe1a1146b5911769d86eeb85ba6d224fb991a5802757142b7e52ccfb893af26"
+      },
+      "known_differences": [
+        "adverse-selection accounting differs: legacy shifts the entry fill before calculating brokerage (INR 4.509 rounds to 4.51), while the integrated path keeps the INR 1,500 limit fill and books INR 30 as a separate adverse-selection charge (brokerage INR 4.50); this yields a one-paise net difference after the exit-fee rounding/precision difference",
+        "raw sub-paise values differ; the legacy engine rounds each fee and final P&L to paise, while the integrated projection retains Decimal fractions below one paise"
+      ],
+      "legacy": {
+        "golden_signature": "3e306dadb1995ef9bdfede7cc0b7d0a6ce9282148b2453d402abf22aea45810a",
+        "net_pnl_inr": "-34.01",
+        "outcome": "LOSS",
+        "reason": "FILLED_FILLED"
+      },
+      "net_pnl_match_at_paise": false,
+      "session_id": "FX-adverse_fill"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "late_quote",
+      "fixture_sha256": "70d7c339736621ab4be149a248baaa920e003691ac221d94c5bf2c4b01967281",
+      "integrated": {
+        "decision_count": 1,
+        "net_pnl_eligible": false,
+        "net_pnl_inr": null,
+        "outcome": "LATE_QUOTE",
+        "paper_intent_count": 1,
+        "receipt_count": 1,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "900243e205458c238719f89ddff26a47c353d088323b24b0bc4106987996c87f"
+      },
+      "known_differences": [
+        "legacy reports zero net P&L for no realized trade; integrated accounting uses null when no realized position exists"
+      ],
+      "legacy": {
+        "golden_signature": "e0eb4f3e1b5fb126854d6573d85eab04ce26d73e7a463994fbba321a8589ed29",
+        "net_pnl_inr": "0",
+        "outcome": "LATE_QUOTE",
+        "reason": "FIRST_QUOTE_AFTER_MAX_WAIT"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-late_quote"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "loss",
+      "fixture_sha256": "dfc2c64b636337dccf8b0a27311f7c06ca3c1ff36ac2708147b56543ad04e7fe",
+      "integrated": {
+        "decision_count": 2,
+        "net_pnl_eligible": true,
+        "net_pnl_inr": "-209.4401499999999995",
+        "outcome": "LOSS",
+        "paper_intent_count": 2,
+        "receipt_count": 2,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "3ea4ba0ed609899d1d59b6443e5d73a83fbe5ff8121050b60cbc855b5e5d11bb"
+      },
+      "known_differences": [
+        "raw sub-paise values differ; the legacy engine rounds each fee and final P&L to paise, while the integrated projection retains Decimal fractions below one paise"
+      ],
+      "legacy": {
+        "golden_signature": "a2c0fccd189e19903e374e97ff1dfd47002972b4e766e7e67af7291f645b693d",
+        "net_pnl_inr": "-209.44",
+        "outcome": "LOSS",
+        "reason": "FILLED_FILLED"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-loss"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "missed_fill",
+      "fixture_sha256": "12621fe7b020c03861d353145bbbbebb85a5f378be82f78672e5675b8919a436",
+      "integrated": {
+        "decision_count": 1,
+        "net_pnl_eligible": false,
+        "net_pnl_inr": null,
+        "outcome": "MISSED_FILL",
+        "paper_intent_count": 1,
+        "receipt_count": 1,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "5236534aa39e36e2bffec0d9cd145e258fc38d64cf3b8bd51e1602f50a0e5813"
+      },
+      "known_differences": [
+        "legacy reports zero net P&L for no realized trade; integrated accounting uses null when no realized position exists"
+      ],
+      "legacy": {
+        "golden_signature": "db081d803371c5db4a7663fab188d5c69ce292b5d6f499b26bbc30bb36cce4de",
+        "net_pnl_inr": "0",
+        "outcome": "MISSED_FILL",
+        "reason": "NO_TRADE_THROUGH_LIMIT"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-missed_fill"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "no_trade",
+      "fixture_sha256": "68c92e4d4a53e4196865a855d87a5e8de13e0ed4f06e1da3f86dfeb21a5e3f96",
+      "integrated": {
+        "decision_count": 1,
+        "net_pnl_eligible": false,
+        "net_pnl_inr": null,
+        "outcome": "NO_TRADE",
+        "paper_intent_count": 0,
+        "receipt_count": 0,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "6ef063482fd2102d88bc720728ee7dcba9e16a9bfc31640820993bc70dc9c2a7"
+      },
+      "known_differences": [
+        "legacy reports zero net P&L for no realized trade; integrated accounting uses null when no realized position exists"
+      ],
+      "legacy": {
+        "golden_signature": "df26a29031b6e4f7883af60e4cb247d87833f38a0dcdb2ade3972d561ace96d6",
+        "net_pnl_inr": "0",
+        "outcome": "NO_TRADE",
+        "reason": "STALE_QUOTE"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-no_trade"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "rejection",
+      "fixture_sha256": "063edcaa75cbe5b30e438505477ef4463886994c4be8e1c6b6273ce839482cf2",
+      "integrated": {
+        "decision_count": 1,
+        "net_pnl_eligible": false,
+        "net_pnl_inr": null,
+        "outcome": "REJECTED",
+        "paper_intent_count": 1,
+        "receipt_count": 1,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "1d09cfec21b747ac347e4717805332c41100bb9139789836d5f38fe437fd0142"
+      },
+      "known_differences": [
+        "legacy reports zero net P&L for no realized trade; integrated accounting uses null when no realized position exists"
+      ],
+      "legacy": {
+        "golden_signature": "abf1bbe66dd7c408c59a6bb05732bdf809accdb06afb0b1fae7832f92d18fb85",
+        "net_pnl_inr": "0",
+        "outcome": "REJECTED",
+        "reason": "PRICE_BAND"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-rejection"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "unknown_order",
+      "fixture_sha256": "aee6ac49a7ab20d1bbf7287e6a4dc7713e516cf223936efa6743ee26c0313825",
+      "integrated": {
+        "decision_count": 1,
+        "net_pnl_eligible": false,
+        "net_pnl_inr": null,
+        "outcome": "UNKNOWN_ORDER",
+        "paper_intent_count": 1,
+        "receipt_count": 0,
+        "report_status": "INCOMPLETE",
+        "runner_records_sha256": "88b85ab8f6c2b3f006da2370c4b8b5500a983611ca20ba474e486b4753eac630"
+      },
+      "known_differences": [
+        "legacy reports zero net P&L for no realized trade; integrated accounting uses null when no realized position exists",
+        "lifecycle completeness: integrated report is INCOMPLETE"
+      ],
+      "legacy": {
+        "golden_signature": "c9823b6a1f62181a3594f8174ac1522707e9deba0527b316dc925da348694b2e",
+        "net_pnl_inr": "0",
+        "outcome": "UNKNOWN_ORDER",
+        "reason": "ACK_LOST_NO_RESEND"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-unknown_order"
+    },
+    {
+      "classification_match": true,
+      "divergences": [],
+      "fixture_id": "win",
+      "fixture_sha256": "91bd7e490480245f421adebe0b8a8ff01830b12352f71cae968dfe0ed3015a33",
+      "integrated": {
+        "decision_count": 2,
+        "net_pnl_eligible": true,
+        "net_pnl_inr": "190.43985",
+        "outcome": "WIN",
+        "paper_intent_count": 2,
+        "receipt_count": 2,
+        "report_status": "CLOSED",
+        "runner_records_sha256": "e4fbde3de0d89dcdf3fabab6f7d352ddbf6dcac67ddc75e3d65d57b5e975176a"
+      },
+      "known_differences": [
+        "raw sub-paise values differ; the legacy engine rounds each fee and final P&L to paise, while the integrated projection retains Decimal fractions below one paise"
+      ],
+      "legacy": {
+        "golden_signature": "d3587cf3efa4299b96204d7c1e2669551a29ac82ebaa79b366f111d806283fae",
+        "net_pnl_inr": "190.44",
+        "outcome": "WIN",
+        "reason": "FILLED_FILLED"
+      },
+      "net_pnl_match_at_paise": true,
+      "session_id": "FX-win"
+    }
+  ],
+  "classification_divergences": 0,
+  "classification_matches": 8,
+  "independent_strategy_reruns": false,
+  "net_pnl_matches_at_paise": 7,
+  "schema": "fb.paper-engine-equivalence.v1",
+  "scope": "Eight deterministic synthetic fixture sessions; compares legacy golden outcomes with the integrated ForwardSessionRunner projection.",
+  "status": "PARTIAL",
+  "status_reason": "The integrated fixture adapter is passed the legacy outcome; an independent run of each original strategy through both engines is not established."
+}

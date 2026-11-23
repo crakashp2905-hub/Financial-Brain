@@ -91,7 +91,12 @@ class KiteBroker:
             if method == "POST":
                 raise BrokerTimeout(f"{method} {path}: {e}") from e
             raise BrokerError(f"{method} {path}: {e}") from e
-        out = json.loads(raw)
+        try:
+            out = json.loads(raw)
+        except (TypeError, ValueError) as e:
+            raise BrokerError(f"invalid JSON from {method} {path}") from e
+        if not isinstance(out, dict):
+            raise BrokerError(f"invalid response shape from {method} {path}")
         if out.get("status") != "success":
             raise BrokerError(f"Kite error on {method} {path}: {out.get('message', out)}")
         return out.get("data", {})

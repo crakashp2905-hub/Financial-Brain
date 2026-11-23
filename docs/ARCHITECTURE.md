@@ -48,21 +48,27 @@ Learning`, never `LLM → predict price`.
 
 ---
 
-## 2. Product charter — decide before architecture
+## 2. Product charter — five desks, paper-first
 
-Four candidate users imply four different products: long-term Indian-equity investor;
-active swing trader; registered advisor/research team; institutional investor. They
-differ in decision horizon, data latency, portfolio constraints, evaluation metrics, UX,
-compliance and acceptable automation.
+Financial-Brain's product contract covers five distinct research and paper-trading
+desks: **swing equities, intraday equities, options, ETFs, and conventional open-ended
+mutual funds**. The desks share evidence, portfolio, risk, accounting, and learning
+services, but retain instrument-specific decision clocks and execution mechanics. The
+canonical desk scope and permitted paper actions live in
+[`edge-program/product-charter.v1.json`](edge-program/product-charter.v1.json).
 
-**First user:** a self-directed, long-term Indian-equity investor.
-**First job:** *understand what changed in my portfolio/watchlist, why it matters, and
-whether any recorded thesis has strengthened or weakened.*
+**First user:** a self-directed Indian-market participant researching and paper-testing
+decisions across those five desks.
+**First job:** *understand what changed, which evidence supports or weakens a thesis,
+what risks and costs apply, and whether a paper action is justified now.* `NO_TRADE` and
+`CASH` are valid decisions; the product must not force a trade or promise an edge.
 
-**First product name:** *Indian Equity Research & Portfolio Copilot* — not a stock-tip
-engine. Buy/sell/hold calls, targets, stop losses, model portfolios or personalised
-recommendations delivered to **anyone else** trigger SEBI RA/RIA obligations and require
-specialist legal advice, disclosures, records and an operating model designed for it.
+**Product name:** *Financial-Brain — Evidence-Led Research and Paper-Trading System*.
+The five-desk charter defines product scope; it does not claim every desk is implemented
+or validated. Physical broker orders remain disabled and out of scope for this product
+contract. Personalised recommendations or advice offered to other people, and any live
+capital deployment, require separate legal, regulatory, operational, and owner approval
+before those capabilities are considered.
 
 ---
 

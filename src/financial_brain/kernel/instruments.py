@@ -6,19 +6,18 @@ outside the trading phase all make the instrument non-tradable; the caller must 
 """
 from __future__ import annotations
 
-import json
+import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum, StrEnum
+from enum import Enum
 
+from financial_brain.kernel.clock import ClockError, MarketFactTimes, utc
 from financial_brain.kernel.units import to_decimal
 
-ASSET_CLASSES = frozenset({"EQUITY", "INDEX", "FUTURE", "OPTION", "FX", "ETF"})
 
-
-class AssetClass(StrEnum):
-    """Product-level asset class; deliberately independent from its trading desk."""
+class AssetClass(str, Enum):
+    """Instrument kind, kept independent from the strategy desk using it."""
 
     EQUITY = "EQUITY"
     ETF = "ETF"
@@ -26,8 +25,8 @@ class AssetClass(StrEnum):
     MUTUAL_FUND = "MUTUAL_FUND"
 
 
-class Desk(StrEnum):
-    """Operating workflow selected for a decision, not an instrument classification."""
+class Desk(str, Enum):
+    """Decision workflow. ETFs, for example, can be traded by either equity desk."""
 
     SWING = "SWING"
     INTRADAY = "INTRADAY"
@@ -35,6 +34,8 @@ class Desk(StrEnum):
     ETF = "ETF"
     MUTUAL_FUND = "MUTUAL_FUND"
 
+
+ASSET_CLASSES = frozenset({*(item.value for item in AssetClass), "INDEX", "FUTURE", "FX"})
 
 _DESK_ASSET_CLASSES: dict[Desk, frozenset[AssetClass]] = {
     Desk.SWING: frozenset({AssetClass.EQUITY, AssetClass.ETF}),
@@ -46,7 +47,7 @@ _DESK_ASSET_CLASSES: dict[Desk, frozenset[AssetClass]] = {
 
 
 def desk_supports_asset_class(desk: Desk, asset_class: AssetClass) -> bool:
-    """Return whether a desk can handle an asset class without conflating their identities."""
+    """Return whether a decision desk supports an instrument asset class."""
     return AssetClass(asset_class) in _DESK_ASSET_CLASSES[Desk(desk)]
 
 
@@ -56,8 +57,8 @@ class Status(str, Enum):
     SUSPENDED = "SUSPENDED"
     HALTED = "HALTED"
     EXPIRED = "EXPIRED"
-    DELISTED = "DELISTED"
     MATURED = "MATURED"
+    DELISTED = "DELISTED"
     CLOSED_FOR_PURCHASE = "CLOSED_FOR_PURCHASE"
     CLOSED_FOR_REDEMPTION = "CLOSED_FOR_REDEMPTION"
     RESTRICTED = "RESTRICTED"
@@ -77,18 +78,18 @@ class InstrumentError(ValueError):
 
 @dataclass(frozen=True)
 class InstrumentId:
-    """Canonical point-in-time identity; ``venue`` remains the legacy exchange argument."""
+    """Canonical identity with optional stable lineage and dated provider identity."""
 
     venue: str
     asset_class: str
     symbol: str
-    market: str = "IN"
+    market: str | None = "IN"
     exchange: str | None = None
     isin: str | None = None
     provider_token: str | None = None
     effective_from: date | None = None
     effective_to: date | None = None
-    underlying_lineage: tuple[str, ...] = ()
+    underlying_lineage: str | tuple[str, ...] | None = None
     underlying_index: str | None = None
     contract_expiry: date | None = None
     scheme_code: str | None = None
@@ -96,60 +97,52 @@ class InstrumentId:
     option: str | None = None
 
     def __post_init__(self) -> None:
-        market = self.market.strip().upper()
-        exchange = (self.exchange or self.venue).strip().upper()
         venue = self.venue.strip().upper()
+        exchange = (self.exchange or venue).strip().upper()
+        market = (self.market or "IN").strip().upper()
         symbol = self.symbol.strip().upper()
-        asset_class = self.asset_class.strip().upper()
-        if not market or not exchange or not symbol:
+        asset_class = self.asset_class.value if isinstance(self.asset_class, AssetClass) else self.asset_class.strip().upper()
+        if not venue or not exchange or not symbol or not market:
             raise InstrumentError("market, exchange/venue and symbol are required")
-        if venue and venue != exchange:
+        if venue != exchange:
             raise InstrumentError("legacy venue and canonical exchange must agree")
-        if asset_class not in ASSET_CLASSES | {AssetClass.MUTUAL_FUND.value}:
+        if asset_class not in ASSET_CLASSES:
             raise InstrumentError(f"unknown asset class {self.asset_class!r}")
-        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
-            raise InstrumentError("ISIN must be 12 alphanumeric characters")
-        if self.provider_token is not None and not self.provider_token.strip():
-            raise InstrumentError("provider_token cannot be blank")
-        if (self.effective_from is not None and self.effective_to is not None
-                and self.effective_to < self.effective_from):
-            raise InstrumentError("effective_to precedes effective_from")
-        lineage = tuple(value.strip().upper() for value in self.underlying_lineage)
-        if any(not value for value in lineage) or len(lineage) != len(set(lineage)):
-            raise InstrumentError("underlying lineage must contain unique, non-empty identities")
-        if symbol in lineage:
-            raise InstrumentError("instrument cannot be its own underlying")
-        for name in ("underlying_index", "scheme_code", "plan", "option"):
-            value = getattr(self, name)
-            if value is not None:
-                normalized = value.strip().upper()
-                if not normalized:
-                    raise InstrumentError(f"{name} cannot be blank")
-                object.__setattr__(self, name, normalized)
-        if asset_class == AssetClass.MUTUAL_FUND.value and not all(
-                (self.scheme_code, self.plan, self.option)):
-            raise InstrumentError("mutual-fund identity requires scheme_code, plan and option")
-        object.__setattr__(self, "market", market)
+        object.__setattr__(self, "venue", venue)
         object.__setattr__(self, "exchange", exchange)
-        object.__setattr__(self, "venue", exchange)
+        object.__setattr__(self, "market", market)
         object.__setattr__(self, "symbol", symbol)
         object.__setattr__(self, "asset_class", asset_class)
-        object.__setattr__(self, "underlying_lineage", lineage)
+        for name in ("provider_token", "underlying_index", "scheme_code", "plan", "option"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"{name} cannot be blank")
+            if value is not None:
+                object.__setattr__(self, name, value.strip().upper())
+        lineage = self.underlying_lineage
+        if isinstance(lineage, str):
+            if not lineage.strip():
+                raise InstrumentError("underlying_lineage cannot be blank")
+            object.__setattr__(self, "underlying_lineage", lineage.strip())
+        elif lineage is not None:
+            normalized = tuple(value.strip() for value in lineage)
+            if any(not value for value in normalized) or len(normalized) != len(set(normalized)):
+                raise InstrumentError("underlying lineage must contain unique, non-empty identities")
+            object.__setattr__(self, "underlying_lineage", normalized)
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        if self.effective_from and self.effective_to and self.effective_to <= self.effective_from:
+            raise InstrumentError("identity effective_to must be later than effective_from")
+        if self.asset_class == AssetClass.MUTUAL_FUND.value and not all((self.scheme_code, self.plan, self.option)):
+            raise InstrumentError("scheme_code, plan and option are required together")
 
     def key(self) -> str:
-        """Stable full identity key, including provider and effective-date distinctions."""
-        parts = (self.market, self.exchange or self.venue, self.asset_class, self.symbol,
-                 self.isin or "", self.provider_token or "",
-                 self.effective_from.isoformat() if self.effective_from else "",
-                 self.effective_to.isoformat() if self.effective_to else "",
-                 ",".join(self.underlying_lineage), self.underlying_index or "",
-                 self.contract_expiry.isoformat() if self.contract_expiry else "",
-                 self.scheme_code or "", self.plan or "", self.option or "")
-        return json.dumps(parts, ensure_ascii=True, separators=(",", ":"))
-
-    def same_listing_series(self, other: InstrumentId) -> bool:
-        """Whether two versions refer to the same market/exchange/symbol history."""
-        return (self.market, self.exchange, self.symbol) == (other.market, other.exchange, other.symbol)
+        if self.underlying_lineage:
+            lineage = ":".join(self.underlying_lineage) if isinstance(self.underlying_lineage, tuple) else self.underlying_lineage
+            return f"LINEAGE:{self.asset_class}:{lineage}"
+        version = self.isin or (self.effective_from.isoformat() if self.effective_from else None)
+        suffix = f":{version}" if version else ""
+        return f"{self.venue}:{self.asset_class}:{self.symbol}{suffix}"
 
 
 @dataclass(frozen=True)
@@ -167,10 +160,89 @@ class RuleVersion:
     def __post_init__(self) -> None:
         object.__setattr__(self, "tick", to_decimal(self.tick))
         object.__setattr__(self, "multiplier", to_decimal(self.multiplier))
-        if self.effective_to is not None and self.effective_to < self.effective_from:
-            raise InstrumentError("rule effective_to precedes effective_from")
         if self.tick <= 0 or self.lot < 1 or self.multiplier <= 0 or self.settlement_lag_days < 0:
             raise InstrumentError("tick, lot and multiplier must be positive; settlement lag non-negative")
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("rule effective_to must be later than effective_from")
+
+
+@dataclass(frozen=True)
+class InstrumentMetadataVersion:
+    """Effective-dated contract, ETF and fund metadata; intervals are start-inclusive/end-exclusive."""
+
+    effective_from: date
+    effective_to: date | None = None
+    isin: str | None = None
+    expiry: date | None = None
+    strike: Decimal | None = None
+    underlying_index: str | None = None
+    scheme_id: str | None = None
+    plan: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("metadata effective_to must be later than effective_from")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        if self.strike is not None:
+            object.__setattr__(self, "strike", to_decimal(self.strike))
+            if self.strike <= 0:
+                raise InstrumentError("strike must be positive")
+        for name in ("underlying_index", "scheme_id", "plan"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"{name} cannot be blank")
+
+
+@dataclass(frozen=True)
+class InstrumentIdentityVersion:
+    """Dated external alias with start-inclusive/end-exclusive resolution dates."""
+
+    effective_from: date
+    market: str
+    exchange: str
+    symbol: str
+    isin: str | None = None
+    provider_token: str | None = None
+    effective_to: date | None = None
+    underlying_lineage: str | None = None
+    successor_lineage: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.effective_to is not None and self.effective_to <= self.effective_from:
+            raise InstrumentError("identity effective_to must be later than effective_from")
+        for name in ("market", "exchange", "symbol"):
+            if not getattr(self, name).strip():
+                raise InstrumentError(f"identity {name} is required")
+        if self.isin is not None and (len(self.isin) != 12 or not self.isin.isalnum()):
+            raise InstrumentError("ISIN must be 12 alphanumeric characters")
+        for name in ("provider_token", "underlying_lineage", "successor_lineage"):
+            value = getattr(self, name)
+            if value is not None and not value.strip():
+                raise InstrumentError(f"identity {name} cannot be blank")
+
+
+@dataclass(frozen=True)
+class InstrumentObservation:
+    """Source-bound market fact that must resolve to one dated instrument identity."""
+
+    market: str
+    exchange: str
+    asset_class: str
+    symbol: str
+    as_of: date
+    times: MarketFactTimes
+    source_id: str
+    record_sha256: str
+
+    def __post_init__(self) -> None:
+        for name in ("market", "exchange", "asset_class", "symbol", "source_id"):
+            if not getattr(self, name).strip():
+                raise InstrumentError(f"observation {name} is required")
+        if self.asset_class not in ASSET_CLASSES:
+            raise InstrumentError(f"unknown asset class {self.asset_class!r}")
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", self.record_sha256):
+            raise InstrumentError("observation record needs a SHA-256 digest")
 
 
 @dataclass
@@ -182,32 +254,49 @@ class Instrument:
     isin: str | None = None
     strike: Decimal | None = None
     rights_status: str = "unverified"
+    metadata_versions: list[InstrumentMetadataVersion] = field(default_factory=list)
+    identity_versions: list[InstrumentIdentityVersion] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        if self.expiry is None:
+            self.expiry = self.instrument.contract_expiry
+        if self.isin is None:
+            self.isin = self.instrument.isin
+        if self.strike is not None:
+            self.strike = to_decimal(self.strike)
         if not self.rules:
             raise InstrumentError("an instrument needs at least one rule version")
-        identity_isin = self.instrument.isin
-        if identity_isin and self.isin and identity_isin != self.isin:
-            raise InstrumentError("Instrument ISIN conflicts with canonical InstrumentId")
-        if identity_isin and self.isin is None:
-            self.isin = identity_isin
-        identity_expiry = self.instrument.contract_expiry
-        if identity_expiry and self.expiry and identity_expiry != self.expiry:
-            raise InstrumentError("instrument expiry conflicts with canonical InstrumentId")
-        if identity_expiry and self.expiry is None:
-            self.expiry = identity_expiry
         self.rules = sorted(self.rules, key=lambda r: r.effective_from)
         if len({r.effective_from for r in self.rules}) != len(self.rules):
             raise InstrumentError("duplicate rule effective dates")
-        for prior, following in zip(self.rules, self.rules[1:]):
-            if prior.effective_to is not None and prior.effective_to >= following.effective_from:
-                raise InstrumentError("overlapping effective market-rule versions")
+        for previous, current in zip(self.rules, self.rules[1:]):
+            if previous.effective_to is not None and current.effective_from < previous.effective_to:
+                raise InstrumentError("overlapping rule effective intervals")
+        self.metadata_versions = sorted(self.metadata_versions, key=lambda item: item.effective_from)
+        if len({item.effective_from for item in self.metadata_versions}) != len(self.metadata_versions):
+            raise InstrumentError("duplicate metadata effective dates")
+        for previous, current in zip(self.metadata_versions, self.metadata_versions[1:]):
+            if previous.effective_to is not None and current.effective_from < previous.effective_to:
+                raise InstrumentError("overlapping metadata effective intervals")
+        self.identity_versions = sorted(self.identity_versions, key=lambda item: item.effective_from)
+        for index, current in enumerate(self.identity_versions):
+            for other in self.identity_versions[index + 1 :]:
+                same_alias = (current.market, current.exchange, current.symbol) == (
+                    other.market,
+                    other.exchange,
+                    other.symbol,
+                )
+                if not same_alias:
+                    continue
+                current_end = current.effective_to or date.max
+                other_end = other.effective_to or date.max
+                if current.effective_from < other_end and other.effective_from < current_end:
+                    raise InstrumentError("overlapping active instrument identities")
         if not self.status_history:
             self.status_history = [(self.rules[0].effective_from, Status.ACTIVE)]
         self.status_history.sort(key=lambda s: s[0])
         if len({day for day, _ in self.status_history}) != len(self.status_history):
-            raise InstrumentError("duplicate instrument status effective dates")
-        self.status_history = [(day, Status(status)) for day, status in self.status_history]
+            raise InstrumentError("duplicate instrument status effective date")
         if self.strike is not None:
             self.strike = to_decimal(self.strike)
             if self.strike <= 0:
@@ -247,11 +336,22 @@ class Instrument:
         return not reasons, tuple(reasons)
 
     def rule_on(self, day: date) -> RuleVersion:
-        applicable = [r for r in self.rules if r.effective_from <= day
-                      and (r.effective_to is None or day <= r.effective_to)]
-        if not applicable:
-            raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
-        return max(applicable, key=lambda rule: rule.effective_from)
+        for index, rule in enumerate(self.rules):
+            effective_to = rule.effective_to
+            if effective_to is None and index + 1 < len(self.rules):
+                effective_to = self.rules[index + 1].effective_from
+            if rule.effective_from <= day and (effective_to is None or day < effective_to):
+                return rule
+        raise InstrumentError(f"no rule effective on {day.isoformat()}; refusing to guess")
+
+    def metadata_on(self, day: date) -> InstrumentMetadataVersion:
+        for index, version in enumerate(self.metadata_versions):
+            effective_to = version.effective_to
+            if effective_to is None and index + 1 < len(self.metadata_versions):
+                effective_to = self.metadata_versions[index + 1].effective_from
+            if version.effective_from <= day and (effective_to is None or day < effective_to):
+                return version
+        raise InstrumentError(f"no metadata effective on {day.isoformat()}; refusing to guess")
 
     def status_on(self, day: date) -> Status:
         current = None
@@ -265,8 +365,8 @@ class Instrument:
     def tradable(self, day: date, phase: Phase) -> tuple[bool, str]:
         """Fail closed: returns (ok, reason). A non-trading phase or inactive status blocks orders."""
         if self.instrument.effective_from is not None and day < self.instrument.effective_from:
-            return False, "NOT_YET_EFFECTIVE"
-        if self.instrument.effective_to is not None and day > self.instrument.effective_to:
+            return False, "NO_LONGER_EFFECTIVE"
+        if self.instrument.effective_to is not None and day >= self.instrument.effective_to:
             return False, "NO_LONGER_EFFECTIVE"
         if self.expiry is not None and day > self.expiry:
             return False, "EXPIRED_BY_DATE"
@@ -281,25 +381,45 @@ class Instrument:
 class InstrumentMaster:
     def __init__(self) -> None:
         self._items: dict[str, Instrument] = {}
+        self._aliases: dict[tuple[str, str, str, str], list[tuple[date, date | None, Instrument]]] = {}
 
     def add(self, item: Instrument) -> None:
         key = item.instrument.key()
         if key in self._items:
             raise InstrumentError(f"duplicate instrument {key}")
-        for prior in self._items.values():
-            left = prior.instrument
-            right = item.instrument
-            if not left.same_listing_series(right):
-                continue
-            left_start = left.effective_from or date.min
-            right_start = right.effective_from or date.min
-            left_end = left.effective_to or date.max
-            right_end = right.effective_to or date.max
-            if max(left_start, right_start) <= min(left_end, right_end):
-                raise InstrumentError(
-                    f"overlapping effective identities for {right.market}:{right.exchange}:{right.symbol}"
-                )
+        start = item.instrument.effective_from or item.rules[0].effective_from
+        base_identity = InstrumentIdentityVersion(
+            effective_from=start,
+            effective_to=item.instrument.effective_to,
+            market=item.instrument.market or "IN",
+            exchange=item.instrument.exchange or item.instrument.venue,
+            symbol=item.instrument.symbol,
+            isin=item.instrument.isin,
+            provider_token=item.instrument.provider_token,
+            underlying_lineage=(item.instrument.underlying_lineage
+                                if isinstance(item.instrument.underlying_lineage, str) else None),
+        )
+        identities = item.identity_versions or [base_identity]
+        for identity in identities:
+            alias_key = (identity.market, identity.exchange, item.instrument.asset_class, identity.symbol)
+            for start, end, _existing in self._aliases.get(alias_key, []):
+                new_end = identity.effective_to or date.max
+                old_end = end or date.max
+                # Treat a shared boundary as a collision during registration. This is
+                # deliberately stricter than point-in-time resolution, whose intervals
+                # are half-open, because the master must not admit duplicate listings
+                # while one source ends and another starts on the same market date.
+                if identity.effective_from <= old_end and start <= new_end:
+                    raise InstrumentError(
+                        f"overlapping active identity alias (overlapping effective identities) "
+                        f"{identity.market}:{identity.exchange}:{identity.symbol}"
+                    )
         self._items[key] = item
+        for identity in identities:
+            alias_key = (identity.market, identity.exchange, item.instrument.asset_class, identity.symbol)
+            self._aliases.setdefault(alias_key, []).append(
+                (identity.effective_from, identity.effective_to, item)
+            )
 
     def get(self, instrument: InstrumentId) -> Instrument:
         item = self._items.get(instrument.key())
@@ -307,18 +427,52 @@ class InstrumentMaster:
             raise InstrumentError(f"unknown instrument {instrument.key()}; no trade is possible")
         return item
 
-    def resolve(self, *, market: str, exchange: str, symbol: str, on: date) -> Instrument:
-        """Resolve one listing version as known for a historical date; ambiguity fails closed."""
-        market_key, exchange_key, symbol_key = market.upper(), exchange.upper(), symbol.upper()
-        matches = [item for item in self._items.values()
-                   if (item.instrument.market, item.instrument.exchange, item.instrument.symbol)
-                   == (market_key, exchange_key, symbol_key)
-                   and (item.instrument.effective_from is None or item.instrument.effective_from <= on)
-                   and (item.instrument.effective_to is None or on <= item.instrument.effective_to)]
+    def resolve(
+        self, market: str, exchange: str, asset_class: str | None = None, symbol: str = "",
+        as_of: date | None = None, *, on: date | None = None,
+    ) -> Instrument:
+        """Resolve a point-in-time alias to its stable canonical instrument; ambiguity refuses."""
+        if as_of is not None and on is not None and as_of != on:
+            raise InstrumentError("as_of and on dates disagree")
+        as_of = as_of or on
+        if as_of is None:
+            raise InstrumentError("a point-in-time resolution date is required")
+        market, exchange, symbol = market.strip().upper(), exchange.strip().upper(), symbol.strip().upper()
+        normalized_class = asset_class.strip().upper() if asset_class is not None else None
+        alias_key = (market, exchange, normalized_class or "*", symbol)
+        matches = [
+            instrument
+            for (alias_market, alias_exchange, alias_class, alias_symbol), aliases in self._aliases.items()
+            if (alias_market, alias_exchange, alias_symbol) == (market, exchange, symbol)
+            and (normalized_class is None or alias_class == normalized_class)
+            for start, end, instrument in aliases
+            if start <= as_of and (end is None or as_of < end)
+        ]
+        if not matches:
+            raise InstrumentError(f"unknown instrument identity {alias_key} on {as_of}; no trade is possible")
         if len(matches) != 1:
-            state = "unknown" if not matches else "ambiguous"
-            raise InstrumentError(f"{state} instrument identity {market_key}:{exchange_key}:{symbol_key} on {on}")
+            raise InstrumentError(f"ambiguous instrument identity {alias_key} on {as_of}")
         return matches[0]
+
+    def resolve_observation(
+        self, observation: InstrumentObservation, decision_time: datetime
+    ) -> Instrument:
+        """Resolve identity and timestamp provenance together, refusing look-ahead facts."""
+        decision = utc(decision_time)
+        try:
+            observation.times.assert_usable_at(decision)
+        except ClockError as exc:
+            raise InstrumentError(f"unusable observation: {exc}") from exc
+        for value in (observation.times.source_at, observation.times.exchange_at):
+            if value is not None and value > decision:
+                raise InstrumentError("observation carries a future source or exchange timestamp")
+        return self.resolve(
+            observation.market,
+            observation.exchange,
+            observation.asset_class,
+            observation.symbol,
+            observation.as_of,
+        )
 
     def __len__(self) -> int:
         return len(self._items)

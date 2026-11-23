@@ -18,6 +18,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Iterator
 
+from financial_brain.kernel.evidence import EvidenceClass
+
 
 class CanonicalLedgerError(ValueError):
     """An event is invalid, conflicting, or cannot be applied to the portfolio."""
@@ -40,6 +42,7 @@ class EventKind(StrEnum):
 
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 _CURRENCY = re.compile(r"^[A-Z]{3}$")
+_EVIDENCE_CLASSES = {item.value for item in EvidenceClass} | {"BROKER_EXECUTION_RECEIPT"}
 
 
 def _decimal(value: Decimal | str | int, field: str) -> Decimal:
@@ -56,6 +59,17 @@ def _required_decimal(value: Decimal | str | int | None, field: str) -> Decimal:
     if value is None:
         raise CanonicalLedgerError(f"{field} is required")
     return _decimal(value, field)
+
+
+def _pnl_evidence(classes: set[str], *, computed: bool = True) -> dict[str, object]:
+    evidence_classes = sorted(classes)
+    classification = (evidence_classes[0] if len(evidence_classes) == 1
+                      else "MIXED_EVIDENCE_CLASSES" if evidence_classes else "UNCLASSIFIED")
+    return {
+        "classification": classification if computed else "NOT_COMPUTABLE",
+        "evidence_classes": evidence_classes,
+        "profitability_claim": "NOT_ESTABLISHED",
+    }
 
 
 @dataclass(frozen=True)
@@ -88,8 +102,8 @@ class PortfolioEvent:
             raise CanonicalLedgerError("source_sha256 must be a lowercase SHA-256 hex digest")
         if not _CURRENCY.fullmatch(self.currency):
             raise CanonicalLedgerError("currency must be a three-letter uppercase code")
-        if not isinstance(self.evidence_class, str) or not self.evidence_class.strip():
-            raise CanonicalLedgerError("evidence_class is required")
+        if not isinstance(self.evidence_class, str) or self.evidence_class.strip().upper() not in _EVIDENCE_CLASSES:
+            raise CanonicalLedgerError("evidence_class must be a recognized, non-empty evidence class")
         try:
             timestamp = datetime.fromisoformat(self.occurred_at.replace("Z", "+00:00"))
         except (TypeError, ValueError) as exc:
@@ -109,13 +123,18 @@ class PortfolioEvent:
             "price": format(_decimal(self.price, "price"), "f") if self.price is not None else None,
             "multiplier": format(_decimal(self.multiplier, "multiplier"), "f"),
             "cash_delta": format(_decimal(self.cash_delta, "cash_delta"), "f") if self.cash_delta is not None else None,
-            "evidence_class": self.evidence_class.strip(),
+            "evidence_class": self.evidence_class.strip().upper(),
             "metadata": self.metadata or {},
         }
         if not isinstance(row["metadata"], dict):
             raise CanonicalLedgerError("metadata must be an object")
 
         kind = EventKind(str(row["event_kind"]))
+        broker_receipt = row["evidence_class"] == "BROKER_EXECUTION_RECEIPT"
+        if broker_receipt != (self.source_system.strip() == "BROKER_EXECUTION_RECEIPT" and kind is EventKind.FILL):
+            raise CanonicalLedgerError(
+                "broker execution receipt evidence is reserved for broker-sourced fill events"
+            )
         if kind is EventKind.FILL:
             if not row["asset_class"] or not row["instrument_id"] or row["side"] not in {"BUY", "SELL"}:
                 raise CanonicalLedgerError("a fill needs asset class, instrument id and BUY/SELL side")
@@ -155,6 +174,7 @@ class _Position:
     currency: str
     multiplier: Decimal
     sleeves: set[str]
+    fill_evidence_classes: set[str]
 
 
 def _is_opening_balance(event: dict[str, object]) -> bool:
@@ -374,7 +394,7 @@ class CanonicalPortfolioLedger:
         resolved_unresolved_ids = _resolved_legacy_event_ids(events)
         cash: dict[str, Decimal] = {}
         positions: dict[tuple[str, str, str], _Position] = {}
-        marks: dict[tuple[str, str], tuple[Decimal, str, str]] = {}
+        marks: dict[tuple[str, str], tuple[Decimal, str, str, str]] = {}
         unresolved: list[dict[str, object]] = []
         for event in events:
             currency = str(event["currency"])
@@ -390,7 +410,8 @@ class CanonicalPortfolioLedger:
             asset_class = str(event["asset_class"])
             if kind is EventKind.MARK:
                 mark_key = (asset_class, instrument)
-                mark_value = (Decimal(str(event["price"])), str(event["occurred_at"]), currency)
+                mark_value = (Decimal(str(event["price"])), str(event["occurred_at"]), currency,
+                              str(event["evidence_class"]))
                 previous_mark = marks.get(mark_key)
                 if previous_mark is not None and previous_mark[2] != currency:
                     raise CanonicalLedgerError("one instrument mark cannot mix currencies")
@@ -400,11 +421,13 @@ class CanonicalPortfolioLedger:
             key = (asset_class, instrument, sleeve)
             multiplier_value = Decimal(str(event["multiplier"]))
             pos = positions.setdefault(key, _Position(asset_class, instrument, Decimal(0), Decimal(0),
-                                                       Decimal(0), None, None, currency, multiplier_value, {sleeve}))
+                                                       Decimal(0), None, None, currency, multiplier_value,
+                                                       {sleeve}, set()))
             if pos.currency != currency:
                 raise CanonicalLedgerError("one instrument position cannot mix currencies")
             if kind is EventKind.FILL and pos.multiplier != multiplier_value:
                 raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
+            pos.fill_evidence_classes.add(str(event["evidence_class"]))
             pos.sleeves.add(sleeve)
             quantity = Decimal(str(event["quantity"]))
             price = Decimal(str(event["price"]))
@@ -431,6 +454,10 @@ class CanonicalPortfolioLedger:
             pos.mark, pos.mark_at = (mark[0], mark[1]) if mark is not None else (None, None)
             if mark is not None and mark[2] != pos.currency:
                 raise CanonicalLedgerError("instrument mark currency differs from position currency")
+            realized_evidence = _pnl_evidence(pos.fill_evidence_classes)
+            unrealized_classes = set(pos.fill_evidence_classes)
+            if mark is not None:
+                unrealized_classes.add(mark[3])
             rendered_positions.append({
                 "asset_class": pos.asset_class, "instrument_id": pos.instrument_id,
                 "sleeve_id": next(iter(pos.sleeves)),
@@ -439,9 +466,13 @@ class CanonicalPortfolioLedger:
                 "currency": pos.currency, "multiplier": pos.multiplier,
                 "unrealized_pnl": ((pos.mark - pos.average_cost) * pos.quantity * pos.multiplier
                                    if pos.mark is not None else None),
+                "pnl_evidence": {
+                    "realized": realized_evidence,
+                    "unrealized": _pnl_evidence(unrealized_classes, computed=pos.mark is not None),
+                },
                 "sleeves": sorted(pos.sleeves),
             })
-        consolidated: dict[tuple[str, str], list[dict[str, object]]] = {}
+        consolidated: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for position in rendered_positions:
             consolidated.setdefault((str(position["asset_class"]), str(position["instrument_id"])), []).append(position)
         consolidated_positions = []
@@ -455,6 +486,16 @@ class CanonicalPortfolioLedger:
                           for row in open_rows), Decimal(0)) / gross_quantity
                      if open_rows and same_direction and gross_quantity else None)
             marks_for_rows = {row["mark"] for row in open_rows}
+            realized_classes = {
+                evidence_class
+                for row in rows
+                for evidence_class in row["pnl_evidence"]["realized"]["evidence_classes"]
+            }
+            unrealized_classes = {
+                evidence_class
+                for row in open_rows
+                for evidence_class in row["pnl_evidence"]["unrealized"]["evidence_classes"]
+            }
             consolidated_positions.append({
                 "asset_class": asset_class, "instrument_id": instrument, "quantity": net_quantity,
                 "gross_abs_quantity": gross_quantity, "average_cost": basis,
@@ -462,6 +503,13 @@ class CanonicalPortfolioLedger:
                 "unrealized_pnl": (sum((Decimal(str(row["unrealized_pnl"])) for row in open_rows), Decimal(0))
                                     if open_rows and all(row["unrealized_pnl"] is not None for row in open_rows)
                                     else (Decimal(0) if not open_rows else None)),
+                "pnl_evidence": {
+                    "realized": _pnl_evidence(realized_classes),
+                    "unrealized": _pnl_evidence(
+                        unrealized_classes,
+                        computed=not open_rows or all(row["unrealized_pnl"] is not None for row in open_rows),
+                    ),
+                },
                 "mark": next(iter(marks_for_rows)) if len(marks_for_rows) == 1 else None,
                 "sleeves": sorted({str(row["sleeve_id"]) for row in rows}),
                 "currency": rows[0]["currency"],

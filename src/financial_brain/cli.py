@@ -16,7 +16,8 @@ from .corpactions import detect as ca_detect
 from .costs.india import DEFAULT as COSTS, Segment
 from .ingest.job import BhavcopyIngestJob
 from .ingest.prefetch import prefetch
-from .ingest.reference import EquityListJob, FnoEligibilityJob, IndexCloseJob
+from .ingest.reference import (ETFReferenceJob, EquityListJob, FnoEligibilityJob,
+                               IndexCloseJob, ingest_etf_product_disclosures)
 from .pit.observations import PITStore, close_price_observations
 from .securities import master as sec
 from .storage.db import Database
@@ -386,10 +387,176 @@ def cmd_check(args) -> int:
 
 
 def cmd_reference(args) -> int:
-    """Sync exchange reference data: master list, F&O eligibility."""
+    """Sync exchange reference data: master lists, ETFs and F&O eligibility."""
     Database(load()).migrate()
     print(EquityListJob().run())
+    print(ETFReferenceJob().run())
     print(FnoEligibilityJob().run())
+    return 0
+
+
+def cmd_etf_disclosures(args) -> int:
+    """Import a CSV of official ETF product facts with source-document provenance."""
+    from pathlib import Path
+
+    result = ingest_etf_product_disclosures(
+        Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_mf_scheme_profile(args) -> int:
+    """Import source-attributed AMC/SID scheme facts from CSV."""
+    from pathlib import Path
+
+    from .ingest.mf_scheme_profile import ingest
+
+    result = ingest(Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_mf_portfolio(args) -> int:
+    """Import source-attributed AMC portfolio disclosure rows from CSV."""
+    from pathlib import Path
+
+    from .ingest.mf_portfolio_disclosure import ingest
+
+    result = ingest(Path(args.file).read_bytes(), _d(args.observed_on), load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_mfnav_history(args) -> int:
+    """Import an already downloaded AMFI NAV history file within its 90-day limit."""
+    from pathlib import Path
+
+    from .ingest.mfnav_history import ingest_export
+
+    result = ingest_export(Path(args.file).read_bytes(), start=_d(args.start),
+                           end=_d(args.end), source_url=args.source_url, cfg=load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_etf_feed(args) -> int:
+    """Poll full read-only Kite ETF quotes into the timestamped forward-event archive."""
+    from pathlib import Path
+
+    from . import etf_feed
+
+    until = datetime.strptime(args.until, "%H:%M").time()
+    result = etf_feed.run(until=until, poll_seconds=args.poll_seconds,
+                          archive_path=Path(args.archive))
+    print(json.dumps(result, indent=2))
+    return 1 if result.get("rejected") or result.get("missing") else 0
+
+
+def cmd_etf_bars(args) -> int:
+    """Build completed ETF sample bars from the timestamped quote archive."""
+    from dataclasses import asdict
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_bars import completed_bars
+    from .forward_edge.quote_archive import QuoteArchive
+
+    ist = ZoneInfo("Asia/Kolkata")
+    session = _d(args.date)
+    as_of = (datetime.fromisoformat(args.as_of) if args.as_of
+             else datetime.now(ist))
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(session, venue="NSE",
+                                            source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    bars = completed_bars(events, as_of=as_of, minutes=args.minutes)
+    print(json.dumps([asdict(bar) for bar in bars], indent=2, default=str))
+    return 0
+
+
+def cmd_etf_valuation(args) -> int:
+    """Compare the latest available ETF quote to point-in-time iNAV, if synchronized."""
+    from dataclasses import asdict
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_valuation import compare_latest_for_quote
+    from .forward_edge.quote_archive import QuoteArchive
+
+    decision_time = datetime.fromisoformat(args.decision_time.replace("Z", "+00:00"))
+    if decision_time.tzinfo is None or decision_time.utcoffset() is None:
+        raise ValueError("--decision-time must include a timezone")
+    session = decision_time.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(
+            session, venue="NSE", source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    candidates = [event for event in events
+                  if event.instrument_id == f"NSE:{args.symbol}"
+                  and event.available_at <= decision_time]
+    if not candidates:
+        print(json.dumps({"status": "REFUSED", "reason": "QUOTE_NOT_AVAILABLE"}))
+        return 1
+    quote = max(candidates, key=lambda event: event.available_at)
+    with Database(load()).connect() as con:
+        result = compare_latest_for_quote(con, quote, decision_time=decision_time)
+    print(json.dumps(asdict(result), indent=2, default=str))
+    return 0 if result.status == "COMPARABLE" else 1
+
+
+def cmd_etf_liquidity(args) -> int:
+    """Report ETF quote depth, historical liquidity and intended-size paper costs."""
+    from pathlib import Path
+    from zoneinfo import ZoneInfo
+
+    from .etf_history import ETFHistoryUnavailable, history
+    from .etf_liquidity import report
+    from .forward_edge.quote_archive import QuoteArchive
+
+    as_of = datetime.fromisoformat(args.as_of.replace("Z", "+00:00")) if args.as_of else datetime.now(
+        ZoneInfo("Asia/Kolkata"))
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise ValueError("--as-of must include a timezone")
+    session = as_of.astimezone(ZoneInfo("Asia/Kolkata")).date()
+    archive = QuoteArchive(Path(args.archive))
+    try:
+        events = archive.events_for_session(
+            session, venue="NSE", source="KITE_CONNECT_READ_ONLY")
+    finally:
+        archive.close()
+    events = [event for event in events if event.instrument_id == f"NSE:{args.symbol}"]
+    events = [event for event in events if event.available_at <= as_of]
+    history_as_of = session - timedelta(days=1)
+    with Database(load()).connect() as con:
+        ref = con.execute(
+            """SELECT isin FROM etf_reference_observations
+               WHERE exchange='NSE' AND symbol=? AND observed_on<=?
+               ORDER BY observed_on DESC LIMIT 1""", [args.symbol, session],
+        ).fetchone()
+        if not ref:
+            print(json.dumps({"status": "UNAVAILABLE", "reason": "ETF_REFERENCE_MISSING"}))
+            return 1
+        try:
+            bars = history(con, ref[0], history_as_of, reference_as_of=session,
+                           limit=args.lookback)
+            history_error = None
+        except ETFHistoryUnavailable as exc:
+            bars, history_error = [], str(exc)
+        sessions = [row[0] for row in con.execute(
+            """SELECT DISTINCT business_date FROM eod_prices
+               WHERE exchange='NSE' AND business_date<=?
+               ORDER BY business_date DESC LIMIT ?""", [history_as_of, args.lookback],
+        ).fetchall()]
+    result = report(events=events, bars=bars, intended_units=args.units,
+                    expected_sessions=reversed(sessions),
+                    expected_poll_seconds=args.expected_poll_seconds)
+    result.update({"symbol": args.symbol, "as_of": as_of.isoformat(),
+                   "history_error": history_error})
+    print(json.dumps(result, indent=2, default=str))
     return 0
 
 
@@ -3079,6 +3246,23 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--date")
     g.set_defaults(fn=cmd_mfnav)
 
+    g = sub.add_parser("mf-scheme-profile", help="import official AMC/SID scheme profile facts")
+    g.add_argument("--file", required=True)
+    g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_scheme_profile)
+
+    g = sub.add_parser("mf-portfolio", help="import source-attributed AMC portfolio disclosures")
+    g.add_argument("--file", required=True)
+    g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_portfolio)
+
+    g = sub.add_parser("mfnav-history", help="import an official AMFI NAV history export (max 90 days)")
+    g.add_argument("--file", required=True)
+    g.add_argument("--start", required=True, help="inclusive requested start date YYYY-MM-DD")
+    g.add_argument("--end", required=True, help="inclusive requested end date YYYY-MM-DD")
+    g.add_argument("--source-url", required=True, help="official AMFI page used to obtain the export")
+    g.set_defaults(fn=cmd_mfnav_history)
+
     g = sub.add_parser("newsref", help="news a filing refers to, from the filing's own text")
     g.add_argument("--date", required=True)
     g.add_argument("--refresh", action="store_true")
@@ -3172,7 +3356,40 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--on", required=True)
     g.set_defaults(fn=cmd_check)
 
-    sub.add_parser("reference", help="sync exchange reference data").set_defaults(fn=cmd_reference)
+    sub.add_parser("reference", help="sync equity, ETF and F&O reference data").set_defaults(fn=cmd_reference)
+
+    g = sub.add_parser("etf-disclosures", help="import source-attributed ETF AMC disclosures")
+    g.add_argument("--file", required=True, help="UTF-8 CSV containing official disclosure facts")
+    g.add_argument("--observed-on", required=True, help="import date, YYYY-MM-DD")
+    g.set_defaults(fn=cmd_etf_disclosures)
+
+    g = sub.add_parser("etf-feed", help="archive read-only Kite full quotes for referenced NSE ETFs")
+    g.add_argument("--until", default="15:30", help="stop polling at exchange-local HH:MM")
+    g.add_argument("--poll-seconds", type=int, default=60)
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_feed)
+
+    g = sub.add_parser("etf-bars", help="aggregate complete session bars from ETF quote events")
+    g.add_argument("--date", required=True, help="NSE session date, YYYY-MM-DD")
+    g.add_argument("--minutes", type=int, default=5, choices=[1, 5, 15, 30])
+    g.add_argument("--as-of", help="timezone-aware ISO timestamp; defaults to current IST time")
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_bars)
+
+    g = sub.add_parser("etf-valuation", help="compare an archived ETF quote with source-backed iNAV")
+    g.add_argument("--symbol", required=True)
+    g.add_argument("--decision-time", required=True, help="timezone-aware ISO timestamp")
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_valuation)
+
+    g = sub.add_parser("etf-liquidity", help="report ETF spread/depth, history and size-aware costs")
+    g.add_argument("--symbol", required=True)
+    g.add_argument("--units", required=True, type=int)
+    g.add_argument("--as-of", help="timezone-aware ISO timestamp; defaults to current IST")
+    g.add_argument("--lookback", type=int, default=20)
+    g.add_argument("--expected-poll-seconds", type=int, default=60)
+    g.add_argument("--archive", default="data/etf-market-events.sqlite")
+    g.set_defaults(fn=cmd_etf_liquidity)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)

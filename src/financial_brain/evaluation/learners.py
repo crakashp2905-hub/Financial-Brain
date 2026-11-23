@@ -140,6 +140,8 @@ def regime_switch(panel: pd.DataFrame, market: pd.DataFrame, *, years=range(2019
         if m is None:
             continue
         rows.append({"d": d, "mom": mom, "rev": rev, **m.to_dict()})
+    if not rows:
+        return pd.DataFrame()
     df = pd.DataFrame(rows)
     feats = list(market.columns)
     df["label"] = (df["mom"] > df["rev"]).astype(int)

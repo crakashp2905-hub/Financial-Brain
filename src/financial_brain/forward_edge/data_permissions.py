@@ -8,6 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+DEFAULT_PERMISSION_REGISTRY = (Path(__file__).resolve().parents[3]
+                               / "docs/edge-program/data-permissions.v1.json")
 
 
 class PermissionStatus(StrEnum):
@@ -67,3 +74,28 @@ class DataPermission:
             evidence_ref=str(row["evidence_ref"]),
             reviewer=str(row["reviewer"]) if row["reviewer"] else None,
         )
+
+
+def load_permission_registry(path: Path | None = None
+                             ) -> tuple[dict[tuple[str, DataUse], DataPermission], str]:
+    """Load canonical source/use permissions and their LF-normalized evidence hash."""
+    raw = Path(path or DEFAULT_PERMISSION_REGISTRY).read_bytes()
+    normalized = raw.replace(b"\r\n", b"\n")
+    document: Any = json.loads(normalized.decode("utf-8"))
+    if not isinstance(document, dict) or document.get("schema") != "fb.data_permissions.v1":
+        raise ValueError("data permission registry has an unsupported schema")
+    rows = document.get("permissions")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("data permission registry is empty or malformed")
+    registry: dict[tuple[str, DataUse], DataPermission] = {}
+    fields = ("source_id", "use", "status", "effective_from", "effective_through",
+              "evidence_ref", "reviewer")
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("data permission registry row is not an object")
+        permission = DataPermission.from_dict({key: row.get(key) for key in fields})
+        key = (permission.source_id, permission.use)
+        if key in registry:
+            raise ValueError(f"duplicate source/use permission in registry: {key}")
+        registry[key] = permission
+    return registry, hashlib.sha256(normalized).hexdigest()

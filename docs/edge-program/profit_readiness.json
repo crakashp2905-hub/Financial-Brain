@@ -1,0 +1,116 @@
+{
+  "decision": "NOT_READY_FOR_PROFITABILITY_CLAIM",
+  "gates": [
+    {
+      "evidence": [
+        {
+          "json_pointer": "/business_objective/current_status",
+          "path": "docs/edge-program/product-charter.v1.json",
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
+        }
+      ],
+      "id": "prospective_net_profitability",
+      "status": "RED",
+      "summary": "Prospective risk-adjusted net profitability is explicitly not demonstrated."
+    },
+    {
+      "evidence": [
+        {
+          "path": "docs/forward-edge/capital-risk-proposal-template.md",
+          "sha256": "0c07d747bb5943da8555ad13ac3031ddc39fb10f8d4e15eb3680241ac7b7bdc1"
+        },
+        {
+          "json_pointer": "/execution_policy/live_cash",
+          "path": "docs/edge-program/product-charter.v1.json",
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
+        }
+      ],
+      "id": "owner_approved_capital_limits",
+      "status": "RED",
+      "summary": "No owner-approved capital budget and hard-loss charter is recorded; the proposal is pending human review."
+    },
+    {
+      "evidence": [
+        {
+          "path": "docs/forward-edge/trial-program.v1.json",
+          "sha256": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e"
+        },
+        {
+          "path": "docs/trials/ledger.jsonl",
+          "sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
+        }
+      ],
+      "id": "confirmatory_trial_capacity",
+      "status": "RED",
+      "summary": "Protected confirmatory trial budget exhausted; 13 trial rows are recorded."
+    },
+    {
+      "evidence": [
+        {
+          "path": "docs/forward-edge/protected-pins.json",
+          "sha256": "f5c289fc893abec6dfad84a3f55be073bbc74f4e8c349e742fdb78d29c739c1d"
+        },
+        {
+          "path": "brain/07-Research/Chart patterns and candles - what is testable and how.md",
+          "sha256": "f770f825245ed8b7773dfd02d10609aadada6fc3e65972088710175961d48985"
+        },
+        {
+          "path": "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md",
+          "sha256": "8c4a622507fee6fe84ee79cf7f35037edef0546569eba91e54c5a0e969e7d2c1"
+        },
+        {
+          "path": "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md",
+          "sha256": "2ca5044cee9a9df6c00982e38a2bc76841bbc977ca60057ff1ae23290952e690"
+        },
+        {
+          "path": "docs/forward-edge/trial-program.v1.json",
+          "sha256": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e"
+        },
+        {
+          "path": "docs/sources/pattern-catalogue.v1.json",
+          "sha256": "2cbe6b609249f5e1824271e4316d830c26c6366bd5277bba77e3bd802dc1066c"
+        },
+        {
+          "path": "docs/trials/ledger.jsonl",
+          "sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
+        },
+        {
+          "path": "docs/trials/manifests/is_minute_family.json",
+          "sha256": "17fbbc26df14f15e14db74af1411cc1602a85dbe1328a6db5f398c25a6ef2411"
+        },
+        {
+          "path": "docs/trials/manifests/mf.json",
+          "sha256": "a321e5240e27a199e1f46b05715a993f8be1bf7ac7eb961d79072a22906ce4a1"
+        },
+        {
+          "path": "docs/trials/manifests/x3.json",
+          "sha256": "f39e619e330f3415356809b189fbb73799d614f7c396554e2e6c775727138b23"
+        }
+      ],
+      "id": "protected_research_integrity",
+      "status": "GREEN",
+      "summary": "Protected research artifact hashes match."
+    },
+    {
+      "evidence": [
+        {
+          "json_pointer": "/execution_policy/physical_orders_enabled",
+          "path": "docs/edge-program/product-charter.v1.json",
+          "sha256": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949"
+        }
+      ],
+      "id": "physical_order_safety",
+      "status": "GREEN",
+      "summary": "Physical order submission is disabled by the product charter."
+    }
+  ],
+  "generated_from": {
+    "docs/edge-program/product-charter.v1.json": "bd17a9aad4913bc43009eb8ef5fe7791231f7c93b55d0b07a9b8be0de0df0949",
+    "docs/forward-edge/capital-risk-proposal-template.md": "0c07d747bb5943da8555ad13ac3031ddc39fb10f8d4e15eb3680241ac7b7bdc1",
+    "docs/forward-edge/protected-pins.json": "f5c289fc893abec6dfad84a3f55be073bbc74f4e8c349e742fdb78d29c739c1d",
+    "docs/forward-edge/trial-program.v1.json": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e",
+    "docs/trials/ledger.jsonl": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
+  },
+  "overall": "RED",
+  "schema": "fb.profit_readiness.v1"
+}

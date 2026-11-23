@@ -55,19 +55,49 @@ class QuoteArchive:
         self._con = sqlite3.connect(str(self.path))
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
+        self._migrate_event_identity()
+
+    def _migrate_event_identity(self) -> None:
+        """Upgrade legacy event-ID uniqueness to source-aware immutable records."""
+        exists = self._con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_events'"
+        ).fetchone()
+        if exists:
+            columns = {row[1] for row in self._con.execute("PRAGMA table_info(market_events)")}
+            if "record_key" not in columns:
+                self._con.execute("ALTER TABLE market_events RENAME TO market_events_legacy_v1")
         self._con.execute("""
             CREATE TABLE IF NOT EXISTS market_events (
-                event_id TEXT PRIMARY KEY, kind TEXT NOT NULL, venue TEXT NOT NULL,
-                instrument_id TEXT NOT NULL, event_time TEXT NOT NULL, received_at TEXT NOT NULL,
-                available_at TEXT NOT NULL, sequence INTEGER, source TEXT NOT NULL,
-                evidence_id TEXT, event_sha256 TEXT NOT NULL, event_json TEXT NOT NULL,
-                ingested_at TEXT
+                record_key TEXT PRIMARY KEY, event_id TEXT NOT NULL, kind TEXT NOT NULL,
+                venue TEXT NOT NULL, instrument_id TEXT NOT NULL, event_time TEXT NOT NULL,
+                received_at TEXT NOT NULL, available_at TEXT NOT NULL, sequence INTEGER,
+                source TEXT NOT NULL, evidence_id TEXT, event_sha256 TEXT NOT NULL,
+                dedupe_sha256 TEXT NOT NULL UNIQUE, event_json TEXT NOT NULL, ingested_at TEXT
             )
         """)
-        columns = {row[1] for row in self._con.execute("PRAGMA table_info(market_events)")}
-        if "ingested_at" not in columns:
-            # Older archives cannot recover their original write time; NULL preserves that fact.
-            self._con.execute("ALTER TABLE market_events ADD COLUMN ingested_at TEXT")
+        legacy = self._con.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='market_events_legacy_v1'"
+        ).fetchone()
+        if legacy:
+            rows = self._con.execute("SELECT * FROM market_events_legacy_v1").fetchall()
+            names = [row[1] for row in self._con.execute(
+                "PRAGMA table_info(market_events_legacy_v1)").fetchall()]
+            for values in rows:
+                old = dict(zip(names, values, strict=True))
+                body = json.loads(old["event_json"])
+                event = MarketEvent.from_dict(body)
+                dedupe = event.dedupe_sha256()
+                self._con.execute("""
+                    INSERT OR IGNORE INTO market_events (
+                        record_key,event_id,kind,venue,instrument_id,event_time,received_at,
+                        available_at,sequence,source,evidence_id,event_sha256,dedupe_sha256,
+                        event_json,ingested_at
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, [dedupe, old["event_id"], old["kind"], old["venue"], old["instrument_id"],
+                      old["event_time"], old["received_at"], old["available_at"], old["sequence"],
+                      old["source"], old["evidence_id"], old["event_sha256"], dedupe,
+                      old["event_json"], old.get("ingested_at")])
+            self._con.execute("DROP TABLE market_events_legacy_v1")
         self._con.commit()
 
     def close(self) -> None:
@@ -82,36 +112,53 @@ class QuoteArchive:
             raise QuoteArchiveError("ingest time cannot precede event availability")
         body = event.as_dict()
         digest = event.sha256()
-        previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE event_id=?",
-                                     [event.event_id]).fetchone()
+        dedupe = event.dedupe_sha256()
+        previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE dedupe_sha256=?",
+                                     [dedupe]).fetchone()
         if previous:
-            if previous[0] != digest:
-                raise QuoteArchiveError("event_id reused with different content")
+            # Receipt and strategy-availability clocks may differ on redelivery. Keep the
+            # first immutable observation and suppress only the same source identity/payload.
             return False
+        if event.revision_of is not None:
+            parents = self._con.execute("""
+                SELECT count(*) FROM market_events
+                WHERE event_id=? AND venue=? AND instrument_id=? AND source=?
+            """, [event.revision_of, event.venue, event.instrument_id, event.source]).fetchone()
+            if parents is None or parents[0] == 0:
+                raise QuoteArchiveError("correction parent must exist for the same source instrument")
+            if parents[0] > 1:
+                raise QuoteArchiveError("correction parent event ID is ambiguous for the source instrument")
         self._con.execute("""INSERT INTO market_events (
-                              event_id, kind, venue, instrument_id, event_time, received_at,
-                              available_at, sequence, source, evidence_id, event_sha256, event_json,
-                              ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                          [event.event_id, event.kind.value, event.venue, event.instrument_id,
+                              record_key, event_id, kind, venue, instrument_id, event_time,
+                              received_at, available_at, sequence, source, evidence_id,
+                              event_sha256, dedupe_sha256, event_json, ingested_at)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                          [dedupe, event.event_id, event.kind.value, event.venue, event.instrument_id,
                            event.event_time.isoformat(), event.received_at.isoformat(),
                            event.available_at.isoformat(), event.sequence, event.source,
-                           event.evidence_id, digest, json.dumps(body, sort_keys=True, separators=(",", ":")),
-                           ingested_at.isoformat()])
+                           event.evidence_id, digest, dedupe,
+                           json.dumps(body, sort_keys=True, separators=(",", ":")), ingested_at.isoformat()])
         self._con.commit()
         return True
 
     def ingest_time(self, event_id: str) -> datetime | None:
         """Return the original archive append clock; legacy rows remain explicitly unknown."""
-        row = self._con.execute("SELECT ingested_at FROM market_events WHERE event_id=?", [event_id]).fetchone()
-        if row is None:
+        rows = self._con.execute("SELECT ingested_at FROM market_events WHERE event_id=? ORDER BY record_key",
+                                 [event_id]).fetchall()
+        if not rows:
             raise KeyError(event_id)
-        return datetime.fromisoformat(row[0]) if row[0] is not None else None
+        if len(rows) > 1:
+            raise QuoteArchiveError("event ID is ambiguous; use source identity to select its record")
+        return datetime.fromisoformat(rows[0][0]) if rows[0][0] is not None else None
 
     def get(self, event_id: str) -> MarketEvent:
-        row = self._con.execute("SELECT event_json FROM market_events WHERE event_id=?", [event_id]).fetchone()
-        if row is None:
+        rows = self._con.execute("SELECT event_json FROM market_events WHERE event_id=? ORDER BY record_key",
+                                 [event_id]).fetchall()
+        if not rows:
             raise KeyError(event_id)
-        return MarketEvent.from_dict(json.loads(row[0]))
+        if len(rows) > 1:
+            raise QuoteArchiveError("event ID is ambiguous; use source identity to select its record")
+        return MarketEvent.from_dict(json.loads(rows[0][0]))
 
     def events_for_session(self, session_date: date, *, venue: str | None = None,
                            source: str | None = None) -> list[MarketEvent]:

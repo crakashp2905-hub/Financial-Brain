@@ -19,7 +19,7 @@ def event(event_id, kind, **kwargs):
     account_id = kwargs.pop("account_id", "paper-main")
     sleeve_id = kwargs.pop("sleeve_id", "intraday")
     return PortfolioEvent(
-        account_id=account_id, sleeve_id=sleeve_id, source_system="fixture-source",
+        account_id=account_id, sleeve_id=sleeve_id, source_system=kwargs.pop("source_system", "fixture-source"),
             source_event_id=event_id, source_sha256=kwargs.pop("source_sha256", HASH), event_kind=kind,
             occurred_at=kwargs.pop("occurred_at", "2026-11-20T10:00:00+05:30"), **kwargs,
     )
@@ -57,8 +57,30 @@ def test_cross_asset_fills_cash_marks_and_realized_unrealized_pnl_replay(tmp_pat
     assert by_instrument["NSE:INFY"]["quantity"] == Decimal("6")
     assert by_instrument["NSE:INFY"]["realized_pnl"] == Decimal("40")
     assert by_instrument["NSE:INFY"]["unrealized_pnl"] == Decimal("72")
+    assert by_instrument["NSE:INFY"]["pnl_evidence"]["realized"]["classification"] == "LOCAL_PAPER"
+    assert by_instrument["NSE:INFY"]["pnl_evidence"]["unrealized"]["profitability_claim"] == "NOT_ESTABLISHED"
     assert by_instrument["NFO:NIFTY-2026-11-26-26000-CE"]["quantity"] == Decimal("50")
     assert snapshot["projection_complete"] is False  # other open holdings still need explicit marks
+
+
+def test_mixed_source_pnl_is_labelled_mixed_and_cannot_be_called_profitable(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("historical-buy", EventKind.FILL, asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="2", price="100",
+              evidence_class="HISTORICAL_REPLAY"),
+        event("observed-sell", EventKind.FILL, asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="SELL", quantity="2", price="105",
+              evidence_class="PROSPECTIVELY_OBSERVED_SESSION"),
+    ])
+
+    position = ledger.snapshot("paper-main")["positions"][0]
+    realized = position["pnl_evidence"]["realized"]
+    assert position["realized_pnl"] == Decimal("10")
+    assert realized["classification"] == "MIXED_EVIDENCE_CLASSES"
+    assert realized["evidence_classes"] == ["HISTORICAL_REPLAY", "PROSPECTIVELY_OBSERVED_SESSION"]
+    assert realized["profitability_claim"] == "NOT_ESTABLISHED"
+    assert position["pnl_evidence"]["unrealized"]["classification"] == "NOT_COMPUTABLE"
 
 
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
@@ -156,6 +178,7 @@ def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_pat
     assert consolidated["gross_abs_quantity"] == Decimal("8")
     assert consolidated["average_cost"] is None  # long/short basis must not be collapsed
     assert consolidated["unrealized_pnl"] == Decimal("35")
+    assert consolidated["pnl_evidence"]["unrealized"]["classification"] == "LOCAL_PAPER"
 
 
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):
@@ -196,3 +219,17 @@ def test_events_refuse_missing_provenance_naive_time_and_bad_trade_fields(tmp_pa
     with pytest.raises(CanonicalLedgerError, match="fill needs"):
         ledger.append(event("not-fill", EventKind.FILL, side="BUY", quantity="1", price="10"))
 
+
+def test_canonical_ledger_rejects_unknown_or_conflicting_evidence_labels(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    with pytest.raises(CanonicalLedgerError, match="recognized.*evidence class"):
+        ledger.append(event("unsupported-label", EventKind.CASH_FLOW, cash_delta="1",
+                            evidence_class="CONFIRMED"))
+    with pytest.raises(CanonicalLedgerError, match="reserved for broker-sourced fill"):
+        ledger.append(event("forged-receipt", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                            instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+                            evidence_class="BROKER_EXECUTION_RECEIPT"))
+    with pytest.raises(CanonicalLedgerError, match="reserved for broker-sourced fill"):
+        ledger.append(event("mislabelled-broker", EventKind.FILL, source_system="BROKER_EXECUTION_RECEIPT",
+                            asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                            side="BUY", quantity="1", price="100", evidence_class="LOCAL_PAPER"))

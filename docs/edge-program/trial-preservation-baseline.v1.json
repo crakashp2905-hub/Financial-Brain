@@ -1,0 +1,18 @@
+{
+  "schema": "fb.trial_preservation_baseline.v1",
+  "source_commit": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+  "source_branch": "main",
+  "source_tree": "b904a44bb83b2b62363c64297b57c47af8d34057",
+  "note": "Git blob IDs captured from main at checklist baseline. These prove exact protected source bytes; missing trial provenance remains missing.",
+  "files": {
+    "brain/07-Research/Chart patterns and candles - what is testable and how.md": "0e160e6b3f6e5a42259982841980181ae3c03799",
+    "brain/07-Research/Source notes - Bulkowski Encyclopedia of Chart Patterns.md": "c0060c4047e499f5231ac63d24c7e9c6e7580bc1",
+    "brain/07-Research/Source notes - Nison Japanese Candlestick Charting Techniques.md": "09312a46ae1e59b89e0693fafe916f8d9f3df548",
+    "docs/forward-edge/trial-program.v1.json": "8efc84cf32f2251b54398843cba161f8dc7eb039",
+    "docs/sources/pattern-catalogue.v1.json": "b7b807b0fe012f181ea230456abd27dc268cb2c8",
+    "docs/trials/ledger.jsonl": "2a2b54ae0d54f882bad6f21dbfad307f847db882",
+    "docs/trials/manifests/is_minute_family.json": "73311ebafdbc0b28a2c3607cdad2795ae9a9e891",
+    "docs/trials/manifests/mf.json": "e2e90c14f386ac34f49d18fe55671c86fc06d690",
+    "docs/trials/manifests/x3.json": "19b997d3f3309e397b51df68b74334ad8ceb6205"
+  }
+}

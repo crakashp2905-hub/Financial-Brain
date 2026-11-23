@@ -1,0 +1,72 @@
+{
+  "schema": "fb.checklist-baseline.v1",
+  "checklist_id": "FB-0001",
+  "captured_at_utc": "2026-11-23T00:56:25Z",
+  "commit_sha": "5ee452797af33a5594b0e01a3e46d3fd4685cd37",
+  "git_tree_sha": "70733547faba1d922819b9661c83a38673cab415",
+  "branch": "feature/forward-edge-f00-f01",
+  "branch_provenance": "Existing pushed feature branch, distinct from main, used for the checklist implementation; current name and commit are recorded.",
+  "main_at_capture": {
+    "commit_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8",
+    "git_tree_sha": "b904a44bb83b2b62363c64297b57c47af8d34057",
+    "source": "GitHub branch API",
+    "protection": {
+      "protected": true,
+      "required_checks": [
+        "test (ubuntu-24.04)",
+        "test (windows-latest)",
+        "reproducibility (ubuntu-24.04)",
+        "reproducibility (windows-2022)"
+      ],
+      "source": "GitHub branch API"
+    }
+  },
+  "dependencies": {
+    "lock_path": "requirements-lock.txt",
+    "git_blob_sha1": "696c104f65f8f62c8337b6b5655d32ec783a6290",
+    "sha256_lf_normalized": "975c74c23711a48b02a11bf6868ac4a70982e54391cfd9a1da4ac1d0f2682681",
+    "working_copy_sha256_at_capture": "47f613e2e061e88a22a3a2e996c581e7fcf1c42db2f3b468183b915345abf852"
+  },
+  "tests": {
+    "collected_count": 3442,
+    "command": "python -m pytest --collect-only -q",
+    "result": "collection passed; 3442 tests collected in 23.22 seconds"
+  },
+  "ci": {
+    "latest_run_at_capture": {
+      "run_id": 45091533639,
+      "commit_sha": "5ee452797af33a5594b0e01a3e46d3fd4685cd37",
+      "status": "in_progress at capture; subsequently completed failure",
+      "final_conclusion": "failure",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45091533639",
+      "job_results": {
+        "reproducibility (ubuntu-24.04)": "success",
+        "reproducibility (windows-2022)": "success",
+        "test (ubuntu-24.04)": "failure: ModuleNotFoundError cryptography in bundle validation",
+        "test (windows-2022)": "failure: paper-equivalence report byte comparison rejected CRLF checkout"
+      }
+    },
+    "previous_run": {
+      "run_id": 45090692416,
+      "commit_sha": "b4fe562949d981ba3602bd3521ea6101bae97af5",
+      "ubuntu_reproducibility": "success",
+      "windows_reproducibility": "success",
+      "ubuntu_test": "failure: stale source-inventory snapshot",
+      "windows_test": "failure: stale source-inventory snapshot",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/actions/runs/45090692416"
+    }
+  },
+  "working_tree": {
+    "clean": false,
+    "porcelain_rows": 48,
+    "note": "Unrelated pre-existing edits and scratch files were present; commit/tree facts above refer to immutable HEAD."
+  },
+  "protected_trial_records": {
+    "changed_since_main": [],
+    "checked_paths": [
+      "docs/trials/ledger.json",
+      "docs/forward-edge/protected-pins.json"
+    ]
+  },
+  "integrity_note": "This manifest records repository state and CI observations only. It does not attest strategy profitability or market-data permissions."
+}

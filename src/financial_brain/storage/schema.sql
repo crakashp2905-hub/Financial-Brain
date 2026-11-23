@@ -577,7 +577,12 @@ CREATE TABLE IF NOT EXISTS mf_nav_observations (
     row_sha256          VARCHAR NOT NULL,
     source_published_at TIMESTAMPTZ,
     observed_at         TIMESTAMPTZ NOT NULL,
-    ingested_at         TIMESTAMPTZ
+    ingested_at         TIMESTAMPTZ,
+    -- Provenance fields used by the bounded historical-export ingestion path.
+    -- These coexist with the per-row NAVAll observation identity above.
+    source_document_sha256 VARCHAR,
+    retrieved_at        TIMESTAMPTZ,
+    record_sha256       VARCHAR
 );
 
 -- Effective-dated mutual-fund reference metadata. Each immutable row carries its source
@@ -680,23 +685,39 @@ CREATE TABLE IF NOT EXISTS mf_scheme_flows (
 CREATE TABLE IF NOT EXISTS mf_portfolio_disclosures (
     record_id       VARCHAR PRIMARY KEY,
     scheme_code     VARCHAR NOT NULL,
-    plan            VARCHAR NOT NULL,
-    option          VARCHAR NOT NULL,
-    scheme_isin     VARCHAR NOT NULL,
-    disclosure_date DATE NOT NULL,
-    asset_class     VARCHAR NOT NULL,
-    weight_percent  VARCHAR NOT NULL,
+    plan            VARCHAR,
+    option          VARCHAR,
+    scheme_isin     VARCHAR,
+    disclosure_date DATE,
+    asset_class     VARCHAR,
+    weight_percent  VARCHAR,
     asset_id        VARCHAR,
     asset_name      VARCHAR,
     sector          VARCHAR,
     credit_rating   VARCHAR,
     modified_duration_years VARCHAR,
     yield_to_maturity_percent VARCHAR,
-    source_id       VARCHAR NOT NULL,
-    source_ref       VARCHAR NOT NULL,
-    source_sha256    VARCHAR NOT NULL,
-    published_at     TIMESTAMPTZ NOT NULL,
-    observed_at      TIMESTAMPTZ NOT NULL
+    source_id       VARCHAR,
+    source_ref       VARCHAR,
+    source_sha256    VARCHAR,
+    published_at     TIMESTAMPTZ,
+    observed_at      TIMESTAMPTZ NOT NULL,
+    -- Normalized AMC CSV import fields retained alongside the richer disclosure rows.
+    portfolio_as_of DATE,
+    instrument_id VARCHAR,
+    underlying_scheme_code VARCHAR,
+    holding_name VARCHAR,
+    asset_type VARCHAR,
+    weight_pct DECIMAL(12, 8),
+    market_value_inr DECIMAL(24, 2),
+    quantity DECIMAL(24, 8),
+    maturity_date DATE,
+    observed_on DATE,
+    source_url VARCHAR,
+    source_document_sha256 VARCHAR,
+    source_published_at TIMESTAMPTZ,
+    lake_key VARCHAR,
+    yield_to_maturity_pct DECIMAL(12, 8)
 );
 
 -- Durable paper mutual-fund accounting. Exit-load terms are frozen per purchase lot
@@ -1721,4 +1742,152 @@ CREATE TABLE IF NOT EXISTS monthly_updates (
     kind            VARCHAR,
     headline        VARCHAR,
     attachment      VARCHAR
+);
+
+-- Feature-side append-only research and ETF reference records.
+CREATE TABLE IF NOT EXISTS counterfactual_outcomes (
+    signal_id VARCHAR NOT NULL,
+    horizon_sessions INTEGER NOT NULL,
+    observed_on DATE NOT NULL,
+    realized_return DOUBLE NOT NULL,
+    benchmark_return DOUBLE,
+    outcome_source_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL',
+    PRIMARY KEY (signal_id, horizon_sessions)
+);
+
+CREATE TABLE IF NOT EXISTS etf_product_disclosures (
+    observed_on             DATE NOT NULL,
+    isin                    VARCHAR NOT NULL,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    inception_date          DATE,
+    listing_date            DATE,
+    nav                     DECIMAL(20, 8),
+    nav_as_of               DATE,
+    indicative_nav          DECIMAL(20, 8),
+    indicative_nav_at       TIMESTAMPTZ,
+    expense_ratio_pct       DECIMAL(12, 8),
+    expense_effective_from  DATE,
+    expense_effective_to    DATE,
+    tracking_error_pct      DECIMAL(12, 8),
+    tracking_difference_pct DECIMAL(12, 8),
+    tracking_period_start   DATE,
+    tracking_period_end     DATE,
+    -- Issuer/market-maker primary-market context only; never a retail redemption route.
+    creation_units          BIGINT,
+    redemption_units        BIGINT,
+    creation_unit_size      BIGINT,
+    flow_period_start       DATE,
+    flow_period_end         DATE,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, isin, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS etf_reference_observations (
+    observed_on      DATE NOT NULL,
+    exchange         VARCHAR NOT NULL,
+    symbol           VARCHAR NOT NULL,
+    isin             VARCHAR NOT NULL,
+    security_name    VARCHAR NOT NULL,
+    underlying       VARCHAR,
+    listing_date     DATE,
+    market_lot       INTEGER NOT NULL,
+    face_value       DECIMAL(20, 6),
+    exposure_class   VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
+    exposure_rule    VARCHAR NOT NULL DEFAULT 'NO_EXPOSURE_LABEL',
+    exposure_confidence VARCHAR NOT NULL DEFAULT 'UNCLASSIFIED',
+    exposure_match   VARCHAR,
+    status           VARCHAR NOT NULL,
+    source           VARCHAR NOT NULL,
+    source_url       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    record_sha256    VARCHAR NOT NULL,
+    retrieved_at     TIMESTAMPTZ NOT NULL,
+    lake_key         VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, exchange, isin)
+);
+
+CREATE TABLE IF NOT EXISTS mf_scheme_master_observations (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    isin_growth             VARCHAR,
+    isin_reinvest           VARCHAR,
+    scheme_name             VARCHAR NOT NULL,
+    fund_house              VARCHAR,
+    scheme_type             VARCHAR,
+    plan_type               VARCHAR NOT NULL,
+    payout_type             VARCHAR NOT NULL,
+    structure_type          VARCHAR NOT NULL,
+    management_type         VARCHAR NOT NULL,
+    asset_class             VARCHAR NOT NULL,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    nav_as_of               DATE NOT NULL,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS mf_scheme_profile_disclosures (
+    identity_key            VARCHAR NOT NULL,
+    scheme_code             VARCHAR NOT NULL,
+    plan                    VARCHAR,
+    option                  VARCHAR,
+    isin                    VARCHAR,
+    riskometer              VARCHAR,
+    benchmark_name          VARCHAR,
+    benchmark_return_type   VARCHAR NOT NULL,
+    manager                 VARCHAR,
+    objective               VARCHAR,
+    effective_from          DATE,
+    effective_to            DATE,
+    scheme_status           VARCHAR,
+    status_effective_from   DATE,
+    successor_scheme_code   VARCHAR,
+    status_reason           VARCHAR,
+    expense_ratio_pct       DECIMAL(12, 8),
+    expense_ratio_plan      VARCHAR,
+    expense_effective_from DATE,
+    expense_effective_to   DATE,
+    aum_inr                 DECIMAL(24, 2),
+    aum_as_of               DATE,
+    minimum_initial_inr     DECIMAL(20, 2),
+    minimum_additional_inr  DECIMAL(20, 2),
+    minimum_effective_from  DATE,
+    minimum_effective_to    DATE,
+    exit_load_schedule      VARCHAR,
+    exit_load_effective_from DATE,
+    exit_load_effective_to   DATE,
+    exit_restrictions       VARCHAR,
+    restriction_effective_from DATE,
+    restriction_effective_to DATE,
+    observed_on             DATE NOT NULL,
+    observed_at             TIMESTAMPTZ NOT NULL,
+    source_url              VARCHAR NOT NULL,
+    source_document_sha256  VARCHAR NOT NULL,
+    source_published_at     TIMESTAMPTZ NOT NULL,
+    import_sha256           VARCHAR NOT NULL,
+    record_sha256           VARCHAR NOT NULL,
+    lake_key                VARCHAR NOT NULL,
+    PRIMARY KEY (identity_key, observed_on, source_document_sha256)
+);
+
+CREATE TABLE IF NOT EXISTS rejected_signal_counterfactuals (
+    signal_id VARCHAR PRIMARY KEY,
+    reason_code VARCHAR NOT NULL,
+    rejected_at TIMESTAMPTZ NOT NULL,
+    decision_sha256 VARCHAR NOT NULL,
+    record_sha256 VARCHAR NOT NULL,
+    classification VARCHAR NOT NULL DEFAULT 'COUNTERFACTUAL_NOT_PNL'
 );

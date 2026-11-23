@@ -1,0 +1,174 @@
+{
+  "captured_at_utc": "2026-11-23T15:41:25.253286+00:00",
+  "current_date_local": "2026-11-23",
+  "datasource_entitlements": {
+    "inventory_path": "docs/edge-program/market-data-sources.v1.json",
+    "inventory_sha256": "f62b835b482b1d4a30ba88d4d6d42d75e657aed1ea7e25d63804843a9779f323",
+    "sources": [
+      {
+        "credential_presence": {
+          "KITE_ACCESS_TOKEN": false,
+          "KITE_API_KEY": false,
+          "KITE_API_SECRET": false,
+          "today_stored_kite_token": true
+        },
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": false,
+        "source_id": "kite_connect_quotes_history_instruments",
+        "status": "LICENSED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "local_kite_quote_archive",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "nse_equity_bhavcopy",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "bse_equity_bhavcopy",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "nse_delivery_mto",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "nse_reference_and_fno_files",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "nifty_indices_tri_and_constituents",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "nse_financial_results_xbrl",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "bse_announcements_actions_filings",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "amfi_mutual_fund_nav",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "screener_company_ratios",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "moneycontrol_news_headlines",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "fred_macro_series",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": true,
+        "source_id": "mospi_cpi_iip",
+        "status": "UNVERIFIED"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": false,
+        "source_id": "nse_licensed_realtime_depth",
+        "status": "MISSING"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": false,
+        "source_id": "expired_options_history_and_chain",
+        "status": "MISSING"
+      },
+      {
+        "credential_presence": {},
+        "retention_status": "UNVERIFIED",
+        "runtime_ready": false,
+        "source_id": "us_equity_market_data",
+        "status": "MISSING"
+      }
+    ]
+  },
+  "dependencies": {
+    "lock_path": "requirements-lock.txt",
+    "lock_sha256": "211ecceb115363b45babf75ddd90a3f229185f2b2a6016a33b25e1d0ca52070b"
+  },
+  "repository": {
+    "branch": "codex/pr87-main-integration",
+    "commit_sha": "fc9f6d965e05ab202b3cbf0959370059d03cc50e",
+    "root": "D:\\Finance-Brain\\.worktrees\\pr87-main-integration",
+    "tree_sha": "d29c5d3fec7c74942eff0037ae801aba6ec4b3e3",
+    "working_tree_clean": false,
+    "working_tree_porcelain": [
+      " M docs/edge-program/V3.0_PROGRESS.md",
+      " M docs/edge-program/v3.0-audit.jsonl",
+      " M docs/edge-program/v3.0-status.json",
+      "?? scripts/capture_environment_baseline.py",
+      "?? tests/test_capture_environment_baseline.py"
+    ]
+  },
+  "runtime": {
+    "architecture": "AMD64",
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+    "python_executable": "C:\\Users\\CR Ramesh\\python.exe"
+  },
+  "scheduled_tasks": {
+    "complete_checkout_paths_verified": false,
+    "documented_external_tasks": [
+      {
+        "checkout_path": "UNVERIFIED",
+        "declared_in": "docs/HANDOFF.md",
+        "task_name": "financial-brain-resume"
+      }
+    ],
+    "host_scheduler": {
+      "reason": "ERROR: The network address is invalid.",
+      "status": "UNAVAILABLE"
+    },
+    "repository_workflows": []
+  },
+  "schema": "fb.environment_baseline.v1"
+}

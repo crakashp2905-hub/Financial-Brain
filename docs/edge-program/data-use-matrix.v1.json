@@ -1,0 +1,517 @@
+{
+  "dimensions": [
+    "PRIVATE_RESEARCH",
+    "RETAINED_HISTORY",
+    "REALTIME_ALGORITHMIC_USE",
+    "DERIVATIVES_DEPTH",
+    "SYNTHETIC_REPLAY",
+    "PAPER_SIMULATION",
+    "REDISTRIBUTION",
+    "PERMITTED_RETENTION"
+  ],
+  "products": [
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "daily mutual-fund scheme NAV and identifiers",
+      "provider": "AMFI NAV publication",
+      "provider_configured": true,
+      "source_id": "amfi_mutual_fund_nav",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "announcements",
+      "provider": "BSE corporate disclosures and archive",
+      "provider_configured": true,
+      "source_id": "bse_announcements_actions_filings",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "corporate actions",
+      "provider": "BSE corporate disclosures and archive",
+      "provider_configured": true,
+      "source_id": "bse_announcements_actions_filings",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "filing attachments",
+      "provider": "BSE corporate disclosures and archive",
+      "provider_configured": true,
+      "source_id": "bse_announcements_actions_filings",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "daily equity OHLCV and BSE security codes",
+      "provider": "BSE archive",
+      "provider_configured": true,
+      "source_id": "bse_equity_bhavcopy",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "historical option chains, expired contracts, and historical option depth",
+      "provider": "No provider configured",
+      "provider_configured": false,
+      "source_id": "expired_options_history_and_chain",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "NOT_CONFIGURED",
+        "PAPER_SIMULATION": "NOT_CONFIGURED",
+        "PERMITTED_RETENTION": "NOT_CONFIGURED",
+        "PRIVATE_RESEARCH": "NOT_CONFIGURED",
+        "REALTIME_ALGORITHMIC_USE": "NOT_CONFIGURED",
+        "REDISTRIBUTION": "NOT_CONFIGURED",
+        "RETAINED_HISTORY": "NOT_CONFIGURED",
+        "SYNTHETIC_REPLAY": "NOT_CONFIGURED"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "USD/INR, crude, rates, CPI, reserves, credit, and commodity series",
+      "provider": "Federal Reserve Bank of St. Louis FRED",
+      "provider_configured": true,
+      "source_id": "fred_macro_series",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "historical candles",
+      "provider": "Zerodha Kite Connect",
+      "provider_configured": true,
+      "source_id": "kite_connect_quotes_history_instruments",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "instrument master",
+      "provider": "Zerodha Kite Connect",
+      "provider_configured": true,
+      "source_id": "kite_connect_quotes_history_instruments",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "live LTP/OHLC/full quotes and visible top-of-book",
+      "provider": "Zerodha Kite Connect",
+      "provider_configured": true,
+      "source_id": "kite_connect_quotes_history_instruments",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "normalized historical quote observations",
+      "provider": "Local archive populated from Kite Connect quote snapshots",
+      "provider_configured": true,
+      "source_id": "local_kite_quote_archive",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "headline and limited article metadata for links referenced by filings",
+      "provider": "Moneycontrol",
+      "provider_configured": true,
+      "source_id": "moneycontrol_news_headlines",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "CPI and IIP series",
+      "provider": "Ministry of Statistics and Programme Implementation API",
+      "provider_configured": true,
+      "source_id": "mospi_cpi_iip",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "current constituent snapshots",
+      "provider": "NSE Indices / niftyindices.com",
+      "provider_configured": true,
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "total-return index history",
+      "provider": "NSE Indices / niftyindices.com",
+      "provider_configured": true,
+      "source_id": "nifty_indices_tri_and_constituents",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "daily security-wise delivery quantities and delivery percentage",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_delivery_mto",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "daily equity OHLCV and security reference fields",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_equity_bhavcopy",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "XBRL instances",
+      "provider": "NSE corporate filings and archive hosts",
+      "provider_configured": true,
+      "source_id": "nse_financial_results_xbrl",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "dissemination timestamps",
+      "provider": "NSE corporate filings and archive hosts",
+      "provider_configured": true,
+      "source_id": "nse_financial_results_xbrl",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "financial-results filing index",
+      "provider": "NSE corporate filings and archive hosts",
+      "provider_configured": true,
+      "source_id": "nse_financial_results_xbrl",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "licensed L1/L2/L3 and tick/order-book data",
+      "provider": "NSE commercial market-data products",
+      "provider_configured": true,
+      "source_id": "nse_licensed_realtime_depth",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "F&O ban list",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_reference_and_fno_files",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "F&O market lots",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_reference_and_fno_files",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "equity security list",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_reference_and_fno_files",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "index closes and valuation fields",
+      "provider": "NSE archive",
+      "provider_configured": true,
+      "source_id": "nse_reference_and_fno_files",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "company headline ratios and summary fields",
+      "provider": "Screener.in",
+      "provider_configured": true,
+      "source_id": "screener_company_ratios",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "UNKNOWN_RIGHTS",
+        "PAPER_SIMULATION": "UNKNOWN_RIGHTS",
+        "PERMITTED_RETENTION": "UNKNOWN_RIGHTS",
+        "PRIVATE_RESEARCH": "UNKNOWN_RIGHTS",
+        "REALTIME_ALGORITHMIC_USE": "UNKNOWN_RIGHTS",
+        "REDISTRIBUTION": "UNKNOWN_RIGHTS",
+        "RETAINED_HISTORY": "UNKNOWN_RIGHTS",
+        "SYNTHETIC_REPLAY": "UNKNOWN_RIGHTS"
+      }
+    },
+    {
+      "authorization_inferred": false,
+      "evidence_ref": "docs/edge-program/market-data-rights-review.v1.md",
+      "product": "US equity/index prices and cross-market reference data",
+      "provider": "No provider configured",
+      "provider_configured": false,
+      "source_id": "us_equity_market_data",
+      "use_status": {
+        "DERIVATIVES_DEPTH": "NOT_CONFIGURED",
+        "PAPER_SIMULATION": "NOT_CONFIGURED",
+        "PERMITTED_RETENTION": "NOT_CONFIGURED",
+        "PRIVATE_RESEARCH": "NOT_CONFIGURED",
+        "REALTIME_ALGORITHMIC_USE": "NOT_CONFIGURED",
+        "REDISTRIBUTION": "NOT_CONFIGURED",
+        "RETAINED_HISTORY": "NOT_CONFIGURED",
+        "SYNTHETIC_REPLAY": "NOT_CONFIGURED"
+      }
+    }
+  ],
+  "schema": "fb.provider_product_data_use_matrix.v1",
+  "source_inventory": "docs/edge-program/market-data-sources.v1.json",
+  "source_inventory_sha256": "9405e33fc1a4620e0fce931f5d7b072f0a30887e379d223a10ad1955e93a14b1",
+  "status_semantics": {
+    "NOT_CONFIGURED": "No provider is configured for this product; it is unavailable and not authorized.",
+    "UNKNOWN_RIGHTS": "Provider/product use is not established by reviewed evidence; operational use remains denied."
+  },
+  "synthetic_replay_policy": {
+    "evidence_paths": [
+      "src/financial_brain/forward_edge/fixtures.py",
+      "src/financial_brain/forward_edge/fixture_adapter.py"
+    ],
+    "grants_provider_rights": false,
+    "note": "Synthetic fixture replay is separate from replay of provider-derived market data; it cannot grant rights to that data.",
+    "provider_data_included": false,
+    "status": "INTERNAL_FIXTURE_ONLY"
+  }
+}

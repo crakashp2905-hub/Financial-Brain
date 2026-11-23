@@ -270,4 +270,3 @@ def decisions_panel(live_locked_reasons: list[str]) -> str:
     html = _page("Operator decisions", f"<ul id='options'>{opts}</ul><h2>Live mode is LOCKED because</h2><ul>{why}</ul>")
     assert_read_only(html)
     return html
-

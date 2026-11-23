@@ -3,11 +3,13 @@
     "forward_session_runner": [
       "financial_brain.costs.india",
       "financial_brain.evidence.decision_manifest",
+      "financial_brain.forward_edge.availability",
       "financial_brain.forward_edge.clock",
       "financial_brain.forward_edge.cost_schedule",
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
+      "financial_brain.forward_edge.feed_quality",
       "financial_brain.forward_edge.instrument_rules",
       "financial_brain.forward_edge.intent_timing",
       "financial_brain.forward_edge.market_data",
@@ -21,6 +23,7 @@
       "financial_brain.forward_edge.session_state",
       "financial_brain.forward_edge.venue_calendar",
       "financial_brain.kernel.clock",
+      "financial_brain.kernel.closures_n",
       "financial_brain.kernel.events",
       "financial_brain.kernel.ledger",
       "financial_brain.kernel.oms",
@@ -82,6 +85,10 @@
       "target": "financial_brain.costs.india"
     },
     {
+      "source": "financial_brain.forward_edge.feed_quality",
+      "target": "financial_brain.forward_edge.market_events"
+    },
+    {
       "source": "financial_brain.forward_edge.intent_timing",
       "target": "financial_brain.forward_edge.market_events"
     },
@@ -127,6 +134,10 @@
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.availability"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.clock"
     },
     {
@@ -144,6 +155,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.execution_scenario"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.feed_quality"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -200,6 +215,10 @@
     {
       "source": "financial_brain.ingest.kite_minute",
       "target": "financial_brain.providers.kite_data"
+    },
+    {
+      "source": "financial_brain.kernel.clock",
+      "target": "financial_brain.kernel.closures_n"
     },
     {
       "source": "financial_brain.kernel.events",
@@ -368,6 +387,6 @@
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive"
   ],
-  "source_count": 682,
-  "source_tree_sha256": "1f148232ccf78569de605028401931114fcef1c11dbb660edd27cbba149be3b2"
+  "source_count": 721,
+  "source_tree_sha256": "cc80ddc0fa02e12c24b400c7316557f5ba22935bad0b1b78f8d777892f4f28c1"
 }

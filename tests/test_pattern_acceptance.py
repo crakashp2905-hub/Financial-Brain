@@ -107,10 +107,11 @@ def test_dual_rating_never_claims_market_edge() -> None:
     assert report["engineering"] in ("ENGINEERING_IN_PROGRESS", "ENGINEERING_TRADER_READY")
 
 
-def test_protected_records_are_byte_unchanged() -> None:
+def test_protected_records_are_content_unchanged_across_checkout_line_endings() -> None:
     baseline = json.loads(PROTECTED.read_text(encoding="utf-8"))["files"]
     for rel, expected in baseline.items():
-        actual = hashlib.sha256((ROOT / rel).read_bytes()).hexdigest()
+        data = (ROOT / rel).read_bytes().replace(b"\r\n", b"\n")
+        actual = hashlib.sha256(data).hexdigest()
         assert actual == expected, f"protected record changed: {rel}"
 
 

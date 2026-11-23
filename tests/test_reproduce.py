@@ -1,8 +1,10 @@
 """A data fingerprint ignores row order and changes when any value changes; every recorded trial has a script."""
 import duckdb
+from pathlib import Path
 
 from financial_brain.evaluation import standard as S
 from financial_brain.research import reproduce as RP
+from scripts.verify_reproducibility import sha256 as reproducibility_sha256
 
 
 def test_fingerprint_order_independent_and_value_sensitive():
@@ -29,3 +31,10 @@ def test_every_2026q4_trial_has_a_script_in_the_repo():
 def test_intraday_manifest_names_the_minute_warehouse_and_basis_file():
     assert set(RP.TRIAL_FILES["is_minute_family.py"]) == {
         "data/minute_history.duckdb", "data/basis_contracts.parquet"}
+
+
+def test_reproducibility_hash_is_independent_of_checkout_line_endings(tmp_path: Path):
+    lf, crlf = tmp_path / "lf.txt", tmp_path / "crlf.txt"
+    lf.write_bytes(b"dependency==1.0\n")
+    crlf.write_bytes(b"dependency==1.0\r\n")
+    assert reproducibility_sha256(lf) == reproducibility_sha256(crlf)

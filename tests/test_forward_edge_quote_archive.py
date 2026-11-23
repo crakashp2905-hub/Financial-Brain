@@ -14,12 +14,17 @@ from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiv
 T0 = datetime(2026, 11, 15, 4, 0, tzinfo=timezone.utc)
 
 
-def _quote(seq: int, *, event_id: str | None = None, event_lag_ms: int = 10) -> MarketEvent:
+def _quote(seq: int, *, event_id: str | None = None, event_lag_ms: int = 10,
+           bid: float | None = None, venue: str = "NSE", instrument_id: str = "NSE:INFY",
+           source: str = "kite-fixture", source_at: datetime | None = None,
+           revision_of: str | None = None) -> MarketEvent:
     received = T0 + timedelta(seconds=seq)
-    return MarketEvent(event_id or f"q-{seq}", EventKind.QUOTE, "NSE", "NSE:INFY",
+    return MarketEvent(event_id or f"q-{seq}", EventKind.QUOTE, venue, instrument_id,
                        received - timedelta(milliseconds=event_lag_ms), received, received,
-                       {"bid": 100 + seq, "ask": 101 + seq, "bid_quantity": 10, "ask_quantity": 12},
-                       "kite-fixture", sequence=seq, evidence_id="fixture:test")
+                       {"bid": bid if bid is not None else 100 + seq, "ask": 101 + seq,
+                        "bid_quantity": 10, "ask_quantity": 12},
+                       source, sequence=seq, evidence_id="fixture:test", source_at=source_at,
+                       revision_of=revision_of)
 
 
 def test_archive_is_append_only_idempotent_and_roundtrips_provenance(tmp_path) -> None:
@@ -31,9 +36,13 @@ def test_archive_is_append_only_idempotent_and_roundtrips_provenance(tmp_path) -
         assert archive.get(first.event_id) == first
         assert archive.count() == 1
         assert archive.rows()[0]["source"] == "kite-fixture"
-        with pytest.raises(QuoteArchiveError, match="different content"):
-            archive.append(_quote(2, event_id=first.event_id))
-        assert archive.count() == 1
+        # Same provider ID with a new source clock/payload is retained as another record;
+        # the archive never silently replaces the original row.
+        revised = _quote(2, event_id=first.event_id)
+        assert archive.append(revised)
+        assert archive.count() == 2
+        with pytest.raises(QuoteArchiveError, match="ambiguous"):
+            archive.get(first.event_id)
     finally:
         archive.close()
 
@@ -74,7 +83,11 @@ def test_ingest_timestamp_is_injected_immutable_and_not_part_of_source_event_ide
         event = _quote(1)
         assert archive.append(event)
         assert archive.ingest_time(event.event_id) == ingested
-        assert not archive.append(event, ingested_at=ingested + timedelta(minutes=1))
+        redelivery = MarketEvent(event.event_id, event.kind, event.venue, event.instrument_id,
+                                 event.event_time, event.received_at + timedelta(seconds=2),
+                                 event.available_at + timedelta(seconds=2), event.payload, event.source,
+                                 sequence=event.sequence, evidence_id=event.evidence_id)
+        assert not archive.append(redelivery, ingested_at=ingested + timedelta(minutes=1))
         assert archive.ingest_time(event.event_id) == ingested
     finally:
         archive.close()
@@ -101,6 +114,72 @@ def test_legacy_archive_migration_does_not_invent_prior_ingest_times(tmp_path) -
         assert archive.ingest_time("q-8") is None
         assert archive.append(_quote(9))
         assert archive.ingest_time("q-9") == ingested
+        columns = {row[1] for row in archive._con.execute("PRAGMA table_info(market_events)")}
+        assert {"record_key", "dedupe_sha256"} <= columns
+    finally:
+        archive.close()
+
+
+def test_archive_preserves_source_corrections_as_append_only_revisions(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "quotes.sqlite3")
+    try:
+        original = _quote(1, event_id="bar-1", source_at=T0)
+        correction = _quote(2, event_id="bar-1-correction", bid=99.5,
+                            source_at=T0, revision_of="bar-1")
+        assert archive.append(original)
+        assert archive.append(correction)
+        assert archive.count() == 2
+        assert archive.get("bar-1").payload["bid"] == 101
+        assert archive.get(correction.event_id).revision_of == "bar-1"
+        assert not archive.append(correction)
+        orphan = _quote(3, event_id="orphan-revision", revision_of="missing-parent")
+        with pytest.raises(QuoteArchiveError, match="parent must exist"):
+            archive.append(orphan)
+    finally:
+        archive.close()
+
+
+def test_archive_deduplicates_and_preserves_corrected_candles(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "candles.sqlite3")
+    try:
+        def bar(event_id: str, *, close: float, revision_of: str | None = None) -> MarketEvent:
+            return MarketEvent(
+                event_id=event_id, kind=EventKind.BAR, venue="NSE", instrument_id="NSE:INFY",
+                event_time=T0, received_at=T0 + timedelta(seconds=2),
+                available_at=T0 + timedelta(seconds=2), payload={
+                    "open": 100, "high": max(102, close), "low": 99,
+                    "close": close, "volume": 10,
+                }, source="exchange-fixture", source_at=T0, revision_of=revision_of,
+            )
+
+        original = bar("bar-1", close=101)
+        redelivery = bar("bar-1", close=101)
+        correction = bar("bar-1-r1", close=101.5, revision_of="bar-1")
+        assert archive.append(original)
+        assert not archive.append(redelivery)
+        assert archive.append(correction)
+        assert archive.count() == 2
+        assert archive.get("bar-1-r1").payload["close"] == 101.5
+    finally:
+        archive.close()
+
+
+def test_archive_scopes_duplicate_event_ids_by_source_identity_and_keeps_late_rows(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "quotes.sqlite3")
+    try:
+        early = _quote(4, event_id="same-id", source_at=T0 + timedelta(seconds=4))
+        late_arriving_old_record = _quote(3, event_id="same-id", source_at=T0 + timedelta(seconds=3))
+        other_venue = _quote(4, event_id="same-id", venue="BSE", source="bse-fixture",
+                             source_at=T0 + timedelta(seconds=4))
+        assert archive.append(early)
+        assert archive.append(late_arriving_old_record)
+        assert archive.append(other_venue)
+        assert archive.count() == 3
+        ambiguous_revision = _quote(5, event_id="ambiguous-r1", revision_of="same-id")
+        with pytest.raises(QuoteArchiveError, match="parent event ID is ambiguous"):
+            archive.append(ambiguous_revision)
+        assert {event.venue for event in archive.events_for_session(
+            datetime(2026, 11, 15).date())} == {"NSE", "BSE"}
     finally:
         archive.close()
 

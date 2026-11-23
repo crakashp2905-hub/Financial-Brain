@@ -228,4 +228,3 @@ def test_reinvestment_requires_terms_and_elss_lock_in(book):
             reinvestment_lot_id="elss-lot", reinvestment_terms=elss_terms,
         )
     assert book.execute("SELECT count(*) FROM mf_paper_flow_events").fetchone()[0] == 0
-

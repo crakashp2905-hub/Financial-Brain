@@ -17,6 +17,7 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 from __future__ import annotations
 
 import time
+import re
 from collections import Counter
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
@@ -163,7 +164,7 @@ def _decode(payload: bytes) -> str:
     return payload.decode("utf-8", errors="replace")
 
 
-def parse(payload: bytes) -> list[dict]:
+def parse(payload: bytes, *, reject_duplicate_scheme_dates: bool = True) -> list[dict]:
     """Rows of the NAV file, with the fund house and scheme type each row sits under.
 
     Rows whose NAV is not a number ("N.A." for a scheme that did not declare one) are
@@ -171,6 +172,7 @@ def parse(payload: bytes) -> list[dict]:
     """
     fund_house = scheme_type = None
     out: list[dict] = []
+    seen_scheme_dates: set[tuple[str, date]] = set()
     for raw in _decode(payload).splitlines():
         line = raw.strip()
         if not line or line.startswith(HEADER):
@@ -190,10 +192,19 @@ def parse(payload: bytes) -> list[dict]:
             value = float(nav)
         except ValueError:
             continue
+        if not isfinite(value):
+            continue
         try:
             on = datetime.strptime(nav_date, "%d-%b-%Y").date()
         except ValueError:
             continue
+        identity = (code, on)
+        if identity in seen_scheme_dates and reject_duplicate_scheme_dates:
+            raise FetchError(
+                f"duplicate AMFI scheme/date identity: {code} on {on.isoformat()}",
+                retryable=False,
+            )
+        seen_scheme_dates.add(identity)
         out.append({"scheme_code": code, "isin_growth": isin_g if isin_g != "-" else None,
                     "isin_reinvest": isin_r if isin_r != "-" else None,
                     "scheme_name": name, "fund_house": fund_house,
@@ -217,7 +228,9 @@ def parse_quality_report(
     if stale_after_days < 0:
         raise ValueError("stale_after_days cannot be negative")
     decoded = _decode(payload)
-    rows = parse(payload)
+    # Quality reports must surface repeated identities instead of failing the entire
+    # report; strict ingestion uses parse()'s default fail-closed behavior.
+    rows = parse(payload, reject_duplicate_scheme_dates=False)
     dated: list[tuple[str, date]] = [(row["scheme_code"], row["nav_date"]) for row in rows]
     reported: list[tuple[str, date]] = list(dated)
     unavailable: list[dict[str, str]] = []
@@ -252,3 +265,64 @@ def parse_quality_report(
         "unavailable": unavailable,
         "stale_after_days": stale_after_days,
     }
+
+
+def classify_scheme(row: dict[str, Any]) -> dict[str, str]:
+    """Normalize only classifications explicitly supported by AMFI descriptors."""
+    plan_text = " ".join(str(row.get(key) or "") for key in ("plan", "scheme_name")).upper()
+    plan_type = ("DIRECT" if re.search(r"\bDIRECT\b", plan_text) else
+                 "REGULAR" if re.search(r"\bREGULAR\b", plan_text) else "UNCLASSIFIED")
+
+    option_text = " ".join(str(row.get(key) or "") for key in ("option", "scheme_name")).upper()
+    if "REINVEST" in option_text:
+        payout_type = "IDCW_REINVESTMENT"
+    elif re.search(r"\b(PAYOUT|DIVIDEND)\b|\bIDCW\b", option_text):
+        payout_type = ("IDCW_PAYOUT" if "PAYOUT" in option_text or "DIVIDEND" in option_text
+                       else "IDCW_UNSPECIFIED")
+    elif re.search(r"\bGROWTH\b", option_text):
+        payout_type = "GROWTH"
+    else:
+        payout_type = "UNCLASSIFIED"
+
+    descriptor = " ".join(str(row.get(key) or "")
+                          for key in ("scheme_type", "scheme_name")).upper()
+    structure_type = ("INTERVAL" if "INTERVAL" in descriptor else
+                      "CLOSED_ENDED" if "CLOSE ENDED" in descriptor else
+                      "OPEN_ENDED" if "OPEN ENDED" in descriptor else "UNCLASSIFIED")
+    if "FUND OF FUNDS" in descriptor or re.search(r"\bFOF\b", descriptor):
+        asset_class = "FUND_OF_FUNDS"
+    elif re.search(r"\b(EQUITY|LARGE CAP|MID CAP|SMALL CAP|ELSS)\b", descriptor):
+        asset_class = "EQUITY"
+    elif re.search(r"\b(DEBT|GILT|BOND|LIQUID|MONEY MARKET|FIXED INCOME)\b", descriptor):
+        asset_class = "DEBT"
+    elif "HYBRID" in descriptor or "BALANCED" in descriptor:
+        asset_class = "HYBRID"
+    elif re.search(r"\b(GOLD|SILVER|COMMODITY)\b", descriptor):
+        asset_class = "COMMODITY"
+    else:
+        asset_class = "UNCLASSIFIED"
+    management_type = ("PASSIVE" if re.search(
+        r"\b(INDEX|PASSIVE|ETF|EXCHANGE TRADED)\b", descriptor) else
+        "ACTIVE" if "ACTIVELY MANAGED" in descriptor else "UNCLASSIFIED")
+    return {"plan_type": plan_type, "payout_type": payout_type,
+            "structure_type": structure_type, "management_type": management_type,
+            "asset_class": asset_class}
+
+def nav_coverage(rows: list[dict], expected_scheme_codes: list[str], *, as_of: date,
+                 stale_after_days: int = 7) -> list[dict]:
+    """Classify expected schemes by their latest NAV date without relabelling old rows."""
+    if stale_after_days < 0:
+        raise ValueError("stale_after_days must be non-negative")
+    latest: dict[str, date] = {}
+    for row in rows:
+        code, day = str(row.get("scheme_code", "")), row.get("nav_date")
+        if code and isinstance(day, date) and day <= as_of:
+            latest[code] = max(day, latest.get(code, day))
+    out = []
+    for code in sorted(set(str(value) for value in expected_scheme_codes)):
+        day = latest.get(code)
+        age = (as_of - day).days if day is not None else None
+        out.append({"scheme_code": code, "latest_nav_date": day, "age_days": age,
+                    "status": "UNAVAILABLE" if day is None else
+                    "STALE" if age > stale_after_days else "CURRENT"})
+    return out

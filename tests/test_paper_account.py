@@ -209,4 +209,3 @@ def test_randomized_partial_fill_cancel_sequences_preserve_buying_power(tmp_path
         assert reopened.cash == book.cash
         assert reopened.available_cash >= 0
         assert reopened.oms.order("buy").state == book.oms.order("buy").state
-

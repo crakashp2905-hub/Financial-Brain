@@ -71,3 +71,89 @@ def test_the_challenger_joins_the_competition_only_when_scored():
     learned = pd.DataFrame({"lineage": cs["lineage"], "pred": np.arange(200)[::-1]})
     got = C.picks(cs, as_of=date(2026, 10, 5), learned=learned)["learned_model_top"]
     assert set(got["lineage"]) == {f"L{i}" for i in range(int(C.TOP_FRACTION * 200))}
+
+
+def test_training_rejects_invalid_contracts_before_fit(tmp_path):
+    p = panel(n_dates=8, n=20)
+    model, meta = tmp_path / "model.txt", tmp_path / "model.json"
+    with pytest.raises(LM.LearnedModelError, match="version"):
+        LM.train_final(p, ["a"], version=" ", model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="embargo"):
+        LM.train_final(p, ["a"], embargo_days=-1, model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="non-empty and unique"):
+        LM.train_final(p, [], model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="non-empty and unique"):
+        LM.train_final(p, ["a", "a"], model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="missing columns"):
+        LM.train_final(p, ["missing"], model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="numeric"):
+        LM.train_final(p.assign(text="not numeric"), ["text"], model_path=model, meta_path=meta)
+    with pytest.raises(LM.LearnedModelError, match="immutable"):
+        model.write_text("already frozen", encoding="utf-8")
+        LM.train_final(p, ["a"], model_path=model, meta_path=meta)
+
+
+def test_training_rejects_unmatured_empty_and_nonfinite_training_data(tmp_path):
+    p = panel(n_dates=8, n=20)
+    with pytest.raises(LM.LearnedModelError, match="finite matured labels"):
+        LM.train_final(p.assign(fwd20=np.nan), ["a"], model_path=tmp_path / "m.txt",
+                       meta_path=tmp_path / "m.json")
+    with pytest.raises(LM.LearnedModelError, match="embargo leaves no training rows"):
+        LM.train_final(p, ["a"], embargo_days=10_000, model_path=tmp_path / "m.txt",
+                       meta_path=tmp_path / "m.json")
+    p.loc[p.index[0], "a"] = np.inf
+    with pytest.raises(LM.LearnedModelError, match="cannot contain infinite"):
+        LM.train_final(p, ["a"], model_path=tmp_path / "m.txt", meta_path=tmp_path / "m.json")
+
+
+def test_load_lineage_drivers_and_score_day_fail_closed(tmp_path, monkeypatch):
+    with pytest.raises(LM.LearnedModelError, match="no trained model"):
+        LM.load(tmp_path / "missing.txt", tmp_path / "missing.json")
+    frame = pd.DataFrame({"a": [1.0, 2.0]})
+    predictions = pd.Series([0.1, 0.2])
+    meta = {"features": ["a"], "model_sha256": "model", "feature_schema_sha256": "schema"}
+    assert len(LM.prediction_lineage(frame, meta, predictions)["lineage_sha256"]) == 64
+    with pytest.raises(LM.LearnedModelError, match="feature schema"):
+        LM.prediction_lineage(frame, {**meta, "features": ["b"]}, predictions)
+    with pytest.raises(LM.LearnedModelError, match="length or values"):
+        LM.prediction_lineage(frame, meta, pd.Series([float("nan"), 0.2]))
+    with pytest.raises(LM.LearnedModelError, match="frozen artifact/schema hashes"):
+        LM.prediction_lineage(frame, {"features": ["a"]}, predictions)
+
+    class Booster:
+        def predict(self, _ranked, *, pred_contrib):
+            assert pred_contrib is True
+            return np.array([[1.0, -2.0, 0.0], [-1.0, 2.0, 0.0]])
+
+    reasons = LM.drivers(Booster(), np.array([[0.9, 0.1], [0.5, 0.8]]), ["mom_12_1", "unknown_factor"])
+    assert "+ 12-month momentum high" in reasons[0]
+    assert "- unknown factor low" in reasons[0]
+    cached_path = tmp_path / "cache" / "2026-01-01.parquet"
+    cached_path.parent.mkdir()
+    cached_path.write_bytes(b"cached")
+    expected = pd.DataFrame({"lineage": ["L1"]})
+    monkeypatch.setattr(pd, "read_parquet", lambda _path: expected)
+    assert LM.score_day(None, date(2026, 1, 1), cache=cached_path.parent) is expected
+
+
+def test_scoring_without_eligible_names_is_an_explicit_error(tmp_path, monkeypatch):
+    class Result:
+        def __init__(self, frame):
+            self.frame = frame
+
+        def fetchall(self):
+            return []
+
+        def df(self):
+            return self.frame
+
+    class Connection:
+        def execute(self, sql, *_args, **_kwargs):
+            if "index_levels_canonical" in sql:
+                return Result(pd.DataFrame(columns=["business_date", "close_level"]))
+            return Result(pd.DataFrame(columns=["lineage", "d", "o", "h", "l", "c", "v"]))
+
+    monkeypatch.setattr(LM, "load", lambda *_args, **_kwargs: (object(), {"features": ["a"]}))
+    with pytest.raises(LM.LearnedModelError, match="no names scored"):
+        LM._score_day(Connection(), date(2026, 1, 1), model_path=tmp_path / "m.txt",
+                      meta_path=tmp_path / "m.json")
