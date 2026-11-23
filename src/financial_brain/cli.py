@@ -416,6 +416,18 @@ def cmd_mf_scheme_profile(args) -> int:
     return 0
 
 
+def cmd_mfnav_history(args) -> int:
+    """Import an already downloaded AMFI NAV history file within its 90-day limit."""
+    from pathlib import Path
+
+    from .ingest.mfnav_history import ingest_export
+
+    result = ingest_export(Path(args.file).read_bytes(), start=_d(args.start),
+                           end=_d(args.end), source_url=args.source_url, cfg=load())
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_etf_feed(args) -> int:
     """Poll full read-only Kite ETF quotes into the timestamped forward-event archive."""
     from pathlib import Path
@@ -3218,6 +3230,13 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--file", required=True)
     g.add_argument("--observed-on", required=True, help="repository observation date YYYY-MM-DD")
     g.set_defaults(fn=cmd_mf_scheme_profile)
+
+    g = sub.add_parser("mfnav-history", help="import an official AMFI NAV history export (max 90 days)")
+    g.add_argument("--file", required=True)
+    g.add_argument("--start", required=True, help="inclusive requested start date YYYY-MM-DD")
+    g.add_argument("--end", required=True, help="inclusive requested end date YYYY-MM-DD")
+    g.add_argument("--source-url", required=True, help="official AMFI page used to obtain the export")
+    g.set_defaults(fn=cmd_mfnav_history)
 
     g = sub.add_parser("newsref", help="news a filing refers to, from the filing's own text")
     g.add_argument("--date", required=True)
