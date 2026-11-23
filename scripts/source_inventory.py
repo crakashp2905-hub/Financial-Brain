@@ -11,6 +11,10 @@ import ast
 import hashlib
 import json
 from pathlib import Path
+try:
+    from scripts.text_hash import sha256_lf_normalized
+except ModuleNotFoundError:  # direct `python scripts/source_inventory.py` invocation
+    from text_hash import sha256_lf_normalized
 
 
 ROLE_BY_PACKAGE = {
@@ -58,7 +62,7 @@ def build(root: Path) -> dict:
             "test_paths": tests,
             "maturity": "locally_mapped" if evidence else "unassessed",
             "imports": imports,
-            "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "source_sha256": sha256_lf_normalized(path.read_bytes()),
             "parse_status": parse_status,
         })
     return {"schema": "fb.source-inventory.v2", "scope": "Python source only; role hints are not owner assignments",
@@ -87,7 +91,8 @@ if __name__ == "__main__":
     if args.output:
         rendered = rendered_bytes(report)
         if args.check:
-            if not args.output.is_file() or args.output.read_bytes() != rendered:
+            current = args.output.read_bytes().replace(b"\r\n", b"\n") if args.output.is_file() else None
+            if current != rendered:
                 raise SystemExit(f"source inventory is stale: {args.output}")
         else:
             args.output.parent.mkdir(parents=True, exist_ok=True)
