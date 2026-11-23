@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 605,
+  "source_count": 606,
   "sources": [
     {
       "capability_ids": [],
@@ -269,7 +269,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "9f97a118eeda514cc11541ca408b44e3aa91dc95832be10616127a93ba4476f0",
+      "source_sha256": "7b5617342f9e1cd442ff30ba9f9af69bbb597cf65e8a58b8aafa46c72c029ff3",
       "test_paths": []
     },
     {
@@ -5792,9 +5792,12 @@
         "__future__",
         "config",
         "datetime",
+        "hashlib",
         "job",
+        "json",
         "lake.store",
         "providers.base",
+        "providers.etf_reference",
         "providers.reference",
         "storage.db",
         "uuid"
@@ -5803,7 +5806,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/reference.py",
-      "source_sha256": "4a44be2b169780a453367b17cce4e3e23d42bc574695232a76f104468810adad",
+      "source_sha256": "0346c3324f38e535d4de5bbe3f222b83411b0e0afa61846bc8905448e9c0bcd8",
       "test_paths": []
     },
     {
@@ -9114,6 +9117,25 @@
         "base",
         "csv",
         "datetime",
+        "decimal",
+        "io",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/etf_reference.py",
+      "source_sha256": "f98f283630cf63fb6f24d1502b38d2fdf0d1b106eadc1e8de2eec6b24d9cbfa3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base",
+        "csv",
+        "datetime",
         "io",
         "json",
         "os"
@@ -10493,6 +10515,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 590,
+  "unassessed_count": 591,
   "unassigned_role_count": 355
 }

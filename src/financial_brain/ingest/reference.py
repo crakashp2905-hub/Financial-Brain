@@ -7,11 +7,14 @@ they share the machinery rather than duplicating it.
 from __future__ import annotations
 
 import uuid
+import hashlib
+import json
 from datetime import date, datetime, timezone
 
 from ..config import Config, load
 from ..lake.store import RawLake
 from ..providers.base import FetchError, NotPublished
+from ..providers.etf_reference import NSEETFReferenceProvider, parse as parse_etf_reference
 from ..providers.reference import (NSEEquityListProvider, NSEFnoLotsProvider,
                                    NSEIndexCloseProvider)
 from ..storage.db import Database
@@ -167,6 +170,79 @@ class EquityListJob(_RefJobBase):
                                                rows_in=len(rows), rows_out=len(rows),
                                                message=f"{len(rows)} securities"),
                                 started, obj, "equity_list")
+
+
+class ETFReferenceJob(_RefJobBase):
+    """Archive and persist a point-in-time observation of NSE's listed ETF reference file."""
+
+    def run(self, business_date: date | None = None, *, force: bool = False,
+            provider=None) -> RunResult:
+        business_date = business_date or date.today()
+        provider = provider or NSEETFReferenceProvider()
+        run_id, started = uuid.uuid4().hex[:16], datetime.now(timezone.utc)
+        with self.db.connect() as con:
+            existing = con.execute(
+                "SELECT COUNT(*) FROM etf_reference_observations WHERE observed_on = ?",
+                [business_date],
+            ).fetchone()[0]
+            if existing and not force:
+                return self._finish(
+                    con,
+                    RunResult(run_id, STATUS_SKIPPED, business_date, "NSE",
+                              message="ETF reference snapshot already ingested"),
+                    started,
+                    None,
+                    "etf_reference",
+                )
+            try:
+                payload, obj = self._land(con, provider, business_date)
+                rows = parse_etf_reference(payload, business_date)
+            except (FetchError, ValueError) as exc:
+                return self._finish(
+                    con,
+                    RunResult(run_id, STATUS_FAILED, business_date, "NSE", message=str(exc)),
+                    started,
+                    None,
+                    "etf_reference",
+                )
+
+            source_hash = obj.sha256
+            con.execute("BEGIN TRANSACTION")
+            try:
+                if force:
+                    con.execute("DELETE FROM etf_reference_observations WHERE observed_on = ?",
+                                [business_date])
+                for row in rows:
+                    canonical = {
+                        key: (str(value) if value is not None else None)
+                        for key, value in row.items()
+                    }
+                    record_hash = hashlib.sha256(
+                        json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest()
+                    con.execute(
+                        """INSERT INTO etf_reference_observations
+                           (observed_on, exchange, symbol, isin, security_name, underlying,
+                            listing_date, market_lot, face_value, status, source, source_url,
+                            source_sha256, record_sha256, retrieved_at, lake_key)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        [row["observed_on"], row["exchange"], row["symbol"], row["isin"],
+                         row["security_name"], row["underlying"], row["listing_date"],
+                         row["market_lot"], row["face_value"], row["status"], obj.source,
+                         obj.url, source_hash, record_hash, obj.retrieved_at, obj.key],
+                    )
+                con.execute("COMMIT")
+            except Exception:
+                con.execute("ROLLBACK")
+                raise
+            return self._finish(
+                con,
+                RunResult(run_id, STATUS_OK, business_date, "NSE", rows_in=len(rows),
+                          rows_out=len(rows), message=f"{len(rows)} ETF reference rows"),
+                started,
+                obj,
+                "etf_reference",
+            )
 
 
 class FnoEligibilityJob(_RefJobBase):

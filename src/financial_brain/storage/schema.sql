@@ -61,6 +61,28 @@ CREATE TABLE IF NOT EXISTS securities (
     status          VARCHAR DEFAULT 'active'
 );
 
+-- Immutable observations of the exchange's current ETF reference list. Each row is
+-- tied to the exact source file hash; omission from a later snapshot is not a delisting.
+CREATE TABLE IF NOT EXISTS etf_reference_observations (
+    observed_on      DATE NOT NULL,
+    exchange         VARCHAR NOT NULL,
+    symbol           VARCHAR NOT NULL,
+    isin             VARCHAR NOT NULL,
+    security_name    VARCHAR NOT NULL,
+    underlying       VARCHAR,
+    listing_date     DATE,
+    market_lot       INTEGER NOT NULL,
+    face_value       DECIMAL(20, 6),
+    status           VARCHAR NOT NULL,
+    source           VARCHAR NOT NULL,
+    source_url       VARCHAR NOT NULL,
+    source_sha256    VARCHAR NOT NULL,
+    record_sha256    VARCHAR NOT NULL,
+    retrieved_at     TIMESTAMPTZ NOT NULL,
+    lake_key         VARCHAR NOT NULL,
+    PRIMARY KEY (observed_on, exchange, isin)
+);
+
 -- Symbol history. One row per (isin, exchange, ticker, series) span actually observed
 -- in the data - this is how a symbol change becomes a fact rather than a guess.
 CREATE TABLE IF NOT EXISTS security_listings (

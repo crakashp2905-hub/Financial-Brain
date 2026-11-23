@@ -30,9 +30,9 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/source-inventory.v2.json (605 Python source files; 590 remain unassessed; 355 role-unassigned; regenerated SHA-256 07e6c2845e2f0cd0146bddb4402e6c24271ea86bda12547dc036c630dbe61cb7)",
-        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated to include current kernel imports)",
-        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check (pass); tests/test_source_inventory.py (5 passed)",
+        "docs/edge-program/source-inventory.v2.json (606 Python source files; 591 remain unassessed; 355 role-unassigned; regenerated SHA-256 e85c02c1ef1dc04ddc1ea07b62102edf802abae38700bd02df41934e2a537545)",
+        "docs/edge-program/forward-engine-dependency-graph.v1.json (regenerated after kernel and ETF ingestion changes)",
+        "scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check and scripts/forward_engine_graph.py --check; tests/test_source_inventory.py (5 passed)",
         "docs/edge-program/capability-ownership.v1.json (eight broad domains; individual reviewed owner assignments remain incomplete)"
       ],
       "blocker": "Inventory is limited to Python files and broad domains; every strategy, feed, OMS, ledger, renderer and output does not yet have a reviewed canonical capability owner.",
@@ -320,11 +320,16 @@
     {
       "id": "FB-0201",
       "text": "Build `providers/etf_reference.py` using permitted NSE/BSE/AMC reference disclosures, exchange codes, identifiers and effective-dated listing status.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/providers/etf_reference.py reads NSE published ETF security-list CSV; parser validates symbol, name, ISIN, listing date, lot and face value.",
+        "src/financial_brain/ingest/reference.py::ETFReferenceJob lands source bytes in RawLake and stores observed ETF rows with source-file and record SHA-256, lake key, retrieval time, exchange and listing date.",
+        "storage schema etf_reference_observations persists immutable date-keyed snapshots; `fb reference` now includes the ETF job.",
+        "tests/test_etf_reference_provider.py and tests/test_migrations.py: 8 passed; scoped Ruff passed. Official NSE ETF download listing: https://betanseapi.nseindia.com/static/market-data/securities-available-for-trading (NSE archive CSV linked there)."
+      ],
+      "blocker": "Automated collection/retention rights remain UNVERIFIED; BSE/AMC reference sources and complete effective-dated status transitions (especially delisting) are not implemented.",
+      "last_audited_at_utc": "2026-11-23T01:21:19Z",
       "commit": null
     },
     {

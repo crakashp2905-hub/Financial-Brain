@@ -16,7 +16,7 @@ from .corpactions import detect as ca_detect
 from .costs.india import DEFAULT as COSTS, Segment
 from .ingest.job import BhavcopyIngestJob
 from .ingest.prefetch import prefetch
-from .ingest.reference import EquityListJob, FnoEligibilityJob, IndexCloseJob
+from .ingest.reference import ETFReferenceJob, EquityListJob, FnoEligibilityJob, IndexCloseJob
 from .pit.observations import PITStore, close_price_observations
 from .securities import master as sec
 from .storage.db import Database
@@ -386,9 +386,10 @@ def cmd_check(args) -> int:
 
 
 def cmd_reference(args) -> int:
-    """Sync exchange reference data: master list, F&O eligibility."""
+    """Sync exchange reference data: master lists, ETFs and F&O eligibility."""
     Database(load()).migrate()
     print(EquityListJob().run())
+    print(ETFReferenceJob().run())
     print(FnoEligibilityJob().run())
     return 0
 
@@ -3163,7 +3164,7 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--on", required=True)
     g.set_defaults(fn=cmd_check)
 
-    sub.add_parser("reference", help="sync exchange reference data").set_defaults(fn=cmd_reference)
+    sub.add_parser("reference", help="sync equity, ETF and F&O reference data").set_defaults(fn=cmd_reference)
 
     g = sub.add_parser("index", help="ingest NSE index closes (benchmark history)")
     g.add_argument("--start", required=True)
