@@ -51,6 +51,8 @@ jobs:
         run: python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check
       - name: Verify trader capability owners
         run: python scripts/capability_ownership.py --check
+      - name: Verify provider/product data-use matrix
+        run: python scripts/data_use_matrix.py --check
       - name: Validate five-desk product charter
         run: python scripts/validate_product_charter.py --check
       - name: Validate five-desk launch gates and evidence labels

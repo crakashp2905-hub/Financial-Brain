@@ -5825,12 +5825,22 @@
     {
       "id": "PA-02-01",
       "text": "Create data-use matrix by provider/product: private research, retained history, real-time algorithmic use, derivatives depth, synthetic/replay, paper simulation, redistribution and permitted retention.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/data-use-matrix.v1.json contains all 27 provider/product pairs from the 17-source inventory and the eight requested use dimensions; rights statuses remain UNKNOWN_RIGHTS or NOT_CONFIGURED.",
+        "docs/edge-program/provider-product-data-use-matrix-audit-2026-11-23.md documents scope and confirms that this is not a rights grant."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-23T18:12:13Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_data_use_matrix.py -q --basetemp=.pytest-tmp-pa0201: 3 passed.",
+        "python scripts/data_use_matrix.py --check: passed.",
+        "python scripts/profit_readiness.py --check: passed.",
+        "python -m ruff check scripts/data_use_matrix.py tests/test_data_use_matrix.py and git diff --check: passed."
+      ],
+      "test_result": "The generated matrix exactly covers every declared provider/product pair and every requested use dimension without inferring authorization."
     },
     {
       "id": "PA-02-02",
@@ -15785,6 +15795,7 @@
       "PA-01-14",
       "PA-01-15",
       "PA-01-16",
+      "PA-02-01",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15807,15 +15818,15 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 276,
+    "audited_count": 277,
     "status_counts": {
-      "COMPLETE": 45,
+      "COMPLETE": 46,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
       "PARTIAL": 214,
-      "UNASSESSED": 1102
+      "UNASSESSED": 1101
     },
-    "verified_complete_count": 45,
+    "verified_complete_count": 46,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15931,10 +15942,10 @@
     "evidence_update": "PA-01-16 verified complete across build policy, modes/configuration, CLI, API and paper integration tests; write requests remain unconditionally denied."
   },
   "counts_by_status": {
-    "COMPLETE": 45,
+    "COMPLETE": 46,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
     "PARTIAL": 214,
-    "UNASSESSED": 1102
+    "UNASSESSED": 1101
   }
 }
