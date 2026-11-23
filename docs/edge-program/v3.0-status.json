@@ -123,7 +123,7 @@
         "tests/test_oms.py::test_the_order_path_lives_in_one_file_only verifies no alternate order-request builder exists."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-23T11:00:00Z",
+      "last_audited_at_utc": "2026-11-23T10:58:26Z",
       "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
       "test_evidence": [
         "python -m pytest tests/test_oms.py -k \"shared_physical_order_lock or oms_auto_submit_cannot_escape or order_path_lives\" -q: 3 passed",
@@ -176,15 +176,20 @@
       "id": "FB-0011",
       "text": "Define five-desk launch gates and independent evidence labels: FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD, BROKER_APPROVED.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/claim_tier.py (typed HISTORICAL, SHADOW, LOCAL_PAPER, INDEPENDENT_FORWARD and DEPLOYMENT_VALIDATED tiers)",
-        "src/financial_brain/forward_edge/modes.py (typed execution modes)",
-        "docs/edge-program/v3.0-status.json SL-00-10 (evidence types remain only partially integrated end to end)"
+        "docs/edge-program/launch-gates.v1.json defines the five required labels and their claims/requirements; FIXTURE, REPLAY, LOCAL_PAPER and ATTESTED_FORWARD map to canonical evidence classes, while BROKER_APPROVED is a separately blocked deployment gate.",
+        "The launch-gate contract covers every charter desk exactly once, includes desk-specific and global preflight requirements, and keeps physical orders/live cash disabled.",
+        "scripts/validate_launch_gates.py validates the contract fail-closed against docs/edge-program/product-charter.v1.json."
       ],
-      "blocker": "The required FIXTURE, REPLAY, LOCAL_PAPER, ATTESTED_FORWARD and BROKER_APPROVED launch gates are not defined as one validated five-desk gate set; existing tier labels differ.",
-      "last_audited_at_utc": "2026-11-23T01:13:32Z",
-      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-23T10:58:26Z",
+      "commit": "8e658f177201a628be45095a4ea27e44699a7ebd",
+      "test_evidence": [
+        "python scripts/validate_launch_gates.py --check: passed",
+        "python -m pytest tests/test_launch_gates.py tests/test_product_charter.py -q: 7 passed"
+      ],
+      "test_result": "All five required labels and five desk-specific launch gates validate; BROKER_APPROVED remains a deployment gate and cannot be self-asserted as evidence."
     },
     {
       "id": "FB-0012",
@@ -15395,13 +15400,13 @@
     ],
     "audited_count": 248,
     "status_counts": {
-      "COMPLETE": 29,
+      "COMPLETE": 30,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 202,
+      "PARTIAL": 201,
       "UNASSESSED": 1130
     },
-    "verified_complete_count": 29,
+    "verified_complete_count": 30,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       ".github/workflows/ci.yml",
@@ -15488,10 +15493,10 @@
     "evidence_update": "Merged feature and main checklist evidence per task using the latest recorded audit timestamp. Counts are recalculated from all 1,378 item rows; only COMPLETE rows count as verified completion."
   },
   "counts_by_status": {
-    "COMPLETE": 29,
+    "COMPLETE": 30,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 202,
+    "PARTIAL": 201,
     "UNASSESSED": 1130
   }
 }
