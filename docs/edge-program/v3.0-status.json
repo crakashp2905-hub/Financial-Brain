@@ -5293,7 +5293,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T16:07:26Z",
-      "commit": null,
+      "commit": "1fedd3e5",
       "artifact_sha256": "5477335cf5b55cedae9c0e0a0033abbb4304f328acb314a1e6ff7df4c4a8ee93",
       "test_evidence": [
         "python scripts/export_checklist_audit.py --check: passed.",
