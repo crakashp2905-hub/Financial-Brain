@@ -5632,12 +5632,23 @@
     {
       "id": "PA-01-08",
       "text": "Investigate failed main CI runs and distinguish runner/billing failures from actual test failures using workflow job evidence; document root causes rather than assuming either.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/main-ci-failure-analysis-2026-11-23.md audits the 12 non-successful main push runs returned by GitHub Actions and records job/step/log evidence by run.",
+        "Available logs identify three paired Linux/Windows Ruff F401 failures, three paired Linux/Windows DuckDB deprecated lambda-arrow test failures, and one paired Linux/Windows application-test mismatch around robots wildcard and expected FetchError behavior.",
+        "Five additional paired-run failures have no step summaries or retrievable logs; the report labels their cause undetermined rather than claiming infrastructure or test failure.",
+        "The latest main run at capture, 45048365531 on 3c99b5dddc775db888822b4cec1849e5ebca56c8, passed both OS test jobs and both reproducibility jobs."
+      ],
+      "blocker": "GitHub Actions no longer exposes logs or step summaries for five failed main runs. Their root causes cannot be established from current evidence; do not classify them as runner/billing or application failures without retained logs.",
+      "last_audited_at_utc": "2026-11-23T17:29:38Z",
+      "commit": null,
+      "test_evidence": [
+        "GitHub Actions workflow run and job APIs inspected for all 12 non-successful main push runs in the captured 90-run result set.",
+        "Downloadable job logs inspected for runs 42780156564, 42786408945, 42794170512, 40813818332, 40014754004, 40013707411 and 38854824098.",
+        "Latest main run 45048365531: Ubuntu and Windows tests and both reproducibility jobs completed successfully."
+      ],
+      "test_result": "Available job evidence distinguishes genuine lint and test failures from infrastructure errors; no runner/billing incident was found in the available logs. Five failures remain causally undetermined because their step/log evidence is unavailable, so the item is PARTIAL."
     },
     {
       "id": "PA-01-09",
@@ -15425,7 +15436,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:24:47Z",
+    "as_of_utc": "2026-11-23T17:29:38Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15673,6 +15684,7 @@
       "PA-01-05",
       "PA-01-06",
       "PA-01-07",
+      "PA-01-08",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15695,13 +15707,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 267,
+    "audited_count": 268,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 206,
-      "UNASSESSED": 1111
+      "PARTIAL": 207,
+      "UNASSESSED": 1110
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15804,13 +15816,13 @@
       "scripts/validate_product_charter.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "PA-01-07 regenerates source and import-graph snapshots from the current tree with unchanged assertions; deterministic Windows/Linux normalization tests pass."
+    "evidence_update": "PA-01-08 classifies available main CI failures as actual lint/test failures and keeps five expired-log cases undetermined; the latest captured main workflow is green."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 206,
-    "UNASSESSED": 1111
+    "PARTIAL": 207,
+    "UNASSESSED": 1110
   }
 }
