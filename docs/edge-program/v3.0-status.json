@@ -5558,7 +5558,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-23T17:15:46Z",
-      "commit": null,
+      "commit": "9d231239b893448ba459950724940d078f7c6631",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-tmp-pa0104 tests/test_forward_edge_f00.py tests/test_trial_preservation_audit.py -q: 60 passed.",
         "python scripts/validate_trial_program.py: passed; Q1-2027 remains unauthorized.",
