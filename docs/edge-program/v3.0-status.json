@@ -336,9 +336,12 @@
         "src/financial_brain/paper/options.py::Quote accepts OptionPremiumPerUnit for bid and ask, normalizing the nominal INR premium before quote validation and existing float-based cost calculations.",
         "tests/test_paper_options.py::test_option_quote_accepts_nominal_inr_premium_per_unit covers typed premium quote construction and paper round-trip valuation.",
         "src/financial_brain/forward_edge/paper_book_adapter.py::PaperBookSignal accepts WholeUnits shares, INR Price stop/reference values and BasisPoints expected-net/cost rates, then canonicalizes to its existing bridge schema.",
-        "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records the forward adapter boundary and uncompleted runner/OMS accounting paths."
+        "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records the forward adapter boundary and uncompleted runner/OMS accounting paths.",
+        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.execute_paper_intent accepts WholeUnits, INR Price limit/tick/band and BasisPoints slippage, rejects non-INR typed prices and normalizes before existing OMS logic.",
+        "tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor exercises typed OMS inputs through fill and paper-book reconciliation.",
+        "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records typed adapter and forward OMS input contracts with persistence/recovery gaps."
       ],
-      "blocker": "Partial: typed boundaries cover cash paper accounts, option lots/premiums, MF NAV ingest/books/SIP/SWP/STP/switch/account-ledger, risk-sizing inputs, and forward paper-book signal inputs. General forward runner OMS requests/fills/accounting, risk-sizing result values, and repository-wide boundary verification remain incomplete.",
+      "blocker": "Partial: typed boundaries cover cash paper accounts, option lots/premiums, MF NAV ingest/books/SIP/SWP/STP/switch/account-ledger, risk-sizing inputs, forward signal inputs and forward OMS order inputs. Persisted OMS/fill/accounting fields, risk-sizing result values, crash/restart typed-state verification, other order adapters and repository-wide boundary coverage remain incomplete.",
       "last_audited_at_utc": "2026-11-24T00:00:00+00:00",
       "commit": "9209f7e8",
       "test_evidence": [
@@ -376,7 +379,10 @@
         "python -m mypy src/financial_brain/paper/options.py --follow-imports=silent: passed.",
         "python -m pytest tests/test_forward_edge_session_runner.py -k \"forward_paper_book_signal_accepts_typed or paper_book_adapter_records_qualified_horizon\" -q --basetemp=.pytest-checklist-forward-units-rerun: 2 passed.",
         "python -m ruff check src/financial_brain/forward_edge/paper_book_adapter.py tests/test_forward_edge_session_runner.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/paper_book_adapter.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/forward_edge/paper_book_adapter.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor\" -q --basetemp=.pytest-checklist-forward-oms-units: 1 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/session_runner.py --follow-imports=silent: passed."
       ],
       "test_result": "Domain nominal types reject invalid fractional equity units, non-INR prices/notionals, invalid option-lot counts and malformed currency codes. Typed boundaries cover cash paper accounts, option lots/plan/replay, AMFI NAV ingest, MF lot purchase/allotment/redemption, SIP, SWP/STP, MF switches, MF ledger postings and risk-sizing inputs. Risk-sizing result contract and shared forward-pipeline integration remain outstanding, so this is partial."
     },

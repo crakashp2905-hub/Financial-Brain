@@ -1163,9 +1163,10 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
         fill_quote.event_id: (fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
     receipt = runner.execute_paper_intent(
         session_id="book-adapter", order_id="book-order", decision_id=decision_id,
-        event_id=fill_quote.event_id, side="BUY", quantity=signal.shares,
-        limit_price=Decimal("101.10"), tick_size=Decimal("0.05"), freeze_limit=10,
-        slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        event_id=fill_quote.event_id, side="BUY", quantity=WholeUnits(Decimal(signal.shares)),
+        limit_price=Price(Decimal("101.10"), "INR"),
+        tick_size=Price(Decimal("0.05"), "INR"), freeze_limit=10,
+        slice_size=10, adverse_slippage_bps=BasisPoints(Decimal("0")), latency_ms=100,
         simulated_at=fill_at + timedelta(milliseconds=50))
     assert receipt["filled_quantity"] == signal.shares
     assert runner.records("book-adapter")["accounting"]["positions"] == {"NSE:INFY": signal.shares}

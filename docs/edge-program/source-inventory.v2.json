@@ -5201,6 +5201,7 @@
         "financial_brain.forward_edge.session_state",
         "financial_brain.forward_edge.venue_calendar",
         "financial_brain.kernel.events",
+        "financial_brain.kernel.units",
         "hashlib",
         "json",
         "pathlib",
@@ -5214,7 +5215,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "c2b9be72cd452545aa4c1fd27ee7f397dfb8e8f01bc60c952b3c40de1d2c6c7d",
+      "source_sha256": "c822ca9d5296a755fd2bbd56ce6588751c8539110034363f61a2a69af8192824",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"

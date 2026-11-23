@@ -194,6 +194,10 @@
       "target": "financial_brain.kernel.events"
     },
     {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.kernel.units"
+    },
+    {
       "source": "financial_brain.ingest.kite_minute",
       "target": "financial_brain.providers"
     },
@@ -369,5 +373,5 @@
     "financial_brain.forward_edge.quote_archive"
   ],
   "source_count": 682,
-  "source_tree_sha256": "8ac465ad6a90960ff181264cec4087ce14387b3038f321acdd265bbbfbe2009b"
+  "source_tree_sha256": "9ceb2d4d303c6dd9e041108280a32a6b4d301283b1d61ec03d839233163220a8"
 }
