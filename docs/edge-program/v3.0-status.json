@@ -5662,7 +5662,7 @@
       ],
       "blocker": "Unit and integration tests remain a single unclassified full-suite invocation. To complete the requested explicit matrix, classify the test collection (without mislabeling existing tests) and run the unit and integration groups as distinct CI gates.",
       "last_audited_at_utc": "2026-11-23T17:32:39Z",
-      "commit": null,
+      "commit": "63a8192df91f32ca8a7ff115d70c73d82654da03",
       "test_evidence": [
         "python scripts/validate_ci_matrix.py: passed.",
         "python -m pytest tests/test_ci_matrix.py -q: 2 passed, including a mutation that adds a duplicate chart-pattern step.",
