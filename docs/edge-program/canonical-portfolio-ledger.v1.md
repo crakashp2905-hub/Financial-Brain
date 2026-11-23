@@ -79,10 +79,11 @@ verifies the source-to-ledger mapping.
 
 ## Verification
 
-`tests/test_canonical_portfolio_ledger.py` and `tests/test_legacy_portfolio_migration.py`
-cover equity, ETF, option and MF units; source idempotency; conflicting and atomic imports;
-timezone-aware as-of marks; source-specific mapping; exact payload verification; missing
-provenance; and unresolved positions. Eleven tests pass. The migration audit is a local
+`tests/test_canonical_portfolio_ledger.py`, `tests/test_legacy_portfolio_migration.py`,
+`tests/test_paper_options_runner.py` and `tests/test_paper_options_forward.py` cover equity,
+ETF, option and MF units; source idempotency; conflicting and atomic imports; timezone-aware
+as-of marks; source-specific mapping; exact payload verification; missing provenance; and
+unresolved positions. Twenty-one targeted tests pass. The migration audit is a local
 paper-book reconciliation only, not a broker reconciliation or performance evaluation.
 
 ## Migration status and limits
