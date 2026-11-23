@@ -57,6 +57,9 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
                        (entry.symbol, entry.expiry, entry.lot_size)), None)
     if exit_quote is None:
         return {**base, "status": "NO_EXIT_QUOTE", "entry_at": entry.observed_at,
+                "contract": entry.symbol, "token": entry.token, "expiry": entry.expiry,
+                "lots": intent.lots, "lot_size": entry.lot_size,
+                "quantity": entry.lot_size * intent.lots,
                 "entry_premium_inr": entry.ask * entry.lot_size * intent.lots}
     return {**base, "status": "CLOSED", **long_round_trip(entry, exit_quote, lots=intent.lots)}
 

@@ -226,6 +226,90 @@ def swing_row_events(row: dict[str, Any]) -> list[PortfolioEvent]:
     return events
 
 
+def option_outcome_row_events(row: dict[str, Any]) -> list[PortfolioEvent]:
+    """Map a persisted options-forward outcome without turning a signal into an order.
+
+    Only outcomes with a recorded quote-based entry become fills. A missing exit is
+    retained as unresolved, using the exact entry contract and quantity in the result.
+    """
+    try:
+        payload = json.loads(str(row["payload"]))
+        result = json.loads(str(row["result"]))
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise LegacyMigrationError("options outcome needs valid persisted intent and result JSON") from exc
+    if not isinstance(payload, dict) or not isinstance(result, dict):
+        raise LegacyMigrationError("options intent and result payloads must be JSON objects")
+    payload_sha = hashlib.sha256(str(row["payload"]).encode("utf-8")).hexdigest()
+    result_sha = hashlib.sha256(str(row["result"]).encode("utf-8")).hexdigest()
+    if (row.get("payload_sha256") != payload_sha or row.get("intent_sha256") != payload_sha
+            or row.get("result_sha256") != result_sha):
+        raise LegacyMigrationError("options intent/outcome content hashes do not reconcile")
+    key_parts = (row.get("cohort"), row.get("rule_version"), row.get("signal_id"))
+    if not all(isinstance(value, str) and value.strip() for value in key_parts):
+        raise LegacyMigrationError("options outcome needs cohort, rule version and signal identity")
+    cohort, version, signal_id = (str(value) for value in key_parts)
+    if payload.get("cohort") != cohort or payload.get("rule_version") != version or payload.get("signal_id") != signal_id:
+        raise LegacyMigrationError("options outcome identity does not match its recorded intent")
+    status = result.get("status")
+    if status not in {"CLOSED", "NO_EXIT_QUOTE"}:
+        # No quote or failed cost/liquidity hurdle means no simulated position existed.
+        return []
+    contract = str(result.get("contract") or "").strip()
+    quantity = _number(result.get("quantity"), "options quantity")
+    entry_total = _number(result.get("entry_premium_inr"), "entry_premium_inr")
+    if not contract:
+        raise LegacyMigrationError("options outcome is missing the observed contract symbol")
+    mode = str(result.get("mode") or "").lower()
+    if mode not in {"local_paper", "replay", "historical_replay"}:
+        raise LegacyMigrationError("options outcome has an unsupported evidence mode")
+    evidence = "HISTORICAL_REPLAY" if mode in {"replay", "historical_replay"} else "LOCAL_PAPER"
+    source_hash = _row_hash(row)
+    source = "options_paper_forward.duckdb:outcomes"
+    account, sleeve = f"options:{cohort}:{version}", version
+    instrument = f"NFO:{contract}"
+    entry_at = result.get("entry_at")
+    if entry_at is None:
+        raise LegacyMigrationError("options outcome is missing observed entry time")
+    entry_price = entry_total / quantity
+    outcome_key = f"{cohort}:{version}:{signal_id}"
+    events = [_event(
+        account=account, sleeve=sleeve, source=source, event_id=f"{outcome_key}:entry",
+        row_hash=source_hash, kind=EventKind.FILL, at=entry_at, evidence=evidence,
+        asset=AssetClass.OPTION, instrument=instrument, side="BUY", quantity=quantity,
+        price=entry_price, metadata={"signal_id": signal_id, "token": result.get("token"),
+                                      "expiry": str(result.get("expiry")),
+                                      "fill_basis": "PERSISTED_TWO_SIDED_QUOTE_OUTCOME"},
+    )]
+    if status == "NO_EXIT_QUOTE":
+        events.append(_event(
+            account=account, sleeve=sleeve, source=source, event_id=f"{outcome_key}:unresolved-exit",
+            row_hash=source_hash, kind=EventKind.UNRESOLVED_POSITION,
+            at=result.get("planned_exit_at") or row.get("planned_exit_at") or row.get("evaluated_at"),
+            evidence=evidence, asset=AssetClass.OPTION, instrument=instrument, quantity=quantity,
+            metadata={"signal_id": signal_id, "reason": "recorded option entry has no executable exit quote"},
+        ))
+        return events
+    exit_total = _number(result.get("exit_premium_inr"), "exit_premium_inr")
+    exit_at = result.get("exit_at")
+    if exit_at is None:
+        raise LegacyMigrationError("closed options outcome is missing observed exit time")
+    events.append(_event(
+        account=account, sleeve=sleeve, source=source, event_id=f"{outcome_key}:exit",
+        row_hash=source_hash, kind=EventKind.FILL, at=exit_at, evidence=evidence,
+        asset=AssetClass.OPTION, instrument=instrument, side="SELL", quantity=quantity,
+        price=exit_total / quantity,
+        metadata={"signal_id": signal_id, "fill_basis": "PERSISTED_TWO_SIDED_QUOTE_OUTCOME"},
+    ))
+    charges = _number(result.get("charges_inr"), "charges_inr", allow_zero=True)
+    events.append(_event(
+        account=account, sleeve=sleeve, source=source, event_id=f"{outcome_key}:charges",
+        row_hash=source_hash, kind=EventKind.FEE, at=exit_at, evidence=evidence,
+        cash_delta=-charges,
+        metadata={"signal_id": signal_id, "cost_basis": "PERSISTED_MODELLED_OPTION_CHARGES"},
+    ))
+    return events
+
+
 def _read_rows(path: Path, table: str) -> list[dict[str, Any]]:
     if not path.is_file():
         return []
@@ -236,6 +320,27 @@ def _read_rows(path: Path, table: str) -> list[dict[str, Any]]:
             return []
         columns = [row[0] for row in con.execute(f'DESCRIBE "{table}"').fetchall()]
         return [dict(zip(columns, values)) for values in con.execute(f'SELECT * FROM "{table}"').fetchall()]
+    finally:
+        con.close()
+
+
+def _read_option_outcomes(path: Path) -> list[dict[str, Any]]:
+    """Read option intents joined to recorded outcomes; a missing file is an absent source."""
+    if not path.is_file():
+        return []
+    con = duckdb.connect(str(path), read_only=True)
+    try:
+        tables = {row[0] for row in con.execute("SHOW TABLES").fetchall()}
+        if not {"intents", "outcomes"}.issubset(tables):
+            return []
+        rows = con.execute("""SELECT i.cohort, i.rule_version, i.signal_id, i.planned_exit_at,
+                    i.payload, i.payload_sha256, o.evaluated_at, o.intent_sha256,
+                    o.result, o.result_sha256
+                FROM intents AS i JOIN outcomes AS o USING (cohort, rule_version, signal_id)
+                ORDER BY i.cohort, i.rule_version, i.signal_id""").fetchall()
+        columns = ["cohort", "rule_version", "signal_id", "planned_exit_at", "payload",
+                   "payload_sha256", "evaluated_at", "intent_sha256", "result", "result_sha256"]
+        return [dict(zip(columns, row)) for row in rows]
     finally:
         con.close()
 
@@ -252,8 +357,10 @@ def migrate_legacy_paper_books(data_dir: Path, ledger_path: Path) -> dict[str, o
         "intraday": (data_dir / "paper_live.duckdb", "trades", intraday_row_events),
         "swing": (data_dir / "paper_book.duckdb", "positions", swing_row_events),
     }
+    options_path = data_dir / "options_paper_forward.duckdb"
     report: dict[str, object] = {"ledger_path": str(ledger_path), "sources": {}, "accounts": {},
-                                 "unavailable_desks": ["options", "ETF-specific", "mutual_fund"],
+                                 "unavailable_desks": ["ETF-specific", "mutual_fund"] if options_path.is_file()
+                                 else ["options", "ETF-specific", "mutual_fund"],
                                  "original_databases_modified": False}
     summaries: dict[str, dict[str, Any]] = {}
     for name, (path, table, convert) in sources.items():
@@ -271,6 +378,20 @@ def migrate_legacy_paper_books(data_dir: Path, ledger_path: Path) -> dict[str, o
             "events": result, "rejected_rows": len(rejected),
             "rejected_row_reasons": rejected,
         }
+    option_rows = _read_option_outcomes(options_path)
+    option_events: list[PortfolioEvent] = []
+    option_rejected: list[dict[str, str]] = []
+    for index, row in enumerate(option_rows):
+        try:
+            option_events.extend(option_outcome_row_events(row))
+        except (LegacyMigrationError, CanonicalLedgerError, ValueError, TypeError) as exc:
+            option_rejected.append({"source_row": str(index), "reason": str(exc)})
+    option_import = ledger.import_events(option_events)
+    summaries["options"] = {
+        "source_path": str(options_path), "table": "intents JOIN outcomes",
+        "source_rows": len(option_rows), "events": option_import,
+        "rejected_rows": len(option_rejected), "rejected_row_reasons": option_rejected,
+    }
     report["sources"] = summaries
     account_summaries = {}
     for account_id in ledger.account_ids():
@@ -329,6 +450,25 @@ def audit_legacy_migration(data_dir: Path, ledger_path: Path, *, captured_at_utc
             "source_rows": len(rows), "expected_events": len(expected), "verification": verification,
             "rejected_rows": rejected,
         }
+    options_path = data_dir / "options_paper_forward.duckdb"
+    option_rows = _read_option_outcomes(options_path)
+    expected_options: list[PortfolioEvent] = []
+    rejected_options = 0
+    for row in option_rows:
+        try:
+            expected_options.extend(option_outcome_row_events(row))
+        except (LegacyMigrationError, CanonicalLedgerError, ValueError, TypeError):
+            rejected_options += 1
+    verification = ledger.verify_import(expected_options)
+    expected_total += len(expected_options)
+    verified_total += verification["verified"]
+    rejected_total += rejected_options
+    source_report["options"] = {
+        "file": options_path.name,
+        "sha256": hashlib.sha256(options_path.read_bytes()).hexdigest() if options_path.is_file() else None,
+        "source_rows": len(option_rows), "expected_events": len(expected_options),
+        "verification": verification, "rejected_rows": rejected_options,
+    }
     account_summaries = []
     open_positions = unresolved = incomplete_accounts = missing_opening_balances = 0
     for account_id in ledger.account_ids():
@@ -386,4 +526,4 @@ def audit_legacy_migration(data_dir: Path, ledger_path: Path, *, captured_at_utc
 
 
 __all__ = ["LegacyMigrationError", "audit_legacy_migration", "intraday_row_events",
-           "migrate_legacy_paper_books", "swing_row_events"]
+           "migrate_legacy_paper_books", "option_outcome_row_events", "swing_row_events"]
