@@ -134,6 +134,16 @@ jobs:
             critical-coverage.json
       - name: Dependency audit
         run: python -m pip_audit --skip-editable
+      - name: Audit release candidate without hiding pytest results
+        if: always()
+        run: python scripts/release_candidate_audit.py --junit pytest-results.xml --output release-candidate-audit.json
+      - name: Upload release candidate audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-audit-${{ matrix.os }}
+          path: release-candidate-audit.json
+          if-no-files-found: error
       - name: Build exact-commit release provenance manifest
         run: python scripts/release_provenance.py --output release-provenance.json
       - name: Upload release provenance manifest

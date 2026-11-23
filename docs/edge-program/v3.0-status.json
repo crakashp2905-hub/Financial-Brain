@@ -5779,12 +5779,24 @@
     {
       "id": "PA-01-15",
       "text": "Require one clean release candidate from a fresh clone with **no developer-specific data paths**; report missing external prerequisites without hiding failed test coverage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/clean-release-candidate-audit-2026-11-23.md documents fresh-checkout CI, JUnit retention and external-prerequisite reporting.",
+        "scripts/release_candidate_audit.py scans runtime/configuration files, preserves JUnit counts and reports non-green readiness gates and data-rights counts; CI runs it with if: always() and uploads its report with if: always().",
+        "The scan found and removed the D:\\Finance-Brain Task Scheduler usage path from scripts/run_hidden.vbs; synthetic JUnit audit now finds zero developer-specific paths in the current checkout.",
+        "docs/edge-program/profit_readiness.json continues to report red profitability/capital/trial gates; data-permissions.v1.json records 102 UNKNOWN_RIGHTS uses."
+      ],
+      "blocker": "Fresh hosted Ubuntu and Windows audit artifacts for the final pushed SHA are still required to prove clean-checkout portability, exact test counts and visible external blockers in both environments.",
+      "last_audited_at_utc": "2026-11-23T17:55:38Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_release_candidate_audit.py tests/test_release_provenance.py -q --basetemp=.pytest-tmp-pa0115c: 5 passed.",
+        "python -m ruff check scripts/release_candidate_audit.py scripts/release_provenance.py tests/test_release_candidate_audit.py tests/test_release_provenance.py: passed.",
+        "Synthetic current-checkout audit: engineering_candidate=PASS, developer path findings=0, external prerequisites=OPEN, unresolved market-data rights=102.",
+        "git diff --check: passed; hosted final-SHA artifacts are pending."
+      ],
+      "test_result": "The local candidate audit now flags developer paths and preserves test failures while exposing external blockers. Fresh hosted two-platform acceptance remains pending; status is PARTIAL."
     },
     {
       "id": "PA-01-16",
@@ -15502,7 +15514,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-23T17:49:33Z",
+    "as_of_utc": "2026-11-23T17:55:38Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15757,6 +15769,7 @@
       "PA-01-12",
       "PA-01-13",
       "PA-01-14",
+      "PA-01-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15779,13 +15792,13 @@
       "SL-01-03",
       "SL-01-06"
     ],
-    "audited_count": 274,
+    "audited_count": 275,
     "status_counts": {
       "COMPLETE": 44,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 16,
-      "PARTIAL": 213,
-      "UNASSESSED": 1104
+      "PARTIAL": 214,
+      "UNASSESSED": 1103
     },
     "verified_complete_count": 44,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -15892,15 +15905,19 @@
       "docs/edge-program/CHANGELOG.md",
       "scripts/release_provenance.py",
       "tests/test_release_provenance.py",
-      "docs/edge-program/replay-release-rollback-audit-2026-11-23.md"
+      "docs/edge-program/replay-release-rollback-audit-2026-11-23.md",
+      "docs/edge-program/clean-release-candidate-audit-2026-11-23.md",
+      "scripts/release_candidate_audit.py",
+      "tests/test_release_candidate_audit.py",
+      "scripts/run_hidden.vbs"
     ],
-    "evidence_update": "PA-01-14 audit: deterministic replay and champion SAFE_HOLD rollback exist, but release restore on P&L/ledger failure is neither integrated nor rehearsed; item is PARTIAL."
+    "evidence_update": "PA-01-15 adds a path scan and always-uploaded candidate audit with JUnit counts and unresolved prerequisite reporting; final hosted platform acceptance is pending."
   },
   "counts_by_status": {
     "COMPLETE": 44,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 16,
-    "PARTIAL": 213,
-    "UNASSESSED": 1104
+    "PARTIAL": 214,
+    "UNASSESSED": 1103
   }
 }

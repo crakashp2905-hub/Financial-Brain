@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CHANGELOG = Path("docs/edge-program/CHANGELOG.md")
 PERMISSIONS = Path("docs/edge-program/data-permissions.v1.json")
 RIGHTS_REVIEW = Path("docs/edge-program/market-data-rights-review.v1.md")
-TEST_ARTIFACTS = ("pytest-results.xml", "coverage.xml", "critical-coverage.json")
+TEST_ARTIFACTS = ("pytest-results.xml", "coverage.xml", "critical-coverage.json",
+                  "release-candidate-audit.json")
 STRATEGY_PATHS = (
     "src/financial_brain/strategies",
     "src/financial_brain/patterns",
