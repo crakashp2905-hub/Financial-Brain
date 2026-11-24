@@ -15,7 +15,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock
-from financial_brain.forward_edge.data_distribution import ProviderWindow
+from financial_brain.forward_edge.data_distribution import PriceWindow, ProviderWindow
 from financial_brain.forward_edge.market_events import MarketEvent
 
 
@@ -256,6 +256,41 @@ class QuoteArchive:
             1.0 - valid_quotes / len(quote_rows) if quote_rows else 1.0,
             source_mix, schema_sha,
         )
+
+    def price_window(self, *, start: datetime, end: datetime, as_of: datetime,
+                     venue: str, instrument_id: str) -> PriceWindow:
+        """Aggregate observed midpoint returns/volatility using only data available by ``as_of``.
+
+        Quotes with malformed or crossed prices are excluded. The return series is based
+        on consecutive valid midpoints in receipt order; no missing interval is interpolated.
+        At least two distinct prices are required by PriceWindow.
+        """
+        if any(value.tzinfo is None or value.utcoffset() is None for value in (start, end, as_of)):
+            raise QuoteArchiveError("price-window clocks must be timezone aware")
+        if end <= start or as_of < end or not venue.strip() or not instrument_id.strip():
+            raise QuoteArchiveError("price-window bounds, cutoff and instrument are invalid")
+        rows = self._con.execute("""SELECT event_json FROM market_events
+            WHERE venue=? AND instrument_id=? AND kind='quote'
+              AND event_time>=? AND event_time<? AND available_at<=?
+            ORDER BY received_at, event_id""",
+            [venue.upper(), instrument_id, start.astimezone(timezone.utc).isoformat(),
+             end.astimezone(timezone.utc).isoformat(), as_of.astimezone(timezone.utc).isoformat()]).fetchall()
+        mids: list[float] = []
+        for (body_raw,) in rows:
+            payload = json.loads(body_raw).get("payload", {})
+            bid, ask = payload.get("bid"), payload.get("ask")
+            if (isinstance(bid, (int, float)) and not isinstance(bid, bool)
+                    and isinstance(ask, (int, float)) and not isinstance(ask, bool)
+                    and math.isfinite(float(bid)) and math.isfinite(float(ask))
+                    and 0 < float(bid) <= float(ask)):
+                mids.append((float(bid) + float(ask)) / 2)
+        if len(mids) < 2:
+            raise QuoteArchiveError("price window needs at least two valid available quotes")
+        returns = [(right / left) - 1.0 for left, right in zip(mids, mids[1:])]
+        mean_return = sum(returns) / len(returns)
+        volatility = math.sqrt(sum((value - mean_return) ** 2 for value in returns) / len(returns))
+        return PriceWindow(start.astimezone(timezone.utc), end.astimezone(timezone.utc), len(mids),
+                           volatility, (mids[-1] / mids[0]) - 1.0)
 
     def count(self) -> int:
         return int(self._con.execute("SELECT count(*) FROM market_events").fetchone()[0])

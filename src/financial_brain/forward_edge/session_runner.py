@@ -20,6 +20,7 @@ from financial_brain.forward_edge.execution_scenario import (
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
+from financial_brain.forward_edge.data_distribution import DistributionThresholds, compare_windows
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_local_time
 from financial_brain.forward_edge.intent_timing import create_timed_intent
@@ -524,6 +525,73 @@ class ForwardSessionRunner:
                 (capture_local_time(self.clock, label="legacy event import timestamp"),
                  "LEGACY_ARCHIVE_IMPORT"))
         return self.ingest(session_id, config, events, ingest_metadata=metadata)
+
+    def compare_archive_windows(self, archive: QuoteArchive, *, venue: str, instrument_id: str,
+                                reference_start: datetime, reference_end: datetime,
+                                current_start: datetime, current_end: datetime, as_of: datetime,
+                                expected_reference_quotes: int, expected_current_quotes: int,
+                                max_transport_lag: timedelta,
+                                thresholds: DistributionThresholds = DistributionThresholds()) -> dict[str, Any]:
+        """Produce an evidence-ready price-regime/feed-distribution comparison for a paper session.
+
+        This diagnostic is intentionally separate from order generation: it reports data
+        health and price regime independently and cannot create a trade or pass a risk gate.
+        """
+        if current_end - current_start != reference_end - reference_start:
+            raise ForwardSessionRunnerError("reference and current windows must have equal duration")
+        try:
+            reference_price = archive.price_window(start=reference_start, end=reference_end, as_of=as_of,
+                                                   venue=venue, instrument_id=instrument_id)
+            current_price = archive.price_window(start=current_start, end=current_end, as_of=as_of,
+                                                 venue=venue, instrument_id=instrument_id)
+            reference_provider = archive.provider_window(
+                start=reference_start, end=reference_end, as_of=as_of,
+                expected_quote_observations=expected_reference_quotes,
+                max_transport_lag=max_transport_lag)
+            current_provider = archive.provider_window(
+                start=current_start, end=current_end, as_of=as_of,
+                expected_quote_observations=expected_current_quotes,
+                max_transport_lag=max_transport_lag)
+            comparison = compare_windows(reference_price, current_price, reference_provider,
+                                         current_provider, thresholds=thresholds)
+        except (ValueError, TypeError) as exc:
+            raise ForwardSessionRunnerError(f"archive window comparison failed: {exc}") from exc
+        return {
+            "schema": "fb.price_provider_distribution_comparison.v1",
+            "venue": venue.upper(), "instrument_id": instrument_id,
+            "as_of": as_of.astimezone(timezone.utc).isoformat(),
+            "reference": {"start": reference_start.astimezone(timezone.utc).isoformat(),
+                          "end": reference_end.astimezone(timezone.utc).isoformat(),
+                          "price_observations": reference_price.observations,
+                          "realized_volatility": reference_price.realized_volatility,
+                          "net_return": reference_price.net_return,
+                          "provider_observations": reference_provider.observations,
+                          "quote_coverage": reference_provider.quote_coverage,
+                          "stale_fraction": reference_provider.stale_fraction,
+                          "out_of_order_fraction": reference_provider.out_of_order_fraction,
+                          "missing_payload_fraction": reference_provider.missing_payload_fraction,
+                          "source_mix": dict(reference_provider.source_mix),
+                          "schema_sha256": reference_provider.schema_sha256},
+            "current": {"start": current_start.astimezone(timezone.utc).isoformat(),
+                        "end": current_end.astimezone(timezone.utc).isoformat(),
+                        "price_observations": current_price.observations,
+                        "realized_volatility": current_price.realized_volatility,
+                        "net_return": current_price.net_return,
+                        "provider_observations": current_provider.observations,
+                        "quote_coverage": current_provider.quote_coverage,
+                        "stale_fraction": current_provider.stale_fraction,
+                        "out_of_order_fraction": current_provider.out_of_order_fraction,
+                        "missing_payload_fraction": current_provider.missing_payload_fraction,
+                        "source_mix": dict(current_provider.source_mix),
+                        "schema_sha256": current_provider.schema_sha256},
+            "comparison": {"price_regime_shift": comparison.price_regime_shift,
+                           "provider_distribution_shift": comparison.provider_distribution_shift,
+                           "price_reasons": list(comparison.price_reasons),
+                           "provider_reasons": list(comparison.provider_reasons),
+                           "source_mix_total_variation": comparison.source_mix_total_variation,
+                           "status": comparison.status},
+            "trading_action": "NONE_DIAGNOSTIC_ONLY",
+        }
 
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,

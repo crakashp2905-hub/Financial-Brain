@@ -195,6 +195,67 @@ def test_provider_windows_from_archive_separate_feed_shift_from_price_window(tmp
         archive.close()
 
 
+def test_archive_price_window_and_runner_report_pair_price_and_feed_diagnostics(tmp_path):
+    from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+    from financial_brain.forward_edge.session_state import ForwardSessionStore
+
+    archive = QuoteArchive(tmp_path / "paired-windows.sqlite3", clock=FixedClock(T0 + timedelta(days=2)))
+    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite3"),
+                                  tmp_path / "runner.sqlite3")
+    reference_start, current_start = T0, T0 + timedelta(days=1)
+    duration = timedelta(minutes=3)
+    as_of = current_start + duration + timedelta(hours=1)
+    try:
+        for start, mids in ((reference_start, (100.0, 100.1, 100.2)),
+                            (current_start, (100.0, 102.0, 104.0))):
+            for index, mid in enumerate(mids):
+                event_at = start + timedelta(minutes=index)
+                event = MarketEvent(
+                    f"paired:{start.date()}:{index}", EventKind.QUOTE, "NSE", "NSE:INFY",
+                    event_at, event_at + timedelta(seconds=1), event_at + timedelta(seconds=1),
+                    {"bid": mid - 0.05, "ask": mid + 0.05}, "KITE", sequence=index + 1,
+                )
+                archive.append(event)
+        reference_price = archive.price_window(
+            start=reference_start, end=reference_start + duration, as_of=as_of,
+            venue="NSE", instrument_id="NSE:INFY")
+        assert reference_price.observations == 3
+        assert reference_price.net_return == pytest.approx(0.002)
+        assert reference_price.realized_volatility > 0
+
+        report = runner.compare_archive_windows(
+            archive, venue="NSE", instrument_id="NSE:INFY",
+            reference_start=reference_start, reference_end=reference_start + duration,
+            current_start=current_start, current_end=current_start + duration, as_of=as_of,
+            expected_reference_quotes=3, expected_current_quotes=3,
+            max_transport_lag=timedelta(seconds=5),
+            thresholds=DistributionThresholds(minimum_observations=2),
+        )
+        assert report["comparison"]["price_regime_shift"] is True
+        assert report["comparison"]["provider_distribution_shift"] is False
+        assert report["trading_action"] == "NONE_DIAGNOSTIC_ONLY"
+    finally:
+        runner.close()
+        archive.close()
+
+
+def test_archive_price_window_rejects_future_cutoff_and_insufficient_quotes(tmp_path):
+    archive = QuoteArchive(tmp_path / "price-cutoff.sqlite3")
+    try:
+        event = _quote(1)
+        archive.append(event)
+        with pytest.raises(QuoteArchiveError, match="cutoff"):
+            archive.price_window(start=T0, end=T0 + timedelta(minutes=1),
+                                as_of=T0 + timedelta(seconds=30), venue="NSE",
+                                instrument_id="NSE:INFY")
+        with pytest.raises(QuoteArchiveError, match="at least two"):
+            archive.price_window(start=T0, end=T0 + timedelta(minutes=1),
+                                as_of=T0 + timedelta(hours=1), venue="NSE",
+                                instrument_id="NSE:INFY")
+    finally:
+        archive.close()
+
+
 
 
 def test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources(tmp_path) -> None:

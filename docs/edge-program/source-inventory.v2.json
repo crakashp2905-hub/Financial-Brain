@@ -5205,7 +5205,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/quote_archive.py",
-      "source_sha256": "4d371dc7bcbe693ce18faacacb27e0dea52ec156d113b67e42611480c3fff9d2",
+      "source_sha256": "f92b642bb1f139621829323690546980b1fe2bb92b3445f5d9c5744d3781eda2",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5431,6 +5431,7 @@
         "financial_brain.evidence.decision_manifest",
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.cost_schedule",
+        "financial_brain.forward_edge.data_distribution",
         "financial_brain.forward_edge.data_permissions",
         "financial_brain.forward_edge.durable",
         "financial_brain.forward_edge.execution_scenario",
@@ -5460,7 +5461,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "82461d50d1516d376837862f7d3694da59a3f83bfd2abf08229a8b85cd0036bb",
+      "source_sha256": "6500bc75c5ddb8e9c49d17196300223b6b1440799c87ac10c4587f28b7286fd7",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"

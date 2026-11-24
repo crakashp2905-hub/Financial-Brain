@@ -16630,19 +16630,23 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/data_distribution.py defines independent price and provider windows and reports price volatility/return changes separately from feed quote coverage, transport staleness, out-of-order/missing-payload rates, source-mix total variation and schema fingerprints.",
-        "QuoteArchive.provider_window() aggregates archived event rows by source-time window and availability cutoff, with explicit expected-quote denominator, transport-lag threshold, per-source sequence ordering, payload-key schema fingerprint and empty-window representation for outages.",
-        "tests/test_forward_edge_data_distribution.py and the archive integration test prove price-only, provider-only, simultaneous, low-support and empty-outage outcomes; ingestion metrics are measured from repository archive records rather than fabricated fixtures inside production code.",
-        "Still partial: no ForwardSessionRunner paired price-window aggregation, session report/dashboard rendering or sourced historical distribution baseline is wired."
+        "src/financial_brain/forward_edge/data_distribution.py compares independent price and provider windows and emits separate price-regime and feed-distribution reasons; low-support windows abstain and empty current feed windows are a provider failure.",
+        "QuoteArchive.provider_window() aggregates source-quality metrics from archived events using source-time membership, an availability cutoff, explicit expected quote denominators, transport-lag thresholds, sequence checks, schema fingerprints and empty-window representation.",
+        "QuoteArchive.price_window() computes midpoint return and realized volatility from valid archived quote observations available by the declared report cutoff; it excludes malformed/crossed prices, requires two observations and does not interpolate missing intervals.",
+        "ForwardSessionRunner.compare_archive_windows() pairs equal-duration reference/current price and provider windows into a structured diagnostic report with provenance clocks and an explicit NONE_DIAGNOSTIC_ONLY trading action; it has no order-generation or risk-gate side effect.",
+        "tests/test_forward_edge_data_distribution.py and tests/test_forward_edge_quote_archive.py: 21 passed, covering independent shifts, archive aggregation, empty outages, quote cutoffs, insufficient support and runner report integration. Ruff passed and mypy reported no issues in the three affected source modules.",
+        "Still partial: production/historical source baselines and their validation are not yet supplied; diagnostic thresholds are configurable defaults, not empirically calibrated. The broad session-runner suite was not completed in this run."
       ],
-      "blocker": "Archive aggregation now produces source-quality windows, but the ForwardSessionRunner does not yet generate the paired price window or include a comparison report/health gate in paper-session outputs; historical baselines remain unvalidated.",
-      "last_audited_at_utc": "2026-11-25T03:00:00Z",
+      "blocker": "A sufficiently sourced and independently validated historical provider/price baseline, with calibrated thresholds, remains absent; broader session-runner suite verification is also pending.",
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
       "commit": null,
       "test_evidence": [
-        "tests/test_forward_edge_data_distribution.py tests/test_forward_edge_quote_archive.py: 19 passed, including archive-derived coverage, stale transport, out-of-order event/sequence, source-mix, schema and empty-outage cases.",
-        "Ruff and mypy passed for data_distribution.py and quote_archive.py."
+        "python -m pytest tests/test_forward_edge_data_distribution.py tests/test_forward_edge_quote_archive.py -q: 21 passed in 25.01s.",
+        "Ruff passed for data_distribution.py, quote_archive.py, session_runner.py and test_forward_edge_quote_archive.py.",
+        "Mypy passed for data_distribution.py, quote_archive.py and session_runner.py.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check, scripts/forward_edge_capability_matrix.py, scripts/forward_engine_graph.py --check, scripts/export_checklist_audit.py --check and scripts/build_checklist_evidence_bundle.py --check all passed."
       ],
-      "test_result": "Independent regime/data-shift logic and archive-backed provider aggregation pass 19 tests. Empty archive windows produce PROVIDER_WINDOW_EMPTY rather than a false STABLE status. SL-23-17 remains PARTIAL pending runner/report integration and historically validated provider baselines."
+      "test_result": "Price/provider comparison is integrated with archive-derived windows and ForwardSessionRunner emits an explicit diagnostic-only report. Focused validation passed 21 tests, Ruff, mypy and generated evidence checks. SL-23-17 remains PARTIAL pending sourced historical-baseline validation."
     },
     {
       "id": "SL-23-18",
