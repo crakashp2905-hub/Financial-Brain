@@ -1,0 +1,486 @@
+"""Pre-decision historical exit-path replay for stop, target, time and gap-risk estimates.
+
+This module estimates conditional scenario frequencies from fully matured historical paths.
+It is not a forecast calibration claim and does not authorize orders. Ambiguous OHLC bars
+resolve adversely; gaps through a stop use the opening price.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
+from typing import Iterable
+
+from .exit_policy import ExitPolicy, ExitRuleAction
+from .trader_signal import (
+    ExitTrigger, TradePlan, TraderSignal, validate_trade_plan_signal,
+)
+
+
+class ExitScenarioError(ValueError):
+    """Exit replay data or policy is incomplete, malformed, or leaks future data."""
+
+
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_ZERO = Decimal(0)
+
+
+def _beta_continued_fraction(a: float, b: float, x: float) -> float:
+    """Numerical Recipes continued fraction for the regularized beta function."""
+    max_iterations = 256
+    epsilon = 3e-14
+    tiny = 1e-300
+    qab, qap, qam = a + b, a + 1.0, a - 1.0
+    c = 1.0
+    d = 1.0 - qab * x / qap
+    if abs(d) < tiny:
+        d = tiny
+    d = 1.0 / d
+    h = d
+    for m in range(1, max_iterations + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1.0 + aa * d
+        if abs(d) < tiny:
+            d = tiny
+        c = 1.0 + aa / c
+        if abs(c) < tiny:
+            c = tiny
+        d = 1.0 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1.0 + aa * d
+        if abs(d) < tiny:
+            d = tiny
+        c = 1.0 + aa / c
+        if abs(c) < tiny:
+            c = tiny
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < epsilon:
+            return h
+    raise ArithmeticError("incomplete beta continued fraction did not converge")
+
+
+def _regularized_beta(x: float, a: float, b: float) -> float:
+    if not (0.0 <= x <= 1.0 and a > 0.0 and b > 0.0):
+        raise ValueError("regularized beta arguments are outside their domain")
+    if x == 0.0:
+        return 0.0
+    if x == 1.0:
+        return 1.0
+    log_front = (math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                 + a * math.log(x) + b * math.log1p(-x))
+    front = math.exp(log_front)
+    if x < (a + 1.0) / (a + b + 2.0):
+        return front * _beta_continued_fraction(a, b, x) / a
+    return 1.0 - front * _beta_continued_fraction(b, a, 1.0 - x) / b
+
+
+def _student_t_one_sided_p(t_statistic: float, degrees_of_freedom: int) -> float:
+    """One-sided survival probability for Student's t, implemented with stdlib math only."""
+    if degrees_of_freedom < 1 or math.isnan(t_statistic):
+        raise ValueError("valid t statistic and positive degrees of freedom are required")
+    if math.isinf(t_statistic):
+        return 0.0 if t_statistic > 0 else 1.0
+    x = degrees_of_freedom / (degrees_of_freedom + t_statistic * t_statistic)
+    half_tail = 0.5 * _regularized_beta(x, degrees_of_freedom / 2.0, 0.5)
+    probability = half_tail if t_statistic > 0 else 1.0 - half_tail
+    return min(1.0, max(0.0, probability))
+
+
+def _decimal(name: str, value: Decimal | str | int | float) -> Decimal:
+    try:
+        parsed = value if isinstance(value, Decimal) else Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ExitScenarioError(f"{name} must be decimal") from exc
+    if not parsed.is_finite() or parsed <= 0:
+        raise ExitScenarioError(f"{name} must be finite and positive")
+    return parsed
+
+
+@dataclass(frozen=True, slots=True)
+class ExitReplayBar:
+    at: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+
+    def __post_init__(self) -> None:
+        if self.at.tzinfo is None or self.at.utcoffset() is None:
+            raise ExitScenarioError("bar timestamp must be timezone-aware")
+        for name in ("open", "high", "low", "close"):
+            object.__setattr__(self, name, _decimal(name, getattr(self, name)))
+        if self.low > min(self.open, self.close) or self.high < max(self.open, self.close) or self.low > self.high:
+            raise ExitScenarioError("bar OHLC prices are internally inconsistent")
+
+
+@dataclass(frozen=True, slots=True)
+class ExitPathSample:
+    sample_id: str
+    instrument_id: str
+    entry_at: datetime
+    entry_price: Decimal
+    completed_at: datetime
+    bars: tuple[ExitReplayBar, ...]
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        if not self.sample_id.strip() or not self.instrument_id.strip():
+            raise ExitScenarioError("sample and instrument identities are required")
+        if (self.entry_at.tzinfo is None or self.entry_at.utcoffset() is None or
+                self.completed_at.tzinfo is None or self.completed_at.utcoffset() is None):
+            raise ExitScenarioError("sample entry/completion clocks must be timezone-aware")
+        if self.entry_at.astimezone(timezone.utc) >= self.completed_at.astimezone(timezone.utc):
+            raise ExitScenarioError("sample completion must follow entry")
+        object.__setattr__(self, "entry_price", _decimal("entry_price", self.entry_price))
+        if not self.bars or any(not isinstance(bar, ExitReplayBar) for bar in self.bars):
+            raise ExitScenarioError("sample needs typed replay bars")
+        times = [bar.at.astimezone(timezone.utc) for bar in self.bars]
+        if (times != sorted(times) or any(a >= b for a, b in zip(times, times[1:])) or
+                times[0] <= self.entry_at.astimezone(timezone.utc)):
+            raise ExitScenarioError("replay bars must be strictly after entry and chronologically ordered")
+        if times[-1] > self.completed_at.astimezone(timezone.utc):
+            raise ExitScenarioError("sample completion precedes a replay bar")
+        if not _SHA256.fullmatch(self.source_sha256):
+            raise ExitScenarioError("sample source_sha256 must be lowercase SHA-256")
+
+
+@dataclass(frozen=True, slots=True)
+class PathExitResult:
+    sample_id: str
+    final_exit: str
+    target_was_executed: bool
+    stop_was_executed: bool
+    gap_stop: bool
+    ambiguous_bar_count: int
+    gross_pnl_inr: Decimal
+    gap_loss_inr: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ExitProbabilityEstimate:
+    sample_count: int
+    stop_exit_probability: Decimal
+    target_exit_probability: Decimal
+    time_exit_probability: Decimal
+    gap_stop_probability: Decimal
+    stop_exit_ci95: tuple[Decimal, Decimal] | None
+    target_exit_ci95: tuple[Decimal, Decimal] | None
+    time_exit_ci95: tuple[Decimal, Decimal] | None
+    gap_stop_ci95: tuple[Decimal, Decimal] | None
+    mean_gross_pnl_inr: Decimal
+    mean_gap_loss_inr: Decimal
+    ambiguous_bar_count: int
+    outcomes: tuple[PathExitResult, ...]
+    policy_sha256: str
+    sample_evidence_sha256: str
+    probability_label: str
+    confidence_interval_method: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExitCostSchedule:
+    """Frozen per-sample entry and exit charges for an exit-policy comparison."""
+
+    entry_cost_inr: Decimal
+    exit_cost_per_unit_inr: Decimal
+    schedule_id: str
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        for name in ("entry_cost_inr", "exit_cost_per_unit_inr"):
+            try:
+                value = Decimal(getattr(self, name))
+            except (InvalidOperation, TypeError) as exc:
+                raise ExitScenarioError(f"{name} must be decimal") from exc
+            if not value.is_finite() or value < 0:
+                raise ExitScenarioError(f"{name} must be finite and non-negative")
+            object.__setattr__(self, name, value)
+        if not self.schedule_id.strip() or not _SHA256.fullmatch(self.source_sha256):
+            raise ExitScenarioError("cost schedule needs an identity and source SHA-256")
+
+
+@dataclass(frozen=True, slots=True)
+class ExitVariantComparison:
+    baseline_policy_sha256: str
+    sample_evidence_sha256: str
+    cost_schedule_sha256: str
+    sample_count: int
+    variant_mean_net_pnl_inr: dict[str, Decimal]
+    paired_mean_delta_vs_baseline_inr: dict[str, Decimal]
+    paired_p_value: dict[str, float]
+    holm_adjusted_p_value: dict[str, float]
+    comparison_count: int
+    prospective_evidence: bool
+    evidence_label: str
+
+
+def _wilson(successes: int, total: int) -> tuple[Decimal, Decimal] | None:
+    if total < 30:
+        return None
+    z = 1.96
+    p = successes / total
+    denom = 1 + z * z / total
+    center = (p + z * z / (2 * total)) / denom
+    margin = z * math.sqrt((p * (1 - p) + z * z / (4 * total)) / total) / denom
+    return Decimal(str(max(0.0, center - margin))), Decimal(str(min(1.0, center + margin)))
+
+
+def _exit_policy(policy: ExitPolicy, signal: TraderSignal, plan: TradePlan):
+    if (policy.strategy_id, policy.strategy_version) != (signal.strategy_id, signal.strategy_version):
+        raise ExitScenarioError("exit policy strategy identity/version differs from signal")
+    stops = [r for r in policy.rules if r.trigger is ExitTrigger.HARD_STOP]
+    targets = [r for r in policy.rules if r.trigger is ExitTrigger.TAKE_PROFIT]
+    times = [r for r in policy.rules if r.action is ExitRuleAction.TIME_EXIT]
+    if len(stops) != 1 or len(targets) != 1 or len(times) != 1:
+        raise ExitScenarioError("replay currently requires one stop, one target and one time-exit rule")
+    stop, target, time_rule = stops[0], targets[0], times[0]
+    if (stop.trigger_price is None or target.trigger_price is None or
+            stop.action is not ExitRuleAction.FULL_EXIT or
+            target.action not in {ExitRuleAction.FULL_EXIT, ExitRuleAction.SCALE_OUT}):
+        raise ExitScenarioError("policy needs a full hard stop and a full or partial take-profit price")
+    if time_rule.after_sessions != plan.max_holding_sessions:
+        raise ExitScenarioError("time-exit horizon must match the frozen trade plan")
+    if stop.trigger_price != plan.stop_price or target.trigger_price != plan.target_price:
+        raise ExitScenarioError("exit policy stop/target differs from the frozen trade plan")
+    if target.action is ExitRuleAction.SCALE_OUT and target.quantity_fraction is None:
+        raise ExitScenarioError("partial target requires an explicit scale-out fraction")
+    return stop.trigger_price, target.trigger_price, target, plan.max_holding_sessions
+
+
+def _pnl(side: str, entry: Decimal, exit_price: Decimal, quantity: Decimal) -> Decimal:
+    return ((exit_price - entry) if side == "BUY" else (entry - exit_price)) * quantity
+
+
+def _policy_outcomes(*, signal: TraderSignal, plan: TradePlan, policy: ExitPolicy,
+                     samples: tuple[ExitPathSample, ...]) -> tuple[PathExitResult, ...]:
+    validate_trade_plan_signal(signal, plan)
+    stop, target, target_rule, horizon = _exit_policy(policy, signal, plan)
+    output = []
+    for sample in samples:
+        if sample.instrument_id != signal.instrument_id:
+            raise ExitScenarioError("historical sample instrument differs from the signal")
+        if sample.completed_at.astimezone(timezone.utc) > signal.as_of.astimezone(timezone.utc):
+            raise ExitScenarioError("future or not-yet-matured path cannot inform the decision")
+        output.append(_replay(sample, plan=plan, stop=stop, target=target,
+                              target_rule=target_rule, horizon=horizon))
+    return tuple(output)
+
+
+def compare_exit_variants(*, signal: TraderSignal, plan: TradePlan, baseline: ExitPolicy,
+                          variants: dict[str, ExitPolicy], samples: Iterable[ExitPathSample],
+                          costs: ExitCostSchedule,
+                          max_comparisons: int = 20) -> ExitVariantComparison:
+    """Paired, after-cost exit comparison over historical replay paths.
+
+    Every candidate is compared on the same frozen paths and cost schedule. A one-sided paired
+    t-test is used as a transparent screening statistic, then Holm adjusts across all variants.
+    This historical replay API cannot attest protected prospective cohort membership.
+    """
+    if not isinstance(baseline, ExitPolicy) or not variants or not isinstance(costs, ExitCostSchedule):
+        raise ExitScenarioError("baseline, variants and frozen cost schedule are required")
+    if len(variants) > max_comparisons or max_comparisons < 1:
+        raise ExitScenarioError("variant family exceeds the declared comparison limit")
+    if "baseline" in variants or any(not key.strip() for key in variants):
+        raise ExitScenarioError("variant names must be non-empty and cannot replace baseline")
+    materialized = tuple(samples)
+    if not materialized or len({s.sample_id for s in materialized}) != len(materialized):
+        raise ExitScenarioError("unique frozen historical/forward samples are required")
+    baseline_rows = _policy_outcomes(signal=signal, plan=plan, policy=baseline, samples=materialized)
+    baseline_net = [row.gross_pnl_inr - costs.entry_cost_inr - costs.exit_cost_per_unit_inr * plan.quantity
+                    for row in baseline_rows]
+    from financial_brain.forward_edge.evidence_stats import holm_adjust
+
+    deltas: dict[str, list[Decimal]] = {}
+    pvalues: dict[str, float] = {}
+    means: dict[str, Decimal] = {"baseline": sum(baseline_net, _ZERO) / len(baseline_net)}
+    for name, candidate in sorted(variants.items()):
+        if not isinstance(candidate, ExitPolicy):
+            raise ExitScenarioError("all variants must use versioned ExitPolicy values")
+        outcomes = _policy_outcomes(signal=signal, plan=plan, policy=candidate, samples=materialized)
+        net = [row.gross_pnl_inr - costs.entry_cost_inr - costs.exit_cost_per_unit_inr * plan.quantity
+               for row in outcomes]
+        paired = [candidate_value - base_value for candidate_value, base_value in zip(net, baseline_net)]
+        deltas[name] = paired
+        means[name] = sum(net, _ZERO) / len(net)
+        # Small cohorts and zero-variance pairs cannot support a p-value; fail closed at p=1.
+        if len(paired) < 2:
+            pvalues[name] = 1.0
+        else:
+            values = [float(x) for x in paired]
+            if not all(math.isfinite(value) for value in values):
+                pvalues[name] = 1.0
+            else:
+                mean = sum(values) / len(values)
+                variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+                standard_error = math.sqrt(variance / len(values))
+                if standard_error == 0.0:
+                    pvalues[name] = 1.0
+                else:
+                    t_statistic = mean / standard_error
+                    try:
+                        pvalues[name] = _student_t_one_sided_p(t_statistic, len(values) - 1)
+                    except (ArithmeticError, OverflowError, ValueError):
+                        pvalues[name] = 1.0
+    adjusted = holm_adjust(pvalues)
+    canonical_samples = [{"sample_id": s.sample_id, "instrument_id": s.instrument_id,
+                          "completed_at": s.completed_at.astimezone(timezone.utc).isoformat(),
+                          "source_sha256": s.source_sha256}
+                         for s in sorted(materialized, key=lambda row: row.sample_id)]
+    sample_hash = hashlib.sha256(json.dumps(canonical_samples, sort_keys=True, separators=(",", ":"),
+                                             allow_nan=False).encode()).hexdigest()
+    cost_hash = hashlib.sha256(json.dumps({"schedule_id": costs.schedule_id,
+        "entry_cost_inr": str(costs.entry_cost_inr), "exit_cost_per_unit_inr": str(costs.exit_cost_per_unit_inr),
+        "source_sha256": costs.source_sha256}, sort_keys=True, separators=(",", ":"),
+        allow_nan=False).encode()).hexdigest()
+    # This API consumes historical replay records only; a caller flag cannot attest a
+    # live receipt or membership in a protected prospective cohort.
+    is_prospective = False
+    return ExitVariantComparison(
+        baseline_policy_sha256=baseline.policy_hash, sample_evidence_sha256=sample_hash,
+        cost_schedule_sha256=cost_hash, sample_count=len(materialized),
+        variant_mean_net_pnl_inr=means,
+        paired_mean_delta_vs_baseline_inr={name: sum(values, _ZERO) / len(values)
+                                           for name, values in deltas.items()},
+        paired_p_value=pvalues, holm_adjusted_p_value=adjusted,
+        comparison_count=len(variants), prospective_evidence=is_prospective,
+        evidence_label="PROSPECTIVE_ATTESTED_EXIT_COHORT" if is_prospective else "HISTORICAL_REPLAY_NOT_PROSPECTIVE",
+    )
+
+
+def _replay(sample: ExitPathSample, *, plan: TradePlan,
+            stop: Decimal, target: Decimal, target_rule, horizon: int) -> PathExitResult:
+    if len(sample.bars) < horizon:
+        raise ExitScenarioError("historical path is not mature for the frozen time-exit horizon")
+    scale = ((plan.entry_low + plan.entry_high) / Decimal(2)) / sample.entry_price
+    entry_reference = (plan.entry_low + plan.entry_high) / Decimal(2)
+    qty = plan.quantity
+    remaining = qty
+    realized = _ZERO
+    target_done = False
+    stop_done = False
+    gap_stop = False
+    gap_loss = _ZERO
+    ambiguous = 0
+    final_exit = "TIME"
+    long = plan.side == "BUY"
+    last_close = (sample.bars[horizon - 1].close * scale)
+
+    for bar_index, bar in enumerate(sample.bars[:horizon]):
+        op, high, low, close = (bar.open * scale, bar.high * scale,
+                                 bar.low * scale, bar.close * scale)
+        # An open beyond a trigger establishes the first executable event for this bar.
+        stop_gapped = op < stop if long else op > stop
+        target_gapped = op >= target if long else op <= target
+        if remaining > 0 and stop_gapped:
+            fill = op
+            realized += _pnl(plan.side, entry_reference, fill, remaining)
+            gap_loss += (stop - fill) * remaining if long else (fill - stop) * remaining
+            gap_stop = stop_done = True
+            remaining = _ZERO
+            final_exit = "GAP_STOP"
+            break
+        if remaining > 0 and not target_done and target_gapped:
+            take = qty * (target_rule.quantity_fraction or Decimal(1))
+            take = min(take, remaining)
+            realized += _pnl(plan.side, entry_reference, target, take)
+            target_done = True
+            remaining -= take
+            if remaining == 0:
+                final_exit = "TARGET"
+                break
+        if remaining > 0:
+            hit_stop = low <= stop if long else high >= stop
+            hit_target = (not target_done) and (high >= target if long else low <= target)
+            if hit_stop and hit_target:
+                ambiguous += 1
+            if hit_stop:
+                fill = min(op, stop) if long else max(op, stop)
+                realized += _pnl(plan.side, entry_reference, fill, remaining)
+                if fill != stop:
+                    gap_loss += (stop - fill) * remaining if long else (fill - stop) * remaining
+                    gap_stop = True
+                stop_done = True
+                remaining = _ZERO
+                final_exit = "STOP"
+                break
+            if hit_target:
+                take = qty * (target_rule.quantity_fraction or Decimal(1))
+                take = min(take, remaining)
+                realized += _pnl(plan.side, entry_reference, target, take)
+                target_done = True
+                remaining -= take
+                if remaining == 0:
+                    final_exit = "TARGET"
+                    break
+        if bar_index == horizon - 1:
+            final_exit = "TIME_AFTER_PARTIAL_TARGET" if target_done else "TIME"
+            realized += _pnl(plan.side, entry_reference, close, remaining)
+            remaining = _ZERO
+            break
+    if remaining > 0:
+        realized += _pnl(plan.side, entry_reference, last_close, remaining)
+        final_exit = "TIME_AFTER_PARTIAL_TARGET" if target_done else "TIME"
+    return PathExitResult(sample.sample_id, final_exit, target_done, stop_done, gap_stop,
+                          ambiguous, realized, gap_loss)
+
+
+def estimate_exit_probabilities(*, signal: TraderSignal, plan: TradePlan, policy: ExitPolicy,
+                                samples: Iterable[ExitPathSample]) -> ExitProbabilityEstimate:
+    """Replay fully matured, prior-only paths through the frozen policy and report frequencies."""
+    if not isinstance(signal, TraderSignal) or not isinstance(plan, TradePlan) or not isinstance(policy, ExitPolicy):
+        raise ExitScenarioError("typed signal, trade plan and versioned exit policy are required")
+    validate_trade_plan_signal(signal, plan)
+    stop, target, target_rule, horizon = _exit_policy(policy, signal, plan)
+    materialized = tuple(samples)
+    if not materialized:
+        raise ExitScenarioError("historical exit-path samples are required")
+    if len({s.sample_id for s in materialized}) != len(materialized):
+        raise ExitScenarioError("historical sample IDs must be unique")
+    for sample in materialized:
+        if sample.instrument_id != signal.instrument_id:
+            raise ExitScenarioError("historical sample instrument differs from the signal")
+        if sample.completed_at.astimezone(timezone.utc) > signal.as_of.astimezone(timezone.utc):
+            raise ExitScenarioError("future or not-yet-matured path cannot inform the decision")
+    outcomes = tuple(_replay(s, plan=plan, stop=stop, target=target,
+                             target_rule=target_rule, horizon=horizon) for s in materialized)
+    n = len(outcomes)
+    stop_count = sum(x.stop_was_executed for x in outcomes)
+    target_count = sum(x.target_was_executed for x in outcomes)
+    time_count = sum(x.final_exit.startswith("TIME") for x in outcomes)
+    gap_count = sum(x.gap_stop for x in outcomes)
+    canonical = {
+        "signal_id": signal.signal_id, "policy_sha256": policy.policy_hash,
+        "samples": [{"sample_id": s.sample_id, "source_sha256": s.source_sha256,
+                     "completed_at": s.completed_at.astimezone(timezone.utc).isoformat()}
+                    for s in sorted(materialized, key=lambda row: row.sample_id)],
+    }
+    evidence_hash = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":"),
+                                              allow_nan=False).encode()).hexdigest()
+    return ExitProbabilityEstimate(
+        sample_count=n,
+        stop_exit_probability=Decimal(stop_count) / Decimal(n),
+        target_exit_probability=Decimal(target_count) / Decimal(n),
+        time_exit_probability=Decimal(time_count) / Decimal(n),
+        gap_stop_probability=Decimal(gap_count) / Decimal(n),
+        stop_exit_ci95=_wilson(stop_count, n), target_exit_ci95=_wilson(target_count, n),
+        time_exit_ci95=_wilson(time_count, n), gap_stop_ci95=_wilson(gap_count, n),
+        mean_gross_pnl_inr=sum((x.gross_pnl_inr for x in outcomes), _ZERO) / Decimal(n),
+        mean_gap_loss_inr=sum((x.gap_loss_inr for x in outcomes), _ZERO) / Decimal(n),
+        ambiguous_bar_count=sum(x.ambiguous_bar_count for x in outcomes), outcomes=outcomes,
+        policy_sha256=policy.policy_hash, sample_evidence_sha256=evidence_hash,
+        probability_label="HISTORICAL_PRIOR_ONLY_FREQUENCY_NOT_CALIBRATED_FORECAST",
+        confidence_interval_method="WILSON_95_ONLY_WHEN_N_GE_30",
+    )
+
+
+__all__ = ["ExitCostSchedule", "ExitPathSample", "ExitProbabilityEstimate", "ExitReplayBar",
+           "ExitScenarioError", "ExitVariantComparison", "PathExitResult", "compare_exit_variants",
+           "estimate_exit_probabilities"]

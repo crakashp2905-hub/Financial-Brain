@@ -15,7 +15,7 @@ from financial_brain.forward_edge.evidence_stats import ClaimTier, StatsError, l
     [
         ("shadow", EvidenceClass.EXPLORATORY_SHADOW),
         ("replay", EvidenceClass.HISTORICAL_REPLAY),
-        ("fixture", EvidenceClass.HISTORICAL_REPLAY),
+        ("fixture", EvidenceClass.DETERMINISTIC_FIXTURE),
         ("live", EvidenceClass.LOCAL_PAPER),
         ("paper", EvidenceClass.LOCAL_PAPER),
     ],
@@ -33,8 +33,16 @@ def test_local_paper_requires_every_independent_evidence_fact_for_higher_label()
     }
     assert classify("local_paper", **facts) is EvidenceClass.INDEPENDENTLY_ATTESTED_FORWARD
     for missing in facts:
-        assert classify("local_paper", **{**facts, missing: False if missing != "custody_status" else None}) \
-            is EvidenceClass.LOCAL_PAPER
+        expected = (EvidenceClass.PROSPECTIVELY_OBSERVED_SESSION if missing == "custody_status"
+                    else EvidenceClass.LOCAL_PAPER)
+        assert classify("local_paper", **{**facts, missing: False if missing != "custody_status" else None}) is expected
+
+
+def test_observed_complete_sealed_session_without_custody_is_distinct_but_not_independent():
+    assert classify("live", market_observed=True, pre_entry_sealed=True, session_complete=True) \
+        is EvidenceClass.PROSPECTIVELY_OBSERVED_SESSION
+    assert classify("live", market_observed=True, pre_entry_sealed=True, session_complete=False) \
+        is EvidenceClass.LOCAL_PAPER
 
 
 def test_replay_cannot_be_upgraded_by_attestation_fields():
@@ -42,6 +50,10 @@ def test_replay_cannot_be_upgraded_by_attestation_fields():
         "replay", market_observed=True, pre_entry_sealed=True, session_complete=True,
         custody_status=CustodyStatus.VERIFIED,
     ) is EvidenceClass.HISTORICAL_REPLAY
+    assert classify(
+        "fixture_replay", market_observed=True, pre_entry_sealed=True, session_complete=True,
+        custody_status=CustodyStatus.VERIFIED,
+    ) is EvidenceClass.DETERMINISTIC_FIXTURE
 
 
 def test_report_stamping_rejects_caller_claimed_independent_forward_label():
@@ -64,8 +76,14 @@ def test_export_rows_cannot_label_replay_or_local_paper_as_independent_forward()
     with pytest.raises(StatsError, match="conflicts with evidence mode"):
         label_rows([{"tier": ClaimTier.INDEPENDENT_FORWARD, "mode": "live"}])
     historical = label_rows([{"tier": ClaimTier.HISTORICAL, "mode": "fixture_replay"}])
-    assert historical[0]["evidence_class"] == "HISTORICAL_REPLAY"
+    assert historical[0]["evidence_class"] == "DETERMINISTIC_FIXTURE"
     assert historical[0]["independently_attested"] is False
+    observed = label_rows([{
+        "tier": ClaimTier.LOCAL_PAPER, "mode": "live", "market_observed": True,
+        "pre_entry_sealed": True, "session_complete": True,
+    }])
+    assert observed[0]["evidence_class"] == "PROSPECTIVELY_OBSERVED_SESSION"
+    assert observed[0]["independently_attested"] is False
 
 
 def test_export_independent_forward_requires_each_source_fact():

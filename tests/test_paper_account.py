@@ -8,6 +8,7 @@ import pytest
 
 from financial_brain.kernel.oms import InsufficientCash, OmsError, State
 from financial_brain.kernel.paper_account import FeeSchedule, PaperAccount, PaperAccountError
+from financial_brain.kernel.units import Money, Price, WholeUnits
 
 
 def _buy(book: PaperAccount, client_id: str = "buy-1", quantity: int = 10) -> None:
@@ -45,6 +46,33 @@ def test_buy_sell_fees_and_restart_reconcile(tmp_path) -> None:
     assert reopened.ledger.trial_balance_ok()
     assert reopened.realized_pnl == Decimal("200")
     assert reopened.fees == Decimal("2.50")
+
+
+def test_typed_cash_order_and_fill_units_are_enforced(tmp_path) -> None:
+    book = PaperAccount(tmp_path / "typed.jsonl", account_id="typed", initial_cash=Decimal("1000"))
+    book.submit_typed_intent(
+        client_id="typed-buy", symbol="NSE:ABC", side="BUY", quantity=WholeUnits(3),
+        limit=Price(Decimal("100"), "INR"), reserve=Money(Decimal("300"), "INR"),
+    )
+    book.move("typed-buy", State.SUBMITTED)
+    book.move("typed-buy", State.ACCEPTED)
+    book.record_typed_fill(
+        "typed-buy", fill_id="typed-fill", quantity=WholeUnits(3),
+        price=Price(Decimal("90"), "INR"),
+    )
+    assert book.position("NSE:ABC").quantity == 3
+    assert book.cash == Decimal("730")
+
+    with pytest.raises(PaperAccountError, match="account currency"):
+        book.submit_typed_intent(
+            client_id="wrong-currency", symbol="NSE:ABC", side="BUY", quantity=WholeUnits(1),
+            limit=Price(Decimal("10"), "USD"), reserve=Money(Decimal("10"), "INR"),
+        )
+    with pytest.raises(PaperAccountError, match="whole-unit integer"):
+        book.submit_intent(
+            client_id="fractional-equity", symbol="NSE:ABC", side="BUY", quantity=1.5,
+            limit=Decimal("10"), reserve=Decimal("10"),
+        )
 
 
 def test_replayed_intent_fill_and_fee_have_one_economic_effect(tmp_path) -> None:

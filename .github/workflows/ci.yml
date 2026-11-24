@@ -5,12 +5,16 @@ on:
   push:
   pull_request:
 
+env:
+  TZ: UTC
+  PYTHONHASHSEED: "20261112"
+
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +22,7 @@ jobs:
           fetch-depth: 0          # the pre-registration audit reads git history
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.13.5"
           cache: pip
       - name: Install (pyproject only)
         run: |
@@ -28,8 +32,40 @@ jobs:
         run: python -m ruff check src tests
       - name: Validate capability claims
         run: python scripts/validate_capability_matrix.py
+      - name: Verify forward-edge capability matrix rendering
+        run: python scripts/forward_edge_capability_matrix.py --check
+      - name: Validate market-data source rights and credential inventory
+        run: python scripts/validate_market_data_sources.py
+      - name: Validate independent release semantics
+        run: python scripts/validate_release_semantics.py
       - name: Inventory source ownership gaps
         run: python scripts/source_inventory.py
+      - name: Verify source inventory snapshot
+        run: python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check
+      - name: Verify trader capability owners
+        run: python scripts/capability_ownership.py --check
+      - name: Validate five-desk product charter
+        run: python scripts/validate_product_charter.py --check
+      - name: Validate five-desk launch gates and evidence labels
+        run: python scripts/validate_launch_gates.py --check
+      - name: Verify complete per-item checklist audit export
+        run: python scripts/export_checklist_audit.py --check
+      - name: Verify old/new forward-engine dependency graph
+        run: python scripts/forward_engine_graph.py --check
+      - name: Verify fixed-fixture legacy/integrated paper equivalence report
+        run: python scripts/forward_edge_equivalence_report.py --check
+      - name: Verify CODEOWNERS domain coverage
+        run: python scripts/validate_codeowners_map.py
+      - name: Verify historical reference-strategy pins
+        run: python scripts/validate_reference_candidates.py
+      - name: Verify reproducible checklist evidence bundle
+        run: python scripts/build_checklist_evidence_bundle.py --check
+      - name: Verify scoped authoritative state ownership
+        run: python scripts/state_ownership.py
+      - name: Verify protected-trial program windows and budgets
+        run: python scripts/validate_trial_program.py
+      - name: Validate protocol deviation register
+        run: python scripts/validate_deviation_log.py
       - name: Type check (OMS, evidence standard, pre-registry)
         run: python -m mypy
       - name: Schema migrations
@@ -40,12 +76,18 @@ jobs:
         run: python scripts/chart_patterns_matrix.py --check
       - name: Chart-pattern offline demo (network denied)
         run: python -m financial_brain.patterns.demo --offline
-      - name: Chart-pattern completion matrix is current
-        run: python scripts/chart_patterns_matrix.py --check
-      - name: Chart-pattern offline demo (network denied)
-        run: python -m financial_brain.patterns.demo --offline
-      - name: Test suite (with skip summary)
-        run: python -m coverage run --source=financial_brain -m pytest -q -ra
+      - name: Test suite
+        run: python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml
+      - name: Summarize test and skip counts
+        if: always()
+        run: python scripts/ci_test_summary.py pytest-results.xml
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.os }}
+          path: pytest-results.xml
+          if-no-files-found: warn
       - name: Critical-module coverage
         run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
       - name: Chart-pattern package coverage floor
@@ -59,3 +101,28 @@ jobs:
           path: coverage.xml
       - name: Dependency audit
         run: python -m pip_audit --skip-editable
+
+  reproducibility:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.5"
+          cache: pip
+          cache-dependency-path: requirements-lock.txt
+      - name: Install pinned build tools and locked environment
+        run: |
+          python -m pip install --upgrade pip==25.2 setuptools==80.9.0 wheel==0.45.1
+          python -m pip install -r requirements-lock.txt
+          python -m pip install -e . --no-deps --no-build-isolation
+      - name: Check locked environment
+        run: python -m pip check
+      - name: Verify Python, timezone, seed, lock, and fixture fingerprints
+        run: python scripts/verify_reproducibility.py
+      - name: Verify deterministic fixture behavior without market access
+        run: python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl

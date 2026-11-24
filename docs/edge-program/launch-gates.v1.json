@@ -1,0 +1,110 @@
+{
+  "schema": "fb.five_desk_launch_gates.v1",
+  "version": 1,
+  "purpose": "Define evidence and launch gates for the five desks without claiming implemented capability or enabling physical orders.",
+  "promotion_policy": {
+    "monotonic_evidence_required": true,
+    "caller_labels_are_authoritative": false,
+    "failed_or_unknown_gate_action": "BLOCK_PROMOTION_AND_REMAIN_PAPER_ONLY",
+    "physical_orders_enabled": false,
+    "live_cash_enabled": false
+  },
+  "evidence_labels": [
+    {
+      "label": "FIXTURE",
+      "kind": "EVIDENCE_CLASS",
+      "canonical_class": "DETERMINISTIC_FIXTURE",
+      "requirements": ["deterministic synthetic inputs", "versioned fixture and seed"],
+      "claims_allowed": ["software behavior under the declared fixture"],
+      "claims_forbidden": ["observed market performance", "prospective profitability", "broker execution"]
+    },
+    {
+      "label": "REPLAY",
+      "kind": "EVIDENCE_CLASS",
+      "canonical_class": "HISTORICAL_REPLAY",
+      "requirements": ["immutable historical input window", "point-in-time and no-lookahead checks", "declared cost and fill assumptions"],
+      "claims_allowed": ["historical simulation result under declared assumptions"],
+      "claims_forbidden": ["prospective validation", "independent custody", "broker execution"]
+    },
+    {
+      "label": "LOCAL_PAPER",
+      "kind": "EVIDENCE_CLASS",
+      "canonical_class": "LOCAL_PAPER",
+      "requirements": ["permitted source and use", "observed quote provenance and availability time", "paper OMS and reconciled account", "fees and conservative fill model"],
+      "claims_allowed": ["local simulated execution result"],
+      "claims_forbidden": ["independent attestation", "real execution", "profit guarantee"]
+    },
+    {
+      "label": "ATTESTED_FORWARD",
+      "kind": "EVIDENCE_CLASS",
+      "canonical_class": "INDEPENDENTLY_ATTESTED_FORWARD",
+      "requirements": ["permitted observed-market source", "sealed pre-entry decision", "complete prospective session", "verified independent custody receipt", "reconciled costs and paper outcome"],
+      "claims_allowed": ["prospective paper outcome with the named custody scope"],
+      "claims_forbidden": ["real broker fill", "automatic capital approval"]
+    },
+    {
+      "label": "BROKER_APPROVED",
+      "kind": "DEPLOYMENT_GATE",
+      "canonical_class": null,
+      "requirements": ["separate owner authorization", "broker and venue approval for the exact account and use", "reviewed compliance and data rights", "risk limits and loss controls", "OMS and reconciliation rehearsal", "human approval and rollback plan"],
+      "current_state": "BLOCKED",
+      "block_reason": "PHYSICAL_ORDERS_ENABLED is false; no broker, owner, compliance, or live-capital approval is inferred by this contract.",
+      "claims_allowed": [],
+      "claims_forbidden": ["live order submission before every gate is independently verified"]
+    }
+  ],
+  "global_preflight": [
+    "source rights and retention permission are effective for the account, instrument, use and time",
+    "instrument identity and contract metadata are valid as of the decision time",
+    "data freshness, clock, exchange calendar and availability timestamps pass",
+    "risk, liquidity, costs, capital and portfolio limits pass",
+    "order, fill, cash, position and P&L events reconcile"
+  ],
+  "current_external_gates": {
+    "kite_quote_paper_simulation_and_archive_rights": "UNKNOWN_RIGHTS",
+    "independent_timestamp_custody": "NOT_CONFIGURED",
+    "broker_approval": "NOT_GRANTED"
+  },
+  "desks": [
+    {
+      "desk": "SWING",
+      "product_scope": "EQUITY",
+      "clock": "EXCHANGE_SESSION_AND_MULTI_SESSION_HOLDING",
+      "paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "desk_preflight": ["point-in-time corporate actions and listing status", "overnight gap and concentration stress", "holding-period exit and liquidity limits"],
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "INTRADAY",
+      "product_scope": "EQUITY",
+      "clock": "EXCHANGE_SESSION_INTRADAY",
+      "paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "desk_preflight": ["exchange session and forced-close policy", "quote age, spread, depth and participation cap", "intraday margin, turnover and fee stress"],
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "OPTIONS",
+      "product_scope": "OPTION",
+      "clock": "CONTRACT_EXPIRY_AND_EXCHANGE_SESSION",
+      "paper_actions": ["BUY_CALL", "BUY_PUT", "DEFINED_RISK_DEBIT_SPREAD", "CLOSE", "NO_TRADE", "CASH"],
+      "desk_preflight": ["effective-dated contract, lot, tick and expiry metadata", "executable bid/ask and multi-leg fill stress", "Greeks, volatility, margin and expiry/settlement risk", "defined maximum loss; naked writing remains excluded"],
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "ETF",
+      "product_scope": "ETF",
+      "clock": "EXCHANGE_SESSION_WITH_OPTIONAL_MULTI_SESSION_HOLDING",
+      "paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "desk_preflight": ["whole-unit quantity and executable exchange price", "spread, liquidity, tracking difference and premium/discount", "keep market price distinct from NAV and underlying index"],
+      "implementation_claim": "SCOPE_ONLY"
+    },
+    {
+      "desk": "MUTUAL_FUND",
+      "product_scope": "CONVENTIONAL_OPEN_ENDED_MUTUAL_FUND",
+      "clock": "SCHEME_BUSINESS_DAY_CUTOFF_NAV_PUBLICATION_AND_SETTLEMENT",
+      "paper_actions": ["SUBSCRIBE", "REDEEM", "SWITCH", "HOLD", "NO_TRADE", "CASH"],
+      "desk_preflight": ["effective-dated scheme, plan, option, cutoff and holiday calendar", "NAV publication, allotment and settlement lifecycle", "scheme-specific fees and purchase/redemption restrictions", "never use exchange ticks or assume intraday/same-day execution"],
+      "implementation_claim": "SCOPE_ONLY"
+    }
+  ]
+}

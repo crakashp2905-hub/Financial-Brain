@@ -9,7 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import Counter
 
-from .options import OptionPaperError, Quote, cost_hurdle, long_round_trip
+from .options import OptionPaperError, Quote, cost_hurdle, long_round_trip, option_lot_count
+from ..kernel.units import OptionLots
 from financial_brain.forward_edge.evidence_labels import metadata
 
 
@@ -22,9 +23,13 @@ class Intent:
     decided_at: datetime
     planned_exit_at: datetime
     expected_exit_bid: float
-    lots: int = 1
+    lots: int | OptionLots = 1
     max_entry_delay: timedelta = timedelta(minutes=1)
     max_exit_delay: timedelta = timedelta(minutes=1)
+
+    def __post_init__(self) -> None:
+        # Keep the durable payload scalar-compatible after validating the domain unit.
+        object.__setattr__(self, "lots", option_lot_count(self.lots))
 
     def validate(self) -> None:
         if not self.signal_id or not self.cohort or not self.rule_version:
@@ -33,6 +38,7 @@ class Intent:
             raise OptionPaperError("option intent timestamps must be timezone-aware")
         if self.planned_exit_at <= self.decided_at:
             raise OptionPaperError("planned exit must follow the signal")
+        option_lot_count(self.lots)
         if self.max_entry_delay <= timedelta(0) or self.max_exit_delay <= timedelta(0):
             raise OptionPaperError("quote delay limits must be positive")
 
@@ -40,6 +46,7 @@ class Intent:
 def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
     """No fill is synthesized when a quote, liquidity or exit is missing."""
     intent.validate()
+    lots = option_lot_count(intent.lots)
     base = {"signal_id": intent.signal_id, "cohort": intent.cohort,
             "rule_version": intent.rule_version, "mode": "replay", **metadata("replay")}
     ordered = sorted((q for q in quotes if q.token == intent.token), key=lambda q: q.observed_at)
@@ -47,18 +54,18 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
                   intent.decided_at + intent.max_entry_delay and _valid(q)), None)
     if entry is None:
         return {**base, "status": "NO_ENTRY_QUOTE"}
-    hurdle = cost_hurdle(entry, lots=intent.lots, expected_exit_bid=intent.expected_exit_bid)
+    hurdle = cost_hurdle(entry, lots=lots, expected_exit_bid=intent.expected_exit_bid)
     if not hurdle["passes"]:
         return {**base, "status": "SKIPPED_COST_OR_LIQUIDITY", **hurdle}
     exit_quote = next((q for q in ordered if intent.planned_exit_at <= q.observed_at <=
                        intent.planned_exit_at + intent.max_exit_delay and q.observed_at > entry.observed_at
-                       and _valid(q) and q.bid_qty >= intent.lots * q.lot_size
+                       and _valid(q) and q.bid_qty >= lots * q.lot_size
                        and (q.symbol, q.expiry, q.lot_size) ==
                        (entry.symbol, entry.expiry, entry.lot_size)), None)
     if exit_quote is None:
         return {**base, "status": "NO_EXIT_QUOTE", "entry_at": entry.observed_at,
-                "entry_premium_inr": entry.ask * entry.lot_size * intent.lots}
-    return {**base, "status": "CLOSED", **long_round_trip(entry, exit_quote, lots=intent.lots)}
+                "entry_premium_inr": entry.ask * entry.lot_size * lots}
+    return {**base, "status": "CLOSED", **long_round_trip(entry, exit_quote, lots=lots)}
 
 
 def _valid(q: Quote) -> bool:

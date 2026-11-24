@@ -1,163 +1,1927 @@
 {
- "blocked": [
-  "FE-0007",
-  "FE-0027",
-  "FE-0133",
-  "FE-0134",
-  "FE-0135",
-  "FE-0136",
-  "FE-0137",
-  "FE-0138",
-  "FE-0139",
-  "FE-0140",
-  "FE-0148"
- ],
- "implemented": [
-  "FE-0001",
-  "FE-0002",
-  "FE-0004",
-  "FE-0005",
-  "FE-0006",
-  "FE-0008",
-  "FE-0009",
-  "FE-0010",
-  "FE-0011",
-  "FE-0012",
-  "FE-0013",
-  "FE-0014",
-  "FE-0015",
-  "FE-0016",
-  "FE-0017",
-  "FE-0019",
-  "FE-0020",
-  "FE-0021",
-  "FE-0023",
-  "FE-0024",
-  "FE-0028",
-  "FE-0033",
-  "FE-0037",
-  "FE-0039",
-  "FE-0042",
-  "FE-0043",
-  "FE-0045",
-  "FE-0050",
-  "FE-0052",
-  "FE-0053",
-  "FE-0056",
-  "FE-0057",
-  "FE-0058",
-  "FE-0059",
-  "FE-0061",
-  "FE-0063",
-  "FE-0065",
-  "FE-0066",
-  "FE-0067",
-  "FE-0068",
-  "FE-0069",
-  "FE-0070",
-  "FE-0071",
-  "FE-0072",
-  "FE-0076",
-  "FE-0080",
-  "FE-0081",
-  "FE-0084",
-  "FE-0088",
-  "FE-0089",
-  "FE-0090",
-  "FE-0091",
-  "FE-0092",
-  "FE-0093",
-  "FE-0094",
-  "FE-0095",
-  "FE-0097",
-  "FE-0098",
-  "FE-0099",
-  "FE-0100",
-  "FE-0101",
-  "FE-0104",
-  "FE-0105",
-  "FE-0106",
-  "FE-0107",
-  "FE-0108",
-  "FE-0115",
-  "FE-0116",
-  "FE-0117",
-  "FE-0118",
-  "FE-0119",
-  "FE-0120",
-  "FE-0122",
-  "FE-0123",
-  "FE-0124",
-  "FE-0126",
-  "FE-0127",
-  "FE-0130",
-  "FE-0131",
-  "FE-0132",
-  "FE-0141",
-  "FE-0142",
-  "FE-0144",
-  "FE-0145",
-  "FE-0147",
-  "FE-0149",
-  "FE-0152"
- ],
- "independently_evidenced": [],
- "not_started": [],
- "note": "implemented means a passing executable test in the stated scope. Nothing is independently evidenced: no independent timestamp receipts, no observed broker fills and no live market sessions exist offline.",
- "partial": [
-  "FE-0003",
-  "FE-0018",
-  "FE-0022",
-  "FE-0025",
-  "FE-0026",
-  "FE-0029",
-  "FE-0030",
-  "FE-0031",
-  "FE-0032",
-  "FE-0034",
-  "FE-0035",
-  "FE-0036",
-  "FE-0038",
-  "FE-0040",
-  "FE-0041",
-  "FE-0044",
-  "FE-0046",
-  "FE-0047",
-  "FE-0048",
-  "FE-0049",
-  "FE-0051",
-  "FE-0054",
-  "FE-0055",
-  "FE-0060",
-  "FE-0062",
-  "FE-0064",
-  "FE-0073",
-  "FE-0074",
-  "FE-0075",
-  "FE-0077",
-  "FE-0078",
-  "FE-0079",
-  "FE-0082",
-  "FE-0083",
-  "FE-0085",
-  "FE-0086",
-  "FE-0087",
-  "FE-0096",
-  "FE-0102",
-  "FE-0103",
-  "FE-0109",
-  "FE-0110",
-  "FE-0111",
-  "FE-0112",
-  "FE-0113",
-  "FE-0114",
-  "FE-0121",
-  "FE-0125",
-  "FE-0128",
-  "FE-0129",
-  "FE-0143",
-  "FE-0146",
-  "FE-0150",
-  "FE-0151"
- ]
+  "schema": "fb.forward-edge.capability-matrix.v1",
+  "implemented": [
+    "FE-0001",
+    "FE-0002",
+    "FE-0003",
+    "FE-0004",
+    "FE-0005",
+    "FE-0006",
+    "FE-0008",
+    "FE-0009",
+    "FE-0010",
+    "FE-0014",
+    "FE-0016",
+    "FE-0017",
+    "FE-0019",
+    "FE-0023",
+    "FE-0033",
+    "FE-0050",
+    "FE-0052",
+    "FE-0053",
+    "FE-0078",
+    "FE-0088"
+  ],
+  "partial": [
+    "FE-0011",
+    "FE-0012",
+    "FE-0013",
+    "FE-0015",
+    "FE-0018",
+    "FE-0024",
+    "FE-0034",
+    "FE-0036",
+    "FE-0037",
+    "FE-0038",
+    "FE-0039",
+    "FE-0042",
+    "FE-0043",
+    "FE-0044",
+    "FE-0046",
+    "FE-0047",
+    "FE-0048",
+    "FE-0049",
+    "FE-0055",
+    "FE-0056",
+    "FE-0057",
+    "FE-0058",
+    "FE-0059",
+    "FE-0060",
+    "FE-0061",
+    "FE-0062",
+    "FE-0063",
+    "FE-0068",
+    "FE-0072",
+    "FE-0074",
+    "FE-0075",
+    "FE-0076",
+    "FE-0077",
+    "FE-0079",
+    "FE-0080",
+    "FE-0081",
+    "FE-0082",
+    "FE-0083",
+    "FE-0084",
+    "FE-0085",
+    "FE-0086",
+    "FE-0087",
+    "FE-0089",
+    "FE-0090",
+    "FE-0091",
+    "FE-0092",
+    "FE-0093",
+    "FE-0094",
+    "FE-0095",
+    "FE-0096",
+    "FE-0097",
+    "FE-0098",
+    "FE-0099",
+    "FE-0100",
+    "FE-0101",
+    "FE-0102",
+    "FE-0103",
+    "FE-0104",
+    "FE-0105",
+    "FE-0106",
+    "FE-0107",
+    "FE-0108",
+    "FE-0109",
+    "FE-0110",
+    "FE-0111",
+    "FE-0112",
+    "FE-0113",
+    "FE-0114",
+    "FE-0115",
+    "FE-0116",
+    "FE-0117",
+    "FE-0118",
+    "FE-0119",
+    "FE-0120",
+    "FE-0121",
+    "FE-0122",
+    "FE-0123",
+    "FE-0124",
+    "FE-0125",
+    "FE-0126",
+    "FE-0127",
+    "FE-0128",
+    "FE-0129",
+    "FE-0130",
+    "FE-0131",
+    "FE-0132",
+    "FE-0137",
+    "FE-0141",
+    "FE-0142",
+    "FE-0143",
+    "FE-0144",
+    "FE-0145",
+    "FE-0146",
+    "FE-0147",
+    "FE-0149",
+    "FE-0150",
+    "FE-0151"
+  ],
+  "blocked": [
+    "FE-0007",
+    "FE-0027",
+    "FE-0035",
+    "FE-0133",
+    "FE-0134",
+    "FE-0135",
+    "FE-0136",
+    "FE-0138",
+    "FE-0139",
+    "FE-0140",
+    "FE-0148"
+  ],
+  "not_started": [
+    "FE-0020",
+    "FE-0021",
+    "FE-0022",
+    "FE-0025",
+    "FE-0026",
+    "FE-0028",
+    "FE-0029",
+    "FE-0030",
+    "FE-0031",
+    "FE-0032",
+    "FE-0040",
+    "FE-0041",
+    "FE-0045",
+    "FE-0051",
+    "FE-0054",
+    "FE-0064",
+    "FE-0065",
+    "FE-0066",
+    "FE-0067",
+    "FE-0069",
+    "FE-0070",
+    "FE-0071",
+    "FE-0073",
+    "FE-0152"
+  ],
+  "independently_evidenced": [],
+  "note": "Status is derived from tracker evidence and applies only to its stated scope. No capability is independently market-forward evidenced by this local matrix.",
+  "capabilities": [
+    {
+      "id": "FE-0001",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_baseline_records_git_head_sources_and_missing_prerequisites",
+        "test_baseline_write_is_deterministic_for_fixed_clock"
+      ],
+      "blockers": [],
+      "note": "docs/forward-edge/baseline-2026-11-10.json captured with gh PR list."
+    },
+    {
+      "id": "FE-0002",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_q4_2026_protected_budget_is_exhausted_at_13_of_13",
+        "test_protected_records_match_pinned_digests",
+        "test_retrospective_edit_of_the_trial_ledger_is_detected",
+        "test_new_protected_trial_refused_when_budget_is_spent",
+        "test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_approval",
+        "test_q1_2027_stays_closed_without_an_owner_approved_protocol_and_explicit_budget",
+        "test_q1_2027_requires_protocol_amendment_and_trial_approval",
+        "test_q1_2027_explicit_budget_is_a_hard_capacity_limit",
+        "test_agent_cannot_authorize_a_protected_trial"
+      ],
+      "blockers": [],
+      "note": "2026Q4 ledger 13/13; pins guard retrospective edits; no ledger write made."
+    },
+    {
+      "id": "FE-0003",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_catalogue_covers_source_registry_and_historical_trials_with_explanations",
+        "test_catalogue_change_requires_new_version_and_source_edits_are_detected",
+        "test_missing_exclusion_reason_and_unknown_status_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Versioned hash-pinned catalogue covers checked-in external references and historical trial ledger; all candidates carry lineage and a conservative exclusion reason. No candidate is paper-eligible or verified."
+    },
+    {
+      "id": "FE-0004",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_charter_hash_is_deterministic_and_sensitive_to_every_field",
+        "test_revision_is_a_new_version_with_a_new_clock",
+        "test_malformed_charters_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Hash over canonical JSON; no signing key."
+    },
+    {
+      "id": "FE-0005",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_live_cash_is_unavailable_by_default",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
+        "test_broker_dryrun_needs_verified_compliance",
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
+        "test_session_mode_is_immutable"
+      ],
+      "blockers": [],
+      "note": "Five modes; grant only via resolve_mode; flag alone insufficient."
+    },
+    {
+      "id": "FE-0006",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_live_cash_is_unavailable_by_default",
+        "test_credentials_approvals_or_runtime_flags_cannot_enable_cash",
+        "test_live_cash_stays_disabled_with_human_approval_and_compliance",
+        "test_broker_dryrun_needs_verified_compliance",
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open",
+        "test_session_mode_is_immutable"
+      ],
+      "blockers": [],
+      "note": "LIVE_CASH is permanently refused in this pipeline, including with approval and compliance inputs."
+    },
+    {
+      "id": "FE-0007",
+      "wave": "F00",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-GITHUB: branch main is not protected (GitHub API 404 'Branch not protected', read-only check 2026-11-10)"
+      ],
+      "note": "Owner must enable branch protection and required checks."
+    },
+    {
+      "id": "FE-0008",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_software_actor_identifiers_cannot_approve",
+        "test_non_human_actor_type_is_rejected_even_with_a_human_looking_name",
+        "test_expired_future_and_stale_approvals_are_rejected",
+        "test_wrong_kind_or_subject_and_naive_clock_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Human-only, scoped, expiring approvals. Real owner approvals not yet recorded."
+    },
+    {
+      "id": "FE-0009",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_disposable_ledger_isolated_append_only_and_removed_on_close",
+        "test_disposable_ledger_refuses_repository_and_existing_paths",
+        "test_temporary_disposable_ledger_needs_no_credentials"
+      ],
+      "blockers": [],
+      "note": "Creates only under a caller-provided temporary root; refuses repository overlap and overwrite; event IDs are idempotent and content-bound."
+    },
+    {
+      "id": "FE-0010",
+      "wave": "F00",
+      "status": "DONE",
+      "tests": [
+        "test_audit_is_red_on_this_repository_and_never_green_without_custody",
+        "test_audit_turns_red_when_a_protected_record_changes",
+        "test_audit_cli_exit_code_is_nonzero_while_blocked"
+      ],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)",
+        "BLK-LINUX: no Linux runner here (WSL not installed); CI on Linux needs a push, not run by this session"
+      ],
+      "note": "python -m financial_brain.forward_edge.audit; currently RED."
+    },
+    {
+      "id": "FE-0011",
+      "wave": "F01",
+      "status": "PARTIAL",
+      "tests": [
+        "test_failed_action_is_unknown_not_acknowledged",
+        "test_unknown_is_never_replayed_without_reconciliation",
+        "test_durable_kernel_recovers_events_and_outbox_after_restart"
+      ],
+      "blockers": [],
+      "note": "SQLite WAL outbox records PENDING before action, then DISPATCHED or UNKNOWN. Cross-process external side-effect atomicity still needs reconciliation."
+    },
+    {
+      "id": "FE-0012",
+      "wave": "F01",
+      "status": "PARTIAL",
+      "tests": [
+        "test_durable_kernel_recovers_events_and_outbox_after_restart"
+      ],
+      "blockers": [],
+      "note": "SQLite FULL-synchronous WAL persists ordered events, watermark, dispatch and reconciliation state. Crash injection at every transition remains incomplete."
+    },
+    {
+      "id": "FE-0013",
+      "wave": "F01",
+      "status": "PARTIAL",
+      "tests": [
+        "test_failed_action_is_unknown_not_acknowledged",
+        "test_unknown_is_never_replayed_without_reconciliation",
+        "test_reconciliation_that_found_the_order_closes_it_without_resend",
+        "test_resolution_requires_a_named_reconciler_and_an_unknown_key",
+        "test_unknown_state_survives_checkpoint_and_resume",
+        "test_durable_kernel_recovers_events_and_outbox_after_restart"
+      ],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Kernel and OMS block replay of UNKNOWN; no broker reconciliation."
+    },
+    {
+      "id": "FE-0014",
+      "wave": "F01",
+      "status": "DONE",
+      "tests": [
+        "test_rejected_fills_leave_state_bit_identical",
+        "test_fill_that_would_overspend_is_refused_without_mutation",
+        "test_cannot_mark_filled_with_open_quantity"
+      ],
+      "blockers": [],
+      "note": "Validate-before-mutate; bit-identical after rejection."
+    },
+    {
+      "id": "FE-0015",
+      "wave": "F01",
+      "status": "PARTIAL",
+      "tests": [
+        "test_full_buy_reduces_buying_power",
+        "test_pilot_win_and_loss_reconcile_oms_cash_to_ledger"
+      ],
+      "blockers": [],
+      "note": "OMS cash moves with fills and the pilot reconciles to its ledger. Other engines keep separate ledgers."
+    },
+    {
+      "id": "FE-0016",
+      "wave": "F01",
+      "status": "DONE",
+      "tests": [
+        "test_partial_fill_releases_only_its_proportion_of_reservation",
+        "test_ten_thousand_random_transitions_reconcile"
+      ],
+      "blockers": [],
+      "note": "10,000 seeded transitions reconcile."
+    },
+    {
+      "id": "FE-0017",
+      "wave": "F01",
+      "status": "DONE",
+      "tests": [
+        "test_pilot_win_and_loss_reconcile_oms_cash_to_ledger",
+        "test_pilot_repeat_run_posts_no_phantom_fill",
+        "test_pilot_failed_dispatch_is_unknown_and_posts_nothing"
+      ],
+      "blockers": [],
+      "note": "Repeat run returns DUPLICATE_SUPPRESSED with no ledger posting."
+    },
+    {
+      "id": "FE-0018",
+      "wave": "F01",
+      "status": "PARTIAL",
+      "tests": [
+        "test_pilot_win_and_loss_reconcile_oms_cash_to_ledger"
+      ],
+      "blockers": [],
+      "note": "Buy and sell in the pilot balance. Dividends, splits, futures variation and option settlement are not implemented."
+    },
+    {
+      "id": "FE-0019",
+      "wave": "F01",
+      "status": "DONE",
+      "tests": [
+        "test_duplicate_postback_is_one_economic_fill",
+        "test_same_provider_id_with_different_content_is_refused",
+        "test_stale_acknowledgement_after_fill_is_refused",
+        "test_fill_racing_a_cancel_is_one_fill_and_the_cancel_resolves_after"
+      ],
+      "blockers": [],
+      "note": "One economic fill per provider fill ID; stale ACK and cancel race covered."
+    },
+    {
+      "id": "FE-0020",
+      "wave": "F01",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Power-loss injection needs the durable journal (FE-0011/0012)."
+    },
+    {
+      "id": "FE-0021",
+      "wave": "F01",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Journal rollover, compaction and backup restore not built."
+    },
+    {
+      "id": "FE-0022",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Strategy inventory: next wave."
+    },
+    {
+      "id": "FE-0023",
+      "wave": "F02",
+      "status": "DONE",
+      "tests": [
+        "test_forward_strategy_spec_validates_all_required_execution_metadata"
+      ],
+      "blockers": [],
+      "note": "Shared StrategySpec now hashes and round-trips every required contract field; forward validation fails closed on missing or malformed metadata."
+    },
+    {
+      "id": "FE-0024",
+      "wave": "F02",
+      "status": "PARTIAL",
+      "tests": [
+        "test_strategy_eligibility_cannot_omit_lineage_or_use_unrecognized_state",
+        "test_catalogue_covers_source_registry_and_historical_trials_with_explanations"
+      ],
+      "blockers": [],
+      "note": "Seven strict eligibility states and hash-linked exclusion records exist. Catalogue candidates are classified; runtime registry transitions and universal strategy mapping are not yet wired."
+    },
+    {
+      "id": "FE-0025",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Benchmark registry not built."
+    },
+    {
+      "id": "FE-0026",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Shadow adapters not built."
+    },
+    {
+      "id": "FE-0027",
+      "wave": "F02",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-GOVERNANCE: Q4-2026 budget 13/13 spent; Q1-2027 remains NOT_AUTHORIZED until an owner-approved protocol ADR and explicit budget exist, with exact-scope approvals per trial"
+      ],
+      "note": "Only recorded M1 trial 'M1 cost-aware momentum book' (docs/trials/ledger.jsonl, 2026-10-13) verdict FAIL at G3."
+    },
+    {
+      "id": "FE-0028",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Virtual subaccounts not built."
+    },
+    {
+      "id": "FE-0029",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Retirement and version handoff not built."
+    },
+    {
+      "id": "FE-0030",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Null and placebo controllers not built."
+    },
+    {
+      "id": "FE-0031",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Correlation deduplication not built."
+    },
+    {
+      "id": "FE-0032",
+      "wave": "F02",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Selection gate on shadow results not built."
+    },
+    {
+      "id": "FE-0033",
+      "wave": "F03",
+      "status": "DONE",
+      "tests": [
+        "test_all_market_event_kinds_roundtrip_with_clocks",
+        "test_naive_clock_or_event_not_available_at_decision_is_rejected",
+        "test_malformed_market_payloads_fail_closed",
+        "test_kite_quote_event_preserves_exchange_and_receipt_clocks_and_source",
+        "test_missing_exchange_clock_is_refused",
+        "test_ltp_only_observation_is_archived_as_non_executable_tick",
+        "test_naive_receipt_clock_is_rejected_instead_of_claimed_as_observed_time"
+      ],
+      "blockers": [],
+      "note": "One normalized immutable event supports tick, quote, depth, bar, halt, auction, corporate action and broker update while preserving UTC event, receipt, availability and optional decision clocks. The existing Kite live-paper loop now feeds full snapshots into this archive using the packet exchange timestamp and actual post-response receipt clock; no timestamp fallback is used. Independent timestamp attestation and provider entitlement evidence remain separate requirements."
+    },
+    {
+      "id": "FE-0034",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_next_session_uses_sourced_records_and_includes_special_sessions",
+        "test_missing_calendar_coverage_and_future_horizon_fail_closed",
+        "test_bad_sources_times_venues_and_duplicate_session_records_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Calendar requires explicit source-hashed NSE/BSE session records, supports special sessions and fails closed outside coverage. Official holiday/special-session data and corporate-action effective-date wiring are not populated."
+    },
+    {
+      "id": "FE-0035",
+      "wave": "F03",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)",
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Offline fixture adapter also not yet built."
+    },
+    {
+      "id": "FE-0036",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_archive_is_append_only_idempotent_and_roundtrips_provenance",
+        "test_archive_recovers_rows_after_close_and_reopen",
+        "test_kite_quote_event_preserves_exchange_and_receipt_clocks_and_source"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "SQLite WAL archive persists normalized event clocks, sequence, source, evidence ID and content hash; the existing Kite read-only paper quote path now writes source-labeled snapshots into it. User-account entitlement evidence, append-only integrity anchoring and full quote coverage remain outstanding."
+    },
+    {
+      "id": "FE-0037",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_feed_health_reports_sequence_gaps_and_transport_lag"
+      ],
+      "blockers": [],
+      "note": "Reports receipt count, sequence gaps, late timestamps, maximum transport lag and last receipt from stored events. Reconnect/drop event integration and real coverage are not wired."
+    },
+    {
+      "id": "FE-0038",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_decision_snapshot_excludes_late_data_and_is_reproducible"
+      ],
+      "blockers": [],
+      "note": "Decision snapshot binds event IDs, content hashes and availability times and excludes events not available by decision time. Per-strategy feature/input hashes and append-only snapshot storage are not yet wired."
+    },
+    {
+      "id": "FE-0039",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_dated_instrument_eligibility_fails_closed_on_status_rights_and_ticket_rules",
+        "test_option_quantity_uses_contract_units_and_effective_lot_size"
+      ],
+      "blockers": [],
+      "note": "Effective-dated rules now carry explicit shares, ETF units, option/futures contracts, tick/lot/freeze rules, lifecycle and session phase. Canonical candidates bind their unit into intent identity; the durable runner validates it against the frozen instrument rule and records it on the order and fill. Legacy rules without unit evidence stay UNSPECIFIED and cannot authorize a typed candidate. Authoritative exchange/broker instrument-master ingestion and migration of all strategy/order paths remain outstanding."
+    },
+    {
+      "id": "FE-0040",
+      "wave": "F03",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Option depth snapshots need licensed depth data."
+    },
+    {
+      "id": "FE-0041",
+      "wave": "F03",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Minute OHLCV archive not built."
+    },
+    {
+      "id": "FE-0042",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_good_observed_quote_passes_and_reason_order_is_stable",
+        "test_each_bad_data_condition_abstains_with_reason",
+        "test_future_and_naive_quote_timestamps_are_rejected"
+      ],
+      "blockers": [],
+      "note": "A shared deterministic data gate abstains on missing/stale/future quotes, wide spread, zero volume, circuit limits, freeze limits, non-continuous sessions and missing auction data. Kite adapters and every paper runner still need to consume the gate."
+    },
+    {
+      "id": "FE-0043",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_point_in_time_inputs_are_hashable_only_when_available",
+        "test_lookahead_contract_rejects_naive_and_duplicate_inputs",
+        "test_prefix_output_survives_future_perturbations_and_detects_leakage"
+      ],
+      "blockers": [],
+      "note": "Reusable point-in-time input hash and future-perturbation contract are implemented. Existing strategy feature families are not yet universally evaluated against this contract."
+    },
+    {
+      "id": "FE-0044",
+      "wave": "F03",
+      "status": "PARTIAL",
+      "tests": [
+        "test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources",
+        "test_coverage_rejects_intents_outside_declared_sessions_and_naive_clock"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Coverage report calculates session, name, quote/depth and intent-notional fractions against caller-declared expected populations. Fixture sources are labeled; live provenance is not authenticated and the report is not yet attached to P&L claims."
+    },
+    {
+      "id": "FE-0045",
+      "wave": "F04",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [
+        "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)",
+        "BLK-TIME: needs elapsed calendar time of scheduled sessions (>=60 independent sessions as a floor)"
+      ],
+      "note": "Cohort schedule freeze not built."
+    },
+    {
+      "id": "FE-0046",
+      "wave": "F04",
+      "status": "PARTIAL",
+      "tests": [],
+      "blockers": [],
+      "note": "Canonical manifest exists (evidence/decision_manifest.py); cross-platform hash not verified."
+    },
+    {
+      "id": "FE-0047",
+      "wave": "F04",
+      "status": "PARTIAL",
+      "tests": [
+        "test_independent_receipt_from_a_pinned_root_verifies",
+        "test_self_signed_local_receipt_cannot_count_as_independent",
+        "test_forged_signature_is_unverified"
+      ],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
+      ],
+      "note": "Verifier abstraction and pinned Ed25519 root check. No real provider."
+    },
+    {
+      "id": "FE-0048",
+      "wave": "F04",
+      "status": "PARTIAL",
+      "tests": [
+        "test_altered_payload_and_replayed_receipt_are_conflicted",
+        "test_false_clock_receipt_before_decision_is_conflicted",
+        "test_late_receipt_is_late_and_decision_after_entry_is_conflicted"
+      ],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
+      ],
+      "note": "Receipt classification exists; not yet wired to a pre-entry recording step."
+    },
+    {
+      "id": "FE-0049",
+      "wave": "F04",
+      "status": "PARTIAL",
+      "tests": [
+        "test_journal_persists_all_outcomes_and_keeps_zero_signal_denominator",
+        "test_journal_rejects_conflicts_missing_reasons_and_unregistered_strategies",
+        "test_journal_recovers_decisions_after_restart_and_reports_missing_cohort_members"
+      ],
+      "blockers": [],
+      "note": "Durable local journal records submitted, withheld, abstained, no-signal and unsuccessful outcomes, retains zero-signal sessions, detects conflicting IDs and exposes missing cohort entries. It is not yet connected to the session runner or independent timestamp custody."
+    },
+    {
+      "id": "FE-0050",
+      "wave": "F04",
+      "status": "DONE",
+      "tests": [
+        "test_no_receipt_is_the_honest_local_only_fallback",
+        "test_independent_receipt_from_a_pinned_root_verifies",
+        "test_self_signed_local_receipt_cannot_count_as_independent",
+        "test_forged_signature_is_unverified",
+        "test_altered_payload_and_replayed_receipt_are_conflicted",
+        "test_false_clock_receipt_before_decision_is_conflicted",
+        "test_late_receipt_is_late_and_decision_after_entry_is_conflicted",
+        "test_default_provider_refuses_to_fabricate_a_receipt"
+      ],
+      "blockers": [],
+      "note": "Five terminal states; only VERIFIED is formal-claim eligible."
+    },
+    {
+      "id": "FE-0051",
+      "wave": "F04",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
+      ],
+      "note": "champion.verified_days is still fed by the caller; not wired to this verifier."
+    },
+    {
+      "id": "FE-0052",
+      "wave": "F04",
+      "status": "DONE",
+      "tests": [
+        "test_forged_signature_is_unverified",
+        "test_altered_payload_and_replayed_receipt_are_conflicted",
+        "test_false_clock_receipt_before_decision_is_conflicted",
+        "test_late_receipt_is_late_and_decision_after_entry_is_conflicted"
+      ],
+      "blockers": [],
+      "note": "False clock, replayed receipt, altered payload, late, decision after entry: all fail closed."
+    },
+    {
+      "id": "FE-0053",
+      "wave": "F04",
+      "status": "DONE",
+      "tests": [
+        "test_no_receipt_is_the_honest_local_only_fallback"
+      ],
+      "blockers": [],
+      "note": "LOCAL_ONLY downgrade at classification level; the pipeline that uses it is FE-0051."
+    },
+    {
+      "id": "FE-0054",
+      "wave": "F04",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Daily attestation bundle not built."
+    },
+    {
+      "id": "FE-0055",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_same_candidate_produces_equivalent_versioned_engine_intents",
+        "test_adapter_rejects_spec_mismatch_or_missing_forward_contract",
+        "test_intent_identity_changes_with_decision_or_signal_payload",
+        "test_approved_candidate_flows_through_versioned_paper_pipeline",
+        "test_risk_rejection_is_journaled_and_never_reaches_paper_oms",
+        "test_candidate_requires_matching_frozen_paper_eligibility",
+        "test_candidate_must_be_listed_in_the_session_frozen_eligibility",
+        "test_versioned_candidate_runs_through_durable_runner_to_accounting"
+      ],
+      "blockers": [],
+      "note": "Candidates require eligibility pinned in frozen session configuration, then pass through the durable runner's versioned decision, manifest, risk, OMS, fill, and account path; order identity, symbol, side, quantity, and reference price are bound to the canonical intent. The normalized adapter is available, but every existing equity/ETF/option strategy has not yet been migrated to emit candidates, and multi-leg options/account parity remains incomplete."
+    },
+    {
+      "id": "FE-0056",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_completed_bar_or_quote_yields_latency_delayed_timed_intent",
+        "test_incomplete_bar_future_event_and_wrong_event_kind_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Shared timed-intent contract requires an explicitly completed bar or available quote and enforces decision plus latency before fill. Existing paper adapters have not all been wired through it."
+    },
+    {
+      "id": "FE-0057",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_buy_uses_ask_and_caps_to_visible_ask_quantity",
+        "test_sell_uses_bid_and_rounds_limit_down_to_tick",
+        "test_zero_or_missing_visible_size_never_produces_a_fillable_quantity"
+      ],
+      "blockers": [],
+      "note": "Quote planner uses side-correct touch, tick rounding, slippage cap and visible-size quantity cap. It returns a plan, not a fill; depth ladders, latency changes and runner integration remain."
+    },
+    {
+      "id": "FE-0058",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_candle_touch_without_trade_evidence_is_a_missed_fill",
+        "test_unknown_queue_position_is_disclosed_and_conservatively_missed",
+        "test_known_queue_position_produces_missed_partial_or_full_fill",
+        "test_invalid_queue_claim_or_book_is_rejected_or_no_fill"
+      ],
+      "blockers": [],
+      "note": "Passive model requires trade-through evidence, discloses unknown queue position and defaults to no fill when queue is unknown; known queue supports partial fills. Real order-book sequencing and runner integration remain."
+    },
+    {
+      "id": "FE-0059",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_adverse_selection_and_order_slices_update_inventory",
+        "test_visible_depth_causes_partial_fill_and_no_liquidity_misses",
+        "test_adverse_price_limit_and_freeze_limit_reject_without_inventory",
+        "test_sell_slippage_is_adverse_and_inventory_direction_is_negative"
+      ],
+      "blockers": [],
+      "note": "Scenario model applies adverse slippage, price limits, visible-size partial fills, slices and freeze rejects with explicit inventory delta. It is not yet wired to OMS, and real adverse-selection calibration is unavailable."
+    },
+    {
+      "id": "FE-0060",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_effective_cost_resolution_returns_each_charge_with_schedule_lineage",
+        "test_schedule_identity_is_immutable_and_effective_ranges_cannot_overlap",
+        "test_missing_or_out_of_effective_date_schedule_fails_closed"
+      ],
+      "blockers": [],
+      "note": "Effective-dated immutable schedule wraps existing Indian STT/exchange/SEBI/stamp/brokerage/GST/DP/impact model and itemizes fill-side charges. Rates are owner-configured, not independently validated against every current broker tariff; OMS/ledger charging remains unwired."
+    },
+    {
+      "id": "FE-0061",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_sensitivity_reports_required_multipliers_and_net_profit_survival",
+        "test_unobserved_assumptions_are_marked_uncalibrated",
+        "test_missing_or_invalid_estimates_fail_closed"
+      ],
+      "blockers": [],
+      "note": "Reports net P&L under fixed 1x/1.5x/2x slippage and impact multipliers including existing statutory/broker fees. Calibration is provenance-labeled; actual observed base estimates and attachment to profit claims remain outstanding."
+    },
+    {
+      "id": "FE-0062",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_executable_multileg_quotes_report_legging_and_unverified_margin",
+        "test_expiry_intrinsic_is_only_a_scenario_and_verified_margin_is_explicit",
+        "test_non_executable_or_stale_leg_quotes_fail_closed"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Two-sided visible option-leg quotes, stale/thin-leg rejects, leg-order loss bound, debit risk and explicitly unverified margin/settlement states are implemented. Real depth, broker margin, actual exchange expiry settlement and paper-runner wiring remain outstanding."
+    },
+    {
+      "id": "FE-0063",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_roll_preserves_negative_basis_and_reconciles_lot_margin_financing_and_mtm",
+        "test_roll_rejects_future_expiry_or_asynchronous_marks"
+      ],
+      "blockers": [],
+      "note": "Calculates observed-input basis (including negative), changed lot quantities, MTM, margin delta and financing. No runner ledger integration, verified broker margin, continuous-contract adjustment or authenticated source marks."
+    },
+    {
+      "id": "FE-0064",
+      "wave": "F05",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "FX simulation not built (no FX execution is implied)."
+    },
+    {
+      "id": "FE-0065",
+      "wave": "F05",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Execution receipts not built."
+    },
+    {
+      "id": "FE-0066",
+      "wave": "F05",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Counterfactual fills not built."
+    },
+    {
+      "id": "FE-0067",
+      "wave": "F05",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Settlement identity checks not built."
+    },
+    {
+      "id": "FE-0068",
+      "wave": "F05",
+      "status": "PARTIAL",
+      "tests": [
+        "test_live_complete_inputs_can_continue_but_stale_and_down_are_no_trade",
+        "test_missing_inputs_and_unknown_broker_state_are_journaled_without_fallback",
+        "test_no_trade_writer_refuses_evaluate_result"
+      ],
+      "blockers": [],
+      "note": "Stale/down feed, unknown broker state and missing required inputs create explicit NO_TRADE decisions and durable journal records with fallback_fill=False. Live adapters still need to call the gate before all entry paths."
+    },
+    {
+      "id": "FE-0069",
+      "wave": "F06",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Preflight not built."
+    },
+    {
+      "id": "FE-0070",
+      "wave": "F06",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [
+        "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)"
+      ],
+      "note": "Session supervisor not built; injected-clock tests possible."
+    },
+    {
+      "id": "FE-0071",
+      "wave": "F06",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Opening-range freeze not built for the forward path."
+    },
+    {
+      "id": "FE-0072",
+      "wave": "F06",
+      "status": "PARTIAL",
+      "tests": [
+        "test_order_lifecycle_is_append_only_and_replay_hash_is_deterministic",
+        "test_order_journal_rejects_gaps_illegal_transitions_decreasing_fills_and_id_conflicts",
+        "test_order_journal_restores_identical_replay_after_restart"
+      ],
+      "blockers": [],
+      "note": "SQLite WAL order journal persists monotonic immutable transitions, accounting payloads and deterministic replay hash. Existing paper OMS and session runner call sites are not yet connected."
+    },
+    {
+      "id": "FE-0073",
+      "wave": "F06",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Websocket resubscribe needs a feed."
+    },
+    {
+      "id": "FE-0074",
+      "wave": "F06",
+      "status": "PARTIAL",
+      "tests": [
+        "test_high_alert_deduplicates_root_cause_and_halts_entries",
+        "test_alert_identity_is_content_bound_and_unknown_clear_is_rejected"
+      ],
+      "blockers": [],
+      "note": "SQLite alert book covers stale quotes, token expiry, aborted sessions, duplicate orders and ledger differences, deduplicates root causes, and halts entries until cleared. No external notification channel or all-runner alert emitters are connected."
+    },
+    {
+      "id": "FE-0075",
+      "wave": "F06",
+      "status": "PARTIAL",
+      "tests": [
+        "test_session_close_values_positions_and_checks_carry_and_expiry",
+        "test_stale_missing_and_late_marks_never_authorize_carry",
+        "test_session_close_journal_is_immutable_and_idempotent"
+      ],
+      "blockers": [],
+      "note": "Deterministic paper valuation, expiry disposition, explicit next-session carry authorization and immutable SQLite close reports are implemented. Existing OMS/session runners, authoritative settlement marks and automatic close orders remain unconnected."
+    },
+    {
+      "id": "FE-0076",
+      "wave": "F06",
+      "status": "PARTIAL",
+      "tests": [
+        "test_missing_segments_or_close_marks_downgrade_evidence",
+        "test_only_complete_incident_free_session_is_eligible",
+        "test_completeness_journal_is_immutable_idempotent_and_restartable"
+      ],
+      "blockers": [],
+      "note": "Immutable SQLite session completeness report hashes declared/received segments, incidents and close-report evidence; missing data or incidents downgrade eligibility. Live session runner and independently attested source evidence are not connected."
+    },
+    {
+      "id": "FE-0077",
+      "wave": "F06",
+      "status": "PARTIAL",
+      "tests": [
+        "test_backup_restore_drill_preserves_sqlite_and_manifest_bytes",
+        "test_backup_rejects_overwrite_and_restore_detects_tampering",
+        "test_restore_rejects_manifest_path_traversal_and_hash_edit"
+      ],
+      "blockers": [],
+      "note": "Verified SQLite online snapshots and file backups restore into an isolated new directory after manifest/content hash and SQLite integrity checks. Scheduling, offsite retention, production source discovery and a full OMS/archive/manifest restore rehearsal remain unconnected."
+    },
+    {
+      "id": "FE-0078",
+      "wave": "F06",
+      "status": "DONE",
+      "tests": [
+        "test_forward_edge_runbooks_cover_fail_closed_operational_recovery"
+      ],
+      "blockers": [],
+      "note": "Paper-only runbooks cover preflight, feed/token failure, unknown orders, reconciliation, close/carry, backup/restore, evidence and escalation. Automated runbook execution and live provider-specific procedures remain outside this documentation item."
+    },
+    {
+      "id": "FE-0079",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_shadow_log_captures_every_family_scan_including_no_signal_and_no_outcomes",
+        "test_shadow_scan_is_idempotent_and_conflicts_are_rejected",
+        "test_shadow_scan_rejects_duplicate_candidates_and_naive_time"
+      ],
+      "blockers": [
+        "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)"
+      ],
+      "note": "Immutable outcome-blind scan journal covers all seven requested strategy families, including explicit zero-opportunity scans and session coverage. Live passive observations and real-feed source evidence remain blocked."
+    },
+    {
+      "id": "FE-0080",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_horizon_choices_are_frozen_before_first_eligible_session",
+        "test_post_start_freeze_and_mechanics_mismatch_fail_closed",
+        "test_horizon_units_and_ranges_are_explicit"
+      ],
+      "blockers": [],
+      "note": "Immutable, content-hashed cohort declaration freezes session or intraday minute horizons before the first eligible session and prevents edits under the same cohort ID. Existing strategy runners and preregistered cohort registry are not yet wired."
+    },
+    {
+      "id": "FE-0081",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_after_cost_net_alpha_includes_cash_days_and_carried_exposure",
+        "test_missing_exchange_session_and_invalid_costs_fail_closed",
+        "test_leveraged_return_uses_equity_denominator_and_exposure_is_checked"
+      ],
+      "blockers": [],
+      "note": "Daily capital-weighted portfolio returns include cash days, supplied charges, financing, gross/net carried exposure and compounded benchmark-relative after-cost alpha. Live OMS/accounting reconciliation and authenticated complete daily marks remain unconnected."
+    },
+    {
+      "id": "FE-0082",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_same_session_matched_pairs_measure_incremental_after_cost_return",
+        "test_controls_are_not_reused_and_unmatched_candidates_are_retained",
+        "test_session_side_sector_and_liquidity_mismatch_are_not_matched"
+      ],
+      "blockers": [],
+      "note": "Deterministic nearest match uses same session, distinct instrument, direction, sector, liquidity bucket and bounded ex-ante size/risk differences; after-cost incremental return and unmatched cases are reported. Full frozen cohort/outcome lineage and population-scale matching remain unconnected."
+    },
+    {
+      "id": "FE-0083",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_factor_adjusted_pattern_coefficient_removes_known_factor_only_effect",
+        "test_adjusted_coefficient_detects_injected_incremental_pattern_component",
+        "test_pattern_uplift_requires_both_groups_and_identifiable_design"
+      ],
+      "blockers": [],
+      "note": "Descriptive after-cost regression controls 12-1 momentum, distance from the 52-week high, volatility and session effects; deterministic synthetic controls verify factor removal and injected uplift. Dependence, search multiplicity, live cohort lineage and promotion-grade inference remain unaddressed."
+    },
+    {
+      "id": "FE-0084",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_all_opportunities_count_and_abstention_missed_winners_are_reported",
+        "test_missing_opportunity_or_changed_policy_cannot_be_silently_dropped",
+        "test_abstentions_need_reasons_and_frozen_policy_precedes_cohort"
+      ],
+      "blockers": [],
+      "note": "Frozen-policy evaluation requires an exact opportunity universe, separates realized policy return from counterfactual outcomes, counts missed winners/avoided losses, and retains unresolved cases. No live decision runner or full-universe forward outcomes are connected."
+    },
+    {
+      "id": "FE-0085",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_intraday_signal_compares_after_cost_with_same_time_side_null",
+        "test_sparse_null_bins_stay_unmatched_instead_of_being_dropped",
+        "test_previous_session_or_duplicate_observations_are_not_accepted_as_peers"
+      ],
+      "blockers": [],
+      "note": "Descriptive same-session minute-bin/side null compares after-cost signal return against other instruments and reports sparse bins as unmatched. Feed-wide candidate generation, side-return normalization lineage, dependence and multiple-test correction remain unconnected."
+    },
+    {
+      "id": "FE-0086",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_negative_basis_and_futures_carry_are_compared_after_all_costs",
+        "test_unmatched_or_different_session_alternatives_are_retained",
+        "test_invalid_cost_and_duplicate_observation_rejected"
+      ],
+      "blockers": [],
+      "note": "Keeps negative basis visible, calculates futures price P&L and subtracts supplied spread, roll and financing costs before matching a same-session alternative by direction, sector, liquidity, notional and duration. Authenticated futures/benchmark marks, continuous cohort capture and official roll inputs remain external."
+    },
+    {
+      "id": "FE-0087",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_vertical_spread_uses_entry_and_exit_bid_ask_and_fees",
+        "test_physical_expiry_reports_gross_assignment_cash_and_shares",
+        "test_mid_only_stale_or_nonmatching_exit_data_is_rejected"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Executable entry/exit bid/ask premiums, contract lot multipliers, fees and physical-delivery/cash-settlement expiry scenarios are reported; stale quotes fail closed. Real licensed depth, authoritative settlement/assignment rules and forward cohort outcomes remain blocked."
+    },
+    {
+      "id": "FE-0088",
+      "wave": "F07",
+      "status": "DONE",
+      "tests": [
+        "test_retrospective_edit_of_the_trial_ledger_is_detected",
+        "test_new_protected_trial_refused_when_budget_is_spent",
+        "test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_approval",
+        "test_q1_2027_stays_closed_without_an_owner_approved_protocol_and_explicit_budget",
+        "test_q1_2027_requires_protocol_amendment_and_trial_approval",
+        "test_q1_2027_explicit_budget_is_a_hard_capacity_limit",
+        "test_agent_cannot_authorize_a_protected_trial"
+      ],
+      "blockers": [],
+      "note": "Trial budget and approval gate; no bypass path."
+    },
+    {
+      "id": "FE-0089",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_negative_inconclusive_and_no_signal_cohorts_are_archived_and_discoverable",
+        "test_archive_is_immutable_and_no_signal_requires_zero_opportunities"
+      ],
+      "blockers": [],
+      "note": "Append-only cohort archive preserves positive, negative, inconclusive, no-signal and unresolved results with version/evidence hashes and discovery queries. Automatic capture by all research/evaluation runners is not yet wired."
+    },
+    {
+      "id": "FE-0090",
+      "wave": "F07",
+      "status": "PARTIAL",
+      "tests": [
+        "test_exact_frozen_strategy_is_allowed_and_parameter_changes_are_refused",
+        "test_unknown_or_pre_cohort_runs_fail_closed",
+        "test_cohort_binding_cannot_be_overwritten"
+      ],
+      "blockers": [],
+      "note": "Immutable cohort binding freezes strategy/code/model/parameter hashes before first eligible date and blocks prospective runs on changed hashes. Runtime adapters and required human approval/ADRs for new protected trials are not yet connected."
+    },
+    {
+      "id": "FE-0091",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_daily_after_cost_portfolio_pnl_reconciles_to_ledger_accounts",
+        "test_mismatch_is_explicit_and_can_fail_closed",
+        "test_ledger_reconciliation_requires_explicit_pnl_accounts"
+      ],
+      "blockers": [],
+      "note": "FE-0081 daily capital-weighted return model now has an exact-decimal bridge to opening/closing double-entry P&L accounts and an explicit fail-closed mismatch gate. Production paper OMS daily account snapshots and full cash/position valuation wiring remain unconnected."
+    },
+    {
+      "id": "FE-0092",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_stationary_bootstrap_is_reproducible_and_labels_inference_limits",
+        "test_longer_stationary_blocks_retain_dependence_in_clustered_returns",
+        "test_invalid_sample_order_block_length_and_replicate_count_rejected"
+      ],
+      "blockers": [],
+      "note": "Reproducible Politis-Romano-style stationary-block percentile intervals preserve dependence in ordered daily/overlapping returns and disclose that family-wise adjustment is still needed. Block-length selection, registered analysis plans and full population data remain unconnected."
+    },
+    {
+      "id": "FE-0093",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_two_way_cluster_report_accounts_for_both_date_and_instrument_dependence",
+        "test_cluster_attribution_rejects_duplicate_cells_and_too_few_clusters",
+        "test_cluster_values_must_be_finite"
+      ],
+      "blockers": [],
+      "note": "Two-way date/instrument clustered mean-attribution diagnostic uses inclusion/exclusion variance, small-sample corrections and reports clipped negative variance. It is not promotion-grade for small cluster counts and is not wired to the cohort attribution pipeline."
+    },
+    {
+      "id": "FE-0094",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_joint_stationary_reality_check_is_reproducible_and_family_wide",
+        "test_familywise_adjustment_flags_large_persistent_alpha",
+        "test_frozen_candidate_universe_must_be_complete_and_chronological"
+      ],
+      "blockers": [],
+      "note": "Joint stationary-block White Reality Check tests the best mean net alpha across the complete frozen candidate set while resampling dates jointly to retain time and strategy dependence. Protected trial registry, formal hypothesis family capture and prespecified method selection are not wired to research runs."
+    },
+    {
+      "id": "FE-0095",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_risk_metrics_include_cash_days_and_dependence_aware_intervals",
+        "test_profit_factor_is_unavailable_without_losses_and_cash_turnover_is_zero",
+        "test_risk_report_rejects_unordered_sessions_and_equity_destroying_loss"
+      ],
+      "blockers": [],
+      "note": "Stationary-block intervals accompany max drawdown, worst daily loss, 95% conditional drawdown, profit factor and cumulative turnover, with cash days retained and undefined profit factor disclosed. Sample-plan calibration, live-ledger sourcing and risk/capacity gates remain unconnected."
+    },
+    {
+      "id": "FE-0096",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_capacity_curve_degrades_net_alpha_and_caps_at_supported_depth",
+        "test_fixture_or_low_coverage_never_produces_size_recommendation",
+        "test_cost_curve_must_be_monotone_and_no_extrapolation_is_allowed"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Liquidity-linked cost curve refuses unsupported extrapolation, requires quote/trade coverage and caps conditional size at visible depth; fixture or unauthenticated calibration cannot recommend a size. Real licensed ADV/depth and live cost calibration remain blocked."
+    },
+    {
+      "id": "FE-0097",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_provisional_60_session_floor_never_promotes_automatically",
+        "test_insufficient_sample_continues_and_precision_at_max_is_inconclusive",
+        "test_exclusions_count_and_plan_contract_cannot_be_violated"
+      ],
+      "blockers": [
+        "BLK-TIME: needs elapsed calendar time of scheduled sessions (>=60 independent sessions as a floor)"
+      ],
+      "note": "Frozen stopping plan requires at least 60 eligible sessions, a predeclared confidence/precision target and a hard maximum; missing precision is inconclusive and no result auto-promotes. Valid independent exchange-session accrual and empirical power design remain subject to elapsed forward observations."
+    },
+    {
+      "id": "FE-0098",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_positive_mean_is_insufficient_if_either_lower_bound_includes_zero",
+        "test_dual_positive_lcb_is_only_a_statistical_signal_not_promotion",
+        "test_sample_and_receipt_gates_and_interval_consistency_are_enforced"
+      ],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)",
+        "BLK-TIME: needs elapsed calendar time of scheduled sessions (>=60 independent sessions as a floor)"
+      ],
+      "note": "Dual cash and risk-matched benchmark lower-bound assessment fails closed on intervals touching zero, fewer than 60 eligible sessions or absent verified independent receipts; positive statistical evidence never auto-promotes. Independent timestamp custody and elapsed prospective sample remain blocked."
+    },
+    {
+      "id": "FE-0099",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_cost_fill_and_outage_stresses_include_missed_fill_effects",
+        "test_stress_requires_explicit_baseline_and_valid_assumptions",
+        "test_zero_fill_is_explicit_and_costs_do_not_turn_into_fictitious_profit"
+      ],
+      "blockers": [],
+      "note": "Joint stress runner compares baseline with inflated fees, adverse fill bps, partial/no fills and outage-exposed orders; reports net P&L, filled notional, foregone counterfactual P&L and cost drag. Stress parameters remain caller-supplied scenarios, not live calibrated probabilities."
+    },
+    {
+      "id": "FE-0100",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_frozen_chronological_blocks_report_regime_mix_and_return_by_period",
+        "test_single_period_cannot_hide_as_overall_positive_mean",
+        "test_block_plan_must_be_preregistered_and_cover_outcomes"
+      ],
+      "blockers": [],
+      "note": "At least three preregistered chronological blocks report session returns and regime mix, and flag when a positive mean depends on one block or exceeds the predeclared concentration limit. Exchange-calendar completeness and data-driven regime assignment are not yet wired."
+    },
+    {
+      "id": "FE-0101",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_daily_loss_reconciliation_and_incident_triggers_stop_at_first_harm",
+        "test_drawdown_rule_is_independent_from_single_day_loss_rule",
+        "test_no_harm_continues_or_requests_review_without_promoting",
+        "test_plan_freeze_and_session_order_are_enforced"
+      ],
+      "blockers": [],
+      "note": "Predeclared daily-loss, drawdown, ledger-mismatch and critical-incident rules stop at first breach; reaching the sample review floor returns review-only and never promotes. Runtime runner/kill-switch wiring and owner-approved thresholds remain pending."
+    },
+    {
+      "id": "FE-0102",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_each_tier_requires_its_own_evidence_and_returns_one_label",
+        "test_higher_tier_cannot_be_claimed_from_local_only_or_fixture_data",
+        "test_artifact_has_exactly_one_valid_tier_label"
+      ],
+      "blockers": [],
+      "note": "Evidence tier vocabulary and qualification gates distinguish historical, shadow, local paper, independently attested forward and deployment-validated claims; artifacts reject absent/multiple tiers. Existing chart/table/report renderers are not yet universally wired to the shared label helper."
+    },
+    {
+      "id": "FE-0103",
+      "wave": "F08",
+      "status": "PARTIAL",
+      "tests": [
+        "test_missing_falsification_evidence_downgrades_to_insufficient_not_pass",
+        "test_failed_check_and_all_pass_have_distinct_statuses",
+        "test_unexecuted_check_and_duplicate_check_are_not_silently_accepted"
+      ],
+      "blockers": [],
+      "note": "Evidence-gated report covers look-ahead, survivorship, delisting, factor overlap, rejected trades and missed fills; missing/unrun checks produce INSUFFICIENT and no report authorizes promotion. Existing research runs do not yet automatically attach the required source evidence."
+    },
+    {
+      "id": "FE-0104",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_fixed_allocation_keeps_losing_subbook_and_cash_sleeve_in_combined_return",
+        "test_missing_losing_book_cannot_be_silently_removed",
+        "test_allocation_weights_and_freeze_date_are_enforced"
+      ],
+      "blockers": [],
+      "note": "Pre-session fixed candidate-book weights plus explicit cash weight are compounded with every book present on every date; a missing or losing sleeve cannot be silently removed. Production account book integration and frozen book updates under trial governance remain unconnected."
+    },
+    {
+      "id": "FE-0105",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_concurrent_intents_cannot_race_past_portfolio_gross_cap",
+        "test_partial_fills_convert_reservation_and_fill_replay_is_idempotent",
+        "test_name_sector_net_and_factor_caps_bind_new_reservations",
+        "test_opposite_side_gross_is_not_erased_by_netting_and_ids_are_immutable"
+      ],
+      "blockers": [],
+      "note": "Thread-safe atomic reservations bind gross, absolute net, single-name gross, sector and factor caps; partial fills convert reserved risk into current exposure and deduplicate fill events. Existing paper OMS/risk gate does not yet call this shared book in the order lifecycle."
+    },
+    {
+      "id": "FE-0106",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_allocation_is_bounded_by_cash_name_sector_and_volatility_limits",
+        "test_cvar_and_concentration_penalties_change_allocation_deterministically",
+        "test_unknown_sector_or_invalid_correlation_cannot_be_allocated"
+      ],
+      "blockers": [],
+      "note": "Deterministic projected allocation applies as-of expected net alpha, full covariance, volatility target, per-name/sector caps, CVaR penalty and concentration penalty with explicit residual cash. Correlation/CVaR calibration, external validation and production portfolio/OMS integration remain unconnected."
+    },
+    {
+      "id": "FE-0107",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_pending_orders_reserve_cash_margin_and_defined_risk_loss_once",
+        "test_partial_fills_convert_reservation_and_fill_replay_is_idempotent"
+      ],
+      "blockers": [],
+      "note": "Shared atomic reservation book now includes aggregate pending capital/margin and worst-case spread loss, converts partial fills proportionally, releases only remaining reservations on cancel, and prevents double allocation. Contract-level broker margin and OMS wiring are still external/incomplete."
+    },
+    {
+      "id": "FE-0108",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_daily_loss_feed_and_reconciliation_latch_survives_restart",
+        "test_llm_agent_cannot_reset_and_human_reset_is_scope_bound",
+        "test_reset_survives_restart_and_event_rows_are_immutable"
+      ],
+      "blockers": [],
+      "note": "SQLite WAL hash-chain latch persists daily loss, drawdown, stale feed and accounting mismatch trips across restart; only a valid, exact-scope human DISARM_RESET approval can clear it, and persisted events are immutable. Runtime loss/feed/OMS signals and all entry adapters are not yet universally wired."
+    },
+    {
+      "id": "FE-0109",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_strategy_pnl_components_reconcile_and_risk_contributions_sum_to_portfolio_vol",
+        "test_component_mismatch_is_visible_and_fails_closed",
+        "test_missing_strategy_covariance_or_negative_cost_is_rejected"
+      ],
+      "blockers": [],
+      "note": "Per-strategy attribution explains realized/unrealized P&L, cash yield, slippage, fees, taxes, financing and other charges, reconciles each net subtotal to ledger values, and computes Euler covariance risk contribution. Source-ledger strategy tagging and live account reporting are not yet wired."
+    },
+    {
+      "id": "FE-0110",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_frozen_regime_and_volatility_thresholds_produce_bounded_repeatable_size",
+        "test_unknown_regime_and_future_input_fail_closed",
+        "test_threshold_plan_is_immutable_and_must_be_frozen_pre_cohort"
+      ],
+      "blockers": [],
+      "note": "SQLite freezes versioned regime and volatility thresholds; as-of checks reject future inputs and unknown regimes default to zero risk. Forward-session adapters, empirical threshold calibration and paper-book risk propagation remain unwired."
+    },
+    {
+      "id": "FE-0111",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_universe_capacity_report_hashes_dated_adv_depth_and_impact_rows",
+        "test_universe_capacity_report_rejects_future_and_duplicate_inputs",
+        "test_capacity_curve_degrades_net_alpha_and_caps_at_supported_depth"
+      ],
+      "blockers": [
+        "BLK-DATA: licensed real-time quote/depth entitlement not available (plan: no sandbox; free plan excludes quotes)"
+      ],
+      "note": "Universe capacity reports hash per-instrument ADV age, visible-depth age and calibrated net-alpha scenarios; stale/future inputs fail closed. Real quote/depth entitlements, session-calendar freshness, provenance attestation and runner/dashboard integration remain outstanding."
+    },
+    {
+      "id": "FE-0112",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_disaster_scenarios_bound_loss_and_report_execution_and_expiry_effects",
+        "test_disaster_suite_requires_each_scenario_class_and_complete_shock_coverage",
+        "test_network_partition_cannot_be_declared_without_disabling_entries"
+      ],
+      "blockers": [],
+      "note": "Deterministic gap, limit-down, spread blowout, expiry and network-partition scenarios report mark loss, execution cost, unfilled exposure, entry disablement and reconciliation requirements. Scenarios are not calibrated forecasts and are not yet run against production book snapshots or operational recovery drills."
+    },
+    {
+      "id": "FE-0113",
+      "wave": "F09",
+      "status": "PARTIAL",
+      "tests": [
+        "test_every_gate_passes_only_with_positive_after_cost_alpha",
+        "test_blocking_conditions_are_explicit_no_trade",
+        "test_abstention_is_journaled_idempotently_without_fallback_fill",
+        "test_abstention_writer_rejects_trade_decision"
+      ],
+      "blockers": [],
+      "note": "Unified policy boundary returns explicit reason-coded NO_TRADE for invalid data, liquidity, margin, risk or non-positive/unknown after-cost alpha; abstentions are idempotently journaled with fallback_fill=false. Trade submission and all paper adapters still need to call this boundary."
+    },
+    {
+      "id": "FE-0114",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_cockpit_renders_ready_only_when_required_states_are_explicit",
+        "test_unknown_stale_or_blocked_snapshot_fails_closed",
+        "test_cockpit_html_escapes_untrusted_ids_and_validates_states"
+      ],
+      "blockers": [],
+      "note": "Static forward-session cockpit renders explicit market/feed/broker health, risk gates, paper modes, source IDs and a digest; missing/stale/unknown states produce NOT READY. Live adapters do not yet populate the snapshot and the cockpit is not wired into the paper terminal."
+    },
+    {
+      "id": "FE-0115",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_inventory_covers_catalogue_and_keeps_missing_operating_records_unverified",
+        "test_inventory_uses_explicit_operating_overlays_and_escapes_html",
+        "test_failed_historical_candidates_are_sorted_before_candidates"
+      ],
+      "blockers": [],
+      "note": "Inventory combines all checked-in external and trial candidates with explicit class, eligibility, version, enrollment, evidence tier and source hash; failed trials are highlighted. Frozen StrategySpec and forward enrollment/evidence records are not yet fed by the live paper runner, so absent values remain NOT_FROZEN/NOT_ENROLLED/UNVERIFIED."
+    },
+    {
+      "id": "FE-0116",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_trace_hash_binds_asof_evidence_quotes_limits_and_order_intent",
+        "test_future_evidence_and_incomplete_no_trade_are_rejected",
+        "test_signal_trace_journal_is_immutable_idempotent_and_rendered_safely"
+      ],
+      "blockers": [],
+      "note": "Signal traces bind the decision to as-of source hashes, quote/spread, volume, limits, expiry, intended order and reason codes in an immutable SQLite journal and escaped detail page. Paper adapters do not yet emit these traces automatically."
+    },
+    {
+      "id": "FE-0117",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_blotter_keeps_unknown_and_unfilled_out_of_confirmed_fill_counts",
+        "test_blotter_page_marks_unknown_and_says_filled_is_not_closed_trade"
+      ],
+      "blockers": [],
+      "note": "Blotter replays the durable order journal and separates unresolved attempts, confirmed partial fills and fully filled orders; UNKNOWN hides unverified fill quantities and cannot inflate fill totals. It does not yet include strategy/symbol metadata or reconcile the blotter with broker and accounting ledgers."
+    },
+    {
+      "id": "FE-0118",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_pnl_view_reconciles_components_to_ledger_and_shows_benchmark",
+        "test_nonreconciled_or_unprovenanced_pnl_is_rejected",
+        "test_strategy_labels_are_escaped_in_pnl_page"
+      ],
+      "blockers": [],
+      "note": "Ledger-gated P&L view displays gross, slippage, fees, taxes, financing, other costs, calculated net, ledger net, difference, covariance risk contribution and a same-session benchmark source hash. Live paper-ledger and benchmark feeds are not connected, and attribution currently allows its configured one-paisa tolerance."
+    },
+    {
+      "id": "FE-0119",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_timeline_keeps_expected_zero_evidence_sessions_in_denominator",
+        "test_timeline_refuses_future_and_unexpected_session_events",
+        "test_timeline_journal_is_idempotent_durable_and_immutable"
+      ],
+      "blockers": [],
+      "note": "Immutable timeline records preflight, signal/no-trade, fill, missed-fill, incident and close events; every caller-declared expected session appears, even with no evidence, and gaps are listed. Exchange-calendar and paper-runner event sources do not yet populate the journal automatically."
+    },
+    {
+      "id": "FE-0120",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_scorecard_only_compares_same_horizon_and_session_cohorts",
+        "test_unaligned_dates_are_separate_groups_not_directly_ranked",
+        "test_duplicate_series_and_too_short_series_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Cross-strategy scorecard groups only identical cohort/horizon/session sets, reuses stationary-block confidence intervals, and shows capacity status without promotion inference. It currently consumes caller-supplied aligned net-alpha series/capacity reports; forward paper ledgers and multiplicity-adjusted selection are not connected."
+    },
+    {
+      "id": "FE-0121",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_bundle_is_deterministic_hashed_and_contains_reanalysis_notebook",
+        "test_optional_signature_is_only_trusted_with_external_matching_public_key",
+        "test_bundle_refuses_traversal_names_and_detects_content_tampering"
+      ],
+      "blockers": [],
+      "note": "Deterministic ZIP export includes an input-hash manifest, checksums, reanalysis notebook and optional Ed25519 signature; signing is explicitly untrusted unless an external public key verifies it. Analyst-supplied frozen experiment files and exact reproduction command must still be selected for each report."
+    },
+    {
+      "id": "FE-0122",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_read_only_actions_are_allowed_without_approvals",
+        "test_ui_can_never_submit_or_cancel_orders_even_with_live_approval",
+        "test_staging_requires_exact_unexpired_human_approval",
+        "test_software_actor_cannot_authorize_live_staging"
+      ],
+      "blockers": [],
+      "note": "Central UI action policy allows view/export/analyze, scopes paper/live staging to exact expiring human approval, and permanently denies UI submit/cancel actions. Existing paper terminal is view-only, but every UI route still needs to call this policy before any mutating staging action."
+    },
+    {
+      "id": "FE-0123",
+      "wave": "F10",
+      "status": "PARTIAL",
+      "tests": [
+        "test_operator_choice_journal_is_idempotent_restart_safe_and_immutable",
+        "test_all_five_operator_decisions_are_supported_without_granting_execution",
+        "test_live_lock_reasons_and_operator_page_never_claim_live_enabled",
+        "test_nonhuman_actors_and_explicit_evidence_identity_are_required"
+      ],
+      "blockers": [],
+      "note": "Continue-paper, pause, investigate, reject and request-review decisions can be stored as immutable, evidence-hashed human records; the page shows current audit blockers plus the permanent physical-order lock. The static view and audit API are not connected to an authenticated operator workflow or mode transitions."
+    },
+    {
+      "id": "FE-0124",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_unfinished_and_embargoed_outcomes_never_enter_training_examples",
+        "test_missing_outcome_label_hash_is_not_released",
+        "test_unfinished_candidate_cannot_be_created_with_early_realized_label",
+        "test_duplicate_ids_and_naive_asof_are_rejected"
+      ],
+      "blockers": [],
+      "note": "Outcome queue exposes a training label only after full exit, valid outcome-source hash and elapsed embargo; unfinished, future-exit and embargoed records expose status only. The queue is not yet populated directly from reconciled paper ledgers or the versioned training pipeline."
+    },
+    {
+      "id": "FE-0125",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_training_artifacts_and_prediction_lineage_are_reproducible_and_frozen",
+        "test_model_load_refuses_artifact_changed_after_freeze"
+      ],
+      "blockers": [],
+      "note": "Learned challenger training now freezes a deterministic sorted training panel, feature schema, embargo, model/data hashes, dependency versions and seed; existing version artifacts cannot be overwritten, and scoring can emit prediction lineage. Outcome-maturation output, locked dataset custody and version metadata are not yet integrated across the training pipeline."
+    },
+    {
+      "id": "FE-0126",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_diagnostics_and_ablations_are_separate_from_locked_evaluation_data",
+        "test_paper_challenger_must_be_frozen_and_use_asof_labels",
+        "test_promotion_validation_requires_exact_frozen_model_spec_and_cohort_data",
+        "test_namespaces_and_cohort_freezes_are_immutable",
+        "test_evaluation_cohort_cannot_be_frozen_after_it_started"
+      ],
+      "blockers": [],
+      "note": "Immutable cohort locks bind the evaluation sessions, data, model and spec hashes. Authorization separates diagnostic/ablation namespaces, requires frozen paper challenger inputs and exact unsearched promotion cohorts, and rejects lookahead labels. Research runners do not yet enforce this policy at every training entry point."
+    },
+    {
+      "id": "FE-0127",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_paired_equal_capital_after_cost_family_test_detects_frozen_challenger",
+        "test_no_net_improvement_or_insufficient_sessions_never_promotes",
+        "test_missing_sessions_or_unequal_capital_are_rejected",
+        "test_every_session_requires_same_frozen_candidate_family",
+        "test_costed_performance_uses_all_fees_and_requires_source_hashes",
+        "test_no_fill_earns_only_cash_rate_and_never_fabricates_a_trade",
+        "test_partial_fill_nets_itemized_cost_and_cash_on_unfilled_fraction",
+        "test_missing_outcome_receives_worst_case_penalty",
+        "test_unknown_return_penalizes_only_filled_slice",
+        "test_outcome_hash_and_schedule_are_mandatory"
+      ],
+      "blockers": [],
+      "note": "Paired champion/challenger comparison recomputes net P&L from itemized costs, requires the exact session denominator, frozen candidate family, equal capital and source hashes, then uses a joint stationary-block maximum test. `resolve_executable()` now separately computes after-cost net outcomes with partial/no fills, cash carry and explicit worst-case missing-data penalties. It remains a diagnostic calculation: the actual paper OMS/cost feed, verified schedule custody, ledger integration and promotion gates remain missing."
+    },
+    {
+      "id": "FE-0128",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_independent_receipt_from_a_pinned_root_verifies",
+        "test_audit_is_red_on_this_repository_and_never_green_without_custody"
+      ],
+      "blockers": [
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
+      ],
+      "note": "Only VERIFIED is claim-eligible. The champion promotion path is not gated by it yet."
+    },
+    {
+      "id": "FE-0129",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_software_actor_identifiers_cannot_approve",
+        "test_non_human_actor_type_is_rejected_even_with_a_human_looking_name",
+        "test_human_paper_champion_change_needs_scoped_approval_and_verified_receipt",
+        "test_champion_change_fails_without_external_custody_or_exact_human_approval"
+      ],
+      "blockers": [
+        "BLK-OWNER: requires the owner's own decision or signature",
+        "BLK-TSA: no independent timestamp provider or pinned trust root configured (docs/forward-edge/trust-roots.json absent)"
+      ],
+      "note": "Paper champion changes require exact human strategy approval, separate capital approval when risk/capital changes, and independently verified pre-entry custody. Physical orders remain disabled; owner trust-root and live-money authorization are absent."
+    },
+    {
+      "id": "FE-0130",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_transition_log_is_hash_chained_and_sqlite_immutable",
+        "test_automatic_rollback_enters_safe_hold_and_blocks_new_orders"
+      ],
+      "blockers": [],
+      "note": "Champion promotions, risk changes and safety rollbacks are versioned in an immutable hash chain with actor, trigger, approval, evidence and unresolved-order counts. Existing runner drift/OMS events are not yet wired to this transition store."
+    },
+    {
+      "id": "FE-0131",
+      "wave": "F11",
+      "status": "PARTIAL",
+      "tests": [
+        "test_automatic_rollback_enters_safe_hold_and_blocks_new_orders"
+      ],
+      "blockers": [],
+      "note": "Drift, outage, accounting mismatch or manual pause can revert to the frozen safe policy and disable new entries while preserving unknown-order counts. Runtime monitors and every order-entry adapter do not yet invoke the rollback hook."
+    },
+    {
+      "id": "FE-0132",
+      "wave": "F12",
+      "status": "PARTIAL",
+      "tests": [
+        "test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders",
+        "test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open"
+      ],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Legacy Kite account adapter is read-only: the shared order policy denies every non-GET request; external broker review remains a separate gate."
+    },
+    {
+      "id": "FE-0133",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-COMPLIANCE: SEBI retail-algo permissions, exchange algo IDs and static IP need broker/owner evidence"
+      ],
+      "note": "Owner and broker must confirm permissions."
+    },
+    {
+      "id": "FE-0134",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-COMPLIANCE: SEBI retail-algo permissions, exchange algo IDs and static IP need broker/owner evidence"
+      ],
+      "note": "Static IP and algo identifiers need broker evidence."
+    },
+    {
+      "id": "FE-0135",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-MARKET: needs observed live NSE/BSE sessions (cannot be produced offline)",
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Ten market-hours rehearsals need a broker dry-run."
+    },
+    {
+      "id": "FE-0136",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Broker status reconciliation needs a broker."
+    },
+    {
+      "id": "FE-0137",
+      "wave": "F12",
+      "status": "PARTIAL",
+      "tests": [
+        "test_micro_capital_proposal_is_review_only_and_explicitly_pending",
+        "test_proposal_costs_must_fit_net_pnl_and_limits_must_be_nested",
+        "test_proposal_cannot_exceed_reviewed_capital_or_enable_physical_orders"
+      ],
+      "blockers": [
+        "BLK-OWNER: requires the owner's own decision or signature"
+      ],
+      "note": "INR micro-capital proposal captures per-order, per-trade, daily loss, drawdown, liquidity, spread and cost-to-P&L bounds and renders a pending human-review worksheet. It is not yet populated from a live account, broker-confirmed costs/margin or owner-reviewed capital."
+    },
+    {
+      "id": "FE-0138",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Contract-note reconciliation needs broker statements."
+    },
+    {
+      "id": "FE-0139",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)",
+        "BLK-OWNER: requires the owner's own decision or signature"
+      ],
+      "note": "Micro pilot needs approval and a broker."
+    },
+    {
+      "id": "FE-0140",
+      "wave": "F12",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-BROKER: no broker account, API credentials or Kite Connect sandbox (none exist offline)"
+      ],
+      "note": "Observed broker slippage needs broker fills."
+    },
+    {
+      "id": "FE-0141",
+      "wave": "F12",
+      "status": "PARTIAL",
+      "tests": [
+        "test_profitable_week_is_not_enough_and_full_evidence_still_needs_human_approval",
+        "test_scale_rejects_negative_net_alpha_unsupported_capacity_and_bad_approval",
+        "test_scale_review_requires_custody_cost_and_risk_evidence"
+      ],
+      "blockers": [
+        "BLK-OWNER: requires the owner's own decision or signature"
+      ],
+      "note": "Scaling requires a positive net-alpha lower bound, minimum independent sample, supported capacity, verified custody/cost/risk evidence and separate exact-scope human capital approval; a profitable week is recorded but never sufficient. Live evidence and deployment wiring remain absent."
+    },
+    {
+      "id": "FE-0142",
+      "wave": "F12",
+      "status": "PARTIAL",
+      "tests": [
+        "test_daily_loss_feed_and_reconciliation_latch_survives_restart",
+        "test_llm_agent_cannot_reset_and_human_reset_is_scope_bound",
+        "test_reset_survives_restart_and_event_rows_are_immutable",
+        "test_heartbeat_broker_unknown_and_risk_breach_reasons_latch_until_human_reset"
+      ],
+      "blockers": [
+        "BLK-OWNER: requires the owner's own decision or signature"
+      ],
+      "note": "Persistent DISARM latch now covers stale feed, lost heartbeat, unknown broker state, reconciliation mismatch and risk-limit breach, with exact-scope human reset after evidence. Feed, broker and risk adapters do not yet automatically emit every trigger in production."
+    },
+    {
+      "id": "FE-0143",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [
+        "test_preflight_never_calls_readiness_green_a_forward_session"
+      ],
+      "blockers": [],
+      "note": "`fb forward preflight` returns explicit GREEN/YELLOW/RED and exit status, plus paper-session blockers. It wraps the read-only evidence audit; integrated runner readiness is still unavailable."
+    },
+    {
+      "id": "FE-0144",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [
+        "test_replay_run_defaults_to_non_mutating_dry_run"
+      ],
+      "blockers": [],
+      "note": "`fb forward paper-run --date` defaults to a no-write plan; explicit `--execute` invokes the existing historical intraday replay into its durable paper ledger. It is clearly labeled RESEARCH_REPLAY and does not implement a prospective ForwardSessionRunner or trace-to-ledger single session."
+    },
+    {
+      "id": "FE-0145",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [
+        "test_close_check_is_read_only_and_never_upgrades_replay"
+      ],
+      "blockers": [],
+      "note": "`fb forward close --date` performs an idempotent read-only check of the legacy replay run and never upgrades it to verified forward evidence. Automatic evidence-complete close and a unified session journal remain unwired."
+    },
+    {
+      "id": "FE-0146",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [],
+      "blockers": [],
+      "note": "`fb forward report --as-of` renders the current audit and an explicit promotion verdict; it does not yet reconcile forward session decisions, orders, fills, costs and attribution from one ledger."
+    },
+    {
+      "id": "FE-0147",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [
+        "test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl"
+      ],
+      "blockers": [],
+      "note": "Versioned synthetic fixtures cover win, loss, no-trade, risk rejection, late quote, unknown order and adverse fill. They test the fixture contract, but are not yet driven through one integrated session runner and are never market evidence."
+    },
+    {
+      "id": "FE-0148",
+      "wave": "F13",
+      "status": "BLOCKED",
+      "tests": [],
+      "blockers": [
+        "BLK-LINUX: no Linux runner here (WSL not installed); CI on Linux needs a push, not run by this session"
+      ],
+      "note": "Windows run only; the Linux hash comparison has not been run."
+    },
+    {
+      "id": "FE-0149",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [],
+      "blockers": [],
+      "note": "This tracker and fe-items.json. Evidence is test-linked for DONE items only."
+    },
+    {
+      "id": "FE-0150",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [],
+      "blockers": [
+        "BLK-LINUX: no Linux runner here (WSL not installed); CI on Linux needs a push, not run by this session"
+      ],
+      "note": "Full Windows suite log in docs/forward-edge/logs; see the log for the result."
+    },
+    {
+      "id": "FE-0151",
+      "wave": "F13",
+      "status": "PARTIAL",
+      "tests": [],
+      "blockers": [],
+      "note": "docs/forward-edge/OPERATOR.md documents the new fail-closed preflight, explicit replay opt-in, close check and report, including limitations; full session-runner operations remain to be documented."
+    },
+    {
+      "id": "FE-0152",
+      "wave": "F13",
+      "status": "NOT_STARTED",
+      "tests": [],
+      "blockers": [],
+      "note": "Release labels not implemented."
+    }
+  ]
 }
