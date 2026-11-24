@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 708,
+  "source_count": 709,
   "sources": [
     {
       "capability_ids": [],
@@ -8827,6 +8827,23 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/execution_reward.py",
+      "source_sha256": "bea3d4e43126c6a0c98f7cb2f58563886365d8598b053670a4d79c9c28e1de08",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "enum",
         "hashlib",
         "json",
@@ -12674,6 +12691,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 678,
-  "unassigned_role_count": 414
+  "unassessed_count": 679,
+  "unassigned_role_count": 415
 }

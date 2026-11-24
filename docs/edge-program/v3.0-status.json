@@ -14981,182 +14981,290 @@
     {
       "id": "SL-20-01",
       "text": "Define child action space: marketable limit, patient limit, cancel/replace, wait, and partition size within venue constraints.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/algos.py` and `execution/oms` expose marketable/passive children, cancel and replace lifecycle; child actions are not one venue-constrained learned action schema."
+      ],
+      "blocker": "Action contract and exchange-specific limits are not unified.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-02",
       "text": "Make approved parent order and quantity immutable input; execution RL may not raise risk or invent new directional trades.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/oms/engine.py` deduplicates repeated intent submissions and applies risk/rollout gates; no separate learning adapter contract proves parent quantity immutable across every child action."
+      ],
+      "blocker": "Execution learning does not consume an immutable, versioned approved-parent record end to end.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-03",
       "text": "Define execution state: spread, depth, queue estimates, order age, participation, shortfall, available time and partial fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/algos.py::Day` carries bars, volume, curve and volatility; OMS orders carry state/age/fills. Queue, depth, participation, shortfall and available-time state are fragmented across these systems."
+      ],
+      "blocker": "No unified point-in-time execution-state vector with authenticated depth and queue uncertainty.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-04",
       "text": "Define execution reward as negative actual implementation shortfall and fees with non-fill penalty tied to parent alpha decay.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `learning/execution_reward.py::score_execution`: signed shortfall against parent arrival, fees and explicit residual-quantity alpha-decay cost; rejects duplicate, late and overfilled events, and preserves evidence mode. It is a scoring primitive, not wired to OMS receipts or a learned policy."
+      ],
+      "blocker": "Actual fill evidence authentication and reward-to-training integration remain outstanding.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-05",
       "text": "Implement deterministic execution baseline marketable-limit, TWAP and fixed participation before learning.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/algos.py` provides deterministic Immediate, TWAP, VWAP and POV schedules; `execution/simulator.py` compares simulated outcomes. A standardized marketable-limit/TWAP/fixed-participation baseline on matched parent intents is not a validated live-market result."
+      ],
+      "blocker": "Matched-urgency baselines and forward execution evidence are missing.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-06",
       "text": "Build limit-fill likelihood calibrated only on observed order/trade/quote history; no guaranteed queue priority.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/exec_study.py::BayesianPegger` estimates limit-hit rates from past simulated minute-bar trade-throughs; no calibrated order/trade/quote-history fill likelihood with observed queue priority is present."
+      ],
+      "blocker": "Calibration on observed order lifecycle and quote/depth sequences is missing.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-07",
       "text": "Create safe replay for quote changes, gaps, quote crossing, stale depth, cancels, races and partial executions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/execution.py` and `forward_edge/passive_queue.py` model observed-quote evidence conservatively and default unknown queue to missed; OMS tests cover partials/UNKNOWN/cancel/reconcile. Full quote race, crossed/stale depth, gap and cancel-replace replay matrix remains incomplete."
+      ],
+      "blocker": "Replay coverage does not yet exercise the complete asynchronous order-state matrix.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-08",
       "text": "Keep fill simulation fidelity labels distinct from broker-executed records.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/execution.py` retains separate SIMULATED_QUOTE, SIMULATED_BAR and OBSERVED_BROKER fidelity labels; aggregation and every legacy report path are not fully audited."
+      ],
+      "blocker": "Repository-wide evidence-label migration and reporting separation remain incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-09",
       "text": "Train contextual bandit for timing/limit choices with realistic late/no-fill outcomes and explicit action support.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "`execution/exec_study.py` contains Bayesian and Q-learning scheduling studies, but no contextual execution bandit with logged action support and realistic late/no-fill outcomes was found."
+      ],
+      "blocker": "A contextual bandit, action-support record and prospective evaluator are absent.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-10",
       "text": "Implement conservative discrete RL only when sequences include adequate order-state behavior coverage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/exec_study.py::QLearner` is a discrete bar-simulation research learner; it does not require adequate observed order-state trajectory coverage or implement a conservative offline policy gate."
+      ],
+      "blocker": "No conservative offline order-state RL or behavior-coverage promotion criterion.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-11",
       "text": "Compare order-size and scheduling optimization on equal desired quantity and urgency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/exec_study.py` and `execution/algos.py` compare schedules using shared simulated parent quantity; equal urgency, matched real fills and capacity-adjusted order-size comparisons are not established."
+      ],
+      "blocker": "No protected matched parent-intent order-size and schedule ablation.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-12",
       "text": "Add adverse selection and post-fill markout scoring for 1/5/15-minute horizons.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/oms/quality.py` and `paper/execution.py` report fill slippage/attribution; explicit post-fill 1/5/15-minute markout scoring was not found."
+      ],
+      "blocker": "Adverse-selection markouts and horizon completeness are missing.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-13",
       "text": "Model per-venue participation and account capital constraints so agent cannot trade with unreserved cash.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/oms/risk_gate.py` reserves paper cash/risk and `execution/simulator.py` has participation caps; per-venue participant capacity and learning-policy budget wiring are incomplete."
+      ],
+      "blocker": "Venue-level capacity and reserved-capital state are not tied to an execution policy.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-14",
       "text": "Enforce order timeout, idempotent cancel/reconciliation and prevention of double fill after lost acknowledgment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/oms/engine.py` deterministically deduplicates intents and reconciles UNKNOWN broker outcomes by tag; OMS handles cancellations and broker state. Full cancel/replace race and lost-ack duplicate-fill fault matrix is not proven."
+      ],
+      "blocker": "Lifecycle recovery drills do not cover every lost-ack/cancel-race boundary.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-15",
       "text": "Test execution agent cannot improve rewards by never trading a valid parent order without being penalized appropriately.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`learning/execution_reward.py` charges remaining approved quantity using explicit alpha-decay cost, so a no-fill action cannot get a zero-cost score; enforcement is not yet wired into agent training or policy evaluation."
+      ],
+      "blocker": "No integrated anti-abstention reward gate or validation against reward gaming.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-16",
       "text": "Expose completion rate, mean/p95 slippage, error rates, capacity and tail shortfall under stress.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/oms/quality.py` reports fill rate, partial share, slippage and latency by liquidity bucket; p95 slippage, error rate, capacity and tail shortfall stress dashboard are not all present."
+      ],
+      "blocker": "Operational quality metrics and stress views are incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-17",
       "text": "Inject sudden spread widening, partial book snapshots and missing quotes; return UNKNOWN/CANCEL rather than fake fill.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/execution.py` and `passive_queue.py` reject stale/unavailable/unknown-queue fills rather than inventing fills; OMS returns UNKNOWN for ambiguous placement acknowledgements. The full sudden-widening/partial-book stress matrix remains open."
+      ],
+      "blocker": "No combined injected stress acceptance suite for all named failure cases.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-20-18",
       "text": "Make new execution policy a distinct promoted artifact from alpha policy; train independently and freeze per session.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`execution/exec_study.py` versions algorithm classes and `execution/order_policy.py` denies physical orders; no separately promoted execution-policy artifact frozen per session and linked to parent alpha identity was found."
+      ],
+      "blocker": "Execution and alpha artifacts are not independently registered/promoted in the forward runner.",
+      "last_audited_at_utc": "2026-11-24T18:14:54Z",
+      "commit": "1945de5d",
+      "test_evidence": [
+        "Execution validation: 105 passed across tests/test_learning_execution_reward.py, test_execution_feasibility.py, test_forward_edge_execution_scenario.py, test_forward_edge_order_journal.py, test_forward_edge_order_blotter.py, test_kernel_oms.py, test_kernel_execution_tools.py, test_kernel_execution_model.py, test_paper_execution_audit.py, test_oms_shortfall_contract.py, test_oms.py, test_phase4_execution.py, and test_phase5_execution_attr.py; Ruff and mypy passed for learning/execution_reward.py."
+      ],
+      "test_result": "Execution-focused verification: 105 passed; Ruff and targeted mypy passed for the new reward component."
     },
     {
       "id": "SL-21-01",
@@ -17820,7 +17928,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T18:09:21Z",
+    "as_of_utc": "2026-11-24T18:14:54Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -18430,15 +18538,33 @@
       "SL-19-17",
       "SL-19-18",
       "SL-19-19",
-      "SL-19-20"
+      "SL-19-20",
+      "SL-20-01",
+      "SL-20-02",
+      "SL-20-03",
+      "SL-20-04",
+      "SL-20-05",
+      "SL-20-06",
+      "SL-20-07",
+      "SL-20-08",
+      "SL-20-09",
+      "SL-20-10",
+      "SL-20-11",
+      "SL-20-12",
+      "SL-20-13",
+      "SL-20-14",
+      "SL-20-15",
+      "SL-20-16",
+      "SL-20-17",
+      "SL-20-18"
     ],
-    "audited_count": 609,
+    "audited_count": 627,
     "status_counts": {
       "COMPLETE": 55,
-      "PARTIAL": 546,
+      "PARTIAL": 563,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 3,
-      "UNASSESSED": 769
+      "NOT_STARTED": 4,
+      "UNASSESSED": 751
     },
     "verified_complete_count": 55,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -18560,13 +18686,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge."
   },
   "counts_by_status": {
     "COMPLETE": 55,
-    "PARTIAL": 546,
+    "PARTIAL": 563,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 3,
-    "UNASSESSED": 769
+    "NOT_STARTED": 4,
+    "UNASSESSED": 751
   }
 }
