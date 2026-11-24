@@ -14,6 +14,9 @@ Research and paper only. Not a verified profitable strategy. Previous failed int
 | `FourNode_XAU_Original_v1` | XAUUSD | never (reference) | source pips (0.10) |
 | `FourNode_India_v1` | Indian index/stock/ETF | only after every ambiguity has an owner-confirmed choice | ATR multiples |
 
+No permission-cleared XAU historical dataset is included in this checkout. The original XAU rules
+remain a non-executable reference; no XAU backtest or performance claim is made.
+
 ## Owner decisions required (signals fail closed until recorded)
 | Id | Question | Alternatives |
 |---|---|---|
@@ -85,7 +88,10 @@ The earlier `signals/index_options.py` path did not exist and is not part of thi
   stream module remain research/paper utilities.
 
 ## Evaluation gates (FB-2534 to FB-2544)
-No backtest has been run. Any test must first be preregistered in the trial ledger with universe,
-parameter bounds, costs and gates; the 2026Q4 protected budget is spent, so a protected test needs
-the owner's amendment or 2027Q1. Use `forecasting/index_15m.purged_splits` for walk-forward, adverse
-same-bar ordering from `exit_triggers`, and the session-block bootstrap from `evaluation/scorecards`.
+An exploratory 128-variant India grid has run, but it is not independent validation: all 128
+variants expose the 2024+ TEST period and the source NPZ inputs are absent from this checkout. No
+variant was profitable after costs in the recorded discovery or validation periods, and none is
+promoted. Any new test must first be preregistered in the trial ledger with universe, parameter
+bounds, costs and gates; the 2026Q4 protected budget is spent, so a protected test needs the owner's
+amendment or 2027Q1. Use `forecasting/index_15m.purged_splits` for walk-forward, adverse same-bar
+ordering from `exit_triggers`, and the session-block bootstrap from `evaluation/scorecards`.
