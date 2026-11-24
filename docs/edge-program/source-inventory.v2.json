@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 712,
+  "source_count": 715,
   "sources": [
     {
       "capability_ids": [],
@@ -60,6 +60,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/agents/evaluate.py",
       "source_sha256": "b2049f3c1b8d1bcfe1edc8b526a5122466643e2322b6c6ab81f689788d95a6d0",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/agents/research_campaign.py",
+      "source_sha256": "f972fddecce03766d4bc4c5678111f281a4c7dbad849e123bf232d6d17287a86",
       "test_paths": []
     },
     {
@@ -3371,6 +3388,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forecasting/ensemble.py",
       "source_sha256": "8fb10af2c30ae6524405577d321a1cadaed3bf65af18c5dc9fe0c8569f3fc0b9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_market.py",
+      "source_sha256": "0c405d80ae429cfab90f7ce93eeef978c44811ba7a1a61ea2d0c23325f5bf9b7",
       "test_paths": []
     },
     {
@@ -10130,16 +10164,33 @@
         "pathlib",
         "portfolio",
         "regime",
-        "risk"
+        "risk",
+        "today_screen"
       ],
       "maturity": "locally_mapped",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "a306affd51ef9fdaa8ad97009d357b95725594a77a3b836fdcc856b73d7f4ebc",
+      "source_sha256": "0b49c5c040a1523a792da464b4394dc120edfb4b19c144f008eeb0e9457daa21",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "html",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/today_screen.py",
+      "source_sha256": "26d6e068a7beafd3eb71695f78b4d8635d3da7a10d98a3b4d0206838014e2872",
+      "test_paths": []
     },
     {
       "capability_ids": [],
@@ -12746,6 +12797,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 682,
-  "unassigned_role_count": 418
+  "unassessed_count": 685,
+  "unassigned_role_count": 419
 }
