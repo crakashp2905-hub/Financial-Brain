@@ -5379,42 +5379,61 @@
     {
       "id": "FB-2301",
       "text": "Build one searchable five-desk `Today` screen with prioritized BUY, SELL, WATCH, NO_TRADE, APPROVAL_NEEDED and EXIT_TRIGGERED messages, market/data freshness and outstanding risk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/today_screen.py: escaped searchable/status/desk filter panel, integrated into paper/terminal.py for equity research watches. Other four desk observations remain visibly unavailable until connected.",
+        "tests/test_paper_today_screen.py: filter markup, cross-desk absence labels, action validation and HTML-injection escaping."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_paper_today_screen.py: 3 passed; tests/test_phase5_trader_view.py and tests/test_etf_terminal_panel.py: 11 passed; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Searchable Today screen suites: 14 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2302",
       "text": "Generate two-level alerts: informational opportunity cards and immediate *risk/exit* notices; include as-of time, time-to-expiry, decision deadline, rule version, evidence tier, SL/TP and position impact.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/alerts.py: deduplicated opportunity, thesis-exit, kill-switch and failed-run alerts. It lacks one fully linked two-level alert contract with complete expiry/decision/SL/TP/position context."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2303",
       "text": "Support human approve/reject/adjust within declared guardrails for the manual paper sleeve; once signal TTL expires, reprice and revalidate instead of using the old approval.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/decisions/record.py: immutable decision state machine with human-only approval; src/financial_brain/forward_edge/approvals.py: scoped, expiring human approvals. A single manual paper-sleeve approve/reject/adjust UI with signal-TTL revalidation is not verified."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2304",
       "text": "Build an explainable post-market desk report: signals issued, trades eligible, signals missed, filled/exited positions, TP/SL reasons, P&L, fees, skipped opportunities, risk breaches and next-session obligations.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/daily_results.py and paper/terminal.py: daily paper reporting and trade attribution. Complete missed-signal, expiry, unresolved obligations and uniform five-desk report coverage remain unverified."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2305",
@@ -5422,15 +5441,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Cockpit renders explicit market/feed/broker/risk state and blocks readiness on stale/unknown evidence; Kite stream exposes queue/stale/reject/drop/reconnect counters. MF pending settlement, option expiry risk, ledger consistency and all telemetry are not joined into one live health view."
+        "src/financial_brain/paper/live_view.py and forward_edge/session_runner.py: feed snapshot freshness, session state, recovery and reconciliation evidence. A unified screen for all listed feed/queue/MF/options/mark health is not verified."
       ],
-      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
-      "last_audited_at_utc": "2026-11-24T05:15:50Z",
-      "commit": "5d13e109",
-      "test_evidence": [
-        "tests/test_forward_edge_cockpit.py; tests/test_kite_stream.py; tests/test_forward_edge_session_runner.py."
-      ],
-      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604",
+      "test_result": null
     },
     {
       "id": "FB-2306",
@@ -5438,15 +5456,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Durable order journal, event outbox, immutable event IDs, idempotent fills and persistent hash-chained kill-switch prevent duplicate side effects and require UNKNOWN reconciliation before retry."
+        "src/financial_brain/forward_edge/session_runner.py: durable outbox and reconciliation, idempotent recovery, unresolved intent blocking; paper OMS and ledger suites cover related flows. Cross-desk alert/signal/fill/exit-trigger end-to-end fault matrix remains incomplete."
       ],
-      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
-      "last_audited_at_utc": "2026-11-24T05:15:50Z",
-      "commit": "5d13e109",
-      "test_evidence": [
-        "tests/test_forward_edge_order_journal.py; tests/test_forward_edge_persistent_killswitch.py; tests/test_forward_edge_session_runner.py."
-      ],
-      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604",
+      "test_result": null
     },
     {
       "id": "FB-2307",
@@ -5454,15 +5471,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/forward-edge/RUNBOOKS.md documents session preflight, feed outage, UNKNOWN order handling, session close, backup/restore, evidence downgrade and paper-only operation. No recorded restore rehearsal or observed recovery drill is attached."
+        "docs/RUNBOOK-LIVE.md and docs/forward-edge/OPERATOR.md: operating guidance exists; complete market-open, broker-feed, kill-switch, stop ambiguity, EOD, backup/restore, custody and rehearsed evidence steps are not all demonstrated in one validated runbook."
       ],
-      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
-      "last_audited_at_utc": "2026-11-24T05:15:50Z",
-      "commit": "5d13e109",
-      "test_evidence": [
-        "tests/test_forward_edge_runbooks.py (content gate); ops drill evidence not present."
-      ],
-      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604",
+      "test_result": null
     },
     {
       "id": "FB-2308",
@@ -5470,15 +5486,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ForwardSessionRunner close_session refuses complete status with missing execution receipts, pending/UNKNOWN outbox, unresolved order states or unreconciled cash; it reports incomplete evidence explicitly. Cross-asset fund units/settlement, all fees and marks are not checked in this one close gate."
+        "src/financial_brain/forward_edge/session_runner.py: SESSION_COMPLETE is gated by immutable/current evidence, resolved outbox and bound costs; unresolved sessions stay incomplete. Cross-desk cash, fund units, fees and valuations are not uniformly reconciled by this single gate."
       ],
-      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
-      "last_audited_at_utc": "2026-11-24T05:15:50Z",
-      "commit": "5d13e109",
-      "test_evidence": [
-        "tests/test_forward_edge_session_runner.py (66 passed in focused runner/stream run); tests/test_forward_edge_order_journal.py."
-      ],
-      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604",
+      "test_result": null
     },
     {
       "id": "FB-2401",
@@ -18914,6 +18929,10 @@
       "FB-2206",
       "FB-2207",
       "FB-2208",
+      "FB-2301",
+      "FB-2302",
+      "FB-2303",
+      "FB-2304",
       "FB-2305",
       "FB-2306",
       "FB-2307",
@@ -19341,13 +19360,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 739,
+    "audited_count": 743,
     "status_counts": {
       "COMPLETE": 64,
-      "PARTIAL": 650,
+      "PARTIAL": 654,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 20,
-      "UNASSESSED": 639
+      "UNASSESSED": 635
     },
     "verified_complete_count": 64,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -19473,9 +19492,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 64,
-    "PARTIAL": 650,
+    "PARTIAL": 654,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 20,
-    "UNASSESSED": 639
+    "UNASSESSED": 635
   }
 }
