@@ -4831,7 +4831,7 @@
       ],
       "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
       "last_audited_at_utc": "2026-11-24T05:06:44Z",
-      "commit": null,
+      "commit": "dacf7931",
       "test_evidence": [
         "tests/test_option_surface.py (5 passed); Ruff and targeted mypy passed."
       ],
