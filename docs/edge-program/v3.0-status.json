@@ -2286,7 +2286,7 @@
       ],
       "blocker": "Partial: a frozen rotation candidate and requested controls are contract-tested, but the authorized economic study, costs/tax/capacity/turnover controls, and prospective evidence are absent. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
       "last_audited_at_utc": "2026-11-24T11:00:00+00:00",
-      "commit": null,
+      "commit": "55d3f35f",
       "test_result": "Five focused contract tests pass for sleeve grouping and selection, control weight sums, negative-momentum cash behavior, deterministic hashes, missing/late data, calendar/hash/timestamp validation, and no-order output. These tests do not evaluate strategy performance.",
       "test_evidence": [
         "python -m pytest tests/test_etf_cross_asset_rotation.py -q: 5 passed.",
