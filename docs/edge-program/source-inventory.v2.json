@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 690,
+  "source_count": 691,
   "sources": [
     {
       "capability_ids": [],
@@ -249,6 +249,8 @@
         "paper",
         "paper.mf_allocation_policy",
         "paper.mf_decisions",
+        "paper.mf_lot_book",
+        "paper.mf_periodic_review",
         "pathlib",
         "pit.observations",
         "portfolio",
@@ -275,7 +277,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "55bc68d6acaf01005462bb543cfa67e92b7f0dbdaf696a1082d921d1bd1235a5",
+      "source_sha256": "4a9e2354c476341fcab9dc054193c786642dedad3053997e56221226ce6e1662",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -9359,6 +9361,24 @@
         "__future__",
         "datetime",
         "decimal",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_periodic_review.py",
+      "source_sha256": "38c2a2c2b07b853cc685418c47c1ce91fb17482178cf2fd29d290bb9c019f7d9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
         "forward_edge.data_permissions",
         "hashlib",
         "ingest.mfnav",
@@ -12262,6 +12282,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 667,
+  "unassessed_count": 668,
   "unassigned_role_count": 398
 }

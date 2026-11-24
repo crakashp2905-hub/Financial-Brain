@@ -966,6 +966,64 @@ def cmd_mf_policy(args) -> int:
     return 0
 
 
+def cmd_mf_review(args) -> int:
+    """Generate a dated, read-only MF book/SIP/rebalance review for owner review."""
+    from pathlib import Path
+
+    import duckdb
+
+    from .paper.mf_allocation_policy import policy_as_of
+    from .paper.mf_lot_book import account_snapshot
+    from .paper.mf_periodic_review import build_weekly_review
+
+    try:
+        generated_at = (datetime.fromisoformat(args.as_of) if args.as_of
+                        else datetime.now().astimezone())
+        if generated_at.tzinfo is None or generated_at.utcoffset() is None:
+            raise ValueError("--as-of must include a timezone offset")
+        target_doc = json.loads(Path(args.targets).read_text(encoding="utf-8"))
+        targets = target_doc.get("target_weights") if isinstance(target_doc, dict) else None
+        if not isinstance(targets, dict):
+            raise ValueError("targets JSON must contain an object named target_weights")
+        database = Database(load(), read_only=True)
+        with database.connect() as con:
+            policy = policy_as_of(con, args.policy_id, as_of=generated_at.date(),
+                                  known_at=generated_at)
+            if policy is None:
+                raise ValueError("no owner MF policy is effective and known at --as-of")
+            account = account_snapshot(con, args.account_id, known_at=generated_at)
+            end_date = generated_at.date() + timedelta(days=args.sip_horizon_days)
+            installments = [dict(zip(
+                ("installment_id", "plan_id", "scheme_code", "scheduled_for", "amount_inr",
+                 "current_state"), row, strict=True))
+                for row in con.execute("""SELECT installment_id, plan_id, scheme_code,
+                    scheduled_for, amount_inr, current_state FROM mf_paper_sip_installments
+                    WHERE account_id=? AND scheduled_for BETWEEN ? AND ?
+                      AND current_state NOT IN ('ALLOTTED','MISSED')
+                    ORDER BY scheduled_for, installment_id""",
+                    [args.account_id, generated_at.date(), end_date]).fetchall()]
+        report = build_weekly_review(account=account, policy=policy,
+                                     target_weights=targets, installments=installments,
+                                     generated_at=generated_at,
+                                     sip_horizon_days=args.sip_horizon_days)
+        output_path = Path(args.output) if args.output else (
+            load().data_root / "reports" / f"mf-weekly-review-{generated_at.date().isoformat()}.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report, indent=2, sort_keys=True, default=str) + "\n",
+                               encoding="utf-8")
+    except (ValueError, OSError, json.JSONDecodeError, duckdb.Error) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "orders_created": False}))
+        return 2
+    print(json.dumps({"ok": True, "report": str(output_path),
+                      "report_sha256": report["report_sha256"],
+                      "rebalance_status": report["rebalance_status"],
+                      "rebalance_candidates": len(report["rebalance_candidates"]),
+                      "upcoming_sips": len(report["upcoming_sips"]),
+                      "liquidity_status": report["liquidity_candidate"]["status"],
+                      "orders_created": False}, sort_keys=True))
+    return 0
+
+
 def cmd_models(args) -> int:
     """Tiered models (ADR-0002): registry, benchmark on labelled tasks, router plan."""
     from .evaluation import models as bench
@@ -2868,6 +2926,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--sip-frequency", choices=["WEEKLY", "FORTNIGHTLY", "MONTHLY"])
     g.add_argument("--sip-day", type=int, help="calendar day; no installment is created by this command")
     g.set_defaults(fn=cmd_mf_policy)
+
+    g = sub.add_parser("mf-review", help="generate a dated read-only MF/SIP/rebalance review")
+    g.add_argument("--account-id", required=True)
+    g.add_argument("--policy-id", required=True)
+    g.add_argument("--targets", required=True,
+                   help="JSON file with explicit owner target_weights keyed by scheme code")
+    g.add_argument("--as-of", help="ISO-8601 review timestamp with timezone; defaults to now")
+    g.add_argument("--sip-horizon-days", type=int, default=90)
+    g.add_argument("--output", help="output JSON path; defaults to data/reports by review date")
+    g.set_defaults(fn=cmd_mf_review)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])
