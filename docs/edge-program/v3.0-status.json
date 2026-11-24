@@ -5188,20 +5188,21 @@
       "id": "FB-2201",
       "text": "Extend the existing champion/challenger and protected trial infrastructure to require preregistered hypothesis, entry/exit rules, risk budget, target comparison, data cutoff and sample size *before* new paper cohorts are promoted.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/forward_edge/charter.py::Preregistration now content-addresses the hypothesis, explicit entry/exit rules, INR risk budget, frozen comparison set, prior-data cutoff and minimum sample sessions.",
-        "ExperimentCharter canonical identity includes the preregistration digest; validation enforces cutoff before the prospective start, risk budget within capital, all frozen benchmarks in the comparison set, and positive sample size.",
-        "CharterRegistry.register() refuses missing preregistration before accepting a protected charter; legacy unregistered charter serialization remains readable without changing historical hashes.",
-        "tests/test_evaluation_identity.py adds registration denial, serialization/hash sensitivity and invalid-design cases; targeted prospective/champion regression set: 85 passed; Ruff and mypy passed."
+        "src/financial_brain/forward_edge/charter.py::Preregistration freezes the hypothesis, entry/exit rules, positive INR risk budget, comparison set, prior-data cutoff and minimum sample sessions. ExperimentCharter canonical hash includes all fields; validation checks risk <= capital, cutoff before start and every frozen benchmark in the comparison set.",
+        "CharterRegistry.register() requires both complete evaluation identity and preregistration before a protected charter can enter the registry; legacy serialized unregistered charters remain readable without changing their historical hashes.",
+        "src/financial_brain/forward_edge/trials.py::protected_trial_scope_sha256 rejects a charter without preregistration before generating the approval scope. assert_new_protected_trial_allowed() requires the exact charter and schedule, so missing/changed design cannot receive valid protected-trial approval.",
+        "tests/test_evaluation_identity.py verifies required fields, pre-start cutoff, risk budget, benchmark comparisons, positive sample size, serialization/hash binding, missing-design rejection and registry denial. tests/test_forward_edge_f00.py verifies the protected-trial scope rejects missing preregistration and exact approval scopes remain enforced.",
+        "Verification: preregistration/charter/protected-trial/preservation regression sets passed 85 tests, then 71 tests after protected-scope enforcement; Ruff and targeted mypy passed. Source inventory, capability ownership, dependency graph, capability matrix, protected-trial preservation audit and checklist export validators passed."
       ],
-      "blocker": "Partial: the governed CharterRegistry now enforces the complete preregistration contract, but a separate protected-trial authorization path and ForwardSessionRunner are not yet unified with this registry, so the rule is not proven to cover every cohort promotion path.",
-      "last_audited_at_utc": "2026-11-24T16:25:14Z",
-      "commit": null,
+      "blocker": null,
+      "last_audited_at_utc": "2026-11-24T16:27:00Z",
+      "commit": "0f2467b5",
       "test_evidence": [
-        "python -m pytest -q tests/test_evaluation_identity.py tests/test_forward_edge_f00.py tests/test_forward_edge_parameter_freeze.py tests/test_forward_edge_champion_governance.py tests/test_forward_edge_champion_challenger.py tests/test_trial_preservation_audit.py: 85 passed in 42.13s.",
-        "python -m ruff check src/financial_brain/forward_edge/charter.py tests/test_evaluation_identity.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/charter.py: passed."
+        "python -m pytest -q tests/test_evaluation_identity.py tests/test_forward_edge_f00.py tests/test_trial_preservation_audit.py: 71 passed in 6.54s after protected-scope enforcement.",
+        "python -m pytest -q tests/test_evaluation_identity.py tests/test_forward_edge_f00.py tests/test_forward_edge_parameter_freeze.py tests/test_forward_edge_champion_governance.py tests/test_forward_edge_champion_challenger.py tests/test_trial_preservation_audit.py: 85 passed before the final scope-gate addition.",
+        "Ruff and targeted mypy passed. Generated source inventory, capability ownership, forward dependency graph, capability matrix and protected trial preservation validators passed."
       ]
     },
     {
@@ -16226,7 +16227,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T16:25:14Z",
+    "as_of_utc": "2026-11-24T16:27:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16557,13 +16558,13 @@
     ],
     "audited_count": 326,
     "status_counts": {
-      "COMPLETE": 45,
+      "COMPLETE": 46,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 2,
-      "PARTIAL": 278,
+      "PARTIAL": 277,
       "UNASSESSED": 1052
     },
-    "verified_complete_count": 45,
+    "verified_complete_count": 46,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16686,10 +16687,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 45,
+    "COMPLETE": 46,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 2,
-    "PARTIAL": 278,
+    "PARTIAL": 277,
     "UNASSESSED": 1052
   }
 }
