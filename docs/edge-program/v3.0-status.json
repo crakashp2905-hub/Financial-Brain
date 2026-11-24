@@ -4276,12 +4276,17 @@
     {
       "id": "FB-1601",
       "text": "Implement `net_ev(signal, fill_scenario, cost_model)` returning rupee expected net profit, loss distribution, confidence interval and data-fidelity tier; distinguish calibrated statistical estimates from uncalibrated heuristic scores. Reject NaN, unavailable/negative-liquidity and optimistic missing-cost inputs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/net_ev.py::net_ev(signal, fill_scenario, cost_model) computes probability-weighted INR gross P&L, effective-dated India schedule charges, explicit spread cost, no-fill outcomes, and scenario net-P&L distribution. It rejects absent/mismatched/stale or future quotes, absent versioned costs, invalid probabilities, non-finite inputs, negative liquidity, fills above visible depth, incomplete round-trip costs, and unknown liquidity buckets.",
+        "Out-of-time calibration metadata and at least 30 samples across all nonzero-probability scenarios are required before an approximate 95% interval is emitted; the method and calibration provenance are returned, and uncalibrated scenarios have no confidence interval. Results include evidence tier and cost/quote source hashes and are explicitly not execution authorization.",
+        "tests/test_kernel_net_ev.py, tests/test_trade_economics.py, tests/test_strategy_economics_gate.py: 12 passed; Ruff and targeted mypy passed."
+      ],
+      "blocker": "Partial: net_ev is not yet wired into a canonical immutable decision-time trade_economics receipt or mandatory forward-session candidate eligibility gate. The confidence interval is a normal approximation conditional on supplied scenario probabilities and caller-asserted calibration provenance; independent calibration validation and time-dependence-robust inference remain needed.",
+      "last_audited_at_utc": "2026-11-24T03:07:16Z",
+      "commit": "095be4f6cc0c423e89cf126c26a052f32eec26c8",
+      "test_result": "python -m pytest tests/test_kernel_net_ev.py tests/test_trade_economics.py tests/test_strategy_economics_gate.py -q: 12 passed; python -m ruff check src/financial_brain/kernel/net_ev.py tests/test_kernel_net_ev.py: passed; python -m mypy src/financial_brain/kernel/net_ev.py --follow-imports=silent: success."
     },
     {
       "id": "FB-1602",
@@ -15731,7 +15736,7 @@
     }
   ],
   "assessment_summary": {
-      "as_of_utc": "2026-11-24T01:54:41Z",
+    "as_of_utc": "2026-11-24T03:07:16Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15960,6 +15965,7 @@
       "FB-1214",
       "FB-1215",
       "FB-1216",
+      "FB-1601",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15980,13 +15986,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 246,
+    "audited_count": 247,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 0,
-      "PARTIAL": 203,
-      "UNASSESSED": 1132
+      "PARTIAL": 204,
+      "UNASSESSED": 1131
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16064,7 +16070,7 @@
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 0,
-    "PARTIAL": 203,
-    "UNASSESSED": 1132
+    "PARTIAL": 204,
+    "UNASSESSED": 1131
   }
 }
