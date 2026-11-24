@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 703,
+  "source_count": 704,
   "sources": [
     {
       "capability_ids": [],
@@ -8809,6 +8809,22 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/bellman.py",
+      "source_sha256": "b89bc396757d596a43fdf60ea13e0c710196c954e54be3464f78fb6e159c27ef",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "datetime",
@@ -12580,6 +12596,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 673,
-  "unassigned_role_count": 409
+  "unassessed_count": 674,
+  "unassigned_role_count": 410
 }
