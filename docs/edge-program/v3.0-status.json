@@ -14343,7 +14343,7 @@
       ],
       "blocker": "Exact historical source commit and per-strategy cost-schedule manifests are not pinned.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_zoo_h_targets.py; tests/test_phase5_zoo_edges.py"
       ],
@@ -14359,7 +14359,7 @@
       ],
       "blocker": "Prospective stock-universe guard is implemented; historical result reconciliation and separate ETF/MF evaluation are still missing.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_zoo_h_targets.py::test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units",
         "tests/test_zoo_h_targets.py (H target tests)."
@@ -14376,7 +14376,7 @@
       ],
       "blocker": "Some point-in-time universe controls exist, but the complete portfolio decision/rebalance/capital contract is not frozen.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_zoo_h_targets.py::test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units",
         "Source audit of evaluation/edges.py and paper/zoo_edges.py."
@@ -14393,7 +14393,7 @@
       ],
       "blocker": "No complete matched benchmark panel per H003/H005/P3 candidate.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of evaluation/edges.py, paper/zoo_edges.py and performance evaluation."
       ],
@@ -14409,7 +14409,7 @@
       ],
       "blocker": "Candidate methodology has not been independently validated against dividend-adjusted delisted-name cohorts.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of features/prices.py, corpactions and evaluation/edges.py."
       ],
@@ -14425,7 +14425,7 @@
       ],
       "blocker": "No common versioned feature vector for the selector.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of features/indicators.py, evaluation/edges.py and regime/breadth.py."
       ],
@@ -14441,7 +14441,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_zoo_h_targets.py::test_h003_and_h005_pick_twenty_equal_weighted_names",
         "tests/test_zoo_h_targets.py::test_h005_skips_industries_with_fewer_than_eight_names",
@@ -14459,7 +14459,7 @@
       ],
       "blocker": "No month-level strategy selector or contextual training loop.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of paper/zoo_edges.py, learning/prequential.py and learning/hierarchy.py."
       ],
@@ -14475,7 +14475,7 @@
       ],
       "blocker": "RL sizing agent and matched fixed-risk experiment are absent.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of paper/zoo_edges.py, forward_edge/risk_allocator.py and learning modules."
       ],
@@ -14491,7 +14491,7 @@
       ],
       "blocker": "No frozen matched adaptive-vs-fixed H cohort.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of risk_allocator.py, paper/zoo.py and evaluation."
       ],
@@ -14507,7 +14507,7 @@
       ],
       "blocker": "Statutory schedule verification, account-size scenarios and rebalance impact attribution remain unconnected to H trials.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of costs/india.py, costs/calculator.py and paper/zoo.py."
       ],
@@ -14523,7 +14523,7 @@
       ],
       "blocker": "Conservative H monthly excess intervals and period-independence checks are absent.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of evaluation/edges.py and forward_edge/bootstrap.py."
       ],
@@ -14539,7 +14539,7 @@
       ],
       "blocker": "H reward remains a paper settlement stream, not a versioned delayed selector reward.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_learning_prequential.py; source audit of paper/zoo.py."
       ],
@@ -14555,7 +14555,7 @@
       ],
       "blocker": "H-specific event exclusion and preregistration absent.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of corpactions, feature and evaluation modules."
       ],
@@ -14571,7 +14571,7 @@
       ],
       "blocker": "Historical training-use authorization and selector trial-budget integration are incomplete.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of patterns/study.py, evaluation trial registry and zoo candidates."
       ],
@@ -14587,7 +14587,7 @@
       ],
       "blocker": "The selector and matched fixed-cohort experiment have not been launched.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of paper/zoo.py, paper/zoo_edges.py and forward-edge shadow/cohort modules."
       ],
@@ -14603,7 +14603,7 @@
       ],
       "blocker": "No candidate-family beta-controlled overlap diagnostics.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of risk/decompose.py, forward_edge/portfolio_risk.py and H zoo."
       ],
@@ -14619,7 +14619,7 @@
       ],
       "blocker": "Safe actions exist; fail-closed selector conditions are not integrated.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "tests/test_learning_hierarchy.py::test_safe_actions_are_available_without_any_alpha_candidates",
         "Source audit of hierarchy, paper zoo, data health and corporate actions."
@@ -14636,7 +14636,7 @@
       ],
       "blocker": "Causal monthly candidate report is incomplete.",
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of paper/zoo.py, paper/zoo_edges.py and reporting."
       ],
@@ -14652,7 +14652,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
-      "commit": "PENDING",
+      "commit": "57529d79",
       "test_evidence": [
         "Source audit of forward_edge/release.py; release label tests in tests/test_forward_edge*.py."
       ],
