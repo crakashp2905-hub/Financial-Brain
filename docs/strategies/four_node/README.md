@@ -83,9 +83,15 @@ The earlier `signals/index_options.py` path did not exist and is not part of thi
   identities, incomplete bars, stale validity and illiquid records fail closed. No actual
   provider snapshot is checked into the repository, so the function alone does not prove
   today's tradable universe.
-- Stream observation clocks are currently integer bar indices. Kite/provider event clocks, actual
-  quote arrival and the M1-only production adapter are still integration work; the backtest and
-  stream module remain research/paper utilities.
+- `four_node.replay.compare_stream_and_replay()` consumes original source timestamps and a separate
+  availability clock, source-hashed OHLC and effective-dated instrument eligibility. It rebuilds
+  pivots from the observed prefix only, waits for right-side confirmation bars, suppresses signals
+  until the configured warm-up, resets on ineligible data and refuses missing/irregular bars. It
+  runs the resulting immutable events online and in historical replay and exposes the parity check.
+- The stream state machine retains integer bar indices for state transitions and also accepts
+  source/availability timestamps for chronology checks and candidate lineage. Kite/provider event
+  IDs, real receipt clocks, a production M1 adapter and durable runner/OMS integration remain open;
+  this replay path is a validated research/paper data contract, not a live-feed claim.
 
 ## Evaluation gates (FB-2534 to FB-2544)
 An exploratory 128-variant India grid has run, but it is not independent validation: all 128

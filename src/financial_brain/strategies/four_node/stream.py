@@ -6,6 +6,8 @@ never creates orders. A candidate becomes actionable on a strictly later bar/quo
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
+import re
 from hashlib import sha256
 from math import isfinite
 from typing import Literal
@@ -23,6 +25,9 @@ class StreamEvent:
     bar_index: int
     node: Node | None = None
     close: float | None = None
+    observed_at: datetime | None = None
+    available_at: datetime | None = None
+    source_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if not self.event_id.strip() or not self.session_id.strip():
@@ -31,6 +36,14 @@ class StreamEvent:
             raise ValueError("unsupported event kind")
         if self.bar_index < 0:
             raise ValueError("bar_index must be nonnegative")
+        for label, value in (("observation", self.observed_at), ("availability", self.available_at)):
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ValueError(f"stream {label} time must be timezone-aware")
+        if (self.observed_at is not None and self.available_at is not None
+                and self.available_at < self.observed_at):
+            raise ValueError("stream data cannot be available before its observation")
+        if self.source_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256):
+            raise ValueError("stream source must be a lowercase SHA-256")
         if self.kind == "NODE_CONFIRMED" and self.node is None:
             raise ValueError("NODE_CONFIRMED requires a node")
         if self.kind == "BAR_CLOSED" and (self.close is None or not isfinite(self.close)):
@@ -46,6 +59,24 @@ class BreakoutCandidate:
     node_ids: tuple[str, str, str]
     breakout_bar: int
     actionable_after_bar: int
+    breakout_at: datetime | None = None
+    available_at: datetime | None = None
+    source_sha256: str | None = None
+
+    def __post_init__(self) -> None:
+        if (not self.signal_id.strip() or self.side not in {"BUY", "SELL"}
+                or len(self.node_ids) != 3 or any(not node_id.strip() for node_id in self.node_ids)):
+            raise ValueError("breakout candidate requires a signal ID, side and three node IDs")
+        if self.breakout_bar < 0 or self.actionable_after_bar <= self.breakout_bar:
+            raise ValueError("breakout candidate must become actionable after its breakout bar")
+        for label, value in (("breakout", self.breakout_at), ("availability", self.available_at)):
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ValueError(f"candidate {label} time must be timezone-aware")
+        if (self.breakout_at is not None and self.available_at is not None
+                and self.available_at < self.breakout_at):
+            raise ValueError("candidate cannot be available before its breakout")
+        if self.source_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256):
+            raise ValueError("candidate source must be a lowercase SHA-256")
 
 
 @dataclass(frozen=True)
@@ -60,9 +91,11 @@ class StreamResult:
 def _fingerprint(event: StreamEvent) -> str:
     node = event.node
     material = (event.event_id, event.kind, event.session_id, event.bar_index, event.close,
+                None if event.observed_at is None else event.observed_at.isoformat(),
+                None if event.available_at is None else event.available_at.isoformat(), event.source_sha256,
                 None if node is None else (node.node_id, node.side, node.price, node.pivot_at,
                                            node.confirmed_at, node.observable_at,
-                                           node.parent_chain, node.source_bar_ids))
+                                           node.parent_chain, node.source_bar_ids, node.source_sha256))
     return sha256(repr(material).encode("utf-8")).hexdigest()
 
 
@@ -84,6 +117,8 @@ class FourNodeStateMachine:
     session_id: str | None = None
     seen_events: dict[str, tuple[str, StreamResult]] = field(default_factory=dict)
     emitted_signal_ids: set[str] = field(default_factory=set)
+    last_observed_at: datetime | None = None
+    last_available_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.max_age_bars < 1:
@@ -96,6 +131,13 @@ class FourNodeStateMachine:
             if prior[0] != fingerprint:
                 raise ValueError("event ID replayed with conflicting payload")
             return prior[1]
+        event_time = event.available_at or event.observed_at
+        if (event.observed_at is not None and self.last_observed_at is not None
+                and event.observed_at < self.last_observed_at):
+            raise ValueError("stream source observation time moved backwards")
+        if (event_time is not None and self.last_available_at is not None
+                and event_time < self.last_available_at):
+            raise ValueError("stream availability time moved backwards")
 
         reasons: list[str] = []
         candidates: tuple[BreakoutCandidate, ...] = ()
@@ -163,7 +205,13 @@ class FourNodeStateMachine:
                         if signal_id not in self.emitted_signal_ids:
                             self.emitted_signal_ids.add(signal_id)
                             made.append(BreakoutCandidate(
-                                signal_id, side, node_ids, event.bar_index, event.bar_index + 1
+                                signal_id, side, node_ids, event.bar_index, event.bar_index + 1,
+                                event.observed_at, event.available_at,
+                                sha256(repr(tuple(
+                                    [node.source_sha256 for node in triple] + [event.source_sha256]
+                                )).encode("utf-8")).hexdigest()
+                                if all(node.source_sha256 is not None for node in triple)
+                                and event.source_sha256 is not None else None,
                             ))
                     candidates = tuple(made)
                     status = "BREAKOUT" if candidates else "DUPLICATE_SIGNAL"
@@ -176,6 +224,10 @@ class FourNodeStateMachine:
         result = StreamResult(event.event_id, status, tuple(reasons),
                               tuple(node.node_id for node in self.nodes), candidates)
         self.seen_events[event.event_id] = (fingerprint, result)
+        if event_time is not None:
+            self.last_available_at = event_time
+        if event.observed_at is not None:
+            self.last_observed_at = event.observed_at
         return result
 
     @classmethod

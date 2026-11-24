@@ -6672,19 +6672,18 @@
       "id": "FB-2534",
       "text": "Build point-in-time replay with original bar timestamps, historical instrument eligibility, warm-up and confirmed-pivot latency; disallow revised ZigZag history as trading evidence. **Acceptance:** Streaming and historical signals match when fed identical observations.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "four_node.stream.FourNodeStateMachine provides idempotent online event application and list replay through the same state transition; tests/test_four_node_stream.py::test_online_and_batch_replay_results_are_identical verifies identical outputs for identical immutable events.",
-        "four_node.backtest.events_for uses completed session dates for prior-day Fibonacci snapshots, and four_node.nodes stores pivot/confirmation/observation indices.",
-        "The production acceptance is incomplete: stream/replay events use integer bar indices, backtest timestamps are synthesized session boundaries, historical instrument eligibility and warm-up are not joined into the stream replay, and revised ZigZag exclusion is not enforced by one shared bar-to-signal pipeline."
+        "four_node/replay.py::ReplayBar preserves the original source timestamp, later availability timestamp, immutable source hash, bar/session identity and OHLC; effective-dated ReplayEligibility carries a separate publication clock and source hash. Bar hashes propagate through confirmation-node, breakout and option-thesis lineage.",
+        "compare_stream_and_replay() uses only bars in the observed prefix; it emits a fractal only after the configured right confirmation bars, never uses revised full-series ZigZag output as trading evidence, resets on ineligible intervals, rejects missing/irregular bars and gates signals until the configured eligible-bar warm-up has elapsed.",
+        "The generated timestamped events are consumed both online and through historical replay by the same deterministic state machine. tests/test_four_node_replay.py verifies exact signal equality, right-pivot latency, breakout actionable-after timing, source/availability clock preservation, unavailable rights, warm-up suppression, missing bars and duplicate event rejection. Combined focused Four-Node suite: 56 passed; Ruff and targeted mypy passed."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:40:51Z",
+      "last_audited_at_utc": "2026-11-24T21:08:48Z",
       "commit": null,
       "test_evidence": [
-        "four_node.stream.FourNodeStateMachine provides idempotent online event application and list replay through the same state transition; tests/test_four_node_stream.py::test_online_and_batch_replay_results_are_identical verifies identical outputs for identical immutable events.",
-        "four_node.backtest.events_for uses completed session dates for prior-day Fibonacci snapshots, and four_node.nodes stores pivot/confirmation/observation indices.",
-        "The production acceptance is incomplete: stream/replay events use integer bar indices, backtest timestamps are synthesized session boundaries, historical instrument eligibility and warm-up are not joined into the stream replay, and revised ZigZag exclusion is not enforced by one shared bar-to-signal pipeline."
+        "tests/test_four_node_replay.py: 4 tests cover stream/replay parity, pivot confirmation timing, source and availability clocks, historical eligibility, warm-up, missing-bar refusal and duplicate events.",
+        "Combined focused Four-Node suite: 56 passed; Ruff and targeted mypy passed."
       ]
     },
     {
@@ -6787,14 +6786,14 @@
       "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/four_node/rules.py::Funnel now stores unique immutable event IDs with direct parent IDs across pivots, patterns, setups, intents, fills and closes; outcomes preserve rejects, expirations and no-fills.",
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 51 focused Four-Node tests pass, Ruff and targeted mypy pass.",
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 56 focused Four-Node tests pass, Ruff and targeted mypy pass.",
         "The funnel remains a reusable local component and is not wired into FourNodeStateMachine, ForwardSessionRunner or the canonical OMS, so live session-wide counts are not yet evidenced."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:54:46Z",
+      "last_audited_at_utc": "2026-11-24T21:09:35Z",
       "commit": null,
       "test_evidence": [
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 51 focused Four-Node tests pass, Ruff and targeted mypy pass."
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 56 focused Four-Node tests pass, Ruff and targeted mypy pass."
       ]
     },
     {
@@ -6803,16 +6802,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "rules.trace() now includes N1-N4 pivot and confirmation indices, node/source-bar IDs, 20C bands, optional SMMA8/50/100/200 values, Fibonacci barriers, D1/D2, spread, stop/target and exit reason. It hash-seals canonical JSON and sets machine_verifiable=false while required evidence is missing.",
+        "rules.trace() now includes N1-N4 pivot and confirmation indices, node/source-bar IDs and source hashes, 20C bands, optional SMMA8/50/100/200 values, Fibonacci barriers, D1/D2, spread, stop/target and exit reason. It hash-seals canonical JSON and sets machine_verifiable=false while required evidence is missing.",
         "tests/test_four_node_s25.py::test_trace_record supplies complete per-trade context and verifies the SHA-256 record seal; test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators verifies missing-field reporting and invalid input refusal.",
         "The trace is not yet emitted by the Four-Node stream/runner or stored against the durable canonical paper book, so every actual paper trade is not yet guaranteed to have this complete evidence."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:54:46Z",
+      "last_audited_at_utc": "2026-11-24T21:09:35Z",
       "commit": null,
       "test_evidence": [
         "tests/test_four_node_s25.py::test_trace_record supplies complete per-trade context and verifies the SHA-256 record seal; test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators verifies missing-field reporting and invalid input refusal.",
-        "Focused Four-Node suite: 51 passed; Ruff and targeted mypy passed."
+        "Focused Four-Node suite: 56 passed; Ruff and targeted mypy passed."
       ]
     },
     {
@@ -19125,7 +19124,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T20:54:46Z",
+    "as_of_utc": "2026-11-24T21:09:35Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19959,11 +19958,11 @@
     "status_counts": {
       "UNASSESSED": 551,
       "NOT_STARTED": 22,
-      "PARTIAL": 722,
-      "COMPLETE": 78,
+      "PARTIAL": 721,
+      "COMPLETE": 79,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 78,
+    "verified_complete_count": 79,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -20088,8 +20087,8 @@
   "counts_by_status": {
     "UNASSESSED": 551,
     "NOT_STARTED": 22,
-    "PARTIAL": 722,
-    "COMPLETE": 78,
+    "PARTIAL": 721,
+    "COMPLETE": 79,
     "EXTERNAL_BLOCKED": 5
   }
 }

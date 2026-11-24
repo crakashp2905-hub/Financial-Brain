@@ -88,3 +88,23 @@ def test_stream_breakout_cannot_route_before_actionable_bar_then_preserves_node_
     assert set(thesis["source_sha256"]) <= set("0123456789abcdef")
     assert routed["option_decision"]["parent_node_ids"] == ["n1", "n2", "n3"]
     assert routed["option_decision"]["status"] == "CANDIDATES_AVAILABLE"
+
+
+def test_stream_breakout_cannot_route_before_data_availability_clock():
+    candidate = BreakoutCandidate(
+        "stream-signal-2", "BUY", ("n4", "n5", "n6"), 12, 13,
+        breakout_at=NOW, available_at=NOW + timedelta(seconds=10),
+    )
+    early = route_breakout_candidate(
+        candidate, instrument_id="NIFTY", decision_bar=13, decided_at=NOW,
+        underlying_price=20000.0, invalidation_price=19950.0,
+        candidates=(_candidate("CE", 33),), lots=1, max_quote_age=timedelta(seconds=15),
+    )
+    assert early["option_decision"]["reason_code"] == "DECISION_PRECEDES_AVAILABLE_DATA"
+    routed = route_breakout_candidate(
+        candidate, instrument_id="NIFTY", decision_bar=13,
+        decided_at=NOW + timedelta(seconds=10),
+        underlying_price=20000.0, invalidation_price=19950.0,
+        candidates=(_candidate("CE", 34),), lots=1, max_quote_age=timedelta(seconds=15),
+    )
+    assert routed["option_decision"]["status"] == "CANDIDATES_AVAILABLE"

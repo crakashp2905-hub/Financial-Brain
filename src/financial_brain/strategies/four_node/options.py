@@ -163,7 +163,14 @@ def route_breakout_candidate(
     """Bridge a stream breakout into the separately auditable option decision after its next bar."""
     if not isinstance(candidate, BreakoutCandidate):
         raise TypeError("FourNodeStateMachine breakout candidate is required")
-    if type(decision_bar) is not int or decision_bar < candidate.actionable_after_bar:
+    early_bar = type(decision_bar) is not int or decision_bar < candidate.actionable_after_bar
+    early_time = (candidate.breakout_at is not None and
+                  (decided_at.tzinfo is None or decided_at.utcoffset() is None
+                   or decided_at < candidate.breakout_at))
+    early_availability = (candidate.available_at is not None and
+                          (decided_at.tzinfo is None or decided_at.utcoffset() is None
+                           or decided_at < candidate.available_at))
+    if early_bar or early_time or early_availability:
         return {
             "underlying_thesis": {
                 "record_type": "UNDERLYING_THESIS",
@@ -173,12 +180,18 @@ def route_breakout_candidate(
                 "breakout_bar": candidate.breakout_bar,
                 "actionable_after_bar": candidate.actionable_after_bar,
                 "decision_bar": decision_bar,
+                "breakout_at": (candidate.breakout_at.isoformat()
+                                if candidate.breakout_at is not None else None),
+                "available_at": (candidate.available_at.isoformat()
+                                 if candidate.available_at is not None else None),
             },
             "option_decision": {
                 "record_type": "OPTION_CANDIDATE_DECISION",
                 "parent_signal_id": candidate.signal_id,
                 "status": "NO_TRADE",
-                "reason_code": "SIGNAL_NOT_YET_ACTIONABLE",
+                "reason_code": ("DECISION_PRECEDES_AVAILABLE_DATA" if early_availability
+                                else "DECISION_PRECEDES_BREAKOUT" if early_time
+                                else "SIGNAL_NOT_YET_ACTIONABLE"),
                 "plans": [],
                 "broker_order_created": False,
             },
@@ -189,6 +202,11 @@ def route_breakout_candidate(
         "node_ids": candidate.node_ids,
         "breakout_bar": candidate.breakout_bar,
         "actionable_after_bar": candidate.actionable_after_bar,
+        "breakout_at": (candidate.breakout_at.isoformat()
+                        if candidate.breakout_at is not None else None),
+        "available_at": (candidate.available_at.isoformat()
+                         if candidate.available_at is not None else None),
+        "source_sha256": candidate.source_sha256,
     }
     source_sha256 = hashlib.sha256(json.dumps(
         source_material, sort_keys=True, separators=(",", ":"), allow_nan=False
@@ -208,6 +226,10 @@ def route_breakout_candidate(
         "breakout_bar": candidate.breakout_bar,
         "actionable_after_bar": candidate.actionable_after_bar,
         "decision_bar": decision_bar,
+        "breakout_at": (candidate.breakout_at.isoformat()
+                        if candidate.breakout_at is not None else None),
+        "available_at": (candidate.available_at.isoformat()
+                         if candidate.available_at is not None else None),
         "node_ids": list(candidate.node_ids),
     })
     option_record["parent_node_ids"] = list(candidate.node_ids)

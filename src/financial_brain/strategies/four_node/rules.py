@@ -400,7 +400,8 @@ def trace(setup: Setup, nodes: tuple[Node, Node, Node], c20: Cluster20, d1: floa
     node_evidence = [{"side": n.side, "price": n.price, "pivot_at": n.pivot_at,
                       "confirmed_at": n.confirmed_at, "observable_at": n.observable_at,
                       "node_id": n.node_id, "parent_chain": list(n.parent_chain),
-                      "source_bar_ids": list(n.source_bar_ids)} for n in (*nodes, *((n4,) if n4 else ()))]
+                      "source_bar_ids": list(n.source_bar_ids), "source_sha256": n.source_sha256}
+                     for n in (*nodes, *((n4,) if n4 else ()))]
     smma_evidence = ({str(period): smma.get(period) for period in (8, 50, 100, 200)}
                      if smma is not None else None)
     missing = []

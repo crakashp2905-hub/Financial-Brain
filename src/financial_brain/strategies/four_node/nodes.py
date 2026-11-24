@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from hashlib import sha256
+import re
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class Node:
     node_id: str = ""
     parent_chain: tuple[str, ...] = ()
     source_bar_ids: tuple[str, ...] = ()
+    source_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if self.side not in (-1, 1):
@@ -31,14 +33,17 @@ class Node:
         if observed < self.confirmed_at:
             raise ValueError("node cannot be observed before confirmation")
         object.__setattr__(self, "observable_at", observed)
+        if self.source_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", self.source_sha256):
+            raise ValueError("node source must be a lowercase SHA-256")
         if not self.node_id:
             material = (f"{self.side}:{self.pivot_at}:{self.confirmed_at}:{self.price!r}:"
-                        f"{','.join(self.source_bar_ids)}")
+                        f"{','.join(self.source_bar_ids)}:{self.source_sha256 or ''}")
             object.__setattr__(self, "node_id", sha256(material.encode()).hexdigest()[:20])
 
 
 def pivots(highs: list[float], lows: list[float], left: int, right: int, *,
-           tie_policy: str = "STRICT", bar_ids: list[str] | None = None) -> list[Node]:
+           tie_policy: str = "STRICT", bar_ids: list[str] | None = None,
+           source_sha256s: list[str] | None = None) -> list[Node]:
     """Confirmed pivots. Tie policy is STRICT, LEFTMOST or RIGHTMOST.
 
     A pivot is observable at the close of its right confirmation bar. ``bar_ids`` allows
@@ -52,6 +57,9 @@ def pivots(highs: list[float], lows: list[float], left: int, right: int, *,
         raise ValueError("high and low arrays must have equal length")
     if bar_ids is not None and len(bar_ids) != len(highs):
         raise ValueError("bar_ids must align with OHLC arrays")
+    if source_sha256s is not None and (len(source_sha256s) != len(highs) or any(
+            not re.fullmatch(r"[0-9a-f]{64}", value) for value in source_sha256s)):
+        raise ValueError("bar source hashes must align and be lowercase SHA-256 values")
     out = []
     for i in range(left, len(highs) - right):
         h = highs[i]
@@ -60,14 +68,16 @@ def pivots(highs: list[float], lows: list[float], left: int, right: int, *,
         hi_right = all(h > v if tie_policy != "LEFTMOST" else h >= v for v in right_highs)
         ids = tuple(bar_ids[j] for j in range(i - left, i + right + 1)) if bar_ids else tuple(
             f"bar:{j}" for j in range(i - left, i + right + 1))
+        source_hash = sha256("|".join(source_sha256s[j] for j in range(i - left, i + right + 1))
+                             .encode()).hexdigest() if source_sha256s else None
         if hi_left and hi_right:
-            out.append(Node(1, h, i, i + right, source_bar_ids=ids))
+            out.append(Node(1, h, i, i + right, source_bar_ids=ids, source_sha256=source_hash))
         lo = lows[i]
         left_lows, right_lows = lows[i - left:i], lows[i + 1:i + right + 1]
         lo_left = all(lo < v if tie_policy != "RIGHTMOST" else lo <= v for v in left_lows)
         lo_right = all(lo < v if tie_policy != "LEFTMOST" else lo <= v for v in right_lows)
         if lo_left and lo_right:
-            out.append(Node(-1, lo, i, i + right, source_bar_ids=ids))
+            out.append(Node(-1, lo, i, i + right, source_bar_ids=ids, source_sha256=source_hash))
     return sorted(out, key=lambda n: (n.confirmed_at, n.pivot_at))
 
 
