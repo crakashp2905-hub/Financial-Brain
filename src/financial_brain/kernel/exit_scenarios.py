@@ -29,6 +29,71 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _ZERO = Decimal(0)
 
 
+def _beta_continued_fraction(a: float, b: float, x: float) -> float:
+    """Numerical Recipes continued fraction for the regularized beta function."""
+    max_iterations = 256
+    epsilon = 3e-14
+    tiny = 1e-300
+    qab, qap, qam = a + b, a + 1.0, a - 1.0
+    c = 1.0
+    d = 1.0 - qab * x / qap
+    if abs(d) < tiny:
+        d = tiny
+    d = 1.0 / d
+    h = d
+    for m in range(1, max_iterations + 1):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1.0 + aa * d
+        if abs(d) < tiny:
+            d = tiny
+        c = 1.0 + aa / c
+        if abs(c) < tiny:
+            c = tiny
+        d = 1.0 / d
+        h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1.0 + aa * d
+        if abs(d) < tiny:
+            d = tiny
+        c = 1.0 + aa / c
+        if abs(c) < tiny:
+            c = tiny
+        d = 1.0 / d
+        delta = d * c
+        h *= delta
+        if abs(delta - 1.0) < epsilon:
+            return h
+    raise ArithmeticError("incomplete beta continued fraction did not converge")
+
+
+def _regularized_beta(x: float, a: float, b: float) -> float:
+    if not (0.0 <= x <= 1.0 and a > 0.0 and b > 0.0):
+        raise ValueError("regularized beta arguments are outside their domain")
+    if x == 0.0:
+        return 0.0
+    if x == 1.0:
+        return 1.0
+    log_front = (math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+                 + a * math.log(x) + b * math.log1p(-x))
+    front = math.exp(log_front)
+    if x < (a + 1.0) / (a + b + 2.0):
+        return front * _beta_continued_fraction(a, b, x) / a
+    return 1.0 - front * _beta_continued_fraction(b, a, 1.0 - x) / b
+
+
+def _student_t_one_sided_p(t_statistic: float, degrees_of_freedom: int) -> float:
+    """One-sided survival probability for Student's t, implemented with stdlib math only."""
+    if degrees_of_freedom < 1 or math.isnan(t_statistic):
+        raise ValueError("valid t statistic and positive degrees of freedom are required")
+    if math.isinf(t_statistic):
+        return 0.0 if t_statistic > 0 else 1.0
+    x = degrees_of_freedom / (degrees_of_freedom + t_statistic * t_statistic)
+    half_tail = 0.5 * _regularized_beta(x, degrees_of_freedom / 2.0, 0.5)
+    probability = half_tail if t_statistic > 0 else 1.0 - half_tail
+    return min(1.0, max(0.0, probability))
+
+
 def _decimal(name: str, value: Decimal | str | int | float) -> Decimal:
     try:
         parsed = value if isinstance(value, Decimal) else Decimal(str(value))
@@ -249,9 +314,21 @@ def compare_exit_variants(*, signal: TraderSignal, plan: TradePlan, baseline: Ex
         if len(paired) < 2:
             pvalues[name] = 1.0
         else:
-            import scipy.stats
-            test = scipy.stats.ttest_1samp([float(x) for x in paired], popmean=0, alternative="greater")
-            pvalues[name] = (float(test.pvalue) if math.isfinite(float(test.pvalue)) else 1.0)
+            values = [float(x) for x in paired]
+            if not all(math.isfinite(value) for value in values):
+                pvalues[name] = 1.0
+            else:
+                mean = sum(values) / len(values)
+                variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+                standard_error = math.sqrt(variance / len(values))
+                if standard_error == 0.0:
+                    pvalues[name] = 1.0
+                else:
+                    t_statistic = mean / standard_error
+                    try:
+                        pvalues[name] = _student_t_one_sided_p(t_statistic, len(values) - 1)
+                    except (ArithmeticError, OverflowError, ValueError):
+                        pvalues[name] = 1.0
     adjusted = holm_adjust(pvalues)
     canonical_samples = [{"sample_id": s.sample_id, "instrument_id": s.instrument_id,
                           "completed_at": s.completed_at.astimezone(timezone.utc).isoformat(),

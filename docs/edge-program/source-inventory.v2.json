@@ -7596,7 +7596,6 @@
         "json",
         "math",
         "re",
-        "scipy.stats",
         "trader_signal",
         "typing"
       ],
@@ -7604,7 +7603,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_scenarios.py",
-      "source_sha256": "65b8b14953e9c7818a6521c007886849b66f17775091972c4bfb085cb8583366",
+      "source_sha256": "20c3d53bd375b7deadfc08117d621a9102c43c96e17700637127a51a4f590d7c",
       "test_paths": []
     },
     {

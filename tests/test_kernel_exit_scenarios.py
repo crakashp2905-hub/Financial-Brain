@@ -7,12 +7,21 @@ import pytest
 from financial_brain.kernel.exit_policy import ExitPolicy, ExitRule, ExitRuleAction
 from financial_brain.kernel.exit_scenarios import (
     ExitCostSchedule, ExitPathSample, ExitReplayBar, ExitScenarioError, compare_exit_variants,
-    estimate_exit_probabilities,
+    estimate_exit_probabilities, _student_t_one_sided_p,
 )
 from financial_brain.kernel.trader_signal import (
     DeskId, EntryCondition, EvidenceTier, ExitTrigger, PriceBasis, SignalSide,
     TradePlan, TraderSignal,
 )
+
+
+def test_stdlib_student_t_one_sided_p_values_match_reference_cases():
+    from math import sqrt
+
+    assert _student_t_one_sided_p(1.0, 1) == pytest.approx(0.25, abs=1e-12)
+    assert _student_t_one_sided_p(sqrt(3), 2) == pytest.approx(0.1127016653792583, abs=1e-12)
+    assert _student_t_one_sided_p(-1.0, 1) == pytest.approx(0.75, abs=1e-12)
+    assert _student_t_one_sided_p(0.0, 3) == pytest.approx(0.5, abs=1e-12)
 
 
 DECISION = datetime(2026, 11, 23, 18, 30, tzinfo=timezone.utc)
