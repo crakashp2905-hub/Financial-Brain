@@ -2597,14 +2597,15 @@
       "id": "FB-0613",
       "text": "Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "MF recommendations accept explicit scheme, amount, horizon and cutoff inputs without using a broker or folio API.",
-        "No owner-managed SIP schedule, configurable allocation policy or persistent owner-control interface was found."
+        "src/financial_brain/paper/mf_allocation_policy.py adds an immutable versioned profile for owner-specified cash reserve, equity/debt/ETF caps, rebalance band, and optional SIP amount/frequency/day; profile has effective dates and content hash and does not require account/folio identity.",
+        "src/financial_brain/storage/schema.sql persists owner-local policies; src/financial_brain/cli.py exposes fb mf-policy and labels output PAPER_DECISION_ONLY with external_fund_transactions=false. No order/SIP installment is created.",
+        "tests/test_mf_allocation_policy.py: 8 passed; tests/test_migrations.py plus tests/test_mf_allocation_policy.py: 13 passed; Ruff, targeted mypy and generated inventory checks pass. docs/edge-program/mf-owner-allocation-policy-v1.md records scope and limits."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: owner label is self-declared and unauthenticated; existing recommendation, rebalance and SIP engines do not yet consume the saved policy as a shared binding constraint.",
+      "last_audited_at_utc": "2026-11-24T01:11:00Z",
+      "commit": "733e0f8861dc68eb926444671b8f175c966466c9",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -15715,7 +15716,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T01:02:00Z",
+    "as_of_utc": "2026-11-24T01:11:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15968,8 +15969,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 7,
-      "PARTIAL": 196,
+      "NOT_STARTED": 6,
+      "PARTIAL": 197,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16047,8 +16048,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 7,
-    "PARTIAL": 196,
+    "NOT_STARTED": 6,
+    "PARTIAL": 197,
     "UNASSESSED": 1132
   }
 }
