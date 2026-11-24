@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs/forward-edge/reference-candidates.v1.json"
@@ -21,9 +23,21 @@ def validate() -> list[str]:
     if policy.get("allowed_label") != "HISTORICAL_CANDIDATE_ONLY":
         errors.append("reference candidate label must remain historical-only")
     sources = {row.get("path"): row.get("sha256_lf") for row in data.get("source_artifacts", [])}
+    revisions = {row.get("path"): row.get("commit") for row in data.get("source_artifacts", [])}
     for rel, expected in sources.items():
-        path = ROOT / rel
-        actual = hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        revision = revisions.get(rel)
+        if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+            errors.append(f"source pin has no immutable Git commit: {rel}")
+            continue
+        try:
+            pinned = subprocess.run(
+                ["git", "show", f"{revision}:{rel}"], cwd=ROOT, check=True,
+                capture_output=True, timeout=15,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            errors.append(f"source pin commit cannot be read: {rel} @ {revision}")
+            continue
+        actual = hashlib.sha256(pinned.replace(b"\r\n", b"\n")).hexdigest()
         if not isinstance(expected, str) or len(expected) != 64 or expected != actual:
             errors.append(f"source fingerprint mismatch: {rel}")
     candidates = data.get("candidates", [])

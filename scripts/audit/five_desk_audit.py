@@ -394,7 +394,7 @@ A.update({
 })
 _DC, _TDC = S + "paper/day_cycle.py", "tests/test_day_cycle_s10.py"
 _ADV = "tests/test_adversarial_s13.py"
-_IX, _TIX = S + "forecasting/index_15m.py", "tests/test_index_15m_s24.py"
+_IX, _TIX = S + "forecasting/index_15m.py", "tests/test_forecasting_index_15m.py"
 _IO, _TIO = S + "signals/index_options.py", "tests/test_index_options_s24d.py"
 A.update({
     "FB-1008": (P, [_DC, _TDC], "daily reconcile phase slot; handler not wired"),

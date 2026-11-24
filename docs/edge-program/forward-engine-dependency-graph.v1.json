@@ -5,6 +5,7 @@
       "financial_brain.evidence.decision_manifest",
       "financial_brain.forward_edge.clock",
       "financial_brain.forward_edge.cost_schedule",
+      "financial_brain.forward_edge.data_distribution",
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
@@ -35,6 +36,7 @@
       "financial_brain.decisions.net_alpha",
       "financial_brain.decisions.plan",
       "financial_brain.forward_edge.clock",
+      "financial_brain.forward_edge.data_distribution",
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.feed_health",
       "financial_brain.forward_edge.market_data",
@@ -120,6 +122,10 @@
     },
     {
       "source": "financial_brain.forward_edge.quote_archive",
+      "target": "financial_brain.forward_edge.data_distribution"
+    },
+    {
+      "source": "financial_brain.forward_edge.quote_archive",
       "target": "financial_brain.forward_edge.market_events"
     },
     {
@@ -137,6 +143,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.cost_schedule"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.data_distribution"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -372,12 +382,13 @@
   "shared_modules": [
     "financial_brain.costs.india",
     "financial_brain.forward_edge.clock",
+    "financial_brain.forward_edge.data_distribution",
     "financial_brain.forward_edge.data_permissions",
     "financial_brain.forward_edge.market_data",
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive",
     "financial_brain.kernel.units"
   ],
-  "source_count": 746,
-  "source_tree_sha256": "15e1980207c3893052ac9b4f4915c0ce63edb9668ccbc16543cc79e50f1d39fa"
+  "source_count": 774,
+  "source_tree_sha256": "bd3c53c87b723cbd4c254c84bcaedf814da10516b008669e48157be2c86602f4"
 }

@@ -93,6 +93,64 @@ class EvaluationIdentity:
 
 
 @dataclass(frozen=True)
+class Preregistration:
+    """Research question and evaluation design frozen before a prospective cohort starts."""
+
+    hypothesis: str
+    entry_rule: str
+    exit_rule: str
+    risk_budget_inr: str
+    target_comparisons: tuple[str, ...]
+    data_cutoff_on: str
+    minimum_sample_sessions: int
+
+    def __post_init__(self) -> None:
+        for name in ("hypothesis", "entry_rule", "exit_rule"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip() or value.strip() != value:
+                raise CharterError(f"preregistration {name} is required")
+        try:
+            risk_budget = Decimal(self.risk_budget_inr)
+        except (InvalidOperation, TypeError) as exc:
+            raise CharterError("preregistration risk budget must be a positive decimal") from exc
+        if not risk_budget.is_finite() or risk_budget <= 0:
+            raise CharterError("preregistration risk budget must be a positive decimal")
+        try:
+            date.fromisoformat(self.data_cutoff_on)
+        except (TypeError, ValueError) as exc:
+            raise CharterError("preregistration data cutoff must be an ISO date") from exc
+        if (not isinstance(self.target_comparisons, tuple) or not self.target_comparisons
+                or list(self.target_comparisons) != sorted(set(self.target_comparisons))
+                or any(not isinstance(item, str) or not item.strip() or item.strip() != item
+                       for item in self.target_comparisons)):
+            raise CharterError("target comparisons must be non-empty, unique and sorted")
+        if type(self.minimum_sample_sessions) is not int or self.minimum_sample_sessions < 1:
+            raise CharterError("minimum sample sessions must be a positive integer")
+
+    def as_dict(self) -> dict:
+        return {
+            "hypothesis": self.hypothesis,
+            "entry_rule": self.entry_rule,
+            "exit_rule": self.exit_rule,
+            "risk_budget_inr": str(Decimal(self.risk_budget_inr)),
+            "target_comparisons": list(self.target_comparisons),
+            "data_cutoff_on": self.data_cutoff_on,
+            "minimum_sample_sessions": self.minimum_sample_sessions,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict) -> "Preregistration":
+        expected = {"hypothesis", "entry_rule", "exit_rule", "risk_budget_inr", "target_comparisons",
+                    "data_cutoff_on", "minimum_sample_sessions"}
+        if not isinstance(value, dict) or set(value) != expected:
+            raise CharterError("malformed preregistration")
+        try:
+            return cls(**{**value, "target_comparisons": tuple(value["target_comparisons"])})
+        except (TypeError, KeyError) as exc:
+            raise CharterError("malformed preregistration") from exc
+
+
+@dataclass(frozen=True)
 class ExperimentCharter:
     charter_id: str
     version: int
@@ -107,6 +165,7 @@ class ExperimentCharter:
     parameters: tuple[tuple[str, str], ...] = field(default=())
     prior_sha256: str | None = None
     evaluation_identity: EvaluationIdentity | None = None
+    preregistration: Preregistration | None = None
 
     def __post_init__(self) -> None:
         if not self.charter_id.strip() or not self.strategy_id.strip():
@@ -141,11 +200,23 @@ class ExperimentCharter:
                 raise CharterError("evaluation strategy-code digest must match charter code_sha256")
             if set(name for name, _ in self.evaluation_identity.benchmarks) != set(self.benchmarks):
                 raise CharterError("evaluation benchmark digests must match the frozen charter benchmarks")
+        if self.preregistration is not None:
+            if Decimal(self.preregistration.risk_budget_inr) > capital:
+                raise CharterError("preregistered risk budget cannot exceed charter capital")
+            if date.fromisoformat(self.preregistration.data_cutoff_on) >= start:
+                raise CharterError("preregistered data cutoff must precede the prospective start")
+            if not set(self.benchmarks).issubset(self.preregistration.target_comparisons):
+                raise CharterError("preregistered comparisons must include every frozen benchmark")
 
     def require_evaluation_identity(self) -> EvaluationIdentity:
         if self.evaluation_identity is None:
             raise CharterError("protected evaluation needs complete market/data-rights/model/cost identity")
         return self.evaluation_identity
+
+    def require_preregistration(self) -> Preregistration:
+        if self.preregistration is None:
+            raise CharterError("protected evaluation needs a complete preregistered hypothesis and sample design")
+        return self.preregistration
 
     def canonical_bytes(self) -> bytes:
         body = {
@@ -156,6 +227,8 @@ class ExperimentCharter:
             "parameters": [list(p) for p in self.parameters], "prior_sha256": self.prior_sha256,
             "evaluation_identity": self.evaluation_identity.as_dict() if self.evaluation_identity else None,
         }
+        if self.preregistration is not None:
+            body["preregistration"] = self.preregistration.as_dict()
         return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
 
     def sha256(self) -> str:
@@ -170,7 +243,7 @@ class ExperimentCharter:
         return replace(self, version=self.version + 1, prior_sha256=self.sha256(), start_on=new_start_on, **changes)
 
     def as_dict(self) -> dict:
-        return {
+        body = {
             "charter_id": self.charter_id, "version": self.version, "strategy_id": self.strategy_id,
             "code_sha256": self.code_sha256, "capital_inr": str(Decimal(self.capital_inr)),
             "start_on": self.start_on, "end_on": self.end_on, "universe": list(self.universe),
@@ -178,14 +251,18 @@ class ExperimentCharter:
             "parameters": [list(p) for p in self.parameters], "prior_sha256": self.prior_sha256,
             "evaluation_identity": self.evaluation_identity.as_dict() if self.evaluation_identity else None,
         }
+        if self.preregistration is not None:
+            body["preregistration"] = self.preregistration.as_dict()
+        return body
 
     @classmethod
     def from_dict(cls, value: dict) -> "ExperimentCharter":
         expected = {"charter_id", "version", "strategy_id", "code_sha256", "capital_inr", "start_on", "end_on",
                     "universe", "benchmarks", "horizon_sessions", "parameters", "prior_sha256", "evaluation_identity"}
-        if not isinstance(value, dict) or set(value) != expected:
+        if not isinstance(value, dict) or set(value) not in (expected, expected | {"preregistration"}):
             raise CharterError("malformed experiment charter")
         identity = value["evaluation_identity"]
+        preregistration = value.get("preregistration")
         try:
             return cls(
                 charter_id=value["charter_id"], version=value["version"], strategy_id=value["strategy_id"],
@@ -194,6 +271,8 @@ class ExperimentCharter:
                 horizon_sessions=value["horizon_sessions"], parameters=tuple(tuple(p) for p in value["parameters"]),
                 prior_sha256=value["prior_sha256"],
                 evaluation_identity=EvaluationIdentity.from_dict(identity) if identity is not None else None,
+                preregistration=(Preregistration.from_dict(preregistration)
+                                 if preregistration is not None else None),
             )
         except (TypeError, KeyError) as exc:
             raise CharterError("malformed experiment charter") from exc
@@ -249,6 +328,7 @@ class CharterRegistry:
 
     def register(self, charter: ExperimentCharter, schedule: CohortSchedule) -> str:
         charter.require_evaluation_identity()
+        charter.require_preregistration()
         digest = charter.sha256()
         if schedule.charter_sha256 != digest:
             raise CharterError("cohort schedule must bind to the exact charter hash")

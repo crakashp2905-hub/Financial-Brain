@@ -52,7 +52,7 @@ def monthly_targets(rcon, day: date) -> dict[str, dict]:
     from ..evaluation import edges as E
     P = _panel(rcon, day)
     last = P["C"].index[-1]
-    out = {}
+    out: dict[str, dict] = {}
     mom = E.momentum_scores(P)
     res = E.residual_scores(P)
     idd = E.info_discreteness(P)
@@ -88,10 +88,22 @@ VERDICT.update({
     "edge_h005_industry_mom": "CANDIDATE_SMALL under ADR-0007 (hundred, 2026-11-17); forward shadow from 2026-11-18"})
 
 
-def _industries(rcon, lineages) -> pd.Series:
-    df = rcon.execute("""SELECT DISTINCT a.lineage, m.industry FROM adjusted_prices a
-                         JOIN (SELECT isin, any_value(industry) industry FROM index_membership
-                               WHERE index_name = 'NIFTY 500' GROUP BY isin) m USING (isin)""").df()
+def _industries(rcon, lineages, as_of: date) -> pd.Series:
+    """Resolve each lineage's latest NIFTY 500 industry known on the decision date."""
+    df = rcon.execute("""WITH security_asof AS (
+                            SELECT lineage, isin,
+                                   ROW_NUMBER() OVER (PARTITION BY lineage ORDER BY business_date DESC) AS rn
+                            FROM adjusted_prices
+                            WHERE business_date <= ? AND lineage IN (SELECT UNNEST(?)) AND isin IS NOT NULL
+                        ), membership_asof AS (
+                            SELECT s.lineage, m.industry,
+                                   ROW_NUMBER() OVER (PARTITION BY s.lineage
+                                                      ORDER BY m.as_of DESC, m.observed_at DESC) AS rn
+                            FROM security_asof s JOIN index_membership m USING (isin)
+                            WHERE s.rn = 1 AND m.index_name = 'NIFTY 500' AND m.as_of <= ?
+                        )
+                        SELECT lineage, industry FROM membership_asof WHERE rn = 1""",
+                       [as_of, list(lineages), as_of]).df()
     return df.drop_duplicates("lineage").set_index("lineage")["industry"].reindex(list(lineages))
 
 
@@ -107,7 +119,7 @@ def h_targets(rcon, P: dict) -> dict[str, dict]:
     s = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
     pick = s.nlargest(20).index
     out["edge_h003_riskadj_mom"] = {k: 1.0 / len(pick) for k in pick}
-    ind = _industries(rcon, C.columns)
+    ind = _industries(rcon, C.columns, last.date())
     r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
     g = r6.groupby(ind).mean().dropna()
     cnt = u.groupby(ind).sum()
@@ -277,7 +289,7 @@ def index_day(day: date) -> dict:
     if not bars or len(daily) < 2:
         return {}
     b = pd.DataFrame(bars)
-    out = {}
+    out: dict[str, float] = {}
     dd = pd.DataFrame(daily)
     dd["d"] = pd.to_datetime(dd["ts"]).dt.tz_localize(None).dt.normalize()
     dd = dd.set_index("d")
@@ -568,7 +580,7 @@ def k7_targets(rcon, day: date, fno_lins: list[str]) -> dict[str, dict]:
                         last = i
                 if any(n - 6 <= i <= n - 2 for i in keep):        # fired at s in [today-5, today-1]
                     held[setup].add(lin)
-    out = {}
+    out: dict[str, dict[str, float]] = {}
     for setup, (side, _) in K.SETUPS.items():
         names = held[setup]
         if not names:

@@ -79,6 +79,8 @@ def test_kite_stream_subscribes_frozen_tokens_in_full_mode_and_normalizes_ticks(
                                        max_quote_age=timedelta(seconds=1))
     assert [event.instrument_id for event in events] == ["NSE:INFY", "NFO:INFY26NOV100CE"]
     assert all(event.source == "KITE_CONNECT_READ_ONLY" for event in events)
+    assert stream.health()["entry_readiness"] == "READY"
+    assert stream.health()["evidence_quality"] == "STREAM_HEALTHY_UNATTESTED"
     assert "token-hidden" not in repr(stream.health())
     stream.stop()
 
@@ -104,3 +106,22 @@ def test_kite_stream_discards_stale_source_quotes_even_when_locally_receipted_no
     stream._on_ticks(None, [quote_tick(11, NOW - timedelta(seconds=2))])
     assert stream.drain_fresh_events(decision_time=NOW, max_quote_age=timedelta(milliseconds=500)) == []
     assert stream.health()["stale"] == 1
+    assert stream.health()["entry_readiness"] == "NO_ENTRY"
+    assert "stale_events_discarded" in stream.health()["no_entry_reasons"]
+    assert stream.health()["evidence_quality"] == "DEGRADED"
+
+
+def test_kite_stream_reconnect_or_queue_drop_forces_no_entry():
+    stream = KiteTickerStream(
+        token_to_instrument={11: "NSE:INFY", 22: "NFO:INFY26NOV100CE"},
+        underlying_tokens={11}, option_tokens={22}, permission=permission(),
+        clock=FixedClock(NOW), ticker_factory=FakeTicker,
+        credentials_provider=lambda: ("key", "token"), queue_capacity=1,
+    )
+    stream._on_ticks(None, [quote_tick(11, NOW), quote_tick(11, NOW)])
+    assert stream.health()["queue_dropped"] == 1
+    assert stream.health()["entry_readiness"] == "NO_ENTRY"
+    assert "queue_events_dropped" in stream.health()["no_entry_reasons"]
+    stream._on_reconnect(None, 1)
+    assert stream.health()["entry_readiness"] == "NO_ENTRY"
+    assert "stream_state_reconnecting" in stream.health()["no_entry_reasons"]

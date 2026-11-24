@@ -62,6 +62,21 @@
       "boundary": "Algorithm clock, cost, order, abstention and behavior specification; not promotion status or portfolio selection."
     },
     {
+      "id": "trade_admissibility_gate",
+      "category": "execution",
+      "owner": "src/financial_brain/kernel/trade_admissibility.py",
+      "owner_symbol": "evaluate_trade_admissibility",
+      "implementations": [
+        "src/financial_brain/kernel/net_ev.py",
+        "src/financial_brain/kernel/execution_feasibility.py",
+        "src/financial_brain/kernel/entry_constraints.py",
+        "src/financial_brain/kernel/trade_economics_receipt.py",
+        "src/financial_brain/kernel/probability_calibration.py",
+        "src/financial_brain/forward_edge/parameter_freeze.py"
+      ],
+      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence, costed net EV, a matching itemized target/stop/cash economics receipt, and versioned OOT probability scoring into research/paper decision evidence. Missing or mismatched receipts cannot pass. It is not wired into the forward session runner, has no OOT forecast cohort yet, and never authorizes broker orders."
+    },
+    {
       "id": "prospective_strategy_adapter",
       "category": "strategy",
       "owner": "src/financial_brain/forward_edge/strategy_adapter.py",
@@ -126,6 +141,16 @@
         "src/financial_brain/paper/intraday_runner.py"
       ],
       "boundary": "Normalized append-only quote-event archive; legacy raw DuckDB quote archive is a separate migration/source store."
+    },
+    {
+      "id": "index_forecast_market_contract",
+      "category": "forecasting",
+      "owner": "src/financial_brain/forecasting/index_market.py",
+      "owner_symbol": "build_15m_bars/forward_return",
+      "implementations": [
+        "src/financial_brain/forecasting/index_15m.py"
+      ],
+      "boundary": "Owns effective-dated index identity, point-in-time complete index bars and same-session labels; the research module owns leakage-safe features and evaluation utilities, not option routing or performance claims."
     },
     {
       "id": "broker_oms",
@@ -1317,6 +1342,90 @@
       "module_owner": "src/financial_brain/execution/ticket.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forecasting/bars.py",
+      "path": "src/financial_brain/forecasting/bars.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/bars.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/calibration.py",
+      "path": "src/financial_brain/forecasting/calibration.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/calibration.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/calibration_tools.py",
+      "path": "src/financial_brain/forecasting/calibration_tools.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/calibration_tools.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/dataset.py",
+      "path": "src/financial_brain/forecasting/dataset.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/dataset.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/distribution.py",
+      "path": "src/financial_brain/forecasting/distribution.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/distribution.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/ensemble.py",
+      "path": "src/financial_brain/forecasting/ensemble.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/ensemble.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_15m.py",
+      "path": "src/financial_brain/forecasting/index_15m.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_15m.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_extras.py",
+      "path": "src/financial_brain/forecasting/index_extras.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_extras.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_market.py",
+      "path": "src/financial_brain/forecasting/index_market.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_market.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_ops.py",
+      "path": "src/financial_brain/forecasting/index_ops.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_ops.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/kronos.py",
+      "path": "src/financial_brain/forecasting/kronos.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/kronos.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/null.py",
+      "path": "src/financial_brain/forecasting/null.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/null.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/store.py",
+      "path": "src/financial_brain/forecasting/store.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/store.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/walkforward.py",
+      "path": "src/financial_brain/forecasting/walkforward.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/walkforward.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/abstention.py",
       "path": "src/financial_brain/forward_edge/abstention.py",
       "module_role": "forward_trading_contract_or_support",
@@ -1477,6 +1586,12 @@
       "path": "src/financial_brain/forward_edge/custody.py",
       "module_role": "forward_trading_contract_or_support",
       "module_owner": "src/financial_brain/forward_edge/custody.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/data_distribution.py",
+      "path": "src/financial_brain/forward_edge/data_distribution.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/data_distribution.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/data_gate.py",
@@ -1705,6 +1820,12 @@
       "path": "src/financial_brain/forward_edge/operator_decisions.py",
       "module_role": "signal_report_or_trader_renderer",
       "module_owner": "src/financial_brain/forward_edge/operator_decisions.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/option_surface.py",
+      "path": "src/financial_brain/forward_edge/option_surface.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/option_surface.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/options_risk.py",
@@ -2295,6 +2416,12 @@
       "module_owner": "src/financial_brain/kernel/candidate_publication.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/entry_constraints.py",
+      "path": "src/financial_brain/kernel/entry_constraints.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/entry_constraints.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/execution_model.py",
       "path": "src/financial_brain/kernel/execution_model.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -2337,6 +2464,12 @@
       "module_owner": "src/financial_brain/kernel/paper_account.py"
     },
     {
+      "capability_id": "module:src/financial_brain/kernel/probability_calibration.py",
+      "path": "src/financial_brain/kernel/probability_calibration.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/probability_calibration.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/kernel/strategy_primitives.py",
       "path": "src/financial_brain/kernel/strategy_primitives.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -2353,6 +2486,18 @@
       "path": "src/financial_brain/kernel/strategy_state.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/kernel/strategy_state.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/trade_admissibility.py",
+      "path": "src/financial_brain/kernel/trade_admissibility.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/trade_admissibility.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/trade_economics_receipt.py",
+      "path": "src/financial_brain/kernel/trade_economics_receipt.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/trade_economics_receipt.py"
     },
     {
       "capability_id": "module:src/financial_brain/opportunity/conditions.py",
@@ -2709,6 +2854,12 @@
       "module_owner": "src/financial_brain/paper/terminal.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/today_screen.py",
+      "path": "src/financial_brain/paper/today_screen.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/paper/today_screen.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/trader_view.py",
       "path": "src/financial_brain/paper/trader_view.py",
       "module_role": "paper_engine_or_output",
@@ -2911,6 +3062,18 @@
       "path": "src/financial_brain/portfolio/canonical_ledger.py",
       "module_role": "ledger_or_journal",
       "module_owner": "src/financial_brain/portfolio/canonical_ledger.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/portfolio/capital_allocator.py",
+      "path": "src/financial_brain/portfolio/capital_allocator.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/capital_allocator.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/portfolio/constraints.py",
+      "path": "src/financial_brain/portfolio/constraints.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/constraints.py"
     },
     {
       "capability_id": "module:src/financial_brain/portfolio/gate.py",

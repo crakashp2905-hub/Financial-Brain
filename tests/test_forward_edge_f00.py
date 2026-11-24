@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 import json
 import shutil
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -65,6 +65,14 @@ def _trial_identity(trial_name: str, proposed_on: date):
         capital_inr="100000", start_on=proposed_on.isoformat(),
         end_on=(proposed_on + timedelta(days=30)).isoformat(), universe=("INFY",),
         benchmarks=("NIFTY50_TRI",), horizon_sessions=10,
+        preregistration=charter.Preregistration(
+            hypothesis=f"Frozen {trial_name} rule has positive net return after costs.",
+            entry_rule="Enter only on an eligible quote when the predeclared signal and risk checks pass.",
+            exit_rule="Exit under the registered stop or horizon; do not revise after cohort start.",
+            risk_budget_inr="1000", target_comparisons=("CASH", "NIFTY50_TRI"),
+            data_cutoff_on=(proposed_on - timedelta(days=1)).isoformat(),
+            minimum_sample_sessions=20,
+        ),
     )
     cohort = decision_custody.Cohort(
         cohort_id=f"{trial_name}-cohort", start=trial_charter.start_on, end=trial_charter.end_on)
@@ -274,6 +282,15 @@ def test_protected_trial_requires_charter_and_matching_cohort_scope(monkeypatch:
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
                                                   approvals=wrong_scope_approvals, now=NOW, scope_sha256=SHA,
                                                   charter=trial_charter, cohort_schedule=schedule)
+
+
+def test_protected_trial_scope_rejects_missing_preregistration() -> None:
+    trial_charter, _, _ = _trial_identity("M1-2027", date(2027, 1, 15))
+    unregistered_design = replace(trial_charter, preregistration=None)
+    schedule = decision_custody.CohortSchedule(unregistered_design.sha256(), (
+        decision_custody.Cohort("M1-2027-cohort", unregistered_design.start_on, unregistered_design.end_on),))
+    with pytest.raises(trials.TrialGovernanceError, match="complete preregistered design"):
+        trials.protected_trial_scope_sha256(unregistered_design, schedule)
 
 
 def test_q1_2027_explicit_budget_is_a_hard_capacity_limit(monkeypatch: pytest.MonkeyPatch) -> None:

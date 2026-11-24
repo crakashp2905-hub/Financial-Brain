@@ -8330,7 +8330,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8379,7 +8379,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8405,7 +8405,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8431,7 +8431,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8457,7 +8457,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8509,7 +8509,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8934,7 +8934,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -9184,7 +9184,7 @@
    "source": [],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -9204,7 +9204,7 @@
    "source": [],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     },
