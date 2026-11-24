@@ -71,6 +71,12 @@ variant and a separate trial; alternatives are never pooled.
   round outward. Risk sizing validates the budget, prices and lot multiple and includes multiplier,
   spread and slippage. `InstrumentConfig` can retain session hours and a corporate-action factor,
   but production calendars/actions and validated per-symbol settings are not yet supplied.
+- `eligibility.evaluate_instrument()` requires an effective-dated provider token, source hash,
+  complete-session flag and turnover floor. Supported indices are signal references only;
+  equities and ETFs must also be declared tradable. Unknown asset classes, missing provider
+  identities, incomplete bars, stale validity and illiquid records fail closed. No actual
+  provider snapshot is checked into the repository, so the function alone does not prove
+  today's tradable universe.
 - Stream observation clocks are currently integer bar indices. Kite/provider event clocks, actual
   quote arrival and the M1-only production adapter are still integration work; the backtest and
   stream module remain research/paper utilities.
