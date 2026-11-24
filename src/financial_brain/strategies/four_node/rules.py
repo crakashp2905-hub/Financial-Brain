@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import time
+from datetime import datetime, time
+from decimal import Decimal, InvalidOperation
 from math import isfinite
 
 from financial_brain.strategies.four_node.indicators import Cluster20
@@ -228,22 +229,152 @@ def size_by_risk(capital_at_risk: float, entry: float, stop: float, cfg: Instrum
     return units - units % lot
 
 
+FUNNEL_STAGES = ("pivots", "patterns", "setups", "intents", "fills", "closes")
+_FUNNEL_OUTCOMES = {
+    "pivots": {"OBSERVED"},
+    "patterns": {"CONFIRMED", "REJECTED", "EXPIRED"},
+    "setups": {"QUALIFIED", "REJECTED", "EXPIRED"},
+    "intents": {"BUY", "SELL", "REJECTED", "EXPIRED"},
+    "fills": {"FILLED", "PARTIAL", "NO_FILL", "REJECTED", "EXPIRED"},
+    "closes": {"CLOSED", "STOP", "TARGET", "TIME_EXIT"},
+}
+
+
+@dataclass(frozen=True)
+class FunnelEvent:
+    stage: str
+    event_id: str
+    parent_event_ids: tuple[str, ...]
+    outcome: str
+    occurred_at: datetime | None = None
+    gross_pnl_inr: Decimal | None = None
+    costs_inr: Decimal | None = None
+
+    @property
+    def net_pnl_inr(self) -> Decimal | None:
+        if self.gross_pnl_inr is None or self.costs_inr is None:
+            return None
+        return self.gross_pnl_inr - self.costs_inr
+
+
 @dataclass
 class Funnel:
-    """raw pivots -> confirmed patterns -> setups -> intents -> fills -> closes (FB-2541)."""
+    """Append-only, event-ID-reconciled Four-Node funnel (FB-2541)."""
 
     counts: Counter = field(default_factory=Counter)
     ids: dict[str, set[str]] = field(default_factory=dict)
+    events: dict[str, FunnelEvent] = field(default_factory=dict)
 
-    def add(self, stage: str, event_id: str) -> None:
-        if event_id in self.ids.setdefault(stage, set()):
+    def add(self, stage: str, event_id: str, *, parents: tuple[str, ...] = (),
+            outcome: str | None = None, occurred_at: datetime | None = None,
+            gross_pnl_inr: Decimal | str | int | float | None = None,
+            costs_inr: Decimal | str | int | float | None = None) -> None:
+        """Record one stage event and its immediate parent IDs; repeats are idempotent."""
+        if stage not in _FUNNEL_OUTCOMES:
+            raise ValueError("unknown Four-Node funnel stage")
+        if not isinstance(event_id, str) or not event_id.strip():
+            raise ValueError("funnel event ID is required")
+        if len(parents) != len(set(parents)):
+            raise ValueError("funnel parent IDs must be unique")
+        normalized_outcome = (outcome or ("OBSERVED" if stage == "pivots" else "")).upper()
+        if normalized_outcome not in _FUNNEL_OUTCOMES[stage]:
+            raise ValueError("outcome is invalid for funnel stage")
+        if occurred_at is not None and (occurred_at.tzinfo is None or occurred_at.utcoffset() is None):
+            raise ValueError("funnel event timestamp must be timezone-aware")
+
+        def amount(value: Decimal | str | int | float | None, name: str) -> Decimal | None:
+            if value is None:
+                return None
+            try:
+                parsed = Decimal(str(value))
+            except (InvalidOperation, ValueError) as exc:
+                raise ValueError(f"{name} must be a finite decimal") from exc
+            if not parsed.is_finite():
+                raise ValueError(f"{name} must be a finite decimal")
+            return parsed
+
+        gross = amount(gross_pnl_inr, "gross P&L")
+        costs = amount(costs_inr, "costs")
+        if stage == "closes":
+            if gross is None or costs is None or costs < 0:
+                raise ValueError("close events require gross P&L and nonnegative costs")
+        elif gross is not None or costs is not None:
+            raise ValueError("P&L is recorded only on close events")
+
+        index = FUNNEL_STAGES.index(stage)
+        required_parent_stage = None if index == 0 else FUNNEL_STAGES[index - 1]
+        if index == 0 and parents:
+            raise ValueError("raw pivots cannot have funnel parents")
+        if index > 0 and not parents:
+            raise ValueError("funnel stage requires parent event IDs")
+        for parent_id in parents:
+            parent = self.events.get(parent_id)
+            if parent is None or parent.stage != required_parent_stage:
+                raise ValueError("funnel parent is missing or belongs to the wrong stage")
+            if occurred_at is not None and parent.occurred_at is not None and parent.occurred_at > occurred_at:
+                raise ValueError("funnel event cannot precede its parent")
+        if stage == "patterns" and len(parents) < 3:
+            raise ValueError("confirmed pattern requires at least three pivot events")
+        if stage == "setups" and any(self.events[p].outcome != "CONFIRMED" for p in parents):
+            raise ValueError("setup parent pattern must be confirmed")
+        if stage == "intents" and normalized_outcome in {"BUY", "SELL"} and any(
+                self.events[p].outcome != "QUALIFIED" for p in parents):
+            raise ValueError("trade intent requires a qualified setup")
+        if stage == "fills" and normalized_outcome in {"FILLED", "PARTIAL"} and any(
+                self.events[p].outcome not in {"BUY", "SELL"} for p in parents):
+            raise ValueError("paper fill requires a directional intent")
+        if stage == "closes" and any(self.events[p].outcome not in {"FILLED", "PARTIAL"} for p in parents):
+            raise ValueError("close requires one or more observed paper fills")
+
+        event = FunnelEvent(stage, event_id, parents, normalized_outcome, occurred_at, gross, costs)
+        prior = self.events.get(event_id)
+        if prior is not None:
+            if prior != event:
+                raise ValueError("funnel event ID reused with conflicting payload")
             return
-        self.ids[stage].add(event_id)
+        self.events[event_id] = event
+        self.ids.setdefault(stage, set()).add(event_id)
         self.counts[stage] += 1
 
     def reconciles(self, order: list[str]) -> bool:
-        return all(self.ids.get(b, set()) <= self.ids.get(a, set()) | self.ids.get(b, set())
-                   and self.counts[b] <= self.counts[a] for a, b in zip(order, order[1:], strict=False))
+        """Verify unique IDs, complete stage ancestry, and exact per-stage count reconciliation."""
+        if tuple(order) != FUNNEL_STAGES:
+            return False
+        if len(self.events) != sum(self.counts.values()):
+            return False
+        for stage in order:
+            event_ids = self.ids.get(stage, set())
+            if self.counts[stage] != len(event_ids):
+                return False
+            if any(event_id not in self.events or self.events[event_id].stage != stage for event_id in event_ids):
+                return False
+        for event in self.events.values():
+            index = order.index(event.stage)
+            if index and (not event.parent_event_ids or any(
+                    self.events[parent_id].stage != order[index - 1] for parent_id in event.parent_event_ids)):
+                return False
+            if event.stage == "closes":
+                if event.gross_pnl_inr is None or event.costs_inr is None:
+                    return False
+                if event.net_pnl_inr != event.gross_pnl_inr - event.costs_inr:
+                    return False
+        return True
+
+    def report(self) -> dict[str, object]:
+        """Return counts and exact close-event P&L with IDs for independent reconciliation."""
+        close_ids = sorted(self.ids.get("closes", set()))
+        net = sum((self.events[event_id].net_pnl_inr or Decimal(0) for event_id in close_ids), Decimal(0))
+        return {
+            "stages": {stage: {
+                "count": self.counts[stage],
+                "event_ids": sorted(self.ids.get(stage, set())),
+                "outcome_counts": dict(Counter(self.events[event_id].outcome
+                                                for event_id in self.ids.get(stage, set()))),
+            } for stage in FUNNEL_STAGES},
+            "close_event_ids": close_ids,
+            "realized_net_pnl_inr": str(net),
+            "reconciles": self.reconciles(list(FUNNEL_STAGES)),
+        }
 
 
 def trace(setup: Setup, nodes: tuple[Node, Node, Node], c20: Cluster20, d1: float, d2: float) -> dict:

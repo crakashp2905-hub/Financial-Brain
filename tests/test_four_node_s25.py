@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -287,10 +288,39 @@ def test_risk_sizing_rounds_to_lots_not_forex_rule():
 
 def test_funnel_dedupes_and_reconciles():
     f = Funnel()
-    for i in range(5):
+    for i in range(4):
         f.add("pivots", f"p{i}")
-    f.add("setups", "p1"); f.add("setups", "p1"); f.add("fills", "p1")
-    assert f.counts["setups"] == 1 and f.reconciles(["pivots", "setups", "fills"])
+    f.add("patterns", "pat-1", parents=("p0", "p1", "p2"), outcome="CONFIRMED")
+    f.add("patterns", "pat-2", parents=("p1", "p2", "p3"), outcome="EXPIRED")
+    f.add("setups", "setup-1", parents=("pat-1",), outcome="QUALIFIED")
+    f.add("setups", "setup-2", parents=("pat-1",), outcome="REJECTED")
+    f.add("intents", "intent-1", parents=("setup-1",), outcome="BUY")
+    f.add("intents", "intent-2", parents=("setup-1",), outcome="SELL")
+    f.add("fills", "fill-1", parents=("intent-1",), outcome="PARTIAL")
+    f.add("fills", "fill-2", parents=("intent-2",), outcome="NO_FILL")
+    f.add("closes", "close-1", parents=("fill-1",), outcome="STOP",
+          gross_pnl_inr=Decimal("100.00"), costs_inr=Decimal("22.00"))
+    f.add("fills", "fill-1", parents=("intent-1",), outcome="PARTIAL")
+    report = f.report()
+    assert f.counts["setups"] == 2
+    assert report["stages"]["patterns"]["outcome_counts"] == {"CONFIRMED": 1, "EXPIRED": 1}
+    assert report["stages"]["setups"]["outcome_counts"] == {"QUALIFIED": 1, "REJECTED": 1}
+    assert report["stages"]["fills"]["outcome_counts"] == {"PARTIAL": 1, "NO_FILL": 1}
+    assert report["realized_net_pnl_inr"] == "78.00"
+    assert report["close_event_ids"] == ["close-1"]
+    assert report["reconciles"] is True
+
+
+def test_funnel_refuses_missing_parent_conflicts_and_unrealized_close():
+    f = Funnel()
+    f.add("pivots", "pivot-1")
+    with pytest.raises(ValueError, match="parent event IDs"):
+        f.add("patterns", "pattern-1", outcome="CONFIRMED")
+    with pytest.raises(ValueError, match="missing or belongs"):
+        f.add("patterns", "pattern-1", parents=("unknown-1", "unknown-2", "unknown-3"),
+              outcome="CONFIRMED")
+    with pytest.raises(ValueError, match="close events require"):
+        f.add("closes", "close-1", parents=("unknown-fill",), outcome="CLOSED")
 
 
 def test_trace_record():

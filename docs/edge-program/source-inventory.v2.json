@@ -12714,6 +12714,7 @@
         "collections",
         "dataclasses",
         "datetime",
+        "decimal",
         "financial_brain.strategies.four_node.indicators",
         "financial_brain.strategies.four_node.nodes",
         "financial_brain.strategies.four_node.spec",
@@ -12723,7 +12724,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/strategies/four_node/rules.py",
-      "source_sha256": "b94ba69d33d19da1119f92dc9d6f7397e3a9a24209d824dfd8918a559a91aa1d",
+      "source_sha256": "d8dc0172c88d82eb4324e5edac2f05722cdb6d3df4ce6b6b113f57dd2cb20a76",
       "test_paths": []
     },
     {
