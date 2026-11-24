@@ -1452,6 +1452,12 @@
       "module_owner": "src/financial_brain/forward_edge/custody.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/data_distribution.py",
+      "path": "src/financial_brain/forward_edge/data_distribution.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/data_distribution.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/data_gate.py",
       "path": "src/financial_brain/forward_edge/data_gate.py",
       "module_role": "canonical_contract_or_signal_output",
