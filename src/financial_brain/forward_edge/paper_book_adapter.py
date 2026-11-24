@@ -7,12 +7,13 @@ import math
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
 from financial_brain.forward_edge.market_data import executable_quote
 from financial_brain.forward_edge.market_events import MarketEvent
 from financial_brain.forward_edge.session_runner import ForwardSessionRunner, ForwardSessionRunnerError
+from financial_brain.kernel.units import BasisPoints, Price, UnitError, WholeUnits
 
 
 class PaperBookAdapterError(ValueError):
@@ -37,12 +38,39 @@ class PaperBookSignal:
     lineage: str
     signal_type: str
     horizon_sessions: int
-    shares: int
-    stop_price: float
-    reference_price: float
-    expected_net: float | None
-    estimated_cost: float
+    shares: int | WholeUnits
+    stop_price: float | Decimal | Price
+    reference_price: float | Decimal | Price
+    expected_net: float | BasisPoints | None
+    estimated_cost: float | BasisPoints
     instrument_id: str
+
+    def __post_init__(self) -> None:
+        try:
+            quantity = (self.shares if isinstance(self.shares, WholeUnits)
+                        else WholeUnits(Decimal(str(self.shares))))
+            if quantity.units <= 0:
+                raise PaperBookAdapterError("paper-book shares must be positive whole units")
+            object.__setattr__(self, "shares", int(quantity.units))
+            for name in ("stop_price", "reference_price"):
+                value = getattr(self, name)
+                price = value if isinstance(value, Price) else Price(Decimal(str(value)), "INR")
+                if price.currency != "INR":
+                    raise PaperBookAdapterError(f"paper-book {name} must be denominated in INR")
+                object.__setattr__(self, name, float(price.value))
+            if isinstance(self.expected_net, BasisPoints):
+                object.__setattr__(self, "expected_net", float(self.expected_net.as_rate()))
+            if isinstance(self.estimated_cost, BasisPoints):
+                object.__setattr__(self, "estimated_cost", float(self.estimated_cost.as_rate()))
+            expected = cast(float | None, self.expected_net)
+            cost = cast(float, self.estimated_cost)
+            if (expected is not None and not math.isfinite(expected)
+                    or not math.isfinite(cost) or cost < 0):
+                raise PaperBookAdapterError("paper-book expected-net and cost rates must be finite")
+        except (UnitError, InvalidOperation, TypeError, ValueError) as exc:
+            if isinstance(exc, PaperBookAdapterError):
+                raise
+            raise PaperBookAdapterError(f"paper-book signal has invalid typed values: {exc}") from exc
 
     @property
     def signal_id(self) -> str:
@@ -168,7 +196,8 @@ def record_signal_decision(*, runner: ForwardSessionRunner, session_id: str,
         raise PaperBookAdapterError("book signal requires a matching executable-quote instrument event")
     decision_id = f"{signal.signal_id}:{session_id}"
     payload = signal.payload()
-    qualified = signal.expected_net is not None and signal.expected_net > 0
+    expected_net = cast(float | None, signal.expected_net)
+    qualified = expected_net is not None and expected_net > 0
     if qualified:
         if manifest is None:
             raise PaperBookAdapterError("positive expected-net book signal requires a canonical decision manifest")
@@ -328,7 +357,8 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
             raise PaperBookAdapterError(f"current quote is not executable for runner-owned position {symbol}")
         bid = float(quote["bid"])
         last = float(event.payload["last_price"])
-        reason = "STOP" if bid <= signal.stop_price else "TIME" if held >= signal.horizon_sessions else None
+        stop_price = cast(float, signal.stop_price)
+        reason = "STOP" if bid <= stop_price else "TIME" if held >= signal.horizon_sessions else None
         marks.append((signal, held, event, last, reason))
         if reason is not None:
             output.append(PaperBookExit(signal, reason, held, event.event_id, bid))
@@ -352,7 +382,7 @@ def record_exit_decision(*, runner: ForwardSessionRunner, session_id: str, exit_
     if exit_signal.reason not in {"STOP", "TIME"} or type(exit_signal.completed_sessions_held) is not int \
             or exit_signal.completed_sessions_held < 0:
         raise PaperBookAdapterError("exit reason or completed session age is invalid")
-    if exit_signal.reason == "STOP" and exit_signal.bid_price > signal.stop_price:
+    if exit_signal.reason == "STOP" and exit_signal.bid_price > cast(float, signal.stop_price):
         raise PaperBookAdapterError("stop exit bid is above the frozen stop price")
     if exit_signal.reason == "TIME" and exit_signal.completed_sessions_held < signal.horizon_sessions:
         raise PaperBookAdapterError("time exit precedes the frozen session horizon")

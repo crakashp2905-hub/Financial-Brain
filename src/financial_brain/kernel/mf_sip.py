@@ -6,6 +6,8 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
+from .units import INRNotional, MutualFundUnits, NavPerUnit, UnitError
+
 
 
 class MFSIPError(ValueError):
@@ -51,18 +53,18 @@ class MFSIPInstallment:
     plan: str
     option: str
     scheduled_for: date
-    amount_inr: Decimal
+    amount_inr: Decimal | INRNotional
     state: MFSIPState = MFSIPState.SCHEDULED
     payment_initiated_at: datetime | None = None
     funds_available_at: datetime | None = None
     missed_at: datetime | None = None
     miss_reason: str | None = None
     nav_date: date | None = None
-    nav_per_unit: Decimal | None = None
+    nav_per_unit: Decimal | NavPerUnit | None = None
     nav_published_at: datetime | None = None
     nav_available_at: datetime | None = None
     allotted_at: datetime | None = None
-    units_allotted: Decimal | None = None
+    units_allotted: Decimal | MutualFundUnits | None = None
 
     def __post_init__(self) -> None:
         for name in ("installment_id", "plan_id", "account_id", "folio_id", "scheme_code",
@@ -74,15 +76,27 @@ class MFSIPInstallment:
         except ValueError as exc:
             raise MFSIPError("unknown SIP installment state") from exc
         object.__setattr__(self, "state", state)
-        amount = _positive(self.amount_inr, "amount_inr")
+        try:
+            amount_unit = (self.amount_inr if isinstance(self.amount_inr, INRNotional)
+                           else INRNotional(self.amount_inr))
+            amount = _positive(amount_unit.amount, "amount_inr")
+        except UnitError as exc:
+            raise MFSIPError(str(exc)) from exc
         if amount is None:
             raise MFSIPError("amount_inr is required")
         object.__setattr__(self, "amount_inr", amount)
         for name in ("payment_initiated_at", "funds_available_at", "missed_at",
                      "nav_published_at", "nav_available_at", "allotted_at"):
             object.__setattr__(self, name, _aware(getattr(self, name), name))
-        nav = _positive(self.nav_per_unit, "nav_per_unit")
-        units = _positive(self.units_allotted, "units_allotted")
+        try:
+            nav_unit = (self.nav_per_unit if isinstance(self.nav_per_unit, NavPerUnit)
+                        else NavPerUnit(self.nav_per_unit)) if self.nav_per_unit is not None else None
+            units_unit = (self.units_allotted if isinstance(self.units_allotted, MutualFundUnits)
+                          else MutualFundUnits(self.units_allotted)) if self.units_allotted is not None else None
+        except UnitError as exc:
+            raise MFSIPError(str(exc)) from exc
+        nav = _positive(nav_unit.amount if nav_unit is not None else None, "nav_per_unit")
+        units = _positive(units_unit.units if units_unit is not None else None, "units_allotted")
         object.__setattr__(self, "nav_per_unit", nav)
         object.__setattr__(self, "units_allotted", units)
         if state is MFSIPState.SCHEDULED:

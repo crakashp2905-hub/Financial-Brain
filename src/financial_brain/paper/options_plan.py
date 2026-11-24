@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from .options import OptionPaperError, Quote, cost_hurdle
+from .options import OptionPaperError, Quote, cost_hurdle, option_lot_count
+from ..kernel.units import OptionLots
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ def build_long_option_plan(
     decision_at: datetime,
     underlying_price: float,
     invalidation_price: float,
-    lots: int,
+    lots: int | OptionLots,
     stop_premium: float,
     target_premium: float,
     max_quote_age: timedelta,
@@ -47,8 +48,7 @@ def build_long_option_plan(
     strike_text = f"{contract.strike:g}"
     if not q.symbol.endswith(f"{strike_text}{contract.option_type}"):
         raise OptionPaperError("tradingsymbol does not match the declared strike and CE/PE type")
-    if not isinstance(lots, int) or isinstance(lots, bool) or lots <= 0:
-        raise OptionPaperError("lots must be a positive integer")
+    lot_count = option_lot_count(lots)
     if decision_at.tzinfo is None or decision_at.utcoffset() is None:
         raise OptionPaperError("decision timestamp must be timezone-aware")
     if not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
@@ -58,7 +58,7 @@ def build_long_option_plan(
         raise OptionPaperError("underlying, invalidation, stop and target prices must be finite and positive")
     if q.observed_at > decision_at or decision_at - q.observed_at > max_quote_age:
         raise OptionPaperError("contract quote is future-dated or stale at decision time")
-    if q.ask_qty < lots * q.lot_size:
+    if q.ask_qty < lot_count * q.lot_size:
         raise OptionPaperError("visible ask depth cannot support requested lots")
     if not (0 < stop_premium < q.ask < target_premium):
         raise OptionPaperError("long-premium levels must satisfy stop < ask entry < target")
@@ -67,7 +67,7 @@ def build_long_option_plan(
     if contract.option_type == "PE" and invalidation_price <= underlying_price:
         raise OptionPaperError("put thesis invalidation must be above the underlying decision price")
 
-    hurdle = cost_hurdle(contract.quote, lots=lots, expected_exit_bid=target_premium)
+    hurdle = cost_hurdle(contract.quote, lots=lot_count, expected_exit_bid=target_premium)
     if not hurdle["passes"]:
         raise OptionPaperError("target premium does not clear estimated round-trip charges")
     return {
@@ -80,8 +80,8 @@ def build_long_option_plan(
         "symbol": q.symbol,
         "token": q.token,
         "lot_size": q.lot_size,
-        "lots": lots,
-        "quantity": lots * q.lot_size,
+        "lots": lot_count,
+        "quantity": lot_count * q.lot_size,
         "entry_premium_band": {"bid": q.bid, "ask": q.ask},
         "entry_price_reference": "observed_ask",
         "stop_premium": stop_premium,

@@ -111,6 +111,27 @@ def test_executable_quote_requires_two_sided_positive_displayed_liquidity():
                                                   received_at=received)) is None
 
 
+def test_kite_price_and_depth_inputs_obey_inr_price_and_whole_share_units():
+    received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
+    with pytest.raises(KiteQuoteNormalizationError, match="Kite ask must be a positive finite INR price"):
+        normalize_kite_quote("NSE:INFY", quote() | {"depth": {
+            "buy": [{"price": 101.4, "quantity": 12}],
+            "sell": [{"price": 0, "quantity": 9}],
+        }}, received_at=received)
+    with pytest.raises(KiteQuoteNormalizationError, match="Kite bid quantity must be a whole-unit quantity"):
+        normalize_kite_quote("NSE:INFY", quote() | {"depth": {
+            "buy": [{"price": 101.4, "quantity": 12.5}],
+            "sell": [{"price": 101.6, "quantity": 9}],
+        }}, received_at=received)
+
+    fractional_l2 = quote() | {"depth": {
+        "buy": [{"price": 101.4, "quantity": 12}, {"price": 101.3, "quantity": 1.5}],
+        "sell": [{"price": 101.6, "quantity": 9}],
+    }}
+    event = normalize_kite_quote("NSE:INFY", fractional_l2, received_at=received)
+    assert executable_quote(event) is None
+
+
 def test_locked_or_crossed_books_are_not_executable():
     received = datetime(2026, 11, 13, 4, 45, 1, tzinfo=timezone.utc)
     locked = quote() | {"depth": {

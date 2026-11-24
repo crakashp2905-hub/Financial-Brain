@@ -114,6 +114,74 @@ def market_panel(rcon) -> str:
     return '<div class="grid">' + "".join(tiles) + "</div>"
 
 
+def etf_desk_panel(rows: list[dict] | None = None) -> str:
+    """Render sourced ETF quote, valuation, tracking, cost and liquidity evidence.
+
+    The caller supplies only observations already resolved as-of the decision time by
+    the ETF reference/market-data services. Missing inputs stay visibly unavailable.
+    """
+    out = ["<h2>ETF desk</h2>",
+           "<div class='sub'>Quoted premium/discount is an observation, not arbitrage. "
+           "A missing or stale source is shown as unavailable; this panel does not create fills.</div>"]
+    if not rows:
+        return "".join(out) + (
+            "<div class='note'>No point-in-time ETF observations were supplied. "
+            "Benchmark, executable bid/ask, fresh iNAV comparison, tracking disclosures, "
+            "cost and liquidity are unavailable until permissioned source data is connected.</div>"
+        )
+
+    def shown(value, suffix=""):
+        if value is None:
+            return "—"
+        if suffix == " INR":
+            try:
+                value = f"{float(value):,.0f}"
+            except (TypeError, ValueError):
+                pass
+        return f"{_e(value)}{suffix}"
+
+    rendered = []
+    for row in rows:
+        quote = row.get("quote") or {}
+        valuation = row.get("valuation") or {}
+        tracking = row.get("tracking") or {}
+        liquidity = row.get("liquidity") or {}
+        bid, ask = quote.get("bid"), quote.get("ask")
+        spread = None
+        try:
+            if bid is not None and ask is not None and float(bid) > 0 and float(ask) >= float(bid):
+                spread = (float(ask) - float(bid)) / ((float(ask) + float(bid)) / 2) * 10_000
+        except (TypeError, ValueError, ZeroDivisionError):
+            spread = None
+        premium = valuation.get("premium_discount_bps") if valuation.get("inav_age_seconds") is not None else None
+        inav_age = valuation.get("inav_age_seconds")
+        inav_state = "fresh comparison" if premium is not None else "unavailable / freshness gate failed"
+        tracking_state = "sourced disclosure" if tracking.get("tracking_difference_bps") is not None else "unavailable"
+        liquidity_state = liquidity.get("status", "unavailable")
+        rendered.append(
+            "<tr>"
+            f"<td>{_e(row.get('symbol', '—'))}</td>"
+            f"<td>{_e(row.get('underlying_index') or '—')}</td>"
+            f"<td class='r'>{shown(bid)}</td><td class='r'>{shown(ask)}</td>"
+            f"<td class='r'>{shown(spread, ' bp')}</td>"
+            f"<td class='r'>{shown(premium, ' bp')}<div class='sub'>{_e(inav_state)}"
+            f"{f' · iNAV age {float(inav_age):.0f}s' if inav_age is not None else ''}</div></td>"
+            f"<td class='r'>{shown(tracking.get('tracking_difference_bps'), ' bp')}"
+            f"<div class='sub'>{_e(tracking_state)}</div></td>"
+            f"<td class='r'>{shown(liquidity.get('estimated_all_in_round_trip_cost_bps'), ' bp')}"
+            f"<div class='sub'>{_e(liquidity_state)} · turnover {shown(liquidity.get('median_daily_turnover_inr'), ' INR')}</div></td>"
+            f"<td>{_e(quote.get('source') or valuation.get('inav_source') or 'source unavailable')}"
+            f"<div class='sub'>quote { _e(quote.get('event_time') or '—') }</div></td>"
+            "</tr>"
+        )
+    return "".join(out) + (
+        "<div class='wrap'><table><tr><th>ETF</th><th>Underlying benchmark</th><th class='r'>Bid</th>"
+        "<th class='r'>Ask</th><th class='r'>Spread</th><th class='r'>Midquote vs fresh iNAV</th>"
+        "<th class='r'>Tracking difference</th><th class='r'>Estimated cost / liquidity</th>"
+        "<th>Evidence source / time</th></tr>" + "".join(rendered) + "</table></div>"
+    )
+
+
 def _spark(df: pd.DataFrame) -> str:
     """Cumulative net rupees of the sold trades by exit day, against the universe on the same money."""
     d = df.sort_values("exit_day")
@@ -670,6 +738,7 @@ def mf_paper_panel(con, asof: date) -> str:
     """Render account-scoped MF values using only NAVs available by the report date."""
     from ..kernel.trading_clock import IST
     from ..kernel.mf_paper_realism import WEIGHTS
+    from .mf_decisions import decisions_as_of
     from .mf_lot_book import account_snapshot
     from .mf_paper_realism_book import assess_account_mf_realism
 
@@ -677,16 +746,68 @@ def mf_paper_panel(con, asof: date) -> str:
     rows = con.execute(
         "SELECT account_id FROM mf_paper_accounts ORDER BY account_id"
     ).fetchall()
-    if not rows:
-        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
-
     out = ["<h2>Mutual fund paper book</h2>",
-           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
+           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible. MF actions below are decisions, not current-price orders.</div>",
+           "<h3>Mutual-fund decision choices</h3><div class='wrap'><table>"
+           "<tr><th>Decision</th><th>Meaning</th><th>Required context</th></tr>"
+           "<tr><td>SUBSCRIBE</td><td>Consider a one-time allocation; units follow the eligible NAV, not a displayed current price.</td><td>Scheme, plan, option, INR amount, cutoff and payment context</td></tr>"
+           "<tr><td>REDEEM</td><td>Consider redeeming specified folio holdings; cash is delayed until the eligible NAV and payout settle.</td><td>Folio, scheme identity, amount or units, exit-load and payout terms</td></tr>"
+           "<tr><td>SWITCH</td><td>Consider paired redemption/subscription with both schemes' cutoff and NAV rules.</td><td>Source/destination scheme identities, folio, amount or units</td></tr>"
+           "<tr><td>SIP</td><td>Consider a recurring schedule; every installment has separate funding and NAV outcomes.</td><td>Scheme identity, INR amount, frequency and schedule dates</td></tr>"
+           "<tr><td>HOLD</td><td>Record no transaction for this review.</td><td>Reason and decision-time evidence</td></tr>"
+           "</table></div>"]
+    if not rows:
+        out.append("<div class='sub'>No MF paper accounts. Decision records require a local paper account and never submit transactions.</div>")
+        return "".join(out)
     for (account_id,) in rows:
+        decisions = decisions_as_of(con, account_id=account_id, known_at=known_at)
+        if decisions:
+            decision_rows = []
+            for item in decisions:
+                scheme = item["scheme_code"] or "—"
+                target = item["target_scheme_code"] or "—"
+                amount = f"Rs {item['amount_inr']:,.2f}" if item["amount_inr"] is not None else "—"
+                units = f"{item['units']:,.6f}" if item["units"] is not None else "—"
+                decision_rows.append(
+                    f"<tr><td>{_e(item['action'])}</td><td>{_e(scheme)} → {_e(target)}</td>"
+                    f"<td>{_e(item['status'])}</td><td>{_e(item['decided_at'].isoformat())}</td>"
+                    f"<td>{_e(item['expires_at'].isoformat())}</td><td class='r'>{_e(amount)}</td>"
+                    f"<td class='r'>{_e(units)}</td><td>{_e(item['reason'])}</td>"
+                    f"<td>{_e(item['decision_sha256'][:12])}</td></tr>"
+                )
+            out.append(
+                f"<h4>{_e(account_id)} · recent human MF decisions</h4><div class='wrap'><table>"
+                "<tr><th>Decision</th><th>Scheme → destination</th><th>Status</th><th>Decided</th>"
+                "<th>Expires</th><th class='r'>INR</th><th class='r'>Units</th><th>Reason</th><th>Hash</th></tr>"
+                + "".join(decision_rows) + "</table></div>"
+                "<div class='sub'>Decision-only journal; no paper order or external transaction was created.</div>"
+            )
         snapshot = account_snapshot(con, account_id, known_at=known_at)
         realism = assess_account_mf_realism(
             con, account_id=account_id, assessed_at=known_at,
         )
+        pending_purchases = con.execute("""SELECT o.order_id, o.scheme_code, o.plan, o.option,
+            o.amount_inr, o.units, e.eligible_nav_date, o.current_state
+            FROM mf_paper_orders o LEFT JOIN mf_paper_purchase_eligibility e USING(order_id)
+            WHERE o.account_id=? AND o.created_at<=? AND o.updated_at<=?
+              AND o.transaction_type IN ('PURCHASE','SWITCH_IN')
+              AND (e.state='NAV_PENDING' OR (e.state IS NULL AND o.current_state IN ('REQUESTED','ACKNOWLEDGED','ACCEPTED')))
+            ORDER BY o.created_at, o.order_id""", [account_id, known_at, known_at]).fetchall()
+        if pending_purchases:
+            pending_rows = []
+            for order_id, scheme, plan, option, amount, units, eligible_date, state in pending_purchases:
+                pending_rows.append(
+                    f"<tr><td>{_e(order_id)}</td><td>{_e(scheme)}</td><td>{_e(plan)}</td><td>{_e(option)}</td>"
+                    f"<td class='r'>{f'Rs {amount:,.2f}' if amount is not None else '—'}</td>"
+                    f"<td class='r'>{f'{units:,.6f}' if units is not None else '—'}</td>"
+                    f"<td>{_e(eligible_date or '—')}</td><td>{_e(state)}</td></tr>"
+                )
+            out.append(
+                "<h4>Pending MF allotments</h4><div class='sub'>Cutoff details are shown only when provided by a sourced scheme rule; this book has no connected cutoff feed.</div>"
+                "<div class='wrap'><table><tr><th>Order</th><th>Scheme</th><th>Plan</th><th>Option</th>"
+                "<th class='r'>Amount</th><th class='r'>Units</th><th>Eligible NAV date</th><th>Order state</th></tr>"
+                + "".join(pending_rows) + "</table></div>"
+            )
         realism_factors = {factor.dimension: factor for factor in realism.factors}
         settlements = con.execute("""SELECT settlement_id, scheme_code, state,
             net_inr, payout_available_at, payout_basis, payout_evidence_ref,
@@ -780,27 +901,56 @@ def mf_paper_panel(con, asof: date) -> str:
             value_text = f"Rs {value:,.2f}" if value is not None else "—"
             basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
             pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
+            exit_load_text = "—"
+            if nav is not None and status == "CURRENT":
+                from .mf_exit_loads import PurchaseLot, calculate_exit_loads
+                from .mf_lot_book import _schedule_from_json
+                folio_clause = "folio_id IS NULL" if position["folio_id"] is None else "folio_id=?"
+                parameters = [account_id, position["scheme_code"], position["plan"],
+                              position["option"], position["isin"]]
+                if position["folio_id"] is not None:
+                    parameters.append(position["folio_id"])
+                lot_rows = con.execute(f"""SELECT lot_id, allotted_on, units_remaining,
+                    exit_loads_json FROM mf_paper_lots WHERE account_id=? AND scheme_code=?
+                    AND plan=? AND option=? AND isin=? AND {folio_clause} AND units_remaining>0
+                    ORDER BY allotted_on, lot_id""", parameters).fetchall()
+                try:
+                    lots = tuple(PurchaseLot(row[0], row[1], row[2], _schedule_from_json(row[3]))
+                                 for row in lot_rows)
+                    estimate = calculate_exit_loads(
+                        lots, redemption_date=asof, redemption_units=position["units"],
+                        nav_per_unit=nav,
+                    )
+                    exit_load_text = f"Rs {estimate.exit_load_inr:,.2f}"
+                except (ValueError, TypeError):
+                    exit_load_text = "Unavailable · terms missing/ambiguous"
             position_rows.append(
                 f"<tr><td>{_e(folio)}</td><td>{_e(position['scheme_code'])}</td>"
                 f"<td>{_e(position['plan'])}</td>"
                 f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
                 f"<td class='r'>{nav_text}</td>"
                 f"<td>{_e(position['nav_date'] or '—')}</td>"
+                f"<td>{_e(position.get('nav_available_at').isoformat() if position.get('nav_available_at') else '—')}</td>"
                 f"<td class='r'>{value_text}</td>"
                 f"<td class='r'>{basis_text}</td>"
+                f"<td class='r'>{_e(exit_load_text)}</td>"
+                "<td>Unavailable · India MF tax rules not configured</td>"
                 f"<td class='r {pnl_class}'>{pnl_text}</td>"
                 f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
             )
         out.append(
+            "<div class='sub'>Exit load is an estimate for redeeming the full position today using the source-pinned lot schedules. Tax is not estimated because a current India MF tax classification/rate schedule is not configured.</div>"
             "<div class='wrap'><table><tr><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
             "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
-            "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
+            "<th>NAV available at</th><th class='r'>Value</th><th class='r'>Cost basis</th>"
+            "<th class='r'>Exit load estimate</th><th>Tax estimate</th><th class='r'>Unrealized P&amp;L</th>"
             "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
         )
     return "".join(out)
 
 
-def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
+def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None,
+          etf_rows: list[dict] | None = None) -> str:
     from ..evaluation import champion as C
     from ..opportunity import scanners as S
     from ..regime import breadth as BR
@@ -812,7 +962,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     stale = freshness(rcon)
     parts = [f"<title>Financial-Brain terminal</title><style>{CSS}</style><main>",
              f"<h1>Financial-Brain</h1><div class='sub'>Terminal for {day} · data through {asof} · written "
-             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system · "
+             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper-only; this terminal does not send external orders · "
              f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>",
              _freshness_banner(stale)]
     # ---------------------------------------------------------------- market
@@ -826,6 +976,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(mf_paper_panel(rcon, asof))
     except Exception as e:                          # noqa: BLE001 - MF books may not be initialized yet
         parts.append(f"<div class='sub'>MF paper book unavailable: {_e(str(e)[:100])}</div>")
+    parts.append(etf_desk_panel(etf_rows))
     # ---------------------------------------------------------------- opportunities
     cs = S.cross_section(rcon, asof)
     opps = S.scan(cs, asof, capital=capital)

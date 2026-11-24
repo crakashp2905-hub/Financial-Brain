@@ -56,3 +56,27 @@ def test_fixture_report_hash_is_independent_of_repository_checkout_provenance(mo
     fake_provenance["source_branch"] = "github-merge-ref"
     second = pipeline.run_session(fixture)["forward_runner"]["records_sha256"]
     assert first == second
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("quantity", "1.5"),
+        ("close_price", "0"),
+        ("tick", "-0.05"),
+    ],
+)
+def test_fixture_pipeline_rejects_invalid_order_units_before_execution(field: str, value: str) -> None:
+    fixture = fixture_pack()["win"]
+    fixture[field] = value
+
+    with pytest.raises(ValueError, match="fixture financial units are invalid"):
+        pipeline.run_session(fixture)
+
+
+def test_fixture_pipeline_rejects_fractional_quote_depth_before_execution() -> None:
+    fixture = fixture_pack()["win"]
+    fixture["quotes"][0]["ask_qty"] = "2.5"
+
+    with pytest.raises(ValueError, match="fixture financial units are invalid"):
+        pipeline.run_session(fixture)

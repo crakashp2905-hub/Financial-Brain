@@ -56,6 +56,11 @@ def test_liquidity_report_combines_spread_depth_staleness_gaps_and_size_cost() -
     assert report["stale_or_non_executable_quote_fraction"] == 0.5
     assert report["capacity_participation_fraction"] == pytest.approx(0.01)
     assert report["estimated_all_in_round_trip_cost_bps"] > report["other_round_trip_cost_bps"]
+    assert report["estimated_all_in_round_trip_cost_bps"] == pytest.approx(
+        report["median_spread_bps"] + report["amihud_size_impact_proxy_bps"]
+        + report["other_round_trip_cost_bps"]
+    )
+    assert "full observed spread" in report["cost_model_label"]
     assert report["limits_met"] is True
 
 

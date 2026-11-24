@@ -33,6 +33,7 @@ from financial_brain.forward_edge.session_state import (
     ForwardSessionStore,
     SessionState,
 )
+from financial_brain.kernel.units import BasisPoints, Price, UnitError, WholeUnits
 from financial_brain.forward_edge.session_ops import REQUIRED_PREFLIGHT
 from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
@@ -1035,12 +1036,13 @@ class ForwardSessionRunner:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
-                             event_id: str, side: str, quantity: int, limit_price: Decimal,
-                             tick_size: Decimal, freeze_limit: int, slice_size: int,
-                             adverse_slippage_bps: Decimal, latency_ms: int,
+                             event_id: str, side: str, quantity: int | WholeUnits,
+                             limit_price: Decimal | Price, tick_size: Decimal | Price,
+                             freeze_limit: int, slice_size: int,
+                             adverse_slippage_bps: Decimal | BasisPoints, latency_ms: int,
                              quantity_unit: str | None = None,
                              simulated_at: datetime | None = None, max_wait_ms: int | None = None,
-                             price_band: tuple[Decimal, Decimal] | None = None,
+                             price_band: tuple[Decimal | Price, Decimal | Price] | None = None,
                              passive_trade_event_ids: tuple[str, ...] = ()) -> dict[str, Any]:
         """Create one durable paper execution receipt from an eligible observed quote.
 
@@ -1052,8 +1054,32 @@ class ForwardSessionRunner:
         if not all(value.strip() for value in (order_id, decision_id, event_id)):
             raise ForwardSessionRunnerError("paper order and source decision identities are required")
         simulated_at = simulated_at or capture_local_time(self.clock, label="simulated execution timestamp")
-        if side not in {"BUY", "SELL"} or type(quantity) is not int or quantity < 1:
+        try:
+            quantity_value = quantity.units if isinstance(quantity, WholeUnits) else quantity
+            if isinstance(quantity_value, Decimal):
+                if quantity_value != quantity_value.to_integral_value():
+                    raise ForwardSessionRunnerError("paper order quantity must be whole units")
+                quantity_value = int(quantity_value)
+            for label, value in (("limit price", limit_price), ("tick size", tick_size)):
+                if isinstance(value, Price) and value.currency != "INR":
+                    raise ForwardSessionRunnerError(f"paper {label} must be denominated in INR")
+            if price_band is not None and any(
+                isinstance(value, Price) and value.currency != "INR" for value in price_band
+            ):
+                raise ForwardSessionRunnerError("paper price band must be denominated in INR")
+            limit_value = limit_price.value if isinstance(limit_price, Price) else limit_price
+            tick_value = tick_size.value if isinstance(tick_size, Price) else tick_size
+            slippage_value = (adverse_slippage_bps.value
+                              if isinstance(adverse_slippage_bps, BasisPoints)
+                              else adverse_slippage_bps)
+            band_values = tuple(
+                value.value if isinstance(value, Price) else value for value in price_band
+            ) if price_band is not None else None
+        except UnitError as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        if side not in {"BUY", "SELL"} or type(quantity_value) is not int or quantity_value < 1:
             raise ForwardSessionRunnerError("paper order side or quantity is invalid")
+        quantity = quantity_value
         if simulated_at.tzinfo is None or simulated_at.utcoffset() is None:
             raise ForwardSessionRunnerError("simulated execution clock must be timezone aware")
         if latency_ms < 0:
@@ -1063,10 +1089,10 @@ class ForwardSessionRunner:
         if len(set(passive_trade_event_ids)) != len(passive_trade_event_ids):
             raise ForwardSessionRunnerError("passive trade event IDs must be unique")
         try:
-            limit = Decimal(limit_price)
-            tick = Decimal(tick_size)
-            slippage = Decimal(adverse_slippage_bps)
-            band = tuple(Decimal(value) for value in price_band) if price_band is not None else None
+            limit = Decimal(limit_value)
+            tick = Decimal(tick_value)
+            slippage = Decimal(slippage_value)
+            band = tuple(Decimal(value) for value in band_values) if band_values is not None else None
         except Exception as exc:  # noqa: BLE001 - Decimal rejects malformed numeric inputs
             raise ForwardSessionRunnerError("limit, tick, slippage and price band must be decimals") from exc
         if any(not value.is_finite() for value in (limit, tick, slippage)) or min(limit, tick) <= 0 or slippage < 0:

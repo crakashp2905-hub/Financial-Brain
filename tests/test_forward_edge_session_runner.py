@@ -14,6 +14,7 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunnerError,
 )
 from financial_brain.forward_edge.paper_book_adapter import (
+    PaperBookSignal,
     due_exits,
     pending_signals,
     reconcile_exit_receipt,
@@ -24,6 +25,7 @@ from financial_brain.forward_edge.paper_book_adapter import (
 from financial_brain.forward_edge.strategy_adapter import CandidateSignal
 from financial_brain.forward_edge.strategy_pipeline import execute_candidate
 from financial_brain.kernel.registry import StrategyEligibility, StrategySpec
+from financial_brain.kernel.units import BasisPoints, Price, WholeUnits
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
@@ -1161,9 +1163,10 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
         fill_quote.event_id: (fill_at + timedelta(milliseconds=1), "TEST_FILL_QUOTE_CLOCK")})
     receipt = runner.execute_paper_intent(
         session_id="book-adapter", order_id="book-order", decision_id=decision_id,
-        event_id=fill_quote.event_id, side="BUY", quantity=signal.shares,
-        limit_price=Decimal("101.10"), tick_size=Decimal("0.05"), freeze_limit=10,
-        slice_size=10, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        event_id=fill_quote.event_id, side="BUY", quantity=WholeUnits(Decimal(signal.shares)),
+        limit_price=Price(Decimal("101.10"), "INR"),
+        tick_size=Price(Decimal("0.05"), "INR"), freeze_limit=10,
+        slice_size=10, adverse_slippage_bps=BasisPoints(Decimal("0")), latency_ms=100,
         simulated_at=fill_at + timedelta(milliseconds=50))
     assert receipt["filled_quantity"] == signal.shares
     assert runner.records("book-adapter")["accounting"]["positions"] == {"NSE:INFY": signal.shares}
@@ -1195,6 +1198,23 @@ def test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrat
     runner.close_session("book-adapter", complete=False, now=decision_at + timedelta(seconds=1),
                          reason="adapter contract test")
     runner.close()
+
+
+def test_forward_paper_book_signal_accepts_typed_prices_units_and_rate_bps():
+    signal = PaperBookSignal(
+        version="swing-v1", mode="live", signal_day=date(2026, 11, 13), rank=1,
+        ticker="INFY", lineage="INFY-LINEAGE", signal_type="swing",
+        horizon_sessions=7, shares=WholeUnits(Decimal("2")),
+        stop_price=Price(Decimal("95"), "INR"),
+        reference_price=Price(Decimal("100"), "INR"),
+        expected_net=BasisPoints(Decimal("200")),
+        estimated_cost=BasisPoints(Decimal("30")), instrument_id="NSE:INFY",
+    )
+    assert signal.shares == 2
+    assert signal.stop_price == 95.0
+    assert signal.reference_price == 100.0
+    assert signal.expected_net == 0.02
+    assert signal.estimated_cost == 0.003
 
 
 @pytest.mark.parametrize("with_cost_schedule", [False, True])

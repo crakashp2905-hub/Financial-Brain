@@ -19,12 +19,32 @@ from pathlib import Path
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.quote_archive import QuoteArchive
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_market_clocks
+from financial_brain.kernel.units import Price, UnitError, WholeUnits
 
 IST = ZoneInfo("Asia/Kolkata")
 
 
 class KiteQuoteNormalizationError(ValueError):
     """Kite quote did not contain trustworthy clocks and a two-sided top of book."""
+
+
+def _inr_price(value: Any, label: str) -> float:
+    """Validate a raw Kite price as a positive INR/share value before scalar encoding."""
+    try:
+        return float(Price(Decimal(str(value)), "INR").value)
+    except (UnitError, InvalidOperation, TypeError, ValueError, OverflowError) as exc:
+        raise KiteQuoteNormalizationError(f"{label} must be a positive finite INR price") from exc
+
+
+def _whole_units(value: Any, label: str, *, allow_zero: bool = True) -> int:
+    """Validate share/depth quantities without silently truncating fractions."""
+    try:
+        units = WholeUnits(Decimal(str(value))).units
+    except (UnitError, InvalidOperation, TypeError, ValueError, OverflowError) as exc:
+        raise KiteQuoteNormalizationError(f"{label} must be a whole-unit quantity") from exc
+    if units < 0 or (units == 0 and not allow_zero):
+        raise KiteQuoteNormalizationError(f"{label} must be a non-negative whole-unit quantity")
+    return int(units)
 
 
 def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
@@ -39,9 +59,9 @@ def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
     try:
         bid = Decimal(str(payload["bid"]))
         ask = Decimal(str(payload["ask"]))
-        bid_quantity = int(payload["bid_quantity"])
-        ask_quantity = int(payload["ask_quantity"])
-        volume = int(payload["volume"])
+        bid_quantity = _whole_units(payload["bid_quantity"], "bid quantity")
+        ask_quantity = _whole_units(payload["ask_quantity"], "ask quantity")
+        volume = _whole_units(payload["volume"], "volume")
     except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
         return None
     depth = payload.get("depth")
@@ -57,7 +77,12 @@ def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
             raw_price, raw_quantity = row
         else:
             raise ValueError("invalid depth level")
-        return Decimal(str(raw_price)), int(raw_quantity)
+        price = Decimal(str(raw_price))
+        quantity = WholeUnits(Decimal(str(raw_quantity))).units
+        if quantity < 0:
+            raise ValueError("depth quantity cannot be negative")
+        Price(price, "INR")
+        return price, int(quantity)
 
     try:
         bid_levels = [level(row) for row in depth["buy"]]
@@ -138,8 +163,8 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
             f"Kite exchange timestamp exceeds the configured future-skew tolerance of {max_future_skew}"
         )
     try:
-        last_price = float(quote["last_price"])
-        volume = int(quote.get("volume", 0))
+        last_price = _inr_price(quote["last_price"], "Kite last price")
+        volume = _whole_units(quote.get("volume", 0), "Kite volume")
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise KiteQuoteNormalizationError("Kite quote contains invalid last price or volume") from exc
     if not math.isfinite(last_price) or last_price <= 0 or volume < 0:
@@ -153,15 +178,20 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
     kind = EventKind.QUOTE if executable else EventKind.TICK
     if executable:
         try:
-            bid, ask = float(bid_rows[0]["price"]), float(ask_rows[0]["price"])
+            bid = _inr_price(bid_rows[0]["price"], "Kite bid")
+            ask = _inr_price(ask_rows[0]["price"], "Kite ask")
+            bid_quantity = _whole_units(bid_rows[0].get("quantity", 0), "Kite bid quantity")
+            ask_quantity = _whole_units(ask_rows[0].get("quantity", 0), "Kite ask quantity")
             payload: dict[str, Any] = {
                 "bid": bid, "ask": ask,
-                "bid_quantity": int(bid_rows[0].get("quantity", 0)),
-                "ask_quantity": int(ask_rows[0].get("quantity", 0)),
+                "bid_quantity": bid_quantity,
+                "ask_quantity": ask_quantity,
                 "last_price": last_price,
                 "volume": volume,
                 "depth": {"buy": bid_rows, "sell": ask_rows},
             }
+        except KiteQuoteNormalizationError:
+            raise
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
             raise KiteQuoteNormalizationError("Kite quote contains invalid depth") from exc
     else:
@@ -169,7 +199,7 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
                    "non_executable_reason": "TWO_SIDED_DEPTH_UNAVAILABLE"}
         if quote.get("last_quantity") is not None:
             try:
-                payload["quantity"] = int(quote["last_quantity"])
+                payload["quantity"] = _whole_units(quote["last_quantity"], "Kite last quantity")
             except (TypeError, ValueError, OverflowError) as exc:
                 raise KiteQuoteNormalizationError("Kite last-trade quantity is invalid") from exc
     ohlc = quote.get("ohlc") or {}
@@ -178,15 +208,17 @@ def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
                                         ("low", "session_low"), ("close", "previous_close")):
             if ohlc.get(source_key) is not None:
                 try:
-                    value = float(ohlc[source_key])
+                    value = float(Price(Decimal(str(ohlc[source_key])), "INR").value)
                 except (TypeError, ValueError, OverflowError) as exc:
-                    raise KiteQuoteNormalizationError(f"Kite OHLC {source_key} is invalid") from exc
+                    raise KiteQuoteNormalizationError(
+                        f"Kite OHLC {source_key} must be positive and finite"
+                    ) from exc
                 if not math.isfinite(value) or value <= 0:
                     raise KiteQuoteNormalizationError(f"Kite OHLC {source_key} must be positive and finite")
                 payload[payload_key] = value
     for key in ("lower_circuit_limit", "upper_circuit_limit"):
         if quote.get(key) is not None:
-            payload[key] = float(quote[key])
+                payload[key] = _inr_price(quote[key], f"Kite {key}")
     exchange_status = quote.get("exchange_status", quote.get("market_status"))
     if exchange_status is not None:
         payload["exchange_status"] = str(exchange_status)
