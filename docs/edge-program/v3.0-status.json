@@ -14051,7 +14051,7 @@
       ],
       "blocker": "Evidence is hash-linked, but joins and validates actual forecast/fill/mark/cost records from canonical ledgers are not integrated.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "tests/test_learning_prequential.py::test_prequential_order_prediction_then_realized_outcome_then_shadow_update"
       ],
@@ -14067,7 +14067,7 @@
       ],
       "blocker": "No scoring calculation or callable learner update is integrated with the causal journal.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "tests/test_learning_prequential.py::test_prequential_order_prediction_then_realized_outcome_then_shadow_update"
       ],
@@ -14083,7 +14083,7 @@
       ],
       "blocker": "No multi-horizon delayed outcome queue or book adapters.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "tests/test_learning_prequential.py (settled outcome must follow a sealed prediction)."
       ],
@@ -14099,7 +14099,7 @@
       ],
       "blocker": "Incremental estimators and versioned optimizer snapshots are absent.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of learning and opportunity learning modules."
       ],
@@ -14115,7 +14115,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "tests/test_learning_prequential.py::test_update_requires_settled_outcomes_and_shadow_only_mode",
         "All journal updates are restricted to SHADOW_ONLY; no live-cash weight mutation API is exposed."
@@ -14132,7 +14132,7 @@
       ],
       "blocker": "Candidate update-window policies are not implemented.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of online learning and research ensemble modules."
       ],
@@ -14148,7 +14148,7 @@
       ],
       "blocker": "No common independently tracked drift alarm system.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of research/diagnostics.py, risk/degradation.py, risk/health.py and execution health."
       ],
@@ -14164,7 +14164,7 @@
       ],
       "blocker": "Drift alarms do not control the paper policy; no wired safe routing.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of learning/hierarchy.py and research diagnostics."
       ],
@@ -14180,7 +14180,7 @@
       ],
       "blocker": "Detector family comparison and autocorrelation-aware false-alarm study are absent.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of risk/degradation.py, research/diagnostics.py and their tests."
       ],
@@ -14196,7 +14196,7 @@
       ],
       "blocker": "No joined variance/change attribution and calibrated uncertainty monitor.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of regime/brain.py, risk/degradation.py and forward_edge/bootstrap.py."
       ],
@@ -14212,7 +14212,7 @@
       ],
       "blocker": "Update safety gate is not connected to market, calendar, settlement or data-quality state.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of learning/prequential.py, forward_edge/market_data.py and settlement modules."
       ],
@@ -14228,7 +14228,7 @@
       ],
       "blocker": "Shadow update log is a contract only; live champion/control sleeve and cohort comparison are not wired.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of learning/prequential.py and forward_edge/champion_governance.py."
       ],
@@ -14244,7 +14244,7 @@
       ],
       "blocker": "Exact reproducible training checkpoint and state rollback are absent.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of forward_edge/champion_governance.py, patterns/learning.py and prequential journal."
       ],
@@ -14260,7 +14260,7 @@
       ],
       "blocker": "No retrained-policy ESS and period eligibility gate.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of evaluation, forward_edge and learning modules."
       ],
@@ -14276,7 +14276,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "tests/test_learning_prequential.py::test_prequential_order_prediction_then_realized_outcome_then_shadow_update",
         "tests/test_learning_prequential.py::test_journal_rows_are_append_only",
@@ -14295,7 +14295,7 @@
       ],
       "blocker": "No registered alpha-spending/e-value or frozen-review control is integrated for online learner checks.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of forward_edge/bootstrap.py, evaluation/sequential modules and trial registry."
       ],
@@ -14311,7 +14311,7 @@
       ],
       "blocker": "Profitable-short-window drift negative-control study is absent.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of learning, regime, forecasting nulls and negative-control tests."
       ],
@@ -14327,7 +14327,7 @@
       ],
       "blocker": "Owner approval does not yet verify that a fresh eligible cohort has completed for the exact new policy.",
       "last_audited_at_utc": "2026-11-24T17:55:00+00:00",
-      "commit": "PENDING",
+      "commit": "5840e6b1",
       "test_evidence": [
         "Source audit of forward_edge/champion_governance.py, forward_edge/eligibility.py and session runner."
       ],
