@@ -2499,13 +2499,15 @@
       "id": "FB-0606",
       "text": "Add investor cash-management allocation: liquid/overnight/debt funds and ETFs compared against cash, accounting for payout lag and risks.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Debt, cash, ETF and MF descriptive analytics exist separately, but no investor cash-management allocator compares liquid/overnight/debt products with cash after payout-lag and liquidity-risk constraints."
+        "src/financial_brain/features/cash_management.py implements an input-driven cash-control comparison for liquid funds, overnight funds, debt funds, and ETFs with evidence clocks/hashes, payout lag, costs, source-pinned scenario hash, explicit tax input, stress/liquidity haircuts, cash reserve, product capacity, and risk-budgeted paper allocation.",
+        "Candidates with stale/future data, payout lag beyond the holding window, missing tax input, non-positive after-cost/risk net, or no usable stress budget receive no allocation; the module never performs a transaction.",
+        "tests/test_cash_management.py: 9 passed; Ruff and focused mypy pass. docs/edge-program/cash-management-allocation-v1.md records formula and limitations."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: no permission-cleared point-in-time product universe, calibrated yield/tax/risk assumptions, source-to-scenario resolver, prospective allocation book or observed payout-lag evidence is connected. Inputs are scenario assumptions, not forecasts.",
+      "last_audited_at_utc": "2026-11-24T01:02:00Z",
+      "commit": "2ce8751db3befd6765f248ca0db095b1d0d99107",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -15713,7 +15715,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T00:47:00Z",
+    "as_of_utc": "2026-11-24T01:02:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15966,8 +15968,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 8,
-      "PARTIAL": 195,
+      "NOT_STARTED": 7,
+      "PARTIAL": 196,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16045,8 +16047,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 8,
-    "PARTIAL": 195,
+    "NOT_STARTED": 7,
+    "PARTIAL": 196,
     "UNASSESSED": 1132
   }
 }
