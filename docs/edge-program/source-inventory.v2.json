@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 698,
+  "source_count": 699,
   "sources": [
     {
       "capability_ids": [],
@@ -8594,7 +8594,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/trade_admissibility.py",
-      "source_sha256": "b12ba5f339160ce9aec3205c53a6a739e418f721d58fa7e1fadb6e145268b2e4",
+      "source_sha256": "094264829b638b26864944b7ada5a9bddc72504d95c5c867a60159dc48340cfc",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_probability_calibration.py",
@@ -10618,6 +10618,25 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "decimal",
+        "financial_brain.forward_edge.exposure_limits",
+        "financial_brain.kernel.oms",
+        "threading",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/capital_allocator.py",
+      "source_sha256": "99190e20e7d22bccaa6a6bd7af8411a581c2b764bf9aed476bc70390deb2a845",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "datetime",
         "decisions",
         "risk"
@@ -11050,7 +11069,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/kite_stream.py",
-      "source_sha256": "81ab83df688bb1370d41245a2e1f3d83629a1fac546165a88751687f5fbf49b9",
+      "source_sha256": "a607b6e1c438e573ed2409d59c5aa481099e4ef3fb33c8128a61ac1aab2e7fed",
       "test_paths": []
     },
     {
@@ -12489,6 +12508,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 668,
-  "unassigned_role_count": 404
+  "unassessed_count": 669,
+  "unassigned_role_count": 405
 }
