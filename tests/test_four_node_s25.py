@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -325,5 +326,26 @@ def test_funnel_refuses_missing_parent_conflicts_and_unrealized_close():
 
 def test_trace_record():
     s = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10, 2007.8, [], 0.1, 0.2)
-    t = trace(s, sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10.0, 4.0)
+    t = trace(s, sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10.0, 4.0,
+              n4=Node(-1, 2006.0, 11, 13, source_bar_ids=("bar-13",)),
+              smma={8: 2008.0, 50: 2007.0, 100: 2006.0, 200: 2005.0},
+              fibonacci_barriers=[], spread=0.2, exit_reason="TARGET", event_id="trade-event-1")
     assert t["nodes"][2]["confirmed_at"] == 9 and t["status"] == "ELIGIBLE"
+    assert len(t["nodes"]) == 4 and t["machine_verifiable"] is True
+    assert t["record_sha256"] == hashlib.sha256(
+        json.dumps({k: v for k, v in t.items() if k != "record_sha256"},
+                   sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+
+
+def test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators():
+    setup = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8),
+                     10, 2007.8, [], 0.1, 0.2)
+    t = trace(setup, sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10.0, 4.0)
+    assert t["machine_verifiable"] is False
+    assert {"N4", "SMMA8_50_100_200", "FIBONACCI_BARRIERS", "SPREAD", "EXIT_REASON", "EVENT_ID"} <= set(
+        t["missing_evidence"]
+    )
+    with pytest.raises(ValueError, match="finite values"):
+        trace(setup, sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10.0, 4.0,
+              smma={8: float("nan")})

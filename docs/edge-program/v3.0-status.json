@@ -6788,14 +6788,14 @@
       "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/four_node/rules.py::Funnel now stores unique immutable event IDs with direct parent IDs across pivots, patterns, setups, intents, fills and closes; outcomes preserve rejects, expirations and no-fills.",
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 49 focused Four-Node tests pass, Ruff and targeted mypy pass.",
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 50 focused Four-Node tests pass, Ruff and targeted mypy pass.",
         "The funnel remains a reusable local component and is not wired into FourNodeStateMachine, ForwardSessionRunner or the canonical OMS, so live session-wide counts are not yet evidenced."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:47:15Z",
+      "last_audited_at_utc": "2026-11-24T20:51:24Z",
       "commit": null,
       "test_evidence": [
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 49 focused Four-Node tests pass, Ruff and targeted mypy pass."
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 50 focused Four-Node tests pass, Ruff and targeted mypy pass."
       ]
     },
     {
@@ -6804,13 +6804,17 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "rules.trace() records N1-N3 pivot, confirmation and observation coordinates, node/source-bar IDs, predicate reasons, 20C low/mid/high, D1/D2 and stop/target.",
-        "The trace lacks N4, SMMA8/50/100/200 values, Fibonacci barrier set, spread, realized exit reason and durable event sealing; human-readable machine-verifiable per-trade evidence remains incomplete."
+        "rules.trace() now includes N1-N4 pivot and confirmation indices, node/source-bar IDs, 20C bands, optional SMMA8/50/100/200 values, Fibonacci barriers, D1/D2, spread, stop/target and exit reason. It hash-seals canonical JSON and sets machine_verifiable=false while required evidence is missing.",
+        "tests/test_four_node_s25.py::test_trace_record supplies complete per-trade context and verifies the SHA-256 record seal; test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators verifies missing-field reporting and invalid input refusal.",
+        "The trace is not yet emitted by the Four-Node stream/runner or stored against the durable canonical paper book, so every actual paper trade is not yet guaranteed to have this complete evidence."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:47:15Z",
+      "last_audited_at_utc": "2026-11-24T20:51:24Z",
       "commit": null,
-      "test_evidence": []
+      "test_evidence": [
+        "tests/test_four_node_s25.py::test_trace_record supplies complete per-trade context and verifies the SHA-256 record seal; test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators verifies missing-field reporting and invalid input refusal.",
+        "Focused Four-Node suite: 50 passed; Ruff and targeted mypy passed."
+      ]
     },
     {
       "id": "FB-2543",
@@ -19122,7 +19126,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T20:47:15Z",
+    "as_of_utc": "2026-11-24T20:51:24Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

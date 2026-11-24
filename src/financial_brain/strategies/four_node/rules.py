@@ -10,6 +10,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, time
 from decimal import Decimal, InvalidOperation
+import hashlib
+import json
 from math import isfinite
 
 from financial_brain.strategies.four_node.indicators import Cluster20
@@ -377,13 +379,66 @@ class Funnel:
         }
 
 
-def trace(setup: Setup, nodes: tuple[Node, Node, Node], c20: Cluster20, d1: float, d2: float) -> dict:
-    """Per-trade evidence record (FB-2542)."""
-    return {"status": setup.status, "side": setup.side, "passed": list(setup.passed),
-            "failed": list(setup.failed),
-            "nodes": [{"side": n.side, "price": n.price, "pivot_at": n.pivot_at,
-                       "confirmed_at": n.confirmed_at, "observable_at": n.observable_at,
-                       "node_id": n.node_id, "parent_chain": list(n.parent_chain),
-                       "source_bar_ids": list(n.source_bar_ids)} for n in nodes],
-            "c20": {"low": c20.low, "mid": c20.mid, "high": c20.high},
-            "d1": d1, "d2": d2, "stop": setup.stop, "target": setup.target}
+def trace(setup: Setup, nodes: tuple[Node, Node, Node], c20: Cluster20, d1: float, d2: float, *,
+          n4: Node | None = None, smma: dict[int, float | None] | None = None,
+          fibonacci_barriers: list[float] | None = None, spread: float | None = None,
+          exit_reason: str | None = None, event_id: str | None = None) -> dict:
+    """Return a hash-sealed trade trace and explicitly expose any missing evidence (FB-2542)."""
+    if not all(isfinite(value) and value >= 0 for value in (d1, d2)):
+        raise ValueError("D1 and D2 must be finite and nonnegative")
+    if spread is not None and (not isfinite(spread) or spread < 0):
+        raise ValueError("spread must be finite and nonnegative")
+    if smma is not None and any(
+            period not in {8, 50, 100, 200} or (value is not None and not isfinite(value))
+            for period, value in smma.items()):
+        raise ValueError("SMMA evidence must use periods 8/50/100/200 and finite values")
+    if fibonacci_barriers is not None and any(not isfinite(value) for value in fibonacci_barriers):
+        raise ValueError("Fibonacci barrier values must be finite")
+    if event_id is not None and not event_id.strip():
+        raise ValueError("trace event ID cannot be empty")
+
+    node_evidence = [{"side": n.side, "price": n.price, "pivot_at": n.pivot_at,
+                      "confirmed_at": n.confirmed_at, "observable_at": n.observable_at,
+                      "node_id": n.node_id, "parent_chain": list(n.parent_chain),
+                      "source_bar_ids": list(n.source_bar_ids)} for n in (*nodes, *((n4,) if n4 else ()))]
+    smma_evidence = ({str(period): smma.get(period) for period in (8, 50, 100, 200)}
+                     if smma is not None else None)
+    missing = []
+    if n4 is None:
+        missing.append("N4")
+    if smma_evidence is None:
+        missing.append("SMMA8_50_100_200")
+    elif any(value is None for value in smma_evidence.values()):
+        missing.append("SMMA_WARMUP_VALUE")
+    if fibonacci_barriers is None:
+        missing.append("FIBONACCI_BARRIERS")
+    if spread is None:
+        missing.append("SPREAD")
+    if exit_reason is None or not exit_reason.strip():
+        missing.append("EXIT_REASON")
+    if event_id is None:
+        missing.append("EVENT_ID")
+    record: dict[str, object] = {
+        "schema": "four-node-trade-trace-v1",
+        "event_id": event_id,
+        "status": setup.status,
+        "side": setup.side,
+        "passed": list(setup.passed),
+        "failed": list(setup.failed),
+        "nodes": node_evidence,
+        "c20": {"low": c20.low, "mid": c20.mid, "high": c20.high},
+        "smma": smma_evidence,
+        "fibonacci_barriers": fibonacci_barriers,
+        "d1": d1,
+        "d2": d2,
+        "spread": spread,
+        "stop": setup.stop,
+        "target": setup.target,
+        "exit_reason": exit_reason,
+        "missing_evidence": missing,
+        "machine_verifiable": not missing,
+    }
+    record["record_sha256"] = hashlib.sha256(json.dumps(
+        record, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")).hexdigest()
+    return record
