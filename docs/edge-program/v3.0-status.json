@@ -2501,13 +2501,13 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/features/cash_management.py implements an input-driven cash-control comparison for liquid funds, overnight funds, debt funds, and ETFs with evidence clocks/hashes, payout lag, costs, source-pinned scenario hash, explicit tax input, stress/liquidity haircuts, cash reserve, product capacity, and risk-budgeted paper allocation.",
-        "Candidates with stale/future data, payout lag beyond the holding window, missing tax input, non-positive after-cost/risk net, or no usable stress budget receive no allocation; the module never performs a transaction.",
-        "tests/test_cash_management.py: 9 passed; Ruff and focused mypy pass. docs/edge-program/cash-management-allocation-v1.md records formula and limitations."
+        "src/financial_brain/features/cash_management.py implements an input-driven cash-control comparison for liquid funds, overnight funds, debt funds, and ETFs with effective-dated RESEARCH/PAPER_SIMULATION permission checks, evidence clocks/hashes, payout lag, costs, source-pinned scenario hash, explicit tax input, stress/liquidity haircuts, cash reserve, product capacity, and risk-budgeted paper allocation.",
+        "Candidates with missing rights, stale/future data, payout lag beyond the holding window, missing tax input, non-positive after-cost/risk net, or no usable stress budget receive no allocation; the module never performs a transaction.",
+        "tests/test_cash_management.py: 10 passed; Ruff and focused mypy pass. docs/edge-program/cash-management-allocation-v1.md records formula and limitations."
       ],
       "blocker": "Partial: no permission-cleared point-in-time product universe, calibrated yield/tax/risk assumptions, source-to-scenario resolver, prospective allocation book or observed payout-lag evidence is connected. Inputs are scenario assumptions, not forecasts.",
       "last_audited_at_utc": "2026-11-24T01:02:00Z",
-      "commit": "2ce8751db3befd6765f248ca0db095b1d0d99107",
+      "commit": "c32eea5cf72e4791a32382a6e1ef698136965291",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
