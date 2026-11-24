@@ -17477,6 +17477,7 @@
         "src/financial_brain/security/untrusted.py provides attack-pattern scanning, prompt framing, audit logging, fail-closed direct adapter checks and structured classifier-output validation; detections are heuristic, not proof against novel attacks.",
         "src/financial_brain/llm/router.py recursively screens all textual fields in classifier rows, writes detected findings to security_findings, and refuses the model call before any classifier runs.",
         "Ollama, Laya and FinBERT direct adapter boundaries now reject suspicious/oversized text and constrain outputs to the caller-declared or fixed sentiment vocabulary with finite confidence and valid probabilities.",
+    "Laya regression coverage now asserts safe filing text remains framed and an instruction-override filing is refused before the checkpoint receives any state.",
         "docs/edge-program/prompt-injection-boundary-audit-2026-11-25.md documents covered filing, website, log and news text paths, plus unverified repository-wide agent/model paths.",
         "tests/test_phase2_security.py and tests/test_phase2_router.py: 25 passed; repeat security-only suite: 18 passed. Ruff passed and mypy passed for untrusted.py, router.py, system1.py and laya.py."
       ],
@@ -17486,6 +17487,7 @@
       "test_evidence": [
         "python -m pytest tests/test_phase2_security.py tests/test_phase2_router.py -q: 25 passed in 194.97s.",
         "python -m pytest tests/test_phase2_security.py -q: 18 passed in 89.22s.",
+    "python -m pytest tests/test_phase3_laya.py tests/test_phase2_security.py -q: 29 passed after updating the stale Laya framing expectation to match fail-closed input rejection.",
         "Ruff passed for security/untrusted.py, llm/router.py, llm/system1.py, llm/laya.py and the two affected security/router test files.",
         "Mypy passed for security/untrusted.py, llm/router.py, llm/system1.py and llm/laya.py."
       ],
