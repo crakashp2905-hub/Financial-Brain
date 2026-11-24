@@ -2278,14 +2278,20 @@
       "id": "FB-0503",
       "text": "Cross-asset rotation across equity, debt, gold/silver ETF sleeves using equal-vol, buy-and-hold, same-risk and cash controls.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "ETF reference metadata distinguishes broad equity, debt, gold, silver and international exposures, but no ETF sleeve-rotation study with equal-volatility, buy-and-hold, same-risk and cash controls was found."
+        "Frozen v1.0.0 candidate contract in docs/edge-program/etf-cross-asset-rotation-v1.md defines one 126-session momentum winner per eligible equity/debt/gold/silver sleeve, with cash fallback when the top return is non-positive.",
+        "src/financial_brain/features/etf_cross_asset_rotation.py emits sourced, point-in-time allocation snapshots with inverse-volatility, buy-and-hold, same-risk and cash controls; it does not evaluate returns, costs, or profitability.",
+        "Research governance remains closed: Q4-2026 is exhausted and Q1-2027 is not authorized. No decisive evaluation, backtest, or prospective cohort was run."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "blocker": "Partial: a frozen rotation candidate and requested controls are contract-tested, but the authorized economic study, costs/tax/capacity/turnover controls, and prospective evidence are absent. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T11:00:00+00:00",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "test_result": "Five focused contract tests pass for sleeve grouping and selection, control weight sums, negative-momentum cash behavior, deterministic hashes, missing/late data, calendar/hash/timestamp validation, and no-order output. These tests do not evaluate strategy performance.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_cross_asset_rotation.py -q: 5 passed.",
+        "Capability matrix validation passed; Ruff and scoped mypy passed for the new implementation."
+      ]
     },
     {
       "id": "FB-0504",
@@ -15686,7 +15692,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T10:00:00Z",
+    "as_of_utc": "2026-11-24T11:00:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15939,8 +15945,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 13,
-      "PARTIAL": 190,
+      "NOT_STARTED": 12,
+      "PARTIAL": 191,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16013,13 +16019,13 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 13,
-    "PARTIAL": 190,
+    "NOT_STARTED": 12,
+    "PARTIAL": 191,
     "UNASSESSED": 1132
   }
 }

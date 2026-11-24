@@ -134,6 +134,17 @@
       "source": ["src/financial_brain/features/etf_trend_rules.py"],
       "tests": ["tests/test_etf_trend_rules.py"],
       "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No benchmark, costs, capacity, tax, turnover, drawdown or prospective evidence evaluated"]
+    },
+    {
+      "id": "etf-cross-asset-rotation-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 equity/debt/gold/silver ETF rotation candidate with inverse-volatility, frozen buy-and-hold, ex-ante same-risk, and cash controls; no performance evaluation or order authority.",
+      "evidence": ["tests/test_etf_cross_asset_rotation.py"],
+      "source": ["src/financial_brain/features/etf_cross_asset_rotation.py"],
+      "tests": ["tests/test_etf_cross_asset_rotation.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No return, cost, tax, turnover, capacity, or prospective cohort evaluation"]
     }
   ]
 }

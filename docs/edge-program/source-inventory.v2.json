@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 685,
+  "source_count": 686,
   "sources": [
     {
       "capability_ids": [],
@@ -2924,6 +2924,30 @@
       "source": "src/financial_brain/features/etf_bars.py",
       "source_sha256": "d9ca5460325446d79a674a10bd369e1649d4e7b621cd27adc41dd7b3927ab110",
       "test_paths": []
+    },
+    {
+      "capability_ids": [
+        "etf-cross-asset-rotation-candidate"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "financial_brain.providers.etf_reference",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_cross_asset_rotation.py",
+      "source_sha256": "25cf009ba4443b4920fab7025b77295773c79481d4dabab9704dbb909bbad771",
+      "test_paths": [
+        "tests/test_etf_cross_asset_rotation.py"
+      ]
     },
     {
       "capability_ids": [],
