@@ -14336,202 +14336,327 @@
     {
       "id": "SL-18-01",
       "text": "Import H005/H003/P3 registered methodology and exact transaction schedules from development branches, retaining separate version IDs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/zoo_edges.py` keeps separate H003, H005 and P3 strategy IDs and registered signal definitions; transaction cost schedules still resolve through shared approximate paper costs and development-branch source provenance is not frozen."
+      ],
+      "blocker": "Exact historical source commit and per-strategy cost-schedule manifests are not pinned.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_zoo_h_targets.py; tests/test_phase5_zoo_edges.py"
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-02",
       "text": "Reconcile H003 universe contamination: reported ETF/MF holdings must be classified by asset class and evaluated using correct desk policies.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.load` now filters its point-in-time daily universe to tradable NSE EQ `STK` instruments before ADV ranking, excluding ETF/MF units from ordinary-share momentum; prior reported contamination has not been recomputed or routed into their separate desk books."
+      ],
+      "blocker": "Prospective stock-universe guard is implemented; historical result reconciliation and separate ETF/MF evaluation are still missing.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_zoo_h_targets.py::test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units",
+        "tests/test_zoo_h_targets.py (H target tests)."
+      ],
+      "test_result": "H candidate audit; stock-only/PIT H-target tests passed (12); Ruff and mypy passed for changed files."
     },
     {
       "id": "SL-18-03",
       "text": "Lock point-in-time candidate universe, month-end decision time, rebalance date, whole-share constraints and investable-capital assumptions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.load` uses date-specific tradable stock snapshots and daily ADV; H targets use only history through their rebalance date. Full decision timestamp/rebalance contract, point-in-time constituents, whole-share account constraints and locked capital assumptions are not unified."
+      ],
+      "blocker": "Some point-in-time universe controls exist, but the complete portfolio decision/rebalance/capital contract is not frozen.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_zoo_h_targets.py::test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units",
+        "Source audit of evaluation/edges.py and paper/zoo_edges.py."
+      ],
+      "test_result": "H candidate audit; stock-only/PIT H-target tests passed (12); Ruff and mypy passed for changed files."
     },
     {
       "id": "SL-18-04",
       "text": "Baseline each candidate versus cash, Nifty 500 TRI, sector/factor matched book, fixed-turnover random books and existing fixed policy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges` applies net stock-book costs and compares with a liquidity-matched universe, but the full required cash/Nifty 500 TRI/sector-factor/fixed-turnover-random/frozen-policy baseline family is not aligned for H candidates."
+      ],
+      "blocker": "No complete matched benchmark panel per H003/H005/P3 candidate.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of evaluation/edges.py, paper/zoo_edges.py and performance evaluation."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-05",
       "text": "Validate dividend-adjusted prices, delisted instruments and corporate actions before any new optimistic model selection.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`features/prices.py` applies corporate-action price adjustment and point-in-time universe snapshots include names through delisting; no candidate-level validation report reconciles dividend, delisting, and action-adjusted H results."
+      ],
+      "blocker": "Candidate methodology has not been independently validated against dividend-adjusted delisted-name cohorts.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of features/prices.py, corpactions and evaluation/edges.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-06",
       "text": "Implement per-name feature vector for momentum persistence, 52-week proximity, industry breadth, volatility and liquidity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing features include 12-1 momentum, 52-week high distance, volatility, ADV/liquidity and industry/breadth measures, but no frozen per-name vector combines them with as-of versioned semantics."
+      ],
+      "blocker": "No common versioned feature vector for the selector.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of features/indicators.py, evaluation/edges.py and regime/breadth.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-07",
       "text": "Create baseline book with exact existing H005 top-three industries and 20-stock selection, no hindsight changes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "`paper/zoo_edges.py::h_targets` implements the fixed H005 baseline: top three eligible industries by six-month return, minimum industry breadth, top 20 names by 12-1 momentum, equal weights; industry is now selected point-in-time."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_zoo_h_targets.py::test_h003_and_h005_pick_twenty_equal_weighted_names",
+        "tests/test_zoo_h_targets.py::test_h005_skips_industries_with_fewer_than_eight_names",
+        "tests/test_zoo_h_targets.py::test_h005_uses_only_industry_membership_known_at_rebalance"
+      ],
+      "test_result": "H candidate audit; stock-only/PIT H-target tests passed (12); Ruff and mypy passed for changed files."
     },
     {
       "id": "SL-18-08",
       "text": "Create `CASH/H005/H003/P3` contextual strategy selector trained on past month outcomes, not daily prices from current month.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No CASH/H005/H003/P3 contextual learner trained solely on fully settled prior monthly outcomes exists; the new hierarchy module only supplies safe action/decision contracts."
+      ],
+      "blocker": "No month-level strategy selector or contextual training loop.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of paper/zoo_edges.py, learning/prequential.py and learning/hierarchy.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-09",
       "text": "Create rule-based volatility scaling comparison and bounded RL sizing challenger under fixed total portfolio risk budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "P2 has rule-based trailing-volatility scaling; no bounded RL sizing challenger shares an explicit fixed portfolio downside/risk budget with H003/H005/P3."
+      ],
+      "blocker": "RL sizing agent and matched fixed-risk experiment are absent.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of paper/zoo_edges.py, forward_edge/risk_allocator.py and learning modules."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-10",
       "text": "Compare risk-aware reallocations against registered unchanged strategies to separate true adaptive gain from sample selection.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge.risk_allocator` allocates across candidates using risk penalties; no H-strategy candidate run compares matched adaptive reallocation against unchanged registered H005/H003/P3 books."
+      ],
+      "blocker": "No frozen matched adaptive-vs-fixed H cohort.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of risk_allocator.py, paper/zoo.py and evaluation."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-11",
       "text": "Include brokerage, STT, fixed depository charges, stamp duty, taxes diagnostics and rebalance impact for account-size scenarios.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`costs.india` itemizes brokerage, STT, exchange, SEBI, stamp, GST, depository and impact assumptions, but H books do not evaluate all schedules and impact across account-size scenarios."
+      ],
+      "blocker": "Statutory schedule verification, account-size scenarios and rebalance impact attribution remain unconnected to H trials.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of costs/india.py, costs/calculator.py and paper/zoo.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-12",
       "text": "Calculate net benchmark excess and conservative downside intervals across independent monthly periods.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.judge` reports split-period net performance, but no dependence-robust downside interval over independent monthly H candidate periods is published."
+      ],
+      "blocker": "Conservative H monthly excess intervals and period-independence checks are absent.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of evaluation/edges.py and forward_edge/bootstrap.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-13",
       "text": "Store delayed-return reward only after the monthly evaluation period; no credit for unrealized or future returns at selection.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`learning.prequential.py` can withhold update until a final horizon outcome settles, but the monthly H selector/reward pipeline is not connected to it."
+      ],
+      "blocker": "H reward remains a paper settlement stream, not a versioned delayed selector reward.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_prequential.py; source audit of paper/zoo.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-14",
       "text": "Build corporate-event exclusion as independent testable rule with separate preregistration and search cost.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Corporate-action event sources and event filters exist, but no independent preregistered corporate-event exclusion for H momentum trials records the search cost."
+      ],
+      "blocker": "H-specific event exclusion and preregistration absent.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of corpactions, feature and evaluation modules."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-15",
       "text": "Use frozen historical candidate runs for training only where allowed; new protected results require owner-authorized trial budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Protected-trial budget/registration tools and frozen strategy records exist, but historical H runs are not captured under an explicit allowed-training lineage and new protected selectors are not tied to authorized budget consumption."
+      ],
+      "blocker": "Historical training-use authorization and selector trial-budget integration are incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of patterns/study.py, evaluation trial registry and zoo candidates."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-16",
       "text": "Launch shadow-only monthly selector against fixed H005/H003/P3 paper cohorts with identical data/economics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "H003/H005 target generation has local paper-zoo track identifiers; there is no shadow-only CASH/H005/H003/P3 selector compared to all fixed books on exactly matched economics."
+      ],
+      "blocker": "The selector and matched fixed-cohort experiment have not been launched.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of paper/zoo.py, paper/zoo_edges.py and forward-edge shadow/cohort modules."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-17",
       "text": "Detect exposure overlap and state when performance is largely one momentum beta rather than three unrelated alphas.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Portfolio covariance/sector and factor attribution modules exist, but no H003/H005/P3 overlap report decomposes common momentum beta from independent alpha."
+      ],
+      "blocker": "No candidate-family beta-controlled overlap diagnostics.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of risk/decompose.py, forward_edge/portfolio_risk.py and H zoo."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-18",
       "text": "Degrade strategy to CASH or baseline on insufficient support, stale inputs, dividend anomalies or failed risk review.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`learning.hierarchy.available_global_actions` exposes CASH/WAIT/CLOSE, but stale feed, dividend anomaly, support and risk-review gates are not wired to the H selector."
+      ],
+      "blocker": "Safe actions exist; fail-closed selector conditions are not integrated.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_hierarchy.py::test_safe_actions_are_available_without_any_alpha_candidates",
+        "Source audit of hierarchy, paper zoo, data health and corporate actions."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-19",
       "text": "Publish causal month-by-month forecast, holdings, decision, costs, rejected alternatives, realized net excess and drawdown.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper.zoo` stores daily P&L/targets and strategy verdicts, but no causal monthly H report combines forecast, chosen holdings, decision time, itemized cost, rejected alternatives, net excess and drawdown."
+      ],
+      "blocker": "Causal monthly candidate report is incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of paper/zoo.py, paper/zoo_edges.py and reporting."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-18-20",
       "text": "No real-money promotion until independent forward periods satisfy predeclared evidence standard and owner/broker gates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "`forward_edge.release.highest_label` requires independent custody and a promotion-grade verdict with at least 60 verified sessions for FORWARD_VERIFIED, then broker rehearsal/compliance and owner approval for live release; physical orders must remain disabled for PAPER_READY."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T18:03:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forward_edge/release.py; release label tests in tests/test_forward_edge*.py."
+      ],
+      "test_result": "Source audit; see cited code/test evidence."
     },
     {
       "id": "SL-19-01",
@@ -18145,17 +18270,37 @@
       "SL-17-15",
       "SL-17-16",
       "SL-17-17",
-      "SL-17-18"
+      "SL-17-18",
+      "SL-18-01",
+      "SL-18-02",
+      "SL-18-03",
+      "SL-18-04",
+      "SL-18-05",
+      "SL-18-06",
+      "SL-18-07",
+      "SL-18-08",
+      "SL-18-09",
+      "SL-18-10",
+      "SL-18-11",
+      "SL-18-12",
+      "SL-18-13",
+      "SL-18-14",
+      "SL-18-15",
+      "SL-18-16",
+      "SL-18-17",
+      "SL-18-18",
+      "SL-18-19",
+      "SL-18-20"
     ],
-    "audited_count": 569,
+    "audited_count": 589,
     "status_counts": {
-      "COMPLETE": 53,
-      "PARTIAL": 511,
+      "COMPLETE": 55,
+      "PARTIAL": 529,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 0,
-      "UNASSESSED": 809
+      "UNASSESSED": 789
     },
-    "verified_complete_count": 53,
+    "verified_complete_count": 55,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -18278,10 +18423,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate."
   },
   "counts_by_status": {
-    "COMPLETE": 53,
-    "PARTIAL": 511,
+    "COMPLETE": 55,
+    "PARTIAL": 529,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 0,
-    "UNASSESSED": 809
+    "UNASSESSED": 789
   }
 }
