@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
@@ -9,6 +9,7 @@ from financial_brain.strategies.four_node.replay import (
     ReplayEligibility,
     compare_stream_and_replay,
 )
+from financial_brain.forward_edge.venue_calendar import Session, VenueCalendar
 
 START = datetime(2026, 11, 24, 9, 15, tzinfo=timezone.utc)
 HASH = "a" * 64
@@ -117,4 +118,39 @@ def test_session_rollover_resets_nodes_across_market_closure_and_revisited_sessi
         compare_stream_and_replay(
             [*first_session, next_session, repeated_session],
             left=1, right=1, warmup_bars=1,
+        )
+
+
+def test_official_venue_calendar_fails_closed_for_holidays_and_uncovered_dates():
+    day = date(2026, 11, 24)
+    official_session = Session(
+        "NSE", day, time(9, 15), time(15, 30), "REGULAR", "NSE calendar", HASH,
+        datetime(2026, 11, 20, tzinfo=timezone.utc),
+    )
+    calendar = VenueCalendar([official_session], source_as_of=day)
+    assert compare_stream_and_replay(
+        _bars(), left=1, right=1, warmup_bars=1, venue_calendar=calendar, venue="NSE",
+    ).matches
+
+    holiday_bar = ReplayBar(
+        "holiday-bar", "NIFTY", "NSE:2026-11-25", 0,
+        datetime(2026, 11, 25, 9, 15, tzinfo=timezone.utc),
+        100, 101, 99, 100, HASH, _eligibility(),
+    )
+    covered_through_holiday = VenueCalendar([], source_as_of=date(2026, 11, 25))
+    with pytest.raises(ValueError, match="non-trading venue date"):
+        compare_stream_and_replay(
+            [holiday_bar], venue_calendar=covered_through_holiday, venue="NSE",
+        )
+
+    with pytest.raises(ValueError, match="sourced venue-calendar coverage"):
+        compare_stream_and_replay(
+            [holiday_bar], venue_calendar=calendar, venue="NSE",
+        )
+
+    with pytest.raises(ValueError, match="session ID does not match"):
+        compare_stream_and_replay(
+            [ReplayBar("wrong-session", "NIFTY", "NSE:2026-11-25", 0, START,
+                       100, 101, 99, 100, HASH, _eligibility())],
+            venue_calendar=calendar, venue="NSE",
         )

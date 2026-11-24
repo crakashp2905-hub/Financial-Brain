@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import re
 from typing import Sequence
 
+from financial_brain.forward_edge.venue_calendar import IST, CalendarError, VenueCalendar
 from financial_brain.strategies.four_node.nodes import pivots
 from financial_brain.strategies.four_node.stream import (
     BreakoutCandidate, FourNodeStateMachine, StreamEvent, StreamResult,
@@ -115,6 +116,8 @@ def compare_stream_and_replay(
     max_age_bars: int = 120,
     expected_interval: timedelta | None = timedelta(minutes=1),
     tie_policy: str = "STRICT",
+    venue_calendar: VenueCalendar | None = None,
+    venue: str | None = None,
 ) -> ReplayComparison:
     """Run the same timestamped observations online and as a historical event replay.
 
@@ -128,6 +131,8 @@ def compare_stream_and_replay(
         raise ValueError("expected bar interval must be positive")
     if tie_policy not in {"STRICT", "LEFTMOST", "RIGHTMOST"}:
         raise ValueError("unsupported fractal tie policy")
+    if (venue_calendar is None) != (venue is None):
+        raise ValueError("venue and official venue calendar must be supplied together")
     if not bars:
         return ReplayComparison((), (), (), 0)
 
@@ -138,6 +143,19 @@ def compare_stream_and_replay(
     eligible_bars = 0
     events: list[StreamEvent] = []
     for bar in bars:
+        if venue_calendar is not None and venue is not None:
+            session_day = bar.observed_at.astimezone(IST).date()
+            expected_session = f"{venue}:{session_day.isoformat()}"
+            if bar.session_id != expected_session:
+                raise ValueError("replay session ID does not match venue and observed session date")
+            try:
+                if not venue_calendar.is_session(venue, session_day):
+                    raise ValueError("replay bar is dated on a non-trading venue date")
+                open_utc, close_utc = venue_calendar.session_bounds_utc(venue, session_day)
+            except CalendarError as exc:
+                raise ValueError(f"replay lacks sourced venue-calendar coverage: {exc}") from exc
+            if not open_utc <= bar.observed_at <= close_utc:
+                raise ValueError("replay observation is outside sourced venue session hours")
         if bar.event_id in event_ids:
             raise ValueError("duplicate replay bar event ID")
         event_ids.add(bar.event_id)
