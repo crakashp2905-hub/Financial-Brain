@@ -334,7 +334,7 @@ def test_decisions_require_available_inputs_and_are_immutable(tmp_path):
     runner = make_runner(tmp_path)
     opened(runner)
     available = NOW.replace(second=10)
-    runner.ingest("s", make_config(), [make_event(available_at=available)])
+    runner.ingest("s", make_config(), [make_event(available_at=available, event_time=available)])
     with pytest.raises(ForwardSessionRunnerError, match="unavailable at decision time"):
         runner.decide(session_id="s", strategy_id="momentum", decision_id="d1", outcome="NO_TRADE",
                       decided_at=NOW, input_event_ids=("fixture-1",), reason_codes=("STALE",))
@@ -737,6 +737,20 @@ def test_stale_quote_is_refused_at_decision_time_by_the_frozen_age_limit(tmp_pat
     with pytest.raises(ForwardSessionRunnerError, match="decision quote exceeds configured maximum age of 500ms"):
         runner.decide(session_id="s", strategy_id="momentum", decision_id="stale-trade", outcome="TRADE",
                       input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
+    assert runner.records("s")["decisions"] == []
+    runner.close()
+
+
+def test_old_exchange_quote_received_just_now_is_refused_at_decision(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config(max_quote_age_ms=500)
+    opened(runner, config=config)
+    event = make_event(event_time=NOW - timedelta(seconds=2), available_at=NOW)
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="decision quote exceeds configured maximum age of 500ms"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="delayed-stale-trade",
+                      outcome="TRADE", input_event_ids=(event.event_id,),
+                      decided_at=NOW + timedelta(milliseconds=100))
     assert runner.records("s")["decisions"] == []
     runner.close()
 
