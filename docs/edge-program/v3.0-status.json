@@ -3657,13 +3657,15 @@
       "id": "FB-1105",
       "text": "Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No paired automatic vs human-approved paper sleeves with matched eligibility, quote feed and risk parameters found"
+        "src/financial_brain/forward_edge/paired_paper.py compares automatic and human paper outcomes over the same frozen eligible signal IDs, per-signal cash outcomes, capital weights, quote-stream hash, risk-policy hash, and cost-model hash.",
+        "The comparator retains no-trade/rejected/watch outcomes in the same denominator, requires full matching outcome rows and decision-before-outcome clocks, reconciles gross less costs to net, preserves unknowns, hashes the report, and never grants promotion eligibility.",
+        "tests/test_forward_edge_paired_paper.py: 11 passed. Implementation/test evidence commit: 32884ab33d48230747f633fd3d5dde966d0caa7a."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: the comparison contract exists, but automatic and human-approved outcomes are not yet assembled from independently operated, persistent sleeves or connected to a common quote/risk/cost runner. Human identity and independent market timestamp attestation are not authenticated.",
+      "last_audited_at_utc": "2026-11-24T01:20:00Z",
+      "commit": "32884ab33d48230747f633fd3d5dde966d0caa7a"
     },
     {
       "id": "FB-1106",
@@ -15716,7 +15718,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T01:11:00Z",
+    "as_of_utc": "2026-11-24T01:20:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15969,8 +15971,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 6,
-      "PARTIAL": 197,
+      "NOT_STARTED": 5,
+      "PARTIAL": 198,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16048,8 +16050,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 6,
-    "PARTIAL": 197,
+    "NOT_STARTED": 5,
+    "PARTIAL": 198,
     "UNASSESSED": 1132
   }
 }
