@@ -786,6 +786,28 @@ def mf_paper_panel(con, asof: date) -> str:
         realism = assess_account_mf_realism(
             con, account_id=account_id, assessed_at=known_at,
         )
+        pending_purchases = con.execute("""SELECT o.order_id, o.scheme_code, o.plan, o.option,
+            o.amount_inr, o.units, e.eligible_nav_date, o.current_state
+            FROM mf_paper_orders o LEFT JOIN mf_paper_purchase_eligibility e USING(order_id)
+            WHERE o.account_id=? AND o.created_at<=? AND o.updated_at<=?
+              AND o.transaction_type IN ('PURCHASE','SWITCH_IN')
+              AND (e.state='NAV_PENDING' OR (e.state IS NULL AND o.current_state IN ('REQUESTED','ACKNOWLEDGED','ACCEPTED')))
+            ORDER BY o.created_at, o.order_id""", [account_id, known_at, known_at]).fetchall()
+        if pending_purchases:
+            pending_rows = []
+            for order_id, scheme, plan, option, amount, units, eligible_date, state in pending_purchases:
+                pending_rows.append(
+                    f"<tr><td>{_e(order_id)}</td><td>{_e(scheme)}</td><td>{_e(plan)}</td><td>{_e(option)}</td>"
+                    f"<td class='r'>{f'Rs {amount:,.2f}' if amount is not None else '—'}</td>"
+                    f"<td class='r'>{f'{units:,.6f}' if units is not None else '—'}</td>"
+                    f"<td>{_e(eligible_date or '—')}</td><td>{_e(state)}</td></tr>"
+                )
+            out.append(
+                "<h4>Pending MF allotments</h4><div class='sub'>Cutoff details are shown only when provided by a sourced scheme rule; this book has no connected cutoff feed.</div>"
+                "<div class='wrap'><table><tr><th>Order</th><th>Scheme</th><th>Plan</th><th>Option</th>"
+                "<th class='r'>Amount</th><th class='r'>Units</th><th>Eligible NAV date</th><th>Order state</th></tr>"
+                + "".join(pending_rows) + "</table></div>"
+            )
         realism_factors = {factor.dimension: factor for factor in realism.factors}
         settlements = con.execute("""SELECT settlement_id, scheme_code, state,
             net_inr, payout_available_at, payout_basis, payout_evidence_ref,
@@ -879,21 +901,49 @@ def mf_paper_panel(con, asof: date) -> str:
             value_text = f"Rs {value:,.2f}" if value is not None else "—"
             basis_text = f"Rs {position['cost_basis_inr']:,.2f}"
             pnl_text = f"Rs {pnl:+,.2f}" if pnl is not None else "—"
+            exit_load_text = "—"
+            if nav is not None and status == "CURRENT":
+                from .mf_exit_loads import PurchaseLot, calculate_exit_loads
+                from .mf_lot_book import _schedule_from_json
+                folio_clause = "folio_id IS NULL" if position["folio_id"] is None else "folio_id=?"
+                parameters = [account_id, position["scheme_code"], position["plan"],
+                              position["option"], position["isin"]]
+                if position["folio_id"] is not None:
+                    parameters.append(position["folio_id"])
+                lot_rows = con.execute(f"""SELECT lot_id, allotted_on, units_remaining,
+                    exit_loads_json FROM mf_paper_lots WHERE account_id=? AND scheme_code=?
+                    AND plan=? AND option=? AND isin=? AND {folio_clause} AND units_remaining>0
+                    ORDER BY allotted_on, lot_id""", parameters).fetchall()
+                try:
+                    lots = tuple(PurchaseLot(row[0], row[1], row[2], _schedule_from_json(row[3]))
+                                 for row in lot_rows)
+                    estimate = calculate_exit_loads(
+                        lots, redemption_date=asof, redemption_units=position["units"],
+                        nav_per_unit=nav,
+                    )
+                    exit_load_text = f"Rs {estimate.exit_load_inr:,.2f}"
+                except (ValueError, TypeError):
+                    exit_load_text = "Unavailable · terms missing/ambiguous"
             position_rows.append(
                 f"<tr><td>{_e(folio)}</td><td>{_e(position['scheme_code'])}</td>"
                 f"<td>{_e(position['plan'])}</td>"
                 f"<td>{_e(position['option'])}</td><td class='r'>{position['units']:,.6f}</td>"
                 f"<td class='r'>{nav_text}</td>"
                 f"<td>{_e(position['nav_date'] or '—')}</td>"
+                f"<td>{_e(position.get('nav_available_at').isoformat() if position.get('nav_available_at') else '—')}</td>"
                 f"<td class='r'>{value_text}</td>"
                 f"<td class='r'>{basis_text}</td>"
+                f"<td class='r'>{_e(exit_load_text)}</td>"
+                "<td>Unavailable · India MF tax rules not configured</td>"
                 f"<td class='r {pnl_class}'>{pnl_text}</td>"
                 f"<td><span class='chip {cls}'>{_e(status)}</span></td></tr>"
             )
         out.append(
+            "<div class='sub'>Exit load is an estimate for redeeming the full position today using the source-pinned lot schedules. Tax is not estimated because a current India MF tax classification/rate schedule is not configured.</div>"
             "<div class='wrap'><table><tr><th>Folio</th><th>Scheme</th><th>Plan</th><th>Option</th>"
             "<th class='r'>Units</th><th class='r'>Last known NAV</th><th>NAV date</th>"
-            "<th class='r'>Value</th><th class='r'>Cost basis</th><th class='r'>Unrealized P&amp;L</th>"
+            "<th>NAV available at</th><th class='r'>Value</th><th class='r'>Cost basis</th>"
+            "<th class='r'>Exit load estimate</th><th>Tax estimate</th><th class='r'>Unrealized P&amp;L</th>"
             "<th>Mark</th></tr>" + "".join(position_rows) + "</table></div>"
         )
     return "".join(out)

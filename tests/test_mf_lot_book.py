@@ -874,6 +874,10 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     assert "Operational evidence completeness only" in page
     assert "Last known NAV" in page and "125.0000" in page
     assert "STALE" in page and "NAV date" in page
+    assert "NAV available at" in page
+    assert "Exit load estimate" in page
+    assert "Tax estimate" in page
+    assert "India MF tax rules not configured" in page
 
 
 def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connection):
