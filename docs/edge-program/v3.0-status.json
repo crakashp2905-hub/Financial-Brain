@@ -4314,7 +4314,7 @@
       ],
       "blocker": "Partial: the gate is implemented and contract-tested, but is not wired into ForwardSessionRunner or a durable paper book. Session eligibility, approvals, portfolio utility and accepted instruments are caller-supplied evidence rather than independently verified runtime records; no prospective calibrated cohort is established. The gate does not prove profitability or authorize broker orders.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "6078b4c5",
       "test_evidence": [
         "tests/test_kernel_trade_admissibility.py",
         "tests/test_kernel_trade_economics_receipt.py"
@@ -4332,7 +4332,7 @@
       ],
       "blocker": "Partial: the gate is implemented and contract-tested, but is not wired into ForwardSessionRunner or a durable paper book. Session eligibility, approvals, portfolio utility and accepted instruments are caller-supplied evidence rather than independently verified runtime records; no prospective calibrated cohort is established. The gate does not prove profitability or authorize broker orders.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "6078b4c5",
       "test_evidence": [
         "tests/test_kernel_trade_admissibility.py",
         "tests/test_kernel_trade_economics_receipt.py"
@@ -4431,7 +4431,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py; tests/test_forward_edge_exposure_limits.py"
       ],
@@ -4447,7 +4447,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py"
       ],
@@ -4463,7 +4463,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py; tests/test_forward_edge_exposure_limits.py"
       ],
@@ -4479,7 +4479,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py; tests/test_forward_edge_exposure_limits.py"
       ],
@@ -4495,7 +4495,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py; tests/test_forward_edge_exposure_limits.py"
       ],
@@ -4511,7 +4511,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py"
       ],
@@ -4527,7 +4527,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_oms.py; tests/test_capital_allocator.py"
       ],
@@ -4543,7 +4543,7 @@
       ],
       "blocker": "PARTIAL: central reservation exists only in memory; complete cross-asset durable ledger, live paper-runner integration, asset lookthrough, required policy breadth and restart reconciliation remain open.",
       "last_audited_at_utc": "2026-11-24T04:36:13Z",
-      "commit": null,
+      "commit": "1f32df6a",
       "test_evidence": [
         "tests/test_capital_allocator.py; tests/test_forward_edge_exposure_limits.py"
       ],
@@ -4559,7 +4559,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_forward_edge_session_runner.py; tests/test_kite_stream.py (66 passed)"
       ],
@@ -4575,7 +4575,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_kite_stream.py; tests/test_forward_edge_session_runner.py (66 passed)"
       ],
@@ -4591,7 +4591,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_kite_stream.py; tests/test_forward_edge_session_runner.py (66 passed)"
       ],
@@ -4607,7 +4607,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_forward_edge_session_runner.py (66 passed)"
       ],
@@ -4623,7 +4623,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_forward_edge_session_runner.py (66 passed)"
       ],
@@ -4639,7 +4639,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_kernel_exit_scenarios.py (19 passed; prior focused run)"
       ],
@@ -4655,7 +4655,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_kite_stream.py; tests/test_forward_edge_session_runner.py (66 passed)"
       ],
@@ -4671,7 +4671,7 @@
       ],
       "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
       "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": null,
+      "commit": "04301294",
       "test_evidence": [
         "tests/test_forward_edge_session_runner.py (66 passed)"
       ],
