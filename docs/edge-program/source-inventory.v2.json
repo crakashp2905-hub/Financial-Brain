@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 706,
+  "source_count": 707,
   "sources": [
     {
       "capability_ids": [],
@@ -8826,6 +8826,26 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/hierarchy.py",
+      "source_sha256": "7e58ecf8a43f3e5d27d1274eb6d1100bc9ab6859f6648c495dc6485caa19cd82",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "math",
         "random",
         "typing"
@@ -12633,6 +12653,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 676,
-  "unassigned_role_count": 412
+  "unassessed_count": 677,
+  "unassigned_role_count": 413
 }
