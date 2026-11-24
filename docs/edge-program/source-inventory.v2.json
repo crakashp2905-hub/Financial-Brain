@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 693,
+  "source_count": 694,
   "sources": [
     {
       "capability_ids": [],
@@ -7491,6 +7491,29 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "exit_policy",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "trader_signal",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/exit_scenarios.py",
+      "source_sha256": "29738ea25b67b8b7c575fb7d984440f029a9294d9f3c2f4ca33d13f9d63096d1",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "decimal"
@@ -12327,6 +12350,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 670,
-  "unassigned_role_count": 399
+  "unassessed_count": 671,
+  "unassigned_role_count": 400
 }
