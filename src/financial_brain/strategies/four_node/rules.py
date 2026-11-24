@@ -34,13 +34,14 @@ def _direction(n1: Node, n2: Node, n3: Node) -> str | None:
 
 
 def evaluate(v: Variant, nodes: tuple[Node, Node, Node], c20: Cluster20, bar: int, close: float,
-             barriers: list[float], unit: float, spread: float) -> Setup:
+             barriers: list[float], unit: float, spread: float, *,
+             d1_inclusive: bool = True, d2_inclusive: bool = False) -> Setup:
     """Evaluate a completed bar ``bar`` closing at ``close`` against N1..N3 (all observable)."""
     if not v.executable() and v.executable_intent:
         return Setup("BLOCKED", None, (), tuple(f"unresolved:{u}" for u in v.unresolved()))
     n1, n2, n3 = nodes
-    if max(n.confirmed_at for n in nodes) > bar:
-        return Setup("REJECTED", None, (), ("node_not_observable",))
+    if any(n.observable_at is None or n.observable_at >= bar for n in nodes):
+        return Setup("REJECTED", None, (), ("node_not_observable_before_breakout_bar",))
     side = _direction(n1, n2, n3)
     if side is None:
         return Setup("REJECTED", None, (), ("not_zigzag",))
@@ -66,12 +67,16 @@ def evaluate(v: Variant, nodes: tuple[Node, Node, Node], c20: Cluster20, bar: in
     k = "" if v.market == "XAUUSD" else "_atr"
     d1 = abs(n2.price - n3.price) / unit
     d2 = abs(close - n2.price) / unit
-    check("d1_max", d1 <= p[f"max_d1{k}"])
-    check("d2_max", d2 < p[f"max_d2{k}"])
+    d1_limit, d2_limit = p[f"max_d1{k}"], p[f"max_d2{k}"]
+    check("d1_max", d1 <= d1_limit if d1_inclusive else d1 < d1_limit)
+    check("d2_max", d2 <= d2_limit if d2_inclusive else d2 < d2_limit)
     stop = n3.price + spread if sell else n3.price - spread
     risk = abs(close - stop) / unit
     check("max_sl", risk <= p[f"max_sl{k}"])
-    check("barrier_clearance", all(abs(close - b) / unit >= p[f"min_struct{k}"] for b in barriers))
+    ahead, _behind = barriers_split(close, side, barriers)
+    check("barrier_clearance", all(
+        abs(close - b) / unit >= p[f"min_struct{k}"] for b in ahead
+    ))
     tp = p[f"tp{k}"] * unit
     target = close - tp if sell else close + tp
     status = "ELIGIBLE" if not bad else "REJECTED"

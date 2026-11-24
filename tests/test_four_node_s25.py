@@ -191,16 +191,34 @@ def test_sell_setup_eligible_with_reason_codes_and_next_bar_entry():
 def test_d2_boundary_is_exclusive():
     s = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10, 2007.0, [], 0.1, 0.2)
     assert "d2_max" in s.failed
+    n1, n2, n3 = sell_nodes()
+    inclusive = evaluate(xau_exec(), (n1, n2, n3), Cluster20(2008.5, 2009.2, 2009.8),
+                         10, 2007.0, [], 0.1, 0.2, d2_inclusive=True)
+    assert "d2_max" in inclusive.passed
+
+
+def test_d1_and_d2_boundary_policies_are_independent_and_configurable():
+    nodes = (Node(1, 2030.0, 1, 3), Node(-1, 2008.0, 4, 6), Node(1, 2023.0, 7, 9))
+    # D1 is exactly 15 units and D2 exactly 10 units; widen only the independent stop gate.
+    variant = xau_exec()
+    variant.params["max_sl"] = 100
+    result = evaluate(variant, nodes, Cluster20(2008.0, 2020.0, 2030.0), 10,
+                      1998.0, [], 1.0, 0.2, d1_inclusive=False, d2_inclusive=True)
+    assert "d1_max" in result.failed
+    assert "d2_max" in result.passed
 
 
 def test_unobservable_node_rejected():
     nodes = (Node(1, 2010.0, 1, 3), Node(-1, 2008.0, 4, 6), Node(1, 2009.0, 7, 12))
-    assert evaluate(xau_exec(), nodes, Cluster20(2008.5, 2009.2, 2009.8), 10, 2007.8, [], 0.1, 0.2).failed == ("node_not_observable",)
+    assert evaluate(xau_exec(), nodes, Cluster20(2008.5, 2009.2, 2009.8), 10, 2007.8, [], 0.1, 0.2).failed == ("node_not_observable_before_breakout_bar",)
 
 
 def test_barrier_too_close_rejects():
     s = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8), 10, 2007.8, [2007.0], 0.1, 0.2)
     assert "barrier_clearance" in s.failed
+    behind = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8),
+                      10, 2007.8, [2008.0], 0.1, 0.2)
+    assert "barrier_clearance" in behind.passed
 
 
 def test_trailing_ratchets_and_never_loosens():

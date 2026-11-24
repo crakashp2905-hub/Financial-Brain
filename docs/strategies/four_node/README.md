@@ -56,6 +56,19 @@ variant and a separate trial; alternatives are never pooled.
   distance. Nodes retain pivot, confirmation and observation indices, stable IDs, parent ancestry
   and source bar IDs. Without supplied source IDs, deterministic local bar-index IDs are used;
   production ingestion should supply provider event IDs.
+- `four_node.stream.FourNodeStateMachine` consumes immutable node-confirmation, completed-bar and
+  session-reset events. Same event IDs with identical payloads replay idempotently; conflicting
+  payload reuse is rejected. It resets on session rollover, supports explicit reset, expires old
+  patterns, and refuses breakouts unless all three nodes were observable before that bar. A close
+  breakout produces a paper/research candidate whose actionable bar is strictly later. Opposing
+  same-bar candidates fail closed. The machine has no order or broker capability.
+- Setup evaluation emits individual passed/failed predicates. D1/D2 equality policy is explicit
+  per evaluation; barrier clearance checks only levels ahead in the trade direction. The original
+  ambiguity variants remain separate and unresolved until independently recorded; the stream
+  machine's pattern candidate is not itself an eligible trade.
+- Stream observation clocks are currently integer bar indices. Kite/provider event clocks, actual
+  quote arrival and the M1-only production adapter are still integration work; the backtest and
+  stream module remain research/paper utilities.
 
 ## Evaluation gates (FB-2534 to FB-2544)
 No backtest has been run. Any test must first be preregistered in the trial ledger with universe,
