@@ -907,6 +907,36 @@ def cmd_manual_paper_decision(args) -> int:
     return 0
 
 
+def cmd_mf_decision(args) -> int:
+    """Record a human-selected mutual-fund decision; this does not create an order."""
+    from .paper.mf_decisions import MFAction, MFActionDecision, record_decision
+
+    try:
+        decision = MFActionDecision(
+            decision_id=args.decision_id, account_id=args.account_id, actor_id=args.actor_id,
+            action=MFAction(args.action), reason=args.reason,
+            source_snapshot_sha256=args.snapshot_sha256,
+            decided_at=datetime.fromisoformat(args.decided_at),
+            expires_at=datetime.fromisoformat(args.expires_at),
+            scheme_code=args.scheme_code, plan=args.plan, option=args.option, folio_id=args.folio_id,
+            amount_inr=args.amount_inr, units=args.units,
+            target_scheme_code=args.target_scheme_code, target_plan=args.target_plan,
+            target_option=args.target_option, sip_frequency=args.sip_frequency,
+            sip_start=date.fromisoformat(args.sip_start) if args.sip_start else None,
+            sip_end=date.fromisoformat(args.sip_end) if args.sip_end else None,
+        )
+        database = Database(load())
+        database.migrate()
+        with database.connect() as con:
+            inserted = record_decision(con, decision, recorded_at=datetime.now().astimezone())
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "physical_orders_authorized": False}))
+        return 2
+    print(json.dumps({"ok": True, "inserted": inserted, "decision": decision.body(),
+                      "decision_sha256": decision.digest(), "physical_orders_authorized": False}, sort_keys=True))
+    return 0
+
+
 def cmd_models(args) -> int:
     """Tiered models (ADR-0002): registry, benchmark on labelled tasks, router plan."""
     from .evaluation import models as bench
@@ -2770,6 +2800,29 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--candidate-expires-at", required=True, help="candidate signal TTL boundary")
     g.add_argument("--journal", default="data/forward-edge/manual-paper-decisions.sqlite3")
     g.set_defaults(fn=cmd_manual_paper_decision)
+
+    g = sub.add_parser("mf-decision", help="record SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as a decision; no order")
+    g.add_argument("--action", required=True, choices=["SUBSCRIBE", "REDEEM", "SWITCH", "SIP", "HOLD"])
+    g.add_argument("--decision-id", required=True)
+    g.add_argument("--account-id", required=True)
+    g.add_argument("--actor-id", required=True, help="named human decision maker")
+    g.add_argument("--reason", required=True)
+    g.add_argument("--snapshot-sha256", required=True, help="hash of the decision-time consumer context")
+    g.add_argument("--decided-at", required=True, help="ISO-8601 timestamp with timezone")
+    g.add_argument("--expires-at", required=True, help="ISO-8601 decision expiry, at most 90 days")
+    g.add_argument("--scheme-code")
+    g.add_argument("--plan")
+    g.add_argument("--option")
+    g.add_argument("--folio-id")
+    g.add_argument("--amount-inr")
+    g.add_argument("--units")
+    g.add_argument("--target-scheme-code")
+    g.add_argument("--target-plan")
+    g.add_argument("--target-option")
+    g.add_argument("--sip-frequency", choices=["WEEKLY", "FORTNIGHTLY", "MONTHLY"])
+    g.add_argument("--sip-start", help="YYYY-MM-DD")
+    g.add_argument("--sip-end", help="YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_decision)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])

@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 687,
+  "source_count": 688,
   "sources": [
     {
       "capability_ids": [],
@@ -198,7 +198,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "mf-action-decision-journal"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -244,6 +246,7 @@
         "os",
         "pandas",
         "paper",
+        "paper.mf_decisions",
         "pathlib",
         "pit.observations",
         "portfolio",
@@ -266,12 +269,14 @@
         "webbrowser",
         "worldstate"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "ade2fda988b9af858394c8e218715a0ffb406bd6d8c275a4cba3dd8f71ba871d",
-      "test_paths": []
+      "source_sha256": "edcbf2235dc99aead724c2de889bfc14b071621ec3a3f42882070e516f852835",
+      "test_paths": [
+        "tests/test_mf_decisions.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -9152,6 +9157,30 @@
       "test_paths": []
     },
     {
+      "capability_ids": [
+        "mf-action-decision-journal"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_decisions.py",
+      "source_sha256": "9914762700fb59ec08711cf04968ff952bb614dc96e87a033fcab72718b72af0",
+      "test_paths": [
+        "tests/test_mf_decisions.py"
+      ]
+    },
+    {
       "capability_ids": [],
       "human_owner": null,
       "imports": [
@@ -9606,7 +9635,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "mf-action-decision-journal"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -9622,6 +9653,7 @@
         "json",
         "kernel.mf_paper_realism",
         "kernel.trading_clock",
+        "mf_decisions",
         "mf_lot_book",
         "mf_paper_realism_book",
         "numpy",
@@ -9632,12 +9664,14 @@
         "regime",
         "risk"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "85e5b00011e5fb09fbaebba307047f1de6ecd7c4977bcae42c6267c9b132ee74",
-      "test_paths": []
+      "source_sha256": "c186e5c7cbcbbbe1219f0da69aa9e40d4bd9969c073a00f4fc25770f9fe67bdd",
+      "test_paths": [
+        "tests/test_mf_decisions.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -12185,6 +12219,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 667,
+  "unassessed_count": 665,
   "unassigned_role_count": 398
 }

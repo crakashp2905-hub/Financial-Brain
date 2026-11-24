@@ -670,6 +670,7 @@ def mf_paper_panel(con, asof: date) -> str:
     """Render account-scoped MF values using only NAVs available by the report date."""
     from ..kernel.trading_clock import IST
     from ..kernel.mf_paper_realism import WEIGHTS
+    from .mf_decisions import decisions_as_of
     from .mf_lot_book import account_snapshot
     from .mf_paper_realism_book import assess_account_mf_realism
 
@@ -677,12 +678,42 @@ def mf_paper_panel(con, asof: date) -> str:
     rows = con.execute(
         "SELECT account_id FROM mf_paper_accounts ORDER BY account_id"
     ).fetchall()
-    if not rows:
-        return "<h2>Mutual fund paper book</h2><div class='sub'>No MF paper accounts.</div>"
-
     out = ["<h2>Mutual fund paper book</h2>",
-           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible.</div>"]
+           f"<div class='sub'>Point-in-time valuation as of {known_at.isoformat()}. Only persisted NAVs available by this cutoff are used; stale and unavailable marks stay visible. MF actions below are decisions, not current-price orders.</div>",
+           "<h3>Mutual-fund decision choices</h3><div class='wrap'><table>"
+           "<tr><th>Decision</th><th>Meaning</th><th>Required context</th></tr>"
+           "<tr><td>SUBSCRIBE</td><td>Consider a one-time allocation; units follow the eligible NAV, not a displayed current price.</td><td>Scheme, plan, option, INR amount, cutoff and payment context</td></tr>"
+           "<tr><td>REDEEM</td><td>Consider redeeming specified folio holdings; cash is delayed until the eligible NAV and payout settle.</td><td>Folio, scheme identity, amount or units, exit-load and payout terms</td></tr>"
+           "<tr><td>SWITCH</td><td>Consider paired redemption/subscription with both schemes' cutoff and NAV rules.</td><td>Source/destination scheme identities, folio, amount or units</td></tr>"
+           "<tr><td>SIP</td><td>Consider a recurring schedule; every installment has separate funding and NAV outcomes.</td><td>Scheme identity, INR amount, frequency and schedule dates</td></tr>"
+           "<tr><td>HOLD</td><td>Record no transaction for this review.</td><td>Reason and decision-time evidence</td></tr>"
+           "</table></div>"]
+    if not rows:
+        out.append("<div class='sub'>No MF paper accounts. Decision records require a local paper account and never submit transactions.</div>")
+        return "".join(out)
     for (account_id,) in rows:
+        decisions = decisions_as_of(con, account_id=account_id, known_at=known_at)
+        if decisions:
+            decision_rows = []
+            for item in decisions:
+                scheme = item["scheme_code"] or "—"
+                target = item["target_scheme_code"] or "—"
+                amount = f"Rs {item['amount_inr']:,.2f}" if item["amount_inr"] is not None else "—"
+                units = f"{item['units']:,.6f}" if item["units"] is not None else "—"
+                decision_rows.append(
+                    f"<tr><td>{_e(item['action'])}</td><td>{_e(scheme)} → {_e(target)}</td>"
+                    f"<td>{_e(item['status'])}</td><td>{_e(item['decided_at'].isoformat())}</td>"
+                    f"<td>{_e(item['expires_at'].isoformat())}</td><td class='r'>{_e(amount)}</td>"
+                    f"<td class='r'>{_e(units)}</td><td>{_e(item['reason'])}</td>"
+                    f"<td>{_e(item['decision_sha256'][:12])}</td></tr>"
+                )
+            out.append(
+                f"<h4>{_e(account_id)} · recent human MF decisions</h4><div class='wrap'><table>"
+                "<tr><th>Decision</th><th>Scheme → destination</th><th>Status</th><th>Decided</th>"
+                "<th>Expires</th><th class='r'>INR</th><th class='r'>Units</th><th>Reason</th><th>Hash</th></tr>"
+                + "".join(decision_rows) + "</table></div>"
+                "<div class='sub'>Decision-only journal; no paper order or external transaction was created.</div>"
+            )
         snapshot = account_snapshot(con, account_id, known_at=known_at)
         realism = assess_account_mf_realism(
             con, account_id=account_id, assessed_at=known_at,
@@ -812,7 +843,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     stale = freshness(rcon)
     parts = [f"<title>Financial-Brain terminal</title><style>{CSS}</style><main>",
              f"<h1>Financial-Brain</h1><div class='sub'>Terminal for {day} · data through {asof} · written "
-             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper only, no orders exist in this system · "
+             f"{datetime.now().strftime('%Y-%m-%d %H:%M')} · paper-only; this terminal does not send external orders · "
              f"<a href='signals.html'>signal screener: every algorithm and indicator, the stocks it fires on, their charts</a></div>",
              _freshness_banner(stale)]
     # ---------------------------------------------------------------- market

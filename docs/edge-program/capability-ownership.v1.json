@@ -2463,6 +2463,12 @@
       "module_owner": "src/financial_brain/paper/mf_account_ledger.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_decisions.py",
+      "path": "src/financial_brain/paper/mf_decisions.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_decisions.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/mf_exit_loads.py",
       "path": "src/financial_brain/paper/mf_exit_loads.py",
       "module_role": "paper_engine_or_output",

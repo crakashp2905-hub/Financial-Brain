@@ -3690,13 +3690,22 @@
       "id": "FB-1108",
       "text": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF decision workflow for SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD found; recommendations remain research primitives"
+        "docs/edge-program/mf-action-decisions-v1.md defines the decision semantics for SUBSCRIBE, REDEEM, SWITCH, SIP, and HOLD; the terminal explains NAV/cutoff, payout, scheme, and recurring-installment implications instead of showing current-price transaction buttons.",
+        "src/financial_brain/paper/mf_decisions.py validates action-specific fields and records an idempotent, content-hashed, as-of/expiry-bound choice in mf_action_decisions.",
+        "src/financial_brain/cli.py exposes fb mf-decision; src/financial_brain/paper/terminal.py displays the decision choices and journal records. Every path fixes PAPER_DECISION_ONLY and physical_orders_authorized=false and never invokes an MF order API.",
+        "The CLI actor label and context SHA-256 are self-declared/caller-supplied; authenticated decision identity, attested context, UI forms, and any separate paper-order confirmation remain incomplete."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: all five MF decision categories are modeled and shown, and local human choices persist, but there is no authenticated consumer UI or independently attested decision context. The journal does not submit a paper or external MF order.",
+      "last_audited_at_utc": "2026-11-24T00:30:35+00:00",
+      "commit": null,
+      "test_result": "Nine focused MF decision tests pass, covering all five action schemas, validation, expiry, idempotency/conflicts, as-of visibility, CLI capture, terminal language and no-order behavior. The existing terminal-panel tests also pass in the targeted run.",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_decisions.py -q: 9 passed.",
+        "python -m pytest tests/test_mf_decisions.py tests/test_mf_lot_book.py -k \"mf_decisions or terminal_panel\" -q: 11 passed, 17 deselected.",
+        "Capability matrix validation and Ruff passed; scoped mypy passed for mf_decisions.py."
+      ]
     },
     {
       "id": "FB-1109",
@@ -15699,7 +15708,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T12:00:00Z",
+    "as_of_utc": "2026-11-24T00:30:35Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15952,8 +15961,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 11,
-      "PARTIAL": 192,
+      "NOT_STARTED": 10,
+      "PARTIAL": 193,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16026,13 +16035,13 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 11,
-    "PARTIAL": 192,
+    "NOT_STARTED": 10,
+    "PARTIAL": 193,
     "UNASSESSED": 1132
   }
 }

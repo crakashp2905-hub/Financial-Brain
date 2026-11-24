@@ -1722,3 +1722,35 @@ CREATE TABLE IF NOT EXISTS monthly_updates (
     headline        VARCHAR,
     attachment      VARCHAR
 );
+
+-- Human-selected MF action decisions are a separate append-only journal, never orders.
+CREATE TABLE IF NOT EXISTS mf_action_decisions (
+    decision_id                 VARCHAR PRIMARY KEY,
+    account_id                  VARCHAR NOT NULL,
+    actor_id                    VARCHAR NOT NULL,
+    action                      VARCHAR NOT NULL CHECK (action IN ('SUBSCRIBE','REDEEM','SWITCH','SIP','HOLD')),
+    reason                      VARCHAR NOT NULL,
+    source_snapshot_sha256      VARCHAR NOT NULL CHECK (regexp_full_match(source_snapshot_sha256, '[0-9a-f]{64}')),
+    decided_at                  TIMESTAMPTZ NOT NULL,
+    expires_at                  TIMESTAMPTZ NOT NULL,
+    scheme_code                 VARCHAR,
+    plan                        VARCHAR,
+    option                      VARCHAR,
+    folio_id                    VARCHAR,
+    amount_inr                  DECIMAL(38,18),
+    units                       DECIMAL(38,18),
+    target_scheme_code          VARCHAR,
+    target_plan                 VARCHAR,
+    target_option               VARCHAR,
+    sip_frequency               VARCHAR,
+    sip_start                   DATE,
+    sip_end                     DATE,
+    execution_scope             VARCHAR NOT NULL CHECK (execution_scope='PAPER_DECISION_ONLY'),
+    physical_orders_authorized  BOOLEAN NOT NULL CHECK (physical_orders_authorized=FALSE),
+    decision_sha256             VARCHAR NOT NULL CHECK (regexp_full_match(decision_sha256, '[0-9a-f]{64}')),
+    body_json                   VARCHAR NOT NULL,
+    recorded_at                 TIMESTAMPTZ NOT NULL,
+    CHECK (expires_at > decided_at),
+    CHECK (amount_inr IS NULL OR amount_inr > 0),
+    CHECK (units IS NULL OR units > 0)
+);
