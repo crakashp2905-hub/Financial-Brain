@@ -3680,13 +3680,16 @@
       "id": "FB-1107",
       "text": "MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax estimate.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF holding panel rendering scheme class, NAV/cutoff, pending units, cost basis, exit load, settlement and tax estimate found"
+        "src/financial_brain/paper/terminal.py displays scheme code, plan, option, units, NAV/date, NAV availability timestamp, market value, cost basis and valuation status; it now adds a source-pinned full-position exit-load estimate when a current NAV and known lot schedules are available.",
+        "The MF terminal shows pending purchase/allotment state and eligible NAV date, plus existing pending redemption and payout states. Unknown/stale data is not filled.",
+        "India MF tax estimate and sourced scheme cutoff are explicitly shown as unavailable because no current tax schedule or connected cutoff feed exists; docs/edge-program/mf-terminal-holdings-v1.md records remaining work.",
+        "tests/test_mf_lot_book.py and tests/test_mf_decisions.py: 28 passed; the new targeted terminal display assertion passes; Ruff and git diff --check pass."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: cutoff/terms feed, reviewed India MF tax rules and full allotment receipt evidence are not connected; tax is explicitly unavailable.",
+      "last_audited_at_utc": "2026-11-24T00:47:00Z",
+      "commit": "0a60a7952855ed746f2d79040a0574f7b7fc40ce"
     },
     {
       "id": "FB-1108",
@@ -15710,7 +15713,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T00:38:38Z",
+    "as_of_utc": "2026-11-24T00:47:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15963,8 +15966,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 9,
-      "PARTIAL": 194,
+      "NOT_STARTED": 8,
+      "PARTIAL": 195,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16042,8 +16045,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 9,
-    "PARTIAL": 194,
+    "NOT_STARTED": 8,
+    "PARTIAL": 195,
     "UNASSESSED": 1132
   }
 }
