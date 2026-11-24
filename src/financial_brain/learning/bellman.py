@@ -71,4 +71,23 @@ def fitted_q_iteration(rows: tuple[Transition, ...], *, gamma: float, iterations
     return q
 
 
-__all__ = ["BellmanError", "Transition", "fitted_q_iteration", "target"]
+def conservative_q_values(q_values: Mapping[tuple[str, str], float],
+                          supported_actions: Mapping[str, frozenset[str]], *,
+                          penalty: float) -> dict[tuple[str, str], float]:
+    """Penalize unsupported state/action estimates; never promote unsupported Q values.
+
+    This is a simple CQL-style tabular screening operator, not a fitted CQL objective.
+    It performs no gradient update and should not be described as full Conservative Q-Learning.
+    """
+    if not math.isfinite(penalty) or penalty < 0:
+        raise BellmanError("conservative penalty must be finite and non-negative")
+    output: dict[tuple[str, str], float] = {}
+    for (state, action), value in q_values.items():
+        if not math.isfinite(value):
+            raise BellmanError("Q-values must be finite")
+        support = supported_actions.get(state, frozenset())
+        output[(state, action)] = value if action in support else value - penalty
+    return output
+
+
+__all__ = ["BellmanError", "Transition", "conservative_q_values", "fitted_q_iteration", "target"]

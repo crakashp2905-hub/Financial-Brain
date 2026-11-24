@@ -12871,182 +12871,273 @@
     {
       "id": "SL-13-01",
       "text": "Implement CQL-style penalization for value estimates on actions outside logged behavior support; verify Q ranking on toy datasets.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "learning.bellman.conservative_q_values subtracts a frozen explicit penalty from Q estimates outside logged state-action support; toy test verifies unsupported high-Q actions are demoted. This is a screening operator, not a trained CQL objective.",
+        "Focused verification: tests/test_learning_bellman.py and tests/test_learning_trajectory.py (15 passed); Ruff and mypy passed."
+      ],
+      "blocker": "Full dataset-driven conservative Q learning and generalization tests remain absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-02",
       "text": "Implement IQL-style expectile state-value regression, in-dataset Bellman targets and advantage-weighted behavior policy extraction.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No IQL expectile value regression or advantage-weighted behavior extraction is implemented."
+      ],
+      "blocker": "Expectile regression and policy extraction absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-03",
       "text": "Implement TD3+BC or BCQ-style action constraints for continuous allocations only if behavior data and compute justify them.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No continuous allocation behavior data or justified offline action-support model exists; TD3+BC/BCQ are not implemented."
+      ],
+      "blocker": "Requires sufficient behavior data and compute evidence first.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-04",
       "text": "Implement separate value, policy, target and support modules with typed gradients, optimizer state and deterministic seeds.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The deterministic Bellman module provides table operations only; separate value/policy/target/support modules, optimizer state and seeded gradient learner do not exist."
+      ],
+      "blocker": "No trainable offline RL architecture.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-05",
       "text": "Use n-step and temporal-difference targets that honor the original session/contract termination, fees and outstanding positions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trajectory rows carry terminal state and reward fields; no n-step training sequence respects session/contract settlement, fees and outstanding inventory in a market environment."
+      ],
+      "blocker": "Market episode simulator absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-06",
       "text": "Add uncertainty ensemble or bootstrap interval around Q estimates and change capital eligibility based on conservative lower bounds.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No Q ensemble/bootstrap uncertainty or conservative capital eligibility gate exists."
+      ],
+      "blocker": "No fitted learner or uncertainty-bound policy gate.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-07",
       "text": "Use action masks for tradable instruments, remaining time, max loss, concentration and permitted order types.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trajectory rows carry eligible_actions, but no risk action mask projects tradable instruments, time, max loss, concentration and permitted order types for RL."
+      ],
+      "blocker": "No shared simulator/risk governor adapter.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-08",
       "text": "Compare CQL/IQL against BC, fitted Q, simpler contextual bandit and deterministic trading baseline on identical samples.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Deterministic tabular FQI and support-penalty math exist as fixtures; no CQL/IQL/BC/bandit/trading-baseline comparison on authorized identical samples."
+      ],
+      "blocker": "No valid logged samples/shared environment.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-09",
       "text": "Tune hyperparameters using train/validation only; lock number of configurations and record every failed run.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No hyperparameter search/trial registry for conservative offline RL."
+      ],
+      "blocker": "Offline RL trial pipeline absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-10",
       "text": "Check sensitivity to support penalty, expectile, discount factor, reward scale, action discretization and transaction costs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Bellman discount and CQL-style penalty are explicit inputs, but no preregistered sensitivity report covers algorithm and economic assumptions."
+      ],
+      "blocker": "Only hand-authored contract tests; no sensitivity study.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-11",
       "text": "Include at least one zero-alpha random-walk and one known-alpha seeded toy environment as positive and negative controls.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Hand-derived Bellman fixtures test terminal math and support ranking; no known-alpha and zero-alpha seeded market environments exist."
+      ],
+      "blocker": "Deterministic market toy simulator absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-12",
       "text": "Use independent environment seeds and trading periods; never select on a single historical market crash or bull market.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No multi-seed, multi-period conservative RL comparison is implemented."
+      ],
+      "blocker": "Learners and environments absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-13",
       "text": "Compute performance by volatility regime, market direction, sector, liquidity and capital bucket.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing portfolio/evaluation modules report some regime/liquidity/risk dimensions; no learned-policy regime/sector/capital performance report exists."
+      ],
+      "blocker": "No learned trading policy results.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-14",
       "text": "Implement policy collapse detection (constant action, excessive leverage, excessive trading, silent liquidation).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No policy collapse diagnostics exist for constant actions, leverage, turnover or silent liquidation."
+      ],
+      "blocker": "Policy evaluation and action stream absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-15",
       "text": "Treat training improvement as optimization progress only, not a claim of real market performance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Bellman module docs state these are math primitives, not market/edge evidence; no model claim or reward report is generated."
+      ],
+      "blocker": "Explicitly PENDING future trained learner evaluations.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-16",
       "text": "Archive all weights, data lineage, optimizer states, model cards and audit findings for every trial.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trajectory row contracts pin evidence and hashes; no per-trial weight/optimizer/model-card archive exists for offline RL."
+      ],
+      "blocker": "Training lifecycle/artifact store absent.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-17",
       "text": "Implement conservative rejection: if uncertain improvement does not exceed cost and evaluation error, prefer current champion/CASH.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No conservative improvement gate compares lower confidence bounds against costs/evaluation error and falls back to champion/CASH."
+      ],
+      "blocker": "No conservative policy evaluation gate.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-13-18",
       "text": "Keep algorithm source implementation in-house; optional PyTorch is infrastructure, not an outsourced signal model.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Learning Bellman and trajectory implementations are in-house Python; no external signal model is called. Algorithm ownership is satisfied for this limited math utility, not for the entire required algorithm suite."
+      ],
+      "blocker": "CQL/IQL/TD3+BC and the full offline-RL stack remain unimplemented.",
+      "last_audited_at_utc": "2026-11-24T23:05:00Z",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Learning Bellman/support mathematical contract tests only; no market-data or profitability evidence."
+      ]
     },
     {
       "id": "SL-14-01",
@@ -17490,15 +17581,33 @@
       "SL-12-15",
       "SL-12-16",
       "SL-12-17",
-      "SL-12-18"
+      "SL-12-18",
+      "SL-13-01",
+      "SL-13-02",
+      "SL-13-03",
+      "SL-13-04",
+      "SL-13-05",
+      "SL-13-06",
+      "SL-13-07",
+      "SL-13-08",
+      "SL-13-09",
+      "SL-13-10",
+      "SL-13-11",
+      "SL-13-12",
+      "SL-13-13",
+      "SL-13-14",
+      "SL-13-15",
+      "SL-13-16",
+      "SL-13-17",
+      "SL-13-18"
     ],
-    "audited_count": 479,
+    "audited_count": 497,
     "status_counts": {
       "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 0,
-      "PARTIAL": 426,
-      "UNASSESSED": 899
+      "PARTIAL": 444,
+      "UNASSESSED": 881
     },
     "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -17620,13 +17729,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate."
   },
   "counts_by_status": {
     "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 0,
-    "PARTIAL": 426,
-    "UNASSESSED": 899
+    "PARTIAL": 444,
+    "UNASSESSED": 881
   }
 }

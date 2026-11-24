@@ -1,6 +1,8 @@
 import pytest
 
-from financial_brain.learning.bellman import BellmanError, Transition, fitted_q_iteration, target
+from financial_brain.learning.bellman import (
+    BellmanError, Transition, conservative_q_values, fitted_q_iteration, target,
+)
 
 
 def test_two_step_hand_computed_bellman_backup_and_terminal_value():
@@ -39,3 +41,19 @@ def test_terminal_state_and_missing_support_are_rejected_or_do_not_bootstrap():
 def test_invalid_discount_is_rejected(gamma):
     with pytest.raises(BellmanError, match="gamma"):
         target(Transition("s", "a", 1.0, None, True), {}, gamma=gamma)
+
+
+def test_conservative_screen_demotes_unsupported_actions_without_changing_logged_values():
+    q = {("s", "CASH"): 0.1, ("s", "LONG"): 0.2, ("s", "SHORT"): 100.0}
+    conservative = conservative_q_values(q, supported_actions={"s": frozenset({"CASH", "LONG"})},
+                                         penalty=1000.0)
+    assert conservative[("s", "CASH")] == q[("s", "CASH")]
+    assert conservative[("s", "LONG")] == q[("s", "LONG")]
+    assert conservative[("s", "SHORT")] == -900.0
+    assert max((a for (state, a), _ in conservative.items() if state == "s"),
+               key=lambda action: conservative[("s", action)]) == "LONG"
+
+
+def test_conservative_penalty_must_be_finite_and_non_negative():
+    with pytest.raises(BellmanError, match="penalty"):
+        conservative_q_values({("s", "a"): 1.0}, supported_actions={}, penalty=-1.0)
