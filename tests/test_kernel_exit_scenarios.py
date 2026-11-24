@@ -6,7 +6,8 @@ import pytest
 
 from financial_brain.kernel.exit_policy import ExitPolicy, ExitRule, ExitRuleAction
 from financial_brain.kernel.exit_scenarios import (
-    ExitPathSample, ExitReplayBar, ExitScenarioError, estimate_exit_probabilities,
+    ExitCostSchedule, ExitPathSample, ExitReplayBar, ExitScenarioError, compare_exit_variants,
+    estimate_exit_probabilities,
 )
 from financial_brain.kernel.trader_signal import (
     DeskId, EntryCondition, EvidenceTier, ExitTrigger, PriceBasis, SignalSide,
@@ -152,3 +153,40 @@ def test_short_gap_through_stop_uses_adverse_open_and_records_gap_loss():
     assert result.outcomes[0].final_exit == "GAP_STOP"
     assert result.outcomes[0].gross_pnl_inr == Decimal("-200")
     assert result.outcomes[0].gap_loss_inr == Decimal("100")
+
+
+def test_exit_variant_benchmark_costs_every_variant_and_adjusts_family():
+    baseline = policy()
+    changed = ExitPolicy(
+        strategy_id="momentum", strategy_version="v1", policy_version="p2",
+        rules=(
+            ExitRule("stop", ExitTrigger.HARD_STOP, ExitRuleAction.FULL_EXIT,
+                     quantity_fraction=Decimal(1), trigger_price=Decimal("90")),
+            ExitRule("target", ExitTrigger.TAKE_PROFIT, ExitRuleAction.FULL_EXIT,
+                     quantity_fraction=Decimal(1), trigger_price=Decimal("120")),
+            ExitRule("time", ExitTrigger.TIME_STOP, ExitRuleAction.TIME_EXIT,
+                     quantity_fraction=Decimal(1), after_sessions=3),
+        ),
+    )
+    costs = ExitCostSchedule(Decimal("5"), Decimal("0.25"), "kite-schedule-v1", HASH)
+    result = compare_exit_variants(signal=signal(), plan=plan(), baseline=baseline,
+                                   variants={"full-target": changed}, samples=scenarios(), costs=costs)
+    assert result.sample_count == 3
+    assert result.comparison_count == 1
+    assert result.variant_mean_net_pnl_inr["baseline"] == Decimal("-22.50")
+    assert result.variant_mean_net_pnl_inr["full-target"] == Decimal("35.83333333333333333333333333")
+    assert result.paired_mean_delta_vs_baseline_inr["full-target"] == Decimal("58.33333333333333333333333333")
+    assert result.holm_adjusted_p_value["full-target"] == result.paired_p_value["full-target"]
+    # These are prior historical replay paths; a caller flag cannot turn them into forward evidence.
+    assert result.prospective_evidence is False
+    assert result.evidence_label == "HISTORICAL_REPLAY_NOT_PROSPECTIVE"
+
+
+def test_exit_variant_benchmark_rejects_unbounded_family_and_bad_cost_provenance():
+    with pytest.raises(ExitScenarioError, match="comparison limit"):
+        compare_exit_variants(signal=signal(), plan=plan(), baseline=policy(),
+                              variants={"a": policy(), "b": policy()}, samples=scenarios(),
+                              costs=ExitCostSchedule(Decimal(0), Decimal(0), "cost", HASH),
+                              max_comparisons=1)
+    with pytest.raises(ExitScenarioError, match="source SHA-256"):
+        ExitCostSchedule(Decimal(0), Decimal(0), "cost", "bad")

@@ -120,6 +120,43 @@ class ExitProbabilityEstimate:
     confidence_interval_method: str
 
 
+@dataclass(frozen=True, slots=True)
+class ExitCostSchedule:
+    """Frozen per-sample entry and exit charges for an exit-policy comparison."""
+
+    entry_cost_inr: Decimal
+    exit_cost_per_unit_inr: Decimal
+    schedule_id: str
+    source_sha256: str
+
+    def __post_init__(self) -> None:
+        for name in ("entry_cost_inr", "exit_cost_per_unit_inr"):
+            try:
+                value = Decimal(getattr(self, name))
+            except (InvalidOperation, TypeError) as exc:
+                raise ExitScenarioError(f"{name} must be decimal") from exc
+            if not value.is_finite() or value < 0:
+                raise ExitScenarioError(f"{name} must be finite and non-negative")
+            object.__setattr__(self, name, value)
+        if not self.schedule_id.strip() or not _SHA256.fullmatch(self.source_sha256):
+            raise ExitScenarioError("cost schedule needs an identity and source SHA-256")
+
+
+@dataclass(frozen=True, slots=True)
+class ExitVariantComparison:
+    baseline_policy_sha256: str
+    sample_evidence_sha256: str
+    cost_schedule_sha256: str
+    sample_count: int
+    variant_mean_net_pnl_inr: dict[str, Decimal]
+    paired_mean_delta_vs_baseline_inr: dict[str, Decimal]
+    paired_p_value: dict[str, float]
+    holm_adjusted_p_value: dict[str, float]
+    comparison_count: int
+    prospective_evidence: bool
+    evidence_label: str
+
+
 def _wilson(successes: int, total: int) -> tuple[Decimal, Decimal] | None:
     if total < 30:
         return None
@@ -155,6 +192,90 @@ def _exit_policy(policy: ExitPolicy, signal: TraderSignal, plan: TradePlan):
 
 def _pnl(side: str, entry: Decimal, exit_price: Decimal, quantity: Decimal) -> Decimal:
     return ((exit_price - entry) if side == "BUY" else (entry - exit_price)) * quantity
+
+
+def _policy_outcomes(*, signal: TraderSignal, plan: TradePlan, policy: ExitPolicy,
+                     samples: tuple[ExitPathSample, ...]) -> tuple[PathExitResult, ...]:
+    validate_trade_plan_signal(signal, plan)
+    stop, target, target_rule, horizon = _exit_policy(policy, signal, plan)
+    output = []
+    for sample in samples:
+        if sample.instrument_id != signal.instrument_id:
+            raise ExitScenarioError("historical sample instrument differs from the signal")
+        if sample.completed_at.astimezone(timezone.utc) > signal.as_of.astimezone(timezone.utc):
+            raise ExitScenarioError("future or not-yet-matured path cannot inform the decision")
+        output.append(_replay(sample, plan=plan, stop=stop, target=target,
+                              target_rule=target_rule, horizon=horizon))
+    return tuple(output)
+
+
+def compare_exit_variants(*, signal: TraderSignal, plan: TradePlan, baseline: ExitPolicy,
+                          variants: dict[str, ExitPolicy], samples: Iterable[ExitPathSample],
+                          costs: ExitCostSchedule,
+                          max_comparisons: int = 20) -> ExitVariantComparison:
+    """Paired, after-cost exit comparison over historical replay paths.
+
+    Every candidate is compared on the same frozen paths and cost schedule. A one-sided paired
+    t-test is used as a transparent screening statistic, then Holm adjusts across all variants.
+    This historical replay API cannot attest protected prospective cohort membership.
+    """
+    if not isinstance(baseline, ExitPolicy) or not variants or not isinstance(costs, ExitCostSchedule):
+        raise ExitScenarioError("baseline, variants and frozen cost schedule are required")
+    if len(variants) > max_comparisons or max_comparisons < 1:
+        raise ExitScenarioError("variant family exceeds the declared comparison limit")
+    if "baseline" in variants or any(not key.strip() for key in variants):
+        raise ExitScenarioError("variant names must be non-empty and cannot replace baseline")
+    materialized = tuple(samples)
+    if not materialized or len({s.sample_id for s in materialized}) != len(materialized):
+        raise ExitScenarioError("unique frozen historical/forward samples are required")
+    baseline_rows = _policy_outcomes(signal=signal, plan=plan, policy=baseline, samples=materialized)
+    baseline_net = [row.gross_pnl_inr - costs.entry_cost_inr - costs.exit_cost_per_unit_inr * plan.quantity
+                    for row in baseline_rows]
+    from financial_brain.forward_edge.evidence_stats import holm_adjust
+
+    deltas: dict[str, list[Decimal]] = {}
+    pvalues: dict[str, float] = {}
+    means: dict[str, Decimal] = {"baseline": sum(baseline_net, _ZERO) / len(baseline_net)}
+    for name, candidate in sorted(variants.items()):
+        if not isinstance(candidate, ExitPolicy):
+            raise ExitScenarioError("all variants must use versioned ExitPolicy values")
+        outcomes = _policy_outcomes(signal=signal, plan=plan, policy=candidate, samples=materialized)
+        net = [row.gross_pnl_inr - costs.entry_cost_inr - costs.exit_cost_per_unit_inr * plan.quantity
+               for row in outcomes]
+        paired = [candidate_value - base_value for candidate_value, base_value in zip(net, baseline_net)]
+        deltas[name] = paired
+        means[name] = sum(net, _ZERO) / len(net)
+        # Small cohorts and zero-variance pairs cannot support a p-value; fail closed at p=1.
+        if len(paired) < 2:
+            pvalues[name] = 1.0
+        else:
+            import scipy.stats
+            pvalues[name] = float(scipy.stats.ttest_1samp([float(x) for x in paired], popmean=0,
+                                                          alternative="greater").pvalue)
+    adjusted = holm_adjust(pvalues)
+    canonical_samples = [{"sample_id": s.sample_id, "instrument_id": s.instrument_id,
+                          "completed_at": s.completed_at.astimezone(timezone.utc).isoformat(),
+                          "source_sha256": s.source_sha256}
+                         for s in sorted(materialized, key=lambda row: row.sample_id)]
+    sample_hash = hashlib.sha256(json.dumps(canonical_samples, sort_keys=True, separators=(",", ":"),
+                                             allow_nan=False).encode()).hexdigest()
+    cost_hash = hashlib.sha256(json.dumps({"schedule_id": costs.schedule_id,
+        "entry_cost_inr": str(costs.entry_cost_inr), "exit_cost_per_unit_inr": str(costs.exit_cost_per_unit_inr),
+        "source_sha256": costs.source_sha256}, sort_keys=True, separators=(",", ":"),
+        allow_nan=False).encode()).hexdigest()
+    # This API consumes historical replay records only; a caller flag cannot attest a
+    # live receipt or membership in a protected prospective cohort.
+    is_prospective = False
+    return ExitVariantComparison(
+        baseline_policy_sha256=baseline.policy_hash, sample_evidence_sha256=sample_hash,
+        cost_schedule_sha256=cost_hash, sample_count=len(materialized),
+        variant_mean_net_pnl_inr=means,
+        paired_mean_delta_vs_baseline_inr={name: sum(values, _ZERO) / len(values)
+                                           for name, values in deltas.items()},
+        paired_p_value=pvalues, holm_adjusted_p_value=adjusted,
+        comparison_count=len(variants), prospective_evidence=is_prospective,
+        evidence_label="PROSPECTIVE_ATTESTED_EXIT_COHORT" if is_prospective else "HISTORICAL_REPLAY_NOT_PROSPECTIVE",
+    )
 
 
 def _replay(sample: ExitPathSample, *, plan: TradePlan,
@@ -283,5 +404,6 @@ def estimate_exit_probabilities(*, signal: TraderSignal, plan: TradePlan, policy
     )
 
 
-__all__ = ["ExitPathSample", "ExitProbabilityEstimate", "ExitReplayBar", "ExitScenarioError",
-           "PathExitResult", "estimate_exit_probabilities"]
+__all__ = ["ExitCostSchedule", "ExitPathSample", "ExitProbabilityEstimate", "ExitReplayBar",
+           "ExitScenarioError", "ExitVariantComparison", "PathExitResult", "compare_exit_variants",
+           "estimate_exit_probabilities"]
