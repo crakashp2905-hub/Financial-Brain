@@ -5184,42 +5184,66 @@
     {
       "id": "FB-2305",
       "text": "Provide a live health screen with market feed uptime, lag, quote gaps, queue backlog, ledger consistency, pending MF allotment/redemption, option expiry exposure and stale marks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Cockpit renders explicit market/feed/broker/risk state and blocks readiness on stale/unknown evidence; Kite stream exposes queue/stale/reject/drop/reconnect counters. MF pending settlement, option expiry risk, ledger consistency and all telemetry are not joined into one live health view."
+      ],
+      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
+      "last_audited_at_utc": "2026-11-24T05:15:50Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_forward_edge_cockpit.py; tests/test_kite_stream.py; tests/test_forward_edge_session_runner.py."
+      ],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
     },
     {
       "id": "FB-2306",
       "text": "Enforce idempotent alerts, signals, orders, fills and exit triggers after crash/reconnect; no duplicated order, repeated profit recognition or silent orphan position.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Durable order journal, event outbox, immutable event IDs, idempotent fills and persistent hash-chained kill-switch prevent duplicate side effects and require UNKNOWN reconciliation before retry."
+      ],
+      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
+      "last_audited_at_utc": "2026-11-24T05:15:50Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_forward_edge_order_journal.py; tests/test_forward_edge_persistent_killswitch.py; tests/test_forward_edge_session_runner.py."
+      ],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
     },
     {
       "id": "FB-2307",
       "text": "Add a documented operator runbook: market-open preflight, broker-feed failure, kill switch activation, stop-trigger ambiguities, EOD reconciliation, DB backup, restore rehearsal and evidence custody.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/forward-edge/RUNBOOKS.md documents session preflight, feed outage, UNKNOWN order handling, session close, backup/restore, evidence downgrade and paper-only operation. No recorded restore rehearsal or observed recovery drill is attached."
+      ],
+      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
+      "last_audited_at_utc": "2026-11-24T05:15:50Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_forward_edge_runbooks.py (content gate); ops drill evidence not present."
+      ],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
     },
     {
       "id": "FB-2308",
       "text": "Define a daily acceptance gate where the desk cannot report `SESSION_COMPLETE` until all open orders, fills, paper positions, cash, fund units, fees and valuations reconcile or are explicitly flagged unresolved.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForwardSessionRunner close_session refuses complete status with missing execution receipts, pending/UNKNOWN outbox, unresolved order states or unreconciled cash; it reports incomplete evidence explicitly. Cross-asset fund units/settlement, all fees and marks are not checked in this one close gate."
+      ],
+      "blocker": "Partial: explicit fail-closed controls exist, but unified real-time health telemetry, external operational drills and complete cross-asset session reconciliation are outstanding.",
+      "last_audited_at_utc": "2026-11-24T05:15:50Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_forward_edge_session_runner.py (66 passed in focused runner/stream run); tests/test_forward_edge_order_journal.py."
+      ],
+      "artifact_sha256": "535711019fd6d2777d7558384429cc450eb81ad00ad3e722d08b115d5c30c604"
     },
     {
       "id": "FB-2401",
@@ -16039,7 +16063,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T05:12:55Z",
+    "as_of_utc": "2026-11-24T05:15:50Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16316,6 +16340,10 @@
       "FB-2106",
       "FB-2107",
       "FB-2108",
+      "FB-2305",
+      "FB-2306",
+      "FB-2307",
+      "FB-2308",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -16336,13 +16364,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 294,
+    "audited_count": 298,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 2,
-      "PARTIAL": 249,
-      "UNASSESSED": 1084
+      "PARTIAL": 253,
+      "UNASSESSED": 1080
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16374,6 +16402,7 @@
       "docs/edge-program/v3.0-baseline-2026-11-21.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21-r2.json",
       "docs/edge-program/v3.0-pr-graph-2026-11-21.json",
+      "docs/forward-edge/RUNBOOKS.md",
       "docs/forward-edge/TRACKER.md",
       "docs/forward-edge/capability-matrix.json",
       "docs/forward-edge/reference-candidates.v1.json",
@@ -16390,12 +16419,15 @@
       "src/financial_brain/features/etf_pricing.py",
       "src/financial_brain/features/etf_valuation.py",
       "src/financial_brain/forward_edge/abstention.py",
+      "src/financial_brain/forward_edge/cockpit.py",
       "src/financial_brain/forward_edge/fixture_adapter.py",
       "src/financial_brain/forward_edge/modes.py",
       "src/financial_brain/forward_edge/option_surface.py",
       "src/financial_brain/forward_edge/options_risk.py",
       "src/financial_brain/forward_edge/options_spread.py",
+      "src/financial_brain/forward_edge/order_journal.py",
       "src/financial_brain/forward_edge/paired_paper.py",
+      "src/financial_brain/forward_edge/persistent_killswitch.py",
       "src/financial_brain/forward_edge/pnl_dashboard.py",
       "src/financial_brain/forward_edge/portfolio_alpha.py",
       "src/financial_brain/forward_edge/session_runner.py",
@@ -16433,12 +16465,16 @@
       "tests/test_exit_policy.py",
       "tests/test_exit_protection_ledger.py",
       "tests/test_forward_edge_checkpoints.py",
+      "tests/test_forward_edge_cockpit.py",
       "tests/test_forward_edge_f00.py",
       "tests/test_forward_edge_integrity_gates.py",
+      "tests/test_forward_edge_order_journal.py",
       "tests/test_forward_edge_paired_paper.py",
+      "tests/test_forward_edge_persistent_killswitch.py",
       "tests/test_forward_edge_pipeline_compat.py",
       "tests/test_forward_edge_pnl_dashboard.py",
       "tests/test_forward_edge_portfolio_alpha.py",
+      "tests/test_forward_edge_runbooks.py",
       "tests/test_forward_edge_strategy_attribution.py",
       "tests/test_kernel_entry_constraints.py",
       "tests/test_kernel_exit_scenarios.py",
@@ -16456,13 +16492,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 2,
-    "PARTIAL": 249,
-    "UNASSESSED": 1084
+    "PARTIAL": 253,
+    "UNASSESSED": 1080
   }
 }
