@@ -378,6 +378,6 @@
     "financial_brain.forward_edge.quote_archive",
     "financial_brain.kernel.units"
   ],
-  "source_count": 700,
-  "source_tree_sha256": "f509d3da25a7c158e1f0a83b0427d2d7569b4b703e46deb646d913fd1cea2041"
+  "source_count": 701,
+  "source_tree_sha256": "dbbf895fffb1a8ddc20f4aba48b60811c63fc82d15b3e86aa455c3c9e40a429a"
 }
