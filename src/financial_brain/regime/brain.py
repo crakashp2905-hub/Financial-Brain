@@ -26,8 +26,9 @@ Regimes, checked in this order:
 
 Versions: v1 used VIX < 20 for RISK_ON and had no NARROW. Validation against 2015-2026
 showed VIX stayed 20-25 through the 2021 bull (post-COVID baseline), and that 2019 - a
-year of new Nifty highs - read as 225 sessions of RISK_OFF. v2 fixes both. v1's rows are
-kept: a rule change adds a version, it does not rewrite history.
+year of new Nifty highs - read as 225 sessions of RISK_OFF. v2 fixes both. v3 adds an
+immediate REGIME_UNKNOWN state when required inputs are missing or non-finite. Earlier
+rows are kept: a rule change adds a version, it does not rewrite history.
 
 Hysteresis: a change of regime is adopted only after ``CONFIRM`` consecutive sessions
 indicate it - otherwise a market hovering at its 200-session average flips daily. CRISIS
@@ -36,9 +37,12 @@ the market is crashing.
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
+from typing import cast
 
-VERSION = "v2"
+VERSION = "v3"
+REGIME_UNKNOWN = "REGIME_UNKNOWN"
 
 
 #: The version every reader must pin to. ``market_regime`` is deliberately append-only - a rule
@@ -141,7 +145,21 @@ ORDER BY g.business_date
 
 def indicate(f: dict) -> tuple[str, list[str]]:
     """The regime one session's features indicate, with the reasons that fired."""
-    vix, rv, dd, r20 = f["vix"], f["rv20"], f["dd"], f["ret20"]
+    required = ("vix", "rv20", "dd", "ret20", "c", "ma50", "ma200", "k200",
+                "ma200_slope", "above_200")
+    missing = []
+    values: dict[str, float | None] = {}
+    for name in required:
+        raw = f.get(name)
+        try:
+            value = None if raw is None else float(raw)
+        except (TypeError, ValueError, OverflowError):
+            value = None
+        if value is None or not math.isfinite(value):
+            missing.append(name)
+        values[name] = value
+
+    vix, rv, dd, r20 = values["vix"], values["rv20"], values["dd"], values["ret20"]
     crisis = []
     if vix is not None and vix >= T["crisis_vix"]:
         crisis.append(f"India VIX {vix:.1f} >= {T['crisis_vix']:.0f}")
@@ -152,15 +170,21 @@ def indicate(f: dict) -> tuple[str, list[str]]:
     if crisis:
         return "CRISIS", crisis
 
-    c, ma50, ma200, b200 = f["c"], f["ma50"], f["ma200"], f["above_200"]
-    full = f["k200"] == 200
+    if missing:
+        return REGIME_UNKNOWN, ["required regime inputs missing or invalid: " + ", ".join(missing)]
+
+    c = cast(float, values["c"])
+    ma50 = cast(float, values["ma50"])
+    ma200 = cast(float, values["ma200"])
+    b200 = cast(float, values["above_200"])
+    full = cast(float, values["k200"]) == 200
     index_healthy = full and c > ma200 and ma50 > ma200
     weak_breadth = b200 is not None and b200 < T["off_breadth200"]
     if index_healthy and weak_breadth and (dd is None or dd > T["off_dd"]):
         return "NARROW", [f"Nifty 50 in a healthy trend (50 > 200) but only {b200:.0%} of "
                           f"NSE stocks above their 200-session average"]
     off = []
-    if full and c < ma200 and (f["ma200_slope"] or 0) < 0:
+    if full and c < ma200 and cast(float, values["ma200_slope"]) < 0:
         off.append("Nifty 50 below a falling 200-session average")
     if weak_breadth:
         off.append(f"only {b200:.0%} of NSE stocks above their 200-session average")
@@ -181,7 +205,7 @@ def classify_history(rows: list[dict]) -> list[dict]:
     out, current, pending, streak = [], None, None, 0
     for f in rows:
         raw, reasons = indicate(f)
-        if current is None or raw == "CRISIS":
+        if current is None or raw in {"CRISIS", REGIME_UNKNOWN}:
             current, pending, streak = raw, None, 0
         elif raw != current:
             streak = streak + 1 if raw == pending else 1
