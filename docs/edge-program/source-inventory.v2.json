@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 688,
+  "source_count": 689,
   "sources": [
     {
       "capability_ids": [],
@@ -2909,6 +2909,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/features/candles.py",
       "source_sha256": "7cf629647f8407d299b84bc6400a5a058baccdfa6103cbb1fea422736225b006",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/cash_management.py",
+      "source_sha256": "1b6a2fb48e9b5d5c1842bfe6eb11861ff42363ec47f42152b6e63949bafe4b8e",
       "test_paths": []
     },
     {
@@ -12220,6 +12239,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 665,
+  "unassessed_count": 666,
   "unassigned_role_count": 398
 }
