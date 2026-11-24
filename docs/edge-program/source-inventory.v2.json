@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 704,
+  "source_count": 705,
   "sources": [
     {
       "capability_ids": [],
@@ -8825,6 +8825,23 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "math",
+        "random",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/risk_distribution.py",
+      "source_sha256": "49bb88a3dc14a013fd1b07e977b439bd15b9b5d0889eeb707a8495331cb0a8a4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "datetime",
@@ -12596,6 +12613,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 674,
-  "unassigned_role_count": 410
+  "unassessed_count": 675,
+  "unassigned_role_count": 411
 }

@@ -13142,182 +13142,320 @@
     {
       "id": "SL-14-01",
       "text": "Define distributional return targets for quantiles, downside and catastrophic tail episodes with realistic financial paths.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py (distributional Bellman targets; no market episode source is wired)",
+        "src/financial_brain/learning/trajectory.py (logged transition schema)"
+      ],
+      "blocker": "Distributional targets are mathematical primitives; realistic net portfolio episodes and catastrophic path definitions are not integrated.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_risk_distribution.py",
+        "No historical market portfolio path or catastrophic-episode target integration."
+      ],
+      "test_result": "tests/test_learning_risk_distribution.py; No historical market portfolio path or catastrophic-episode target integration."
     },
     {
       "id": "SL-14-02",
       "text": "Implement quantile-regression critic or categorical return distribution with numerical checks and bound clipping.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py (quantile Bellman target and quantile-Huber loss with finite-input and clipping checks)"
+      ],
+      "blocker": "A quantile loss primitive exists, but no trainable critic, optimizer, or calibrated learned return distribution.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_risk_distribution.py::test_quantile_bellman_targets_preserve_distribution_and_clip_bounds",
+        "No trainable quantile critic or categorical distribution learner exists."
+      ],
+      "test_result": "tests/test_learning_risk_distribution.py::test_quantile_bellman_targets_preserve_distribution_and_clip_bounds; No trainable quantile critic or categorical distribution learner exists."
     },
     {
       "id": "SL-14-03",
       "text": "Implement CVaR and expected-shortfall estimates over actual portfolio net-return episodes, with finite sample uncertainty.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py::episode_cvar_with_uncertainty (episode bootstrap percentile interval over realized net returns)",
+        "src/financial_brain/risk/limits.py::expected_shortfall (empirical ES with thin-sample refusal)"
+      ],
+      "blocker": "The estimator is not connected to actual paper portfolio episode data and its iid episode-bootstrap interval does not model serial/regime dependence.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_risk_distribution.py::test_episode_cvar_reports_deterministic_uncertainty_interval",
+        "Estimator requires caller-supplied completed net portfolio episodes; no canonical episode feed or dependence-robust interval."
+      ],
+      "test_result": "tests/test_learning_risk_distribution.py::test_episode_cvar_reports_deterministic_uncertainty_interval; Estimator requires caller-supplied completed net portfolio episodes; no canonical episode feed or dependence-robust interval."
     },
     {
       "id": "SL-14-04",
       "text": "Use constrained MDP Lagrangian as research objective but keep risk governor as independent hard safety layer.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/limits.py",
+        "src/financial_brain/execution/oms/risk_gate.py",
+        "src/financial_brain/learning/bellman.py"
+      ],
+      "blocker": "No Lagrangian constrained-MDP objective or shared integration; existing risk gates are separate components.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: separate risk checks and tabular Bellman research math; no constrained-MDP training loop."
+      ],
+      "test_result": "Source audit: separate risk checks and tabular Bellman research math; no constrained-MDP training loop."
     },
     {
       "id": "SL-14-05",
       "text": "Add time-varying drawdown state, loss-streak stress and remaining risk budget to policy input.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/limits.py",
+        "src/financial_brain/forward_edge/risk_metrics.py",
+        "src/financial_brain/learning/trajectory.py"
+      ],
+      "blocker": "No canonical temporal state builder supplies drawdown, loss streak, and remaining risk budget to learner policies.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: portfolio risk metrics and transition schema are not assembled into a time-varying RL observation."
+      ],
+      "test_result": "Source audit: portfolio risk metrics and transition schema are not assembled into a time-varying RL observation."
     },
     {
       "id": "SL-14-06",
       "text": "Implement terminal ruin/forced liquidation states; never hide them through early episode termination.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py",
+        "src/financial_brain/learning/bellman.py"
+      ],
+      "blocker": "No integrated environment records forced liquidation and ruin as terminal outcomes without truncation.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: runner/order closure and terminal Bellman target exist separately; no ruin/forced-liquidation episode semantics."
+      ],
+      "test_result": "Source audit: runner/order closure and terminal Bellman target exist separately; no ruin/forced-liquidation episode semantics."
     },
     {
       "id": "SL-14-07",
       "text": "Study uncertainty-aware policy abstention and fractional sizing under bootstrap and stress intervals.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py",
+        "src/financial_brain/learning/trajectory.py",
+        "src/financial_brain/risk/sizing.py"
+      ],
+      "blocker": "No policy-level uncertainty abstention or fractional-size study based on bootstrap and stress intervals.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: uncertainty primitives and risk sizing are disconnected; no bootstrap/stress interval abstention experiment."
+      ],
+      "test_result": "Source audit: uncertainty primitives and risk sizing are disconnected; no bootstrap/stress interval abstention experiment."
     },
     {
       "id": "SL-14-08",
       "text": "Compare mean-return, mean-variance, CVaR and downside-utility policies on exactly matched data and cost assumptions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py",
+        "src/financial_brain/kernel/portfolio_risk.py",
+        "src/financial_brain/forward_edge/risk_allocator.py"
+      ],
+      "blocker": "No matched replay comparison across mean, mean-variance, CVaR, and downside utility policies.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: separate risk metric and allocator implementations; no same-sample policy comparison harness."
+      ],
+      "test_result": "Source audit: separate risk metric and allocator implementations; no same-sample policy comparison harness."
     },
     {
       "id": "SL-14-09",
       "text": "Forbid risk limit changes during model training unless separately approved and hashed.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/champion_governance.py::change_paper_champion (risk/capital change requires separate scoped approval and policy hash)",
+        "src/financial_brain/forward_edge/approvals.py"
+      ],
+      "blocker": "Governed champion changes require approval, but no training contract freezes and verifies risk limits during training.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_forward_edge_champion_governance.py::test_champion_change_fails_without_external_custody_or_exact_human_approval",
+        "No training-time frozen risk-limit artifact or immutability check."
+      ],
+      "test_result": "tests/test_forward_edge_champion_governance.py::test_champion_change_fails_without_external_custody_or_exact_human_approval; No training-time frozen risk-limit artifact or immutability check."
     },
     {
       "id": "SL-14-10",
       "text": "Add crash/reversal/volatility expansion and margin spike scenario sets, generated from historical blocks plus transparent synthetic perturbations.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/disaster_stress.py",
+        "src/financial_brain/risk/stress.py"
+      ],
+      "blocker": "No complete versioned scenario family with historical-block provenance and transparent synthetic perturbation manifests.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: existing stress primitives do not form the required crash/reversal/volatility/margin-spike scenario set from historical blocks plus transparent perturbations."
+      ],
+      "test_result": "Source audit: existing stress primitives do not form the required crash/reversal/volatility/margin-spike scenario set from historical blocks plus transparent perturbations."
     },
     {
       "id": "SL-14-11",
       "text": "Model position size scaling under fat-tailed costs, market impact and correlated book drawdowns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/risk_allocator.py",
+        "src/financial_brain/forward_edge/stress.py",
+        "src/financial_brain/learning/risk_distribution.py"
+      ],
+      "blocker": "No integrated size-scaling model spanning fat-tail execution costs, impact, and correlated drawdowns.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: bounded allocation and stress components are not calibrated for fat-tail costs and correlated book-drawdown sizing."
+      ],
+      "test_result": "Source audit: bounded allocation and stress components are not calibrated for fat-tail costs and correlated book-drawdown sizing."
     },
     {
       "id": "SL-14-12",
       "text": "Use proper baselines: risk-budgeted cash/momentum, volatility-targeted strategy, robust mean-variance allocation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/risk_allocator.py",
+        "src/financial_brain/forecasting/null.py"
+      ],
+      "blocker": "Required baseline policies are not registered and evaluated on the common trading simulator.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: allocation and forecasting null references exist; no matched risk-budgeted cash/momentum, vol-targeted, and robust mean-variance trading baselines."
+      ],
+      "test_result": "Source audit: allocation and forecasting null references exist; no matched risk-budgeted cash/momentum, vol-targeted, and robust mean-variance trading baselines."
     },
     {
       "id": "SL-14-13",
       "text": "Stress risk model errors, missing observations and unexpected position correlation; fail closed on budget breach.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/health.py",
+        "src/financial_brain/risk/covariance.py",
+        "src/financial_brain/forward_edge/risk_throttle.py",
+        "src/financial_brain/execution/oms/risk_gate.py"
+      ],
+      "blocker": "No unified adversarial risk-model error test suite proving fail-closed budget behavior across the paper runner.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: component health, covariance, throttle and OMS gates exist but are not verified together against missing inputs and correlation shocks."
+      ],
+      "test_result": "Source audit: component health, covariance, throttle and OMS gates exist but are not verified together against missing inputs and correlation shocks."
     },
     {
       "id": "SL-14-14",
       "text": "Require expected tail loss estimates and their uncertainty in every approved policy decision manifest.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/decision_custody.py",
+        "src/financial_brain/evidence/decision_manifest.py",
+        "src/financial_brain/learning/risk_distribution.py"
+      ],
+      "blocker": "The canonical approved decision manifest does not require expected tail loss and uncertainty fields.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: manifests/custody and tail estimator exist separately; approved policy schema does not require tail loss with uncertainty."
+      ],
+      "test_result": "Source audit: manifests/custody and tail estimator exist separately; approved policy schema does not require tail loss with uncertainty."
     },
     {
       "id": "SL-14-15",
       "text": "Test that increasing estimated risk without increasing expected value cannot increase allocated size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/risk_allocator.py",
+        "src/financial_brain/risk/sizing.py"
+      ],
+      "blocker": "No explicit monotonic allocation test across higher risk estimates at fixed expected value.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: risk allocation/sizing tests exist, but no invariant property test varies risk while holding expected value fixed."
+      ],
+      "test_result": "Source audit: risk allocation/sizing tests exist, but no invariant property test varies risk while holding expected value fixed."
     },
     {
       "id": "SL-14-16",
       "text": "Publish long-horizon rolling max drawdown, time-underwater, CVaR, cash drag and ruin probability in reports.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/portfolio_risk.py",
+        "src/financial_brain/forward_edge/risk_metrics.py",
+        "src/financial_brain/portfolio/stress.py"
+      ],
+      "blocker": "No integrated long-horizon portfolio risk report with the full required metric set.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: individual drawdown/risk metrics exist; no long-horizon report combines rolling drawdown, time underwater, CVaR, cash drag and ruin probability."
+      ],
+      "test_result": "Source audit: individual drawdown/risk metrics exist; no long-horizon report combines rolling drawdown, time underwater, CVaR, cash drag and ruin probability."
     },
     {
       "id": "SL-14-17",
       "text": "Reject agents that earn small frequent wins but occasionally incur catastrophic loss beyond stated budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/risk_distribution.py",
+        "src/financial_brain/forward_edge/champion_governance.py"
+      ],
+      "blocker": "No agent approval gate ties tail-loss uncertainty and catastrophic budget exceedance to rejection.",
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit: tail estimates and champion governance exist separately; no policy acceptance gate rejects catastrophic tail loss over budget."
+      ],
+      "test_result": "Source audit: tail estimates and champion governance exist separately; no policy acceptance gate rejects catastrophic tail loss over budget."
     },
     {
       "id": "SL-14-18",
       "text": "Develop reversibility: risk-off and rollback must work without model state, internet connectivity or GPU.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/forward_edge/champion_governance.py::automatic_rollback (SQLite hash-chain safe-hold rollback; no network/GPU dependency)",
+        "tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders (DRIFT, OUTAGE, ACCOUNTING_MISMATCH, MANUAL_PAUSE; persistence verified after restart)"
+      ],
+      "test_result": "tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders (DRIFT, OUTAGE, ACCOUNTING_MISMATCH, MANUAL_PAUSE; persistence verified after restart)"
     },
     {
       "id": "SL-15-01",
@@ -17599,17 +17737,35 @@
       "SL-13-15",
       "SL-13-16",
       "SL-13-17",
-      "SL-13-18"
+      "SL-13-18",
+      "SL-14-01",
+      "SL-14-02",
+      "SL-14-03",
+      "SL-14-04",
+      "SL-14-05",
+      "SL-14-06",
+      "SL-14-07",
+      "SL-14-08",
+      "SL-14-09",
+      "SL-14-10",
+      "SL-14-11",
+      "SL-14-12",
+      "SL-14-13",
+      "SL-14-14",
+      "SL-14-15",
+      "SL-14-16",
+      "SL-14-17",
+      "SL-14-18"
     ],
-    "audited_count": 497,
+    "audited_count": 515,
     "status_counts": {
-      "COMPLETE": 48,
+      "COMPLETE": 49,
+      "PARTIAL": 461,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 0,
-      "PARTIAL": 444,
-      "UNASSESSED": 881
+      "UNASSESSED": 863
     },
-    "verified_complete_count": 48,
+    "verified_complete_count": 49,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -17732,10 +17888,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate."
   },
   "counts_by_status": {
-    "COMPLETE": 48,
+    "COMPLETE": 49,
+    "PARTIAL": 461,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 0,
-    "PARTIAL": 444,
-    "UNASSESSED": 881
+    "UNASSESSED": 863
   }
 }
