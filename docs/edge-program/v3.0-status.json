@@ -10911,182 +10911,272 @@
     {
       "id": "SL-05-01",
       "text": "Define step net return from post-cost marked equity, excluding deposits/withdrawals and marking open positions at executable exit-side quotes when possible.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Daily PortfolioAlpha uses opening equity and explicit charge/financing/cash-interest items, while canonical ledger stores marks; executable-side valuation, external cash-flow adjustment and position-derived equity are not unified for RL steps."
+      ],
+      "blocker": "No single reward equity series with flow adjustment and executable marks.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-02",
       "text": "Compute reward using posted ledger costs exactly once: brokerage, STT/CTT if relevant, exchange fees, GST, stamp duty, spread, slippage and measured impact.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Paper accounting and attribution deduct recorded charges and financing components; all named fee/tax/spread/impact classes are not consistently applied exactly once across asset classes or tied to learner action IDs."
+      ],
+      "blocker": "Cost component lineage to transitions remains incomplete.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-03",
       "text": "Use matched benchmark excess as a separately reported objective; never quietly subtract both benchmark drift and risk penalties twice.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "PortfolioAlpha reports benchmark return and net alpha separately; no learner objective contract ensures benchmark excess is distinct from risk utility through training/selection."
+      ],
+      "blocker": "Reward/objective semantics are not implemented for learning.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-04",
       "text": "Distinguish gross return, net return, net alpha, downside utility, risk constraint violation and estimation confidence in separate metrics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Strategy attribution and portfolio-alpha reports separate gross/net/alpha/cost/exposure metrics; downside utility, hard violations and estimation confidence are not one typed reward record."
+      ],
+      "blocker": "No normalized learning outcome vector.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-05",
       "text": "Define reward as cumulative portfolio utility rather than average winning trade, win rate, gross P&L or raw price direction.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No-trade/cash days are included in portfolio alpha; no cumulative portfolio-utility reward is tied to sequential states and valuations."
+      ],
+      "blocker": "Sequential utility reward absent.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-06",
       "text": "Use drawdown, CVaR, gross/net exposure, turnover, concentration, margin and liquidity as hard policy constraints before reward optimization.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trade admissibility and portfolio risk guard modules enforce some pre-trade limits; reward-time hard constraints for drawdown, CVaR, concentration, margin and liquidity are not unified."
+      ],
+      "blocker": "No complete policy projection/constraint interface.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-07",
       "text": "Add risk penalties to diagnostic objective with frozen coefficients; avoid replacing a failed hard constraint with small negative reward.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Evidence and risk gates fail closed in selected pipelines; no learner diagnostic penalty with preregistered coefficients exists, nor a boundary requiring hard gates before optimization."
+      ],
+      "blocker": "Frozen risk-penalty diagnostics not present.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-08",
       "text": "Include flat/cash and no-trade periods in equity-curve and Sharpe calculations.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "PortfolioAlpha requires every expected session including no-trade days and counts cash-only sessions; this is an implemented accounting component but not wired to all RL scoring."
+      ],
+      "blocker": "Training/evaluation integration missing; strict end-to-end requirement incomplete.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-09",
       "text": "Enforce end-of-episode liquidation using feasible exit-side prices, unsettled states and explicit unknown marks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Canonical ledger preserves marks and unresolved positions; no shared simulator liquidation procedure covers executable side, unsettled funds and unknown marks."
+      ],
+      "blocker": "No asset-aware episode close/liquidation transition.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-10",
       "text": "Penalize unnecessary churn through realized costs, not an arbitrary fee that might be tuned to hide losses.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Realized ledger charge deductions naturally penalize turnover where cost receipts are complete; a learning environment has not been tested for churn economics."
+      ],
+      "blocker": "No unified reward simulator and anti-churn adversarial test.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-11",
       "text": "Handle option premium, theta/IV, exercise/assignment/expiry and defined-risk spread value in position-based P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Options risk/scenario modules model some Greeks and expiry; canonical position P&L is not a complete option exercise/assignment/theta/IV/defined-risk reward lifecycle."
+      ],
+      "blocker": "Complete option lifecycle accounting is not integrated.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-12",
       "text": "Handle futures variation margin, margin requirement and liquidation stress in the simulator, separately from cash-equity bookkeeping.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Canonical ledger has futures variation-margin primitives and OMS margin checks; no learner simulator differentiates futures margin/liquidation stress from equity cash accounting."
+      ],
+      "blocker": "Not connected to sequential learning.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-13",
       "text": "Handle ETF distributions and MF NAV/exit loads/settlement with asset-specific valuation clocks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF distributions and MF NAV, exit loads, settlement books exist in separate modules; no common reward clock/transition joining these values."
+      ],
+      "blocker": "Cross-asset valuation event integration absent.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-14",
       "text": "Test zero-price-change high-turnover policies produce negative net P&L under positive costs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No zero-price-change high-turnover policy anti-reward test was found against the unified learner reward because that reward/simulator does not exist."
+      ],
+      "blocker": "Reward hacking acceptance suite absent.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-15",
       "text": "Test rewards cannot be increased by fake wins, reopening after crash, postponing loss realization or ignoring open adverse marks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Ledger and protection tests preserve adverse marks and idempotent receipts in components; no adversarial learner reward tests for fake wins, crash/reopen, deferred losses and ignored open marks."
+      ],
+      "blocker": "Integrated reward/episode recovery tests absent.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-16",
       "text": "Create per-action reward decomposition and per-episode double-entry reconciliation with one source of truth.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Strategy attribution decomposes P&L and canonical double-entry/accounting modules exist; no per-action reward vector reconciles every episode to one canonical book."
+      ],
+      "blocker": "No action-linked reward accounting ledger.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-17",
       "text": "Add reward misspecification audit: verify that a higher reward ranking implies better actual defined economic objective on holdout.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No held-out reward misspecification audit compares learned reward rank with a defined actual economic objective."
+      ],
+      "blocker": "No learning reward audit implementation.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-05-18",
       "text": "Fix reward and risk coefficient versions before each registered experiment; any tuning is a new trial.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Evaluation charter and parameter freeze hash bind strategy/data/cost identities; reward and risk coefficients are not a versioned required field in the protected experiment charter."
+      ],
+      "blocker": "Reward design is not frozen as a mandatory trial identity.",
+      "last_audited_at_utc": "2026-11-24T20:42:00Z",
+      "commit": "caf6490e",
+      "test_evidence": [
+        "Source audit of portfolio alpha, paper accounting, strategy attribution, canonical ledger, options/MF/futures accounting and trade-admissibility modules; no RL reward pipeline found."
+      ]
     },
     {
       "id": "SL-06-01",
@@ -17025,6 +17115,24 @@
       "SL-04-18",
       "SL-04-19",
       "SL-04-20",
+      "SL-05-01",
+      "SL-05-02",
+      "SL-05-03",
+      "SL-05-04",
+      "SL-05-05",
+      "SL-05-06",
+      "SL-05-07",
+      "SL-05-08",
+      "SL-05-09",
+      "SL-05-10",
+      "SL-05-11",
+      "SL-05-12",
+      "SL-05-13",
+      "SL-05-14",
+      "SL-05-15",
+      "SL-05-16",
+      "SL-05-17",
+      "SL-05-18",
       "SL-07-01",
       "SL-07-02",
       "SL-07-03",
@@ -17060,13 +17168,13 @@
       "SL-10-15",
       "SL-10-16"
     ],
-    "audited_count": 407,
+    "audited_count": 425,
     "status_counts": {
       "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 0,
-      "PARTIAL": 354,
-      "UNASSESSED": 971
+      "PARTIAL": 372,
+      "UNASSESSED": 953
     },
     "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -17188,13 +17296,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter."
   },
   "counts_by_status": {
     "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 0,
-    "PARTIAL": 354,
-    "UNASSESSED": 971
+    "PARTIAL": 372,
+    "UNASSESSED": 953
   }
 }
