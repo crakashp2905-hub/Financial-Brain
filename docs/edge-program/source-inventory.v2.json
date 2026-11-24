@@ -7557,10 +7557,12 @@
         "datetime",
         "decimal",
         "exit_policy",
+        "financial_brain.forward_edge.evidence_stats",
         "hashlib",
         "json",
         "math",
         "re",
+        "scipy.stats",
         "trader_signal",
         "typing"
       ],
@@ -7568,7 +7570,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_scenarios.py",
-      "source_sha256": "29738ea25b67b8b7c575fb7d984440f029a9294d9f3c2f4ca33d13f9d63096d1",
+      "source_sha256": "65b8b14953e9c7818a6521c007886849b66f17775091972c4bfb085cb8583366",
       "test_paths": []
     },
     {
