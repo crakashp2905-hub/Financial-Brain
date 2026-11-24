@@ -3763,7 +3763,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/charter.py",
-      "source_sha256": "44e359c1300e60736a128eaf94c0802d80792184bddbe547af6f0ea879590c28",
+      "source_sha256": "9b58c450575a530f869dcb6ab4677d54ab80d3a9a75616b176fe1f0983f85825",
       "test_paths": []
     },
     {

@@ -3984,8 +3984,8 @@
         "Verification: canonical ledger suite 9 passed; randomized 1,000-sequence test passed; Ruff and mypy passed."
       ],
       "blocker": "Partial: seeded ledger sequences do not yet randomize every repository schema, instrument/calendar transitions, exchange session calendars or economic lifecycle failure points; a broader cross-domain generator and market-hours rehearsal remain.",
-      "last_audited_at_utc": "2026-11-24T14:30:00Z",
-      "commit": "d0d6fc04",
+      "last_audited_at_utc": "2026-11-24T16:25:14Z",
+      "commit": "5ddc470b",
       "test_evidence": [
         "python -m pytest -q tests/test_canonical_portfolio_ledger.py --basetemp .pytest-randomized-sequences: 9 passed in 6.30s, including 1,000 seeded sequences and 5,000 events.",
         "python -m ruff check tests/test_canonical_portfolio_ledger.py: passed.",
@@ -5190,14 +5190,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/charter.py::ExperimentCharter freezes strategy identity, code/config parameters, capital, start/end dates, universe, benchmark set and horizon; revisions are hash-linked and restart the prospective clock.",
-        "src/financial_brain/forward_edge/trials.py and decision_custody.py enforce a registered, hash-bound cohort schedule and protected trial approval before prospective use.",
-        "tests/test_forward_edge_f00.py (charter identity, revision and protected cohort checks); tests/test_forward_edge_champion_challenger.py and tests/test_forward_edge_evidence_bundle.py.",
-        "Prospective/champion focused tests: 89 passed; Ruff passed."
+        "src/financial_brain/forward_edge/charter.py::Preregistration now content-addresses the hypothesis, explicit entry/exit rules, INR risk budget, frozen comparison set, prior-data cutoff and minimum sample sessions.",
+        "ExperimentCharter canonical identity includes the preregistration digest; validation enforces cutoff before the prospective start, risk budget within capital, all frozen benchmarks in the comparison set, and positive sample size.",
+        "CharterRegistry.register() refuses missing preregistration before accepting a protected charter; legacy unregistered charter serialization remains readable without changing historical hashes.",
+        "tests/test_evaluation_identity.py adds registration denial, serialization/hash sensitivity and invalid-design cases; targeted prospective/champion regression set: 85 passed; Ruff and mypy passed."
       ],
-      "blocker": "Partial: the charter does not require every checklist field as a single enforced preregistration contract, including explicit hypothesis and sample-size design, and cohort promotion is not an end-to-end runner workflow. No owner-authorized prospective cohort evidence is available.",
-      "last_audited_at_utc": "2026-11-24T14:23:16Z",
-      "commit": null
+      "blocker": "Partial: the governed CharterRegistry now enforces the complete preregistration contract, but a separate protected-trial authorization path and ForwardSessionRunner are not yet unified with this registry, so the rule is not proven to cover every cohort promotion path.",
+      "last_audited_at_utc": "2026-11-24T16:25:14Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest -q tests/test_evaluation_identity.py tests/test_forward_edge_f00.py tests/test_forward_edge_parameter_freeze.py tests/test_forward_edge_champion_governance.py tests/test_forward_edge_champion_challenger.py tests/test_trial_preservation_audit.py: 85 passed in 42.13s.",
+        "python -m ruff check src/financial_brain/forward_edge/charter.py tests/test_evaluation_identity.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/charter.py: passed."
+      ]
     },
     {
       "id": "FB-2202",
@@ -16221,7 +16226,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T14:30:00Z",
+    "as_of_utc": "2026-11-24T16:25:14Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
