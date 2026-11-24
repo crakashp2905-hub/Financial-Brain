@@ -169,14 +169,27 @@ def test_exit_variant_benchmark_costs_every_variant_and_adjusts_family():
         ),
     )
     costs = ExitCostSchedule(Decimal("5"), Decimal("0.25"), "kite-schedule-v1", HASH)
+    unchanged = ExitPolicy(
+        strategy_id="momentum", strategy_version="v1", policy_version="p3",
+        rules=(
+            ExitRule("stop", ExitTrigger.HARD_STOP, ExitRuleAction.FULL_EXIT,
+                     quantity_fraction=Decimal(1), trigger_price=Decimal("90")),
+            ExitRule("target", ExitTrigger.TAKE_PROFIT, ExitRuleAction.SCALE_OUT,
+                     quantity_fraction=Decimal("0.5"), trigger_price=Decimal("120")),
+            ExitRule("time", ExitTrigger.TIME_STOP, ExitRuleAction.TIME_EXIT,
+                     quantity_fraction=Decimal(1), after_sessions=3),
+        ),
+    )
     result = compare_exit_variants(signal=signal(), plan=plan(), baseline=baseline,
-                                   variants={"full-target": changed}, samples=scenarios(), costs=costs)
+                                   variants={"full-target": changed, "same-exits-new-version": unchanged},
+                                   samples=scenarios(), costs=costs)
     assert result.sample_count == 3
-    assert result.comparison_count == 1
+    assert result.comparison_count == 2
     assert result.variant_mean_net_pnl_inr["baseline"] == Decimal("-22.50")
     assert result.variant_mean_net_pnl_inr["full-target"] == Decimal("35.83333333333333333333333333")
     assert result.paired_mean_delta_vs_baseline_inr["full-target"] == Decimal("58.33333333333333333333333333")
-    assert result.holm_adjusted_p_value["full-target"] == result.paired_p_value["full-target"]
+    assert result.holm_adjusted_p_value["full-target"] >= result.paired_p_value["full-target"]
+    assert result.holm_adjusted_p_value["same-exits-new-version"] >= result.paired_p_value["same-exits-new-version"]
     # These are prior historical replay paths; a caller flag cannot turn them into forward evidence.
     assert result.prospective_evidence is False
     assert result.evidence_label == "HISTORICAL_REPLAY_NOT_PROSPECTIVE"

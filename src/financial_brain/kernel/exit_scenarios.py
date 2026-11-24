@@ -250,8 +250,8 @@ def compare_exit_variants(*, signal: TraderSignal, plan: TradePlan, baseline: Ex
             pvalues[name] = 1.0
         else:
             import scipy.stats
-            pvalues[name] = float(scipy.stats.ttest_1samp([float(x) for x in paired], popmean=0,
-                                                          alternative="greater").pvalue)
+            test = scipy.stats.ttest_1samp([float(x) for x in paired], popmean=0, alternative="greater")
+            pvalues[name] = (float(test.pvalue) if math.isfinite(float(test.pvalue)) else 1.0)
     adjusted = holm_adjust(pvalues)
     canonical_samples = [{"sample_id": s.sample_id, "instrument_id": s.instrument_id,
                           "completed_at": s.completed_at.astimezone(timezone.utc).isoformat(),
