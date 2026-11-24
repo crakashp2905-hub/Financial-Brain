@@ -156,11 +156,12 @@ def compare_stream_and_replay(
             else:
                 if bar.session_id in sessions or bar.bar_index != 0:
                     raise ValueError("sessions must be unique and begin at bar index zero")
-                sessions.add(previous.session_id)
+                sessions.add(bar.session_id)
                 session_bars = []
         else:
             if bar.bar_index != 0:
                 raise ValueError("first session must begin at bar index zero")
+            sessions.add(bar.session_id)
         allowed = bar.eligibility.permits(
             bar.instrument_id, bar.observed_at, available_at=bar.available_at
         )

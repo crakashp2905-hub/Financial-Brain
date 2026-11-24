@@ -93,3 +93,28 @@ def test_missing_bars_duplicate_ids_and_invalid_timestamp_contract_are_rejected(
         compare_stream_and_replay(duplicate, left=1, right=1, warmup_bars=1)
     with pytest.raises(ValueError, match="timezone-aware"):
         ReplayEligibility("NIFTY", datetime(2026, 11, 24), START, HASH, True)
+
+
+def test_session_rollover_resets_nodes_across_market_closure_and_revisited_session_fails():
+    first_session = _bars()
+    next_day = START + timedelta(days=1)
+    next_session = ReplayBar(
+        "next-session-bar-0", "NIFTY", "NSE:2026-11-25", 0, next_day,
+        100, 101, 99, 100, HASH, _eligibility(),
+    )
+    replay = compare_stream_and_replay(
+        [*first_session, next_session], left=1, right=1, warmup_bars=1,
+    )
+    rollover = replay.historical_results[-1]
+    assert "SESSION_ROLLOVER_RESET" in rollover.reason_codes
+    assert rollover.node_ids == ()
+
+    repeated_session = ReplayBar(
+        "revisited-session-bar", "NIFTY", "NSE:2026-11-24", 0,
+        next_day + timedelta(minutes=1), 100, 101, 99, 100, HASH, _eligibility(),
+    )
+    with pytest.raises(ValueError, match="sessions must be unique"):
+        compare_stream_and_replay(
+            [*first_session, next_session, repeated_session],
+            left=1, right=1, warmup_bars=1,
+        )

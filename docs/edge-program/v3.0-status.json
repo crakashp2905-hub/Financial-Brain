@@ -6822,16 +6822,18 @@
       "evidence": [
         "tests/test_four_node_stream.py covers late-confirmed-node refusal, event-ID payload conflict, duplicate replay, same-bar opposing breakout abstention, expiry and session rollover; tests/test_four_node_s25.py and tests/test_four_node_backtest.py cover stale/crossed quotes, outward stops, adverse same-bar ordering and price-gap stop fills.",
         "src/financial_brain/strategies/four_node/durable_stream.py reuses the fsync-backed hash-chained DurableJournal, validates on a copied machine before persistence, replays committed events on restart, returns stored results for identical old retries and rejects conflicting event-ID payloads.",
-        "tests/test_four_node_durable_stream.py verifies restart restoration, idempotent retry after later events, conflicting payload rejection and torn-tail recovery; focused durable/stream tests: 8 passed; Ruff clean."
+        "tests/test_four_node_durable_stream.py verifies restart restoration, idempotent retry after later events, conflicting payload rejection and torn-tail recovery; focused durable/stream tests: 8 passed; Ruff clean.",
+        "`four_node/replay.py` now rejects revisiting an earlier session ID and a regression test verifies session rollover clears prior nodes across a market closure; this closes a duplicate-session replay ambiguity but does not add an official holiday calendar."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "last_audited_at_utc": "2026-11-25T00:15:00Z",
       "commit": null,
       "test_evidence": [
         "python -m pytest tests/test_four_node_durable_stream.py tests/test_four_node_stream.py -q: 8 passed.",
-        "python -m ruff check src/financial_brain/strategies/four_node/durable_stream.py tests/test_four_node_durable_stream.py: all checks passed."
+        "python -m ruff check src/financial_brain/strategies/four_node/durable_stream.py tests/test_four_node_durable_stream.py: all checks passed.",
+        "tests/test_four_node_replay.py tests/test_four_node_durable_stream.py tests/test_four_node_stream.py: 13 passed; Ruff and mypy passed for replay.py."
       ],
-      "test_result": "Durable stream recovery, event retry idempotency, conflicting ID refusal and torn-tail recovery pass in focused tests. Still partial: no full missed-candle policy, exchange holiday-calendar replay, all adversarial market execution cases or end-to-end broker-order audit is implemented; this signal module has no broker/order interface."
+      "test_result": "Durable restart, torn-tail recovery, duplicate-event idempotency, conflicting ID refusal, session rollover reset and repeated-session rejection pass focused tests. Still partial: no sourced official holiday-calendar coverage, missed-candle recovery policy or complete adversarial execution/zero-order matrix; this signal module has no broker/order interface."
     },
     {
       "id": "FB-2544",
