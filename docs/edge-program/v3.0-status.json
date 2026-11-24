@@ -3484,7 +3484,7 @@
         "tests/test_signal_watch.py and tests/test_options_quotes.py cover stale-quote abstention, current two-sided contract observation, scenario-only messaging, and gated archive behavior. This is a 60-second REST poll for selected opportunities, not a continuous underlying/options stream or stream-driven paper-signal path."
       ],
       "blocker": "Partial: no continuous KiteTicker/event stream, broad instrument subscription, canonical underlying/options event ingestion, synchronized contract freshness gate within the forward session runner, or stream-to-paper-intent integration. Market-data permissions for paper use and retention remain externally unresolved.",
-      "last_audited_at_utc": "2026-11-24T02:05:00Z",
+      "last_audited_at_utc": "2026-11-24T01:54:41Z",
       "commit": "f08ddd6ab1012363507b6fa3e518b01243fafe11",
       "test_result": "Existing tests/test_signal_watch.py and tests/test_options_quotes.py cover current quote freshness, stale rejection, two-sided depth and archive gating; no new test was run in this status audit."
     },
@@ -3556,13 +3556,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/paper/mf_allocation_policy.py persists effective-dated SIP/allocation preferences; src/financial_brain/kernel/mf_allocation_recommendation.py defines typed, NAV-clock-aware allocation guidance; src/financial_brain/paper/mf_sip_book.py persists installment schedules and lifecycle transitions.",
-        "tests/test_mf_allocation_policy.py, tests/test_mf_allocation_recommendation.py and tests/test_mf_sip_book.py exercise the separate policy, recommendation and SIP primitives. No single periodic review consumes holdings, NAV marks, owner policy, SIP state and cash/liquidity into a scheduled portfolio report."
+        "src/financial_brain/cli.py:cmd_mf_review and src/financial_brain/paper/mf_periodic_review.py implement fb mf-review: read-only as-of paper-book/NAV snapshot, effective owner policy, upcoming SIP installments and explicit scheme targets produce a dated, SHA-256-attested report with review-only rebalance and liquidity candidates.",
+        "The report suppresses rebalance suggestions when any NAV is stale/unavailable or a held scheme lacks an owner target, reserves near-term scheduled/payment-initiated SIPs before describing excess cash, and records configured owner SIP amount/frequency/day. It does not create orders.",
+        "tests/test_mf_periodic_review.py: 8 passed including CLI-to-paper-book report generation; combined MF review/policy/recommendation/SIP suite: 29 passed; Ruff, source inventory, capability ownership, dependency graph and checklist-export checks pass. Implementation commits af413265 and 6b0ee462."
       ],
-      "blocker": "Partial: weekly review scheduling and an integrated report with holdings/performance, target-band rebalance suggestions, due SIP plans, liquidity-reallocation candidates, source freshness and evidence are missing. Existing components do not yet join to account-level decisions.",
-      "last_audited_at_utc": "2026-11-24T02:05:00Z",
-      "commit": "f08ddd6ab1012363507b6fa3e518b01243fafe11",
-      "test_result": "Existing allocation-policy, recommendation and SIP-book test modules provide component evidence; no new test was run in this status audit."
+      "blocker": "Partial: no automated weekly scheduler or persistent review history exists; target weights are supplied separately by the owner rather than versioned in the MF policy; tax, exit-load, cutoff and liquidity settlement impacts are not scored; no prospective evidence validates any suggested allocation.",
+      "last_audited_at_utc": "2026-11-24T01:54:41Z",
+      "commit": "6b0ee4622ea71aff0dedb375ac4029f31f290ec9",
+      "test_result": "tests/test_mf_periodic_review.py: 8 passed; combined focused MF review/policy/recommendation/SIP suite: 29 passed."
     },
     {
       "id": "FB-1010",
@@ -15727,7 +15728,7 @@
     }
   ],
   "assessment_summary": {
-      "as_of_utc": "2026-11-24T02:05:00Z",
+      "as_of_utc": "2026-11-24T01:54:41Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
