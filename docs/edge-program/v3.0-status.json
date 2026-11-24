@@ -6583,16 +6583,15 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/strategies/four_node/options.py::route_underlying_thesis emits separate hash-bound UNDERLYING_THESIS and OPTION_CANDIDATE_DECISION records; BUY maps to CE and SELL maps to PE, contract identity is checked, and option plans reuse the observed-quote long-premium planner.",
-        "tests/test_four_node_options.py verifies direction/type separation, stale quote NO_TRADE, mismatched underlying rejection, stable rejection codes and no broker order.",
-        "Focused Four-Node/options suite: 48 passed; Ruff and targeted mypy passed. The function is not connected to FourNodeStateMachine, ForwardSessionRunner or a durable OMS, and it deliberately does not rank/select strikes."
+        "four_node/options.py::route_breakout_candidate accepts the immutable FourNodeStateMachine BreakoutCandidate, denies routing before actionable_after_bar, preserves the three node IDs and binds signal lineage into a SHA-256 source record before creating the separate underlying-thesis and option-decision records.",
+        "tests/test_four_node_options.py::test_stream_breakout_cannot_route_before_actionable_bar_then_preserves_node_lineage verifies early NO_TRADE, later CE candidate generation and preserved node lineage; option routing and stream suites: 8 passed, Ruff and targeted mypy passed.",
+        "This bridge is not connected to ForwardSessionRunner, durable OMS or the paper book, and does not rank/select strikes; full session integration remains incomplete."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:36:55Z",
+      "last_audited_at_utc": "2026-11-24T20:53:48Z",
       "commit": null,
       "test_evidence": [
-        "tests/test_four_node_options.py verifies direction/type separation, stale quote NO_TRADE, mismatched underlying rejection, stable rejection codes and no broker order.",
-        "Focused Four-Node/options suite: 48 passed; Ruff and targeted mypy passed. The function is not connected to FourNodeStateMachine, ForwardSessionRunner or a durable OMS, and it deliberately does not rank/select strikes."
+        "tests/test_four_node_options.py::test_stream_breakout_cannot_route_before_actionable_bar_then_preserves_node_lineage verifies early NO_TRADE, later CE candidate generation and preserved node lineage; option routing and stream suites: 8 passed, Ruff and targeted mypy passed."
       ]
     },
     {
@@ -6788,14 +6787,14 @@
       "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/four_node/rules.py::Funnel now stores unique immutable event IDs with direct parent IDs across pivots, patterns, setups, intents, fills and closes; outcomes preserve rejects, expirations and no-fills.",
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 50 focused Four-Node tests pass, Ruff and targeted mypy pass.",
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 51 focused Four-Node tests pass, Ruff and targeted mypy pass.",
         "The funnel remains a reusable local component and is not wired into FourNodeStateMachine, ForwardSessionRunner or the canonical OMS, so live session-wide counts are not yet evidenced."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:51:24Z",
+      "last_audited_at_utc": "2026-11-24T20:54:46Z",
       "commit": null,
       "test_evidence": [
-        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 50 focused Four-Node tests pass, Ruff and targeted mypy pass."
+        "The funnel report derives stage counts from event-ID sets, validates parent-stage lineage and reconciles exact Decimal net P&L from close gross P&L less costs. tests/test_four_node_s25.py covers duplicate idempotence, conflicting/missing lineage, rejected/expired/no-fill outcomes and net-P&L reconciliation; 51 focused Four-Node tests pass, Ruff and targeted mypy pass."
       ]
     },
     {
@@ -6809,11 +6808,11 @@
         "The trace is not yet emitted by the Four-Node stream/runner or stored against the durable canonical paper book, so every actual paper trade is not yet guaranteed to have this complete evidence."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:51:24Z",
+      "last_audited_at_utc": "2026-11-24T20:54:46Z",
       "commit": null,
       "test_evidence": [
         "tests/test_four_node_s25.py::test_trace_record supplies complete per-trade context and verifies the SHA-256 record seal; test_trace_marks_missing_evidence_and_rejects_nonfinite_indicators verifies missing-field reporting and invalid input refusal.",
-        "Focused Four-Node suite: 50 passed; Ruff and targeted mypy passed."
+        "Focused Four-Node suite: 51 passed; Ruff and targeted mypy passed."
       ]
     },
     {
@@ -19126,7 +19125,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T20:51:24Z",
+    "as_of_utc": "2026-11-24T20:54:46Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

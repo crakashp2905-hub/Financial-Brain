@@ -12,6 +12,7 @@ from typing import Literal
 from financial_brain.paper.options import OptionPaperError
 from financial_brain.paper.options_plan import OptionContract, build_long_option_plan
 from financial_brain.kernel.units import OptionLots
+from financial_brain.strategies.four_node.stream import BreakoutCandidate
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -145,3 +146,69 @@ def route_underlying_thesis(
         "broker_order_created": False,
     }
     return {"underlying_thesis": thesis_record, "option_decision": option_record}
+
+
+def route_breakout_candidate(
+    candidate: BreakoutCandidate,
+    *,
+    instrument_id: str,
+    decision_bar: int,
+    decided_at: datetime,
+    underlying_price: float,
+    invalidation_price: float,
+    candidates: tuple[OptionCandidateTerms, ...],
+    lots: int | OptionLots,
+    max_quote_age: timedelta,
+) -> dict[str, object]:
+    """Bridge a stream breakout into the separately auditable option decision after its next bar."""
+    if not isinstance(candidate, BreakoutCandidate):
+        raise TypeError("FourNodeStateMachine breakout candidate is required")
+    if type(decision_bar) is not int or decision_bar < candidate.actionable_after_bar:
+        return {
+            "underlying_thesis": {
+                "record_type": "UNDERLYING_THESIS",
+                "signal_id": candidate.signal_id,
+                "instrument_id": instrument_id,
+                "side": candidate.side,
+                "breakout_bar": candidate.breakout_bar,
+                "actionable_after_bar": candidate.actionable_after_bar,
+                "decision_bar": decision_bar,
+            },
+            "option_decision": {
+                "record_type": "OPTION_CANDIDATE_DECISION",
+                "parent_signal_id": candidate.signal_id,
+                "status": "NO_TRADE",
+                "reason_code": "SIGNAL_NOT_YET_ACTIONABLE",
+                "plans": [],
+                "broker_order_created": False,
+            },
+        }
+    source_material = {
+        "signal_id": candidate.signal_id,
+        "side": candidate.side,
+        "node_ids": candidate.node_ids,
+        "breakout_bar": candidate.breakout_bar,
+        "actionable_after_bar": candidate.actionable_after_bar,
+    }
+    source_sha256 = hashlib.sha256(json.dumps(
+        source_material, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    thesis = UnderlyingThesis(
+        candidate.signal_id, instrument_id, candidate.side, decided_at,
+        underlying_price, invalidation_price, source_sha256,
+    )
+    routed = route_underlying_thesis(
+        thesis, candidates, lots=lots, max_quote_age=max_quote_age,
+    )
+    underlying_record = routed["underlying_thesis"]
+    option_record = routed["option_decision"]
+    if not isinstance(underlying_record, dict) or not isinstance(option_record, dict):
+        raise TypeError("option routing returned malformed decision records")
+    underlying_record.update({
+        "breakout_bar": candidate.breakout_bar,
+        "actionable_after_bar": candidate.actionable_after_bar,
+        "decision_bar": decision_bar,
+        "node_ids": list(candidate.node_ids),
+    })
+    option_record["parent_node_ids"] = list(candidate.node_ids)
+    return routed

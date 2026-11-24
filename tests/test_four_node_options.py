@@ -7,8 +7,10 @@ from financial_brain.paper.options_plan import OptionContract
 from financial_brain.strategies.four_node.options import (
     OptionCandidateTerms,
     UnderlyingThesis,
+    route_breakout_candidate,
     route_underlying_thesis,
 )
+from financial_brain.strategies.four_node.stream import BreakoutCandidate
 
 
 NOW = datetime(2026, 11, 24, 10, 0, tzinfo=timezone.utc)
@@ -61,3 +63,28 @@ def test_underlying_sell_routes_to_pe_and_missing_stale_or_wrong_underlying_is_n
     stale_rejection = next(row for row in decision["rejected_candidates"]
                            if row["reason"] == "OPTION_PLAN_REJECTED")
     assert stale_rejection["detail"] == "contract quote is future-dated or stale at decision time"
+
+
+def test_stream_breakout_cannot_route_before_actionable_bar_then_preserves_node_lineage():
+    candidate = BreakoutCandidate("stream-signal-1", "BUY", ("n1", "n2", "n3"), 12, 13)
+    early = route_breakout_candidate(
+        candidate, instrument_id="NIFTY", decision_bar=12, decided_at=NOW,
+        underlying_price=20000.0, invalidation_price=19950.0,
+        candidates=(_candidate("CE", 31),), lots=1, max_quote_age=timedelta(seconds=2),
+    )
+    assert early["option_decision"]["status"] == "NO_TRADE"
+    assert early["option_decision"]["reason_code"] == "SIGNAL_NOT_YET_ACTIONABLE"
+
+    routed = route_breakout_candidate(
+        candidate, instrument_id="NIFTY", decision_bar=13, decided_at=NOW,
+        underlying_price=20000.0, invalidation_price=19950.0,
+        candidates=(_candidate("CE", 32),), lots=1, max_quote_age=timedelta(seconds=2),
+    )
+    thesis = routed["underlying_thesis"]
+    assert thesis["signal_id"] == candidate.signal_id
+    assert thesis["breakout_bar"] == 12 and thesis["actionable_after_bar"] == 13
+    assert thesis["node_ids"] == ["n1", "n2", "n3"]
+    assert len(thesis["source_sha256"]) == 64
+    assert set(thesis["source_sha256"]) <= set("0123456789abcdef")
+    assert routed["option_decision"]["parent_node_ids"] == ["n1", "n2", "n3"]
+    assert routed["option_decision"]["status"] == "CANDIDATES_AVAILABLE"
