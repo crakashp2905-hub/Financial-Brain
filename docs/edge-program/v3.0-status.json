@@ -3481,12 +3481,15 @@
       "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/signals/watch.py:once polls selected current underlying and near-expiry option contracts during market hours; build_alerts rejects missing/stale quotes beyond 120 seconds and requires two-sided option depth before recording scenarios.",
-        "tests/test_signal_watch.py and tests/test_options_quotes.py cover stale-quote abstention, current two-sided contract observation, scenario-only messaging, and gated archive behavior. This is a 60-second REST poll for selected opportunities, not a continuous underlying/options stream or stream-driven paper-signal path."
+        "tests/test_signal_watch.py and tests/test_options_quotes.py cover stale-quote abstention, current two-sided contract observation, scenario-only messaging, and gated archive behavior. This is a 60-second REST poll for selected opportunities, not a continuous underlying/options stream or stream-driven paper-signal path.",
+        "src/financial_brain/providers/kite_stream.py::KiteTickerStream subscribes a frozen, exchange-qualified underlying/options token set in full mode, normalizes ticks into MarketEvent, uses a bounded in-memory queue, rejects stale/future source clocks and non-executable option books, and hands fresh batches to ForwardSessionRunner.ingest. Effective source-specific Kite PAPER_SIMULATION permission is required before socket startup; no quote archive or broker order path is used.",
+        "src/financial_brain/forward_edge/session_runner.py::decide and paper execution enforce quote age from the source event timestamp as well as local availability, closing the delayed-stale-packet gap.",
+        "tests/test_kite_stream.py and tests/test_forward_edge_session_runner.py cover subscription/normalization, fail-closed permission, stale source-clock rejection, and frozen age limits. Focused suite: 65 passed; Ruff and source/capability/dependency-graph/audit freshness checks passed."
       ],
-      "blocker": "Partial: no continuous KiteTicker/event stream, broad instrument subscription, canonical underlying/options event ingestion, synchronized contract freshness gate within the forward session runner, or stream-to-paper-intent integration. Market-data permissions for paper use and retention remain externally unresolved.",
-      "last_audited_at_utc": "2026-11-24T01:54:41Z",
-      "commit": "f08ddd6ab1012363507b6fa3e518b01243fafe11",
-      "test_result": "Existing tests/test_signal_watch.py and tests/test_options_quotes.py cover current quote freshness, stale rejection, two-sided depth and archive gating; no new test was run in this status audit."
+      "blocker": "Partial: effective Kite data rights remain externally unresolved, so the fail-closed adapter cannot be used against the account until a reviewed permission grant is recorded. Token discovery/universe selection, an always-on session driver that evaluates strategies and creates paper decisions/intents from stream events, and prospective live-market behavior evidence remain outstanding.",
+      "last_audited_at_utc": "2026-11-24T02:33:00Z",
+      "commit": "e7f6bd07",
+      "test_result": "python -m pytest tests/test_kite_stream.py tests/test_forward_edge_session_runner.py -q: 65 passed; python -m ruff check src/financial_brain/providers/kite_stream.py src/financial_brain/forward_edge/session_runner.py tests/test_kite_stream.py tests/test_forward_edge_session_runner.py: passed; source-inventory, capability-ownership, forward-engine-graph, and checklist-audit checks passed."
     },
     {
       "id": "FB-1004",
