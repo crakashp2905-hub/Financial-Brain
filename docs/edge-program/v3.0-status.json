@@ -4291,12 +4291,17 @@
     {
       "id": "FB-1602",
       "text": "Compute SL/TP hit probabilities, time-exit probabilities, gap risk and partial-exit effects using pre-decision information only; reject naive `reward:risk = 2:1` as sufficient evidence for positive expected value.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/exit_scenarios.py::estimate_exit_probabilities replays fully matured same-instrument historical paths against the signal-matched TradePlan and versioned ExitPolicy. It rejects samples completed after signal.as_of, future/unmatured paths, wrong instruments, wrong strategy/version, mismatched stop/target/horizon, and incomplete paths.",
+        "The replay reports empirical stop/target/time/gap-stop frequencies, gross P&L and gap-loss distribution, models partial target exits, fills stop gaps at the adverse open, and resolves stop/target ambiguity in favor of the stop. Wilson intervals are omitted below 30 samples and the output is labeled as an uncalibrated historical frequency.",
+        "tests/test_kernel_exit_scenarios.py, tests/test_exit_policy.py, tests/test_trade_economics.py, tests/test_kernel_net_ev.py: 19 passed; Ruff and targeted mypy passed."
+      ],
+      "blocker": "Partial: historical frequencies are not independently calibrated forecasts, do not account for temporal dependence or analog-selection uncertainty, and are not yet joined to net_ev/costed decision receipts or the mandatory forward-session eligibility gate. Caller-supplied source evidence remains to be permission-validated.",
+      "last_audited_at_utc": "2026-11-24T03:24:28Z",
+      "commit": "150fccf0",
+      "test_result": "python -m pytest tests/test_kernel_exit_scenarios.py tests/test_exit_policy.py tests/test_trade_economics.py tests/test_kernel_net_ev.py -q: 19 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-1603",
@@ -15736,7 +15741,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T03:07:16Z",
+    "as_of_utc": "2026-11-24T03:24:28Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15966,6 +15971,7 @@
       "FB-1215",
       "FB-1216",
       "FB-1601",
+      "FB-1602",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -15986,13 +15992,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 247,
+    "audited_count": 248,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 0,
-      "PARTIAL": 204,
-      "UNASSESSED": 1131
+      "PARTIAL": 205,
+      "UNASSESSED": 1130
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16070,7 +16076,7 @@
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 0,
-    "PARTIAL": 204,
-    "UNASSESSED": 1131
+    "PARTIAL": 205,
+    "UNASSESSED": 1130
   }
 }
