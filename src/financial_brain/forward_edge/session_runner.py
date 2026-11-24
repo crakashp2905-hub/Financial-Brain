@@ -42,6 +42,90 @@ IST = ZoneInfo("Asia/Kolkata")
 DEFAULT_MAX_QUOTE_AGE_MS = 5_000
 
 
+def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
+    """Join session clocks by decision while keeping absent stages explicitly unknown."""
+    events = {row["event_id"]: row for row in records["events"]}
+    risk = {row["decision_id"]: row for row in records["risk_verdicts"]}
+    intents: dict[str, list[dict[str, Any]]] = {}
+    for intent in records["intents"]:
+        intents.setdefault(intent["decision_id"], []).append(intent)
+    receipts = {row["order_id"]: row for row in records["execution_receipts"]}
+    order_events: dict[str, list[dict[str, Any]]] = {}
+    for row in records["order_events"]:
+        order_events.setdefault(row["paper_order_id"], []).append(row)
+
+    signals = []
+    for decision in records["decisions"]:
+        decision_id = decision["decision_id"]
+        input_events = [events[event_id] for event_id in decision["input_event_ids"]
+                        if event_id in events]
+        source_clocks = [{
+            "event_id": event["event_id"], "source": event["source"],
+            "event_time": event.get("event_time"), "source_at": event.get("source_at"),
+            "exchange_at": event.get("exchange_at"), "received_at": event.get("received_at"),
+            "available_at": event.get("available_at"), "ingested_at": event.get("ingested_at"),
+            "ingest_clock_source": event.get("ingest_clock_source"),
+        } for event in input_events]
+        order_rows = intents.get(decision_id, [])
+        order_timing = []
+        for intent in order_rows:
+            order_id = intent["order_id"]
+            receipt = receipts.get(order_id)
+            history = order_events.get(order_id, [])
+            fills = [{"occurred_at": event["occurred_at"], "state": event["state"],
+                      "filled_quantity": event["filled_quantity"], "price": event["price"]}
+                     for event in history if event["state"] in {"PARTIAL", "FILLED"}]
+            order_timing.append({
+                "order_id": order_id,
+                "intent_at": intent.get("simulated_at"),
+                "oms_states": [{"state": event["state"], "occurred_at": event["occurred_at"]}
+                               for event in history],
+                "execution_status": receipt.get("status") if receipt else "NO_RECEIPT",
+                "simulated_fill_at": fills[0]["occurred_at"] if fills else None,
+                "fills": fills,
+            })
+        payload = decision.get("payload") or {}
+        risk_stop = payload.get("risk_stop_triggered_at")
+        exit_role = payload.get("position_role") == "EXIT"
+        exit_execution = [fill for order in order_timing for fill in order["fills"]] if exit_role else []
+        missing = []
+        if not source_clocks:
+            missing.append("SOURCE_EVENT_CLOCKS")
+        if any(not event.get("source_at") for event in source_clocks):
+            missing.append("SOURCE_TIMESTAMP")
+        if any(not event.get("exchange_at") for event in source_clocks):
+            missing.append("EXCHANGE_TIMESTAMP")
+        if any(not event.get("received_at") for event in source_clocks):
+            missing.append("LOCAL_RECEIPT_TIMESTAMP")
+        if not decision.get("feature_ready_at"):
+            missing.append("FEATURE_READY_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and decision_id not in risk:
+            missing.append("OMS_RISK_APPROVAL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not order_timing:
+            missing.append("SIMULATED_ORDER_OR_FILL")
+        if decision["outcome"] == "TRADE" and not any(row["fills"] for row in order_timing):
+            missing.append("SIMULATED_FILL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and risk_stop is None:
+            missing.append("RISK_STOP_TRIGGER_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not exit_role:
+            missing.append("EXIT_ROLE_OR_EXECUTION_TIMESTAMP")
+        signals.append({
+            "decision_id": decision_id, "strategy_id": decision["strategy_id"],
+            "outcome": decision["outcome"], "source_clocks": source_clocks,
+            "feature_ready_at": decision.get("feature_ready_at"),
+            "signal_decision_at": decision["decided_at"],
+            "oms_approval_at": risk.get(decision_id, {}).get("assessed_at"),
+            "orders": order_timing, "risk_stop_triggered_at": risk_stop,
+            "exit_execution": exit_execution,
+            "missing_stages": sorted(set(missing)),
+            "status": "COMPLETE" if not missing else "INCOMPLETE",
+        })
+    return {"schema": "fb.forward_session_timing_telemetry.v1", "signals": signals,
+            "signal_count": len(signals), "complete_signal_count": sum(
+                signal["status"] == "COMPLETE" for signal in signals),
+            "claim_scope": "PAPER_SESSION_EVIDENCE"}
+
+
 class ForwardSessionRunnerError(ValueError):
     """Session runner rejected an event, decision or lifecycle operation."""
 
@@ -595,7 +679,8 @@ class ForwardSessionRunner:
 
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,
-               reason_codes: tuple[str, ...] = (), payload: dict[str, Any] | None = None) -> bool:
+               reason_codes: tuple[str, ...] = (), payload: dict[str, Any] | None = None,
+               feature_ready_at: datetime | None = None) -> bool:
         """Record a decision only when every referenced source event was already available."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("decisions are accepted only in an OPEN session")
@@ -622,6 +707,16 @@ class ForwardSessionRunner:
         clock = decided_at.astimezone(timezone.utc)
         if any(datetime.fromisoformat(available) > clock for _, _, available, _ in rows):
             raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
+        feature_clock = None
+        if feature_ready_at is not None:
+            if feature_ready_at.tzinfo is None or feature_ready_at.utcoffset() is None:
+                raise ForwardSessionRunnerError("feature-ready time must be timezone-aware")
+            feature_clock = feature_ready_at.astimezone(timezone.utc)
+            latest_input = max(datetime.fromisoformat(available).astimezone(timezone.utc)
+                               for _, _, available, _ in rows)
+            if feature_clock < latest_input or feature_clock > clock:
+                raise ForwardSessionRunnerError(
+                    "feature-ready time must follow all input availability and precede the signal decision")
         max_quote_age = self._max_quote_age(session_id)
         stale = []
         for event_id, kind, _, event_json in rows:
@@ -635,13 +730,18 @@ class ForwardSessionRunner:
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
+                "feature_ready_at": feature_clock.isoformat() if feature_clock else None,
                 "reason_codes": sorted(set(reason_codes)), "payload": payload or {}}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        existing = self._con.execute("SELECT record_sha256 FROM runner_decisions WHERE session_id=? AND decision_id=?",
+        existing = self._con.execute("SELECT record_sha256, record_json FROM runner_decisions WHERE session_id=? AND decision_id=?",
                                      [session_id, decision_id]).fetchone()
         if existing:
             if existing[0] != digest:
+                prior_body = json.loads(existing[1])
+                legacy_body = {key: value for key, value in body.items() if key != "feature_ready_at"}
+                if "feature_ready_at" not in prior_body and prior_body == legacy_body:
+                    return False
                 raise ForwardSessionRunnerError("decision ID reused with conflicting content")
             return False
         prior = self._con.execute("SELECT MAX(decided_at) FROM runner_decisions WHERE session_id=?",
@@ -792,12 +892,14 @@ class ForwardSessionRunner:
                 order_events.extend(
                     event | {"session_id": session_id, "paper_order_id": paper_order_id}
                     for event in self.order_journal.replay(journal_order_id))
-        return {"events": events, "decisions": decisions, "lifecycle": lifecycle,
-                "intents": intents, "execution_receipts": receipts, "session_reports": reports,
-                "order_events": order_events,
-                "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
-                "data_rejections": data_rejections,
-                "audit_log": audit_log, "accounting": accounting}
+        result = {"events": events, "decisions": decisions, "lifecycle": lifecycle,
+                  "intents": intents, "execution_receipts": receipts, "session_reports": reports,
+                  "order_events": order_events,
+                  "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
+                  "data_rejections": data_rejections,
+                  "audit_log": audit_log, "accounting": accounting}
+        result["timing_telemetry"] = _timing_telemetry(result)
+        return result
 
     def _append_paper_order_event(self, *, session_id: str, order_id: str, state: str,
                                   occurred_at: datetime, quantity: int, filled_quantity: int,

@@ -4741,15 +4741,22 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ForwardSessionRunner persists source event event/receipt/availability/ingest clocks, decisions, OMS/order events and simulated execution receipts with hashes. This change exposes stream readiness and degraded evidence state."
+        "ForwardSessionRunner persists normalized event source, event, exchange, receipt, availability and ingest clocks; decisions now accept a validated optional feature_ready_at, and runner records publish per-decision timing_telemetry joined to risk verdicts, intents and order events.",
+        "Timing telemetry emits source clock rows, feature readiness, signal decision, OMS risk approval, order states, partial/full simulated fill timestamps, stop trigger and exit execution fields, plus explicit missing_stages; unknown clocks are not inferred.",
+        "docs/edge-program/forward-session-timing-telemetry-audit-2026-11-25.md records the output contract and unfilled operational gaps.",
+        "Focused session-runner timing, feature-clock ordering, and durable candidate-to-fill tests: 3 passed. Ruff and mypy passed for session_runner.py.",
+        "Still partial: strategy adapters do not consistently provide feature-ready clocks; source/exchange clocks may be absent; stop/exit attribution, permitted captured trace validation, independent live/replay parity, and cockpit latency/coverage publication remain incomplete."
       ],
-      "blocker": "PARTIAL: implementation covers parts of the requirement, but complete acceptance still needs production integration, permitted captured market traces, validated sequence semantics, full latency/coverage cockpit and/or independently checked live/replay parity as described by the item.",
-      "last_audited_at_utc": "2026-11-24T04:45:22Z",
-      "commit": "04301294",
+      "blocker": "No complete all-adapter timing chain or independent captured-trace/dashboard validation exists; risk-stop and exit execution clocks are not durably recorded for every trade.",
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
       "test_evidence": [
-        "tests/test_forward_edge_session_runner.py; tests/test_kite_stream.py (66 passed)"
+        "python -m pytest tests/test_forward_edge_session_runner.py::test_session_records_publish_per_signal_timing_telemetry_and_missing_stages tests/test_forward_edge_session_runner.py::test_feature_ready_clock_must_follow_inputs_and_precede_decision tests/test_forward_edge_session_runner.py::test_versioned_candidate_runs_through_durable_runner_to_accounting -q: 3 passed in 7.83s.",
+        "python -m ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: all checks passed.",
+        "python -m mypy src/financial_brain/forward_edge/session_runner.py: no issues found."
       ],
-      "artifact_sha256": "ce806473b409d041a880d56ab2121872393b6cb76e822e372c1291ce0e07a713"
+      "artifact_sha256": "ce806473b409d041a880d56ab2121872393b6cb76e822e372c1291ce0e07a713",
+      "test_result": "Session records now expose joined per-signal timing telemetry and validate any supplied feature-ready clock against source availability and decision time. Focused timing/clock/durable-fill tests, Ruff and mypy pass. End-to-end feature, stop and exit clocks and independent captured-trace validation remain incomplete."
     },
     {
       "id": "FB-1802",

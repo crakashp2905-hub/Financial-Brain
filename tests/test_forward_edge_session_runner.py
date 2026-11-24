@@ -127,6 +127,54 @@ def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_pat
     runner.close()
 
 
+def test_session_records_publish_per_signal_timing_telemetry_and_missing_stages(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="timed-signal")
+    runner.ingest("s", config, [event])
+    feature_ready = NOW + timedelta(milliseconds=5)
+    decided = NOW + timedelta(milliseconds=10)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="timed-decision",
+                  outcome="TRADE", input_event_ids=(event.event_id,), decided_at=decided,
+                  feature_ready_at=feature_ready)
+    approved = decided + timedelta(milliseconds=2)
+    runner.record_risk_verdict(session_id="s", decision_id="timed-decision", verdict_id="risk-timed",
+                               allowed=True, policy_id="timing-v1", policy_sha256="a" * 64,
+                               assessed_at=approved)
+
+    telemetry = runner.records("s")["timing_telemetry"]
+    assert telemetry["schema"] == "fb.forward_session_timing_telemetry.v1"
+    row = telemetry["signals"][0]
+    assert row["feature_ready_at"] == feature_ready.isoformat()
+    assert row["signal_decision_at"] == decided.isoformat()
+    assert row["oms_approval_at"] == approved.isoformat()
+    assert row["source_clocks"][0]["received_at"] == event.received_at.isoformat()
+    assert row["status"] == "INCOMPLETE"
+    assert "SIMULATED_FILL_TIMESTAMP" in row["missing_stages"]
+    assert "RISK_STOP_TRIGGER_TIMESTAMP" in row["missing_stages"]
+    assert "EXIT_ROLE_OR_EXECUTION_TIMESTAMP" in row["missing_stages"]
+    runner.close()
+
+
+def test_feature_ready_clock_must_follow_inputs_and_precede_decision(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="feature-ready-input")
+    runner.ingest("s", config, [event])
+    decided = NOW + timedelta(milliseconds=10)
+    with pytest.raises(ForwardSessionRunnerError, match="follow all input availability"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="bad-feature-clock",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
+                      reason_codes=("NO_EDGE",), feature_ready_at=NOW - timedelta(milliseconds=1))
+    with pytest.raises(ForwardSessionRunnerError, match="follow all input availability"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="late-feature-clock",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
+                      reason_codes=("NO_EDGE",), feature_ready_at=decided + timedelta(milliseconds=1))
+    runner.close()
+
+
 def test_fixture_source_cannot_bypass_rights_gate_without_frozen_fixture_scope(tmp_path):
     runner = make_runner(tmp_path)
     config = make_config_with_constraints({"allow_synthetic_fixture_events": False})
@@ -540,6 +588,10 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     assert records["accounting"]["simulation_fidelity"] == "OBSERVED_QUOTE_SIM"
     assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
     assert records["order_events"][-1]["fill_evidence_id"] is not None
+    timing = records["timing_telemetry"]["signals"][0]
+    assert timing["orders"][0]["fills"][0]["filled_quantity"] == 2
+    assert timing["orders"][0]["simulated_fill_at"] == result.receipt["simulated_at"]
+    assert "FEATURE_READY_TIMESTAMP" in timing["missing_stages"]
     with pytest.raises(ForwardSessionRunnerError, match="canonical candidate intent"):
         runner.execute_paper_intent(
             session_id="s", order_id="forged-order", decision_id="candidate-1",
