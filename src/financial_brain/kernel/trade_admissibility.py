@@ -180,6 +180,8 @@ def evaluate_trade_admissibility(
                          economic_receipt)
     if (signal.strategy_id, signal.strategy_version) != (hurdle.strategy_id, hurdle.strategy_version):
         raise AdmissibilityError("hurdle does not match signal strategy identity/version")
+    if economic_receipt is not None and not isinstance(economic_receipt, TradeEconomicsReceipt):
+        raise AdmissibilityError("economic_receipt must be a TradeEconomicsReceipt")
 
     reasons: set[DecisionReason] = set()
     try:
@@ -249,6 +251,8 @@ def evaluate_trade_admissibility(
         reasons.add(DecisionReason.ECONOMIC_RECEIPT_UNAVAILABLE)
     else:
         receipt_matches = (
+            _SHA256.fullmatch(economic_receipt.receipt_sha256) is not None
+            and
             economic_receipt.signal_id == signal.signal_id and
             economic_receipt.instrument_id == signal.instrument_id and
             economic_receipt.decision_at_utc == signal.decision_at.astimezone(timezone.utc).isoformat() and
