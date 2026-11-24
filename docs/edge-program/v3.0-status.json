@@ -16133,202 +16133,322 @@
     {
       "id": "SL-24-01",
       "text": "Define observed on-policy evaluation, matched counterfactual replay and logged-policy off-policy evaluation as different evidence types.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`learning/trajectory.py::TransitionEvidence` distinguishes historical replay, deterministic fixture, local paper and prospective paper; the new `learning/off_policy.py` emits contextual OPE separately. The repository does not yet publish a complete evidence-type contract for all on-policy and matched-counterfactual analyses."
+      ],
+      "blocker": "Evidence labels exist but are not unified across every evaluation/report path.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-02",
       "text": "Implement direct method, IPS, self-normalized IPS and doubly robust estimators only where action support/propensities exist.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Added `learning/off_policy.py::evaluate_logged_policy` with direct-method, IPS, self-normalized IPS and doubly robust estimates from complete target/behavior action distributions; action values are needed for DM/DR. It is a one-step contextual helper, not integrated to real strategy cohorts."
+      ],
+      "blocker": "No propensity-supported market dataset, model governance or end-to-end evaluator integration.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-03",
       "text": "Calculate effective sample size, maximum importance weight and positivity/support diagnostics; refuse invalid estimates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "The OPE evaluator checks target-action positivity, reports effective sample size/max weights, uses a default minimum ESS of 30, and returns NO_VALID_OPE with no estimates for missing propensities, unsupported actions or inadequate weighted support. Tests cover each denial."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-04",
       "text": "Implement propensity clipping and sensitivity analysis as registered variants, never after seeing favorable results.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Importance-weight clipping is available only as an explicit `max_importance_weight` plus caller-supplied `variant_id`, and reports clipped count/raw maximum; no immutable registered clipping-variant/sensitivity protocol exists."
+      ],
+      "blocker": "Clipping caps are not registered before cohort evaluation or compared in a governed sensitivity report.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-05",
       "text": "Validate DR estimators on synthetic bandit environment with known exact value and deliberately misspecified outcome/propensity models.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "A deterministic synthetic two-action fixture has an exact 0.8 target value and tests DM/IPS/SNIPS/DR all recover it; deliberate outcome-model and propensity misspecification experiments are not yet included."
+      ],
+      "blocker": "Misspecified-model robustness and repeated synthetic sampling calibration are absent.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-06",
       "text": "For sequential RL implement appropriate trajectory or per-decision importance weights with variance bounds; abstain when variance explodes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Trajectory records represent sequential transitions, but no per-decision/trajectory importance estimator, variance bound or sequential-OPE abstention gate was found."
+      ],
+      "blocker": "Sequential RL off-policy estimator and variance controls are absent.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-07",
       "text": "Use fitted Q evaluation with independent models and bootstrap as supplementary not definitive when support is weak.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation/learners.py` and tabular Bellman utilities provide learning primitives; independent fitted-Q evaluation plus bootstrap under weak support was not found."
+      ],
+      "blocker": "No independent fitted-Q evaluation model, bootstrap uncertainty or support gate.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-08",
       "text": "Distinguish replay-derived counterfactual fills from actual observed fills, preserving simulator fidelity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "`learning/trajectory.py` explicitly labels HISTORICAL_REPLAY/DETERMINISTIC_FIXTURE and rejects OBSERVED_FILL outcomes for those evidence classes; replay tests assert the relabel attempt fails."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-09",
       "text": "Calculate matched random-book nulls with same turnover, exposure, sector, liquidity, instrument availability and hold period.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`strategies/evaluation_controls.py` matches controls on pre-event sector/momentum/high/volatility and family-validation tools build nulls; equal-turnover, exposure, liquidity, availability and holding-period random books are not all constrained together."
+      ],
+      "blocker": "Matched random-book construction is not a single complete constrained null.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-10",
       "text": "Create nested chronological training/validation/test and purge/embargo where rewards overlap.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Chronological walk-forward, purge/embargo and split-aware champion evaluation exist across evaluation modules; no shared nested train/validation/test manifest ensures the untouched outer holdout remains unopened."
+      ],
+      "blocker": "Nested cohort identity and one-time holdout opening are not uniformly enforced.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-11",
       "text": "Use clustered confidence intervals at session and month level, not as independent overlapping minute/trade rows.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/evidence_stats.py` implements Newey-West and clustered standard errors; monthly/session clustering is not uniformly connected to every candidate report."
+      ],
+      "blocker": "Dependence-aware CI coverage across all decision/evaluation surfaces is incomplete.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-12",
       "text": "Use deflated Sharpe, familywise correction, SPA/Reality Check and PBO where their assumptions are satisfied.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation/firewall.py`, `family_validation.py` and strategy controls implement deflated Sharpe, family-wise/Reality Check/SPA and PBO methods; multiplicity assumptions and complete integration for all strategy families remain open."
+      ],
+      "blocker": "No single validated report applies all assumption-appropriate corrections across all research runs.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-13",
       "text": "Count all variants generated by AI, hyperparameter runs, prompts and failed hypotheses in experiment multiplicity.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Protected trial ledgers and family-wide evaluation IDs count registered variants; AI prompts, failed hypotheses and every hyperparameter run are not automatically captured in one immutable experiment registry."
+      ],
+      "blocker": "Experiment generator and evaluation registry are not fully joined for multiplicity accounting.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-14",
       "text": "Implement sequential test governance with frozen review cadence, alpha spending or preapproved evidence windows.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trial budgets and frozen prospective evidence windows exist; formal sequential alpha-spending/review-cadence control is not demonstrated."
+      ],
+      "blocker": "Sequential test spending and review schedule are not implemented as a statistical policy.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-15",
       "text": "Maintain untouched held-out samples and record one-time opening; once viewed they become development data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trial preservation and protected data access audits identify frozen samples; there is no enforced one-time holdout-open journal that automatically reclassifies viewed observations as development data."
+      ],
+      "blocker": "Holdout access lifecycle is partly procedural rather than fully enforced.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-16",
       "text": "Declare `NO_VALID_OPE` and require forward shadow instead of computing unsupported counterfactual returns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "`evaluate_logged_policy` returns `NO_VALID_OPE` and empty estimates for missing behavior propensities, target actions outside behavior support, all-zero weighted support or ESS below its predeclared minimum; no unsupported returns are emitted."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-17",
       "text": "Compare economic outcomes against cash, matched TRI and risk-normalized champion with all fees, partial fills and open marks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion/challenger reports use equal capital and costed net P&L; cash, matched TRI, open marks and complete partial-fill treatment are not universally present in every evaluation."
+      ],
+      "blocker": "Common benchmark and mark/cost completeness vary by cohort.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-18",
       "text": "Include selection bias from always choosing the strongest recent strategy in simulations and null controls.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation/synthetic.py`, PBO and family-level null procedures measure strategy selection bias; matching nulls to turnover, exposure, sector, liquidity and instrument availability for all families is not complete."
+      ],
+      "blocker": "Selection-bias null controls are not comprehensively matched to each strategy's feasible opportunity set.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-19",
       "text": "Publish evidence tier, independent sample count, effect CI, cost-stress pass and contradictory null tests for every candidate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Evidence tiers, familywise inference, source hashes, cost stress and champion reports supply parts of the requested publication; an automated per-candidate packet with independent sample count, effect CI, contradictions and cost gate is not universal."
+      ],
+      "blocker": "Evidence publication contract is fragmented across reports.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-24-20",
       "text": "Automate falsification reviewer verdict; candidate generator has zero authority to waive failure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion governance and trial verdicts prevent candidate code from self-promoting, but no automatic independent falsification-review verdict is wired to every generated candidate."
+      ],
+      "blocker": "Independent review verdict source and candidate-generator zero-waiver rule are not end-to-end automated.",
+      "last_audited_at_utc": "2026-11-24T19:04:33Z",
+      "commit": "16899e7f",
+      "test_evidence": [
+        "OPE/learning verification: 24 passed across tests/test_learning_off_policy.py, test_learning_trajectory.py, test_family_validation.py, test_forward_edge_champion_challenger.py and test_phase2_replay.py; Ruff and mypy passed for learning/off_policy.py."
+      ],
+      "test_result": "OPE and existing evaluation controls: 24 tests passed; Ruff and targeted mypy passed for the OPE module."
     },
     {
       "id": "SL-25-01",
@@ -18252,7 +18372,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T18:58:57Z",
+    "as_of_utc": "2026-11-24T19:04:33Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -18934,17 +19054,37 @@
       "SL-23-15",
       "SL-23-16",
       "SL-23-17",
-      "SL-23-18"
+      "SL-23-18",
+      "SL-24-01",
+      "SL-24-02",
+      "SL-24-03",
+      "SL-24-04",
+      "SL-24-05",
+      "SL-24-06",
+      "SL-24-07",
+      "SL-24-08",
+      "SL-24-09",
+      "SL-24-10",
+      "SL-24-11",
+      "SL-24-12",
+      "SL-24-13",
+      "SL-24-14",
+      "SL-24-15",
+      "SL-24-16",
+      "SL-24-17",
+      "SL-24-18",
+      "SL-24-19",
+      "SL-24-20"
     ],
-    "audited_count": 681,
+    "audited_count": 701,
     "status_counts": {
-      "COMPLETE": 57,
-      "PARTIAL": 608,
+      "COMPLETE": 60,
+      "PARTIAL": 624,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 11,
-      "UNASSESSED": 697
+      "NOT_STARTED": 12,
+      "UNASSESSED": 677
     },
-    "verified_complete_count": 57,
+    "verified_complete_count": 60,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -19064,13 +19204,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing. SL-24-01..SL-24-20 off-policy evaluation requirements were source-audited: 3 COMPLETE, 16 PARTIAL and 1 NOT_STARTED. Added support-checked contextual DM/IPS/SNIPS/DR estimates with positivity/ESS gates and explicit NO_VALID_OPE refusal; 24 OPE/learning/evaluation tests passed, Ruff and mypy passed. Sequential trajectory OPE, confidence intervals, registered sensitivity variants and fully captured trial multiplicity remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 57,
-    "PARTIAL": 608,
+    "COMPLETE": 60,
+    "PARTIAL": 624,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 11,
-    "UNASSESSED": 697
+    "NOT_STARTED": 12,
+    "UNASSESSED": 677
   }
 }
