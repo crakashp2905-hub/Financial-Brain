@@ -81,6 +81,15 @@ def test_malformed_or_unbounded_window_metrics_fail_closed(mutate):
 
 def test_unmatched_windows_are_not_compared():
     later = END + timedelta(days=7)
-    with pytest.raises(DistributionError, match="same observation interval"):
-        compare_windows(_price(), PriceWindow(END, later, 100, 0.01, 0),
+    with pytest.raises(DistributionError, match="same window duration"):
+        compare_windows(_price(), PriceWindow(END, later + timedelta(days=7), 100, 0.01, 0),
                         _provider(), _provider())
+
+
+def test_empty_current_provider_window_is_reported_as_data_failure_not_stability():
+    empty = ProviderWindow(START, END, 0, 0, 1, 0, 1, (), HASH_A)
+    result = compare_windows(_price(), _price(), _provider(), empty)
+    assert result.status == "PROVIDER_DISTRIBUTION_SHIFT"
+    assert not result.price_regime_shift
+    assert result.provider_distribution_shift
+    assert result.provider_reasons == ("PROVIDER_WINDOW_EMPTY",)

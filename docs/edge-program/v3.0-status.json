@@ -16630,18 +16630,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/data_distribution.py defines independent PriceWindow and ProviderWindow contracts and compares volatility/return distribution separately from quote coverage, stale/out-of-order/missing-payload rates, source-mix total variation and schema fingerprint.",
-        "The comparator requires matched aware observation windows, source mixes summing to one, valid schema hashes and minimum sample support. It returns independent market/provider shift flags and reasons; insufficient support is not labeled stable.",
-        "This is a diagnostic primitive only. No production feed-window aggregation, runner/dashboard integration or historical provider-shift baseline is available yet."
+        "src/financial_brain/forward_edge/data_distribution.py defines independent price and provider windows and reports price volatility/return changes separately from feed quote coverage, transport staleness, out-of-order/missing-payload rates, source-mix total variation and schema fingerprints.",
+        "QuoteArchive.provider_window() aggregates archived event rows by source-time window and availability cutoff, with explicit expected-quote denominator, transport-lag threshold, per-source sequence ordering, payload-key schema fingerprint and empty-window representation for outages.",
+        "tests/test_forward_edge_data_distribution.py and the archive integration test prove price-only, provider-only, simultaneous, low-support and empty-outage outcomes; ingestion metrics are measured from repository archive records rather than fabricated fixtures inside production code.",
+        "Still partial: no ForwardSessionRunner paired price-window aggregation, session report/dashboard rendering or sourced historical distribution baseline is wired."
       ],
-      "blocker": "The independent window comparator is implemented, but provider metrics are not yet collected from the forward paper runner or displayed beside the existing price-regime report; historical source-mix baseline coverage is also unvalidated.",
-      "last_audited_at_utc": "2026-11-25T02:30:00Z",
+      "blocker": "Archive aggregation now produces source-quality windows, but the ForwardSessionRunner does not yet generate the paired price window or include a comparison report/health gate in paper-session outputs; historical baselines remain unvalidated.",
+      "last_audited_at_utc": "2026-11-25T03:00:00Z",
       "commit": null,
       "test_evidence": [
-        "tests/test_forward_edge_data_distribution.py: 9 passed; tests distinguish price-only, provider-only, simultaneous and insufficient-support cases, and check malformed metrics and unmatched windows.",
-        "Ruff and mypy passed for data_distribution.py and its tests."
+        "tests/test_forward_edge_data_distribution.py tests/test_forward_edge_quote_archive.py: 19 passed, including archive-derived coverage, stale transport, out-of-order event/sequence, source-mix, schema and empty-outage cases.",
+        "Ruff and mypy passed for data_distribution.py and quote_archive.py."
       ],
-      "test_result": "Independent price-regime versus provider-distribution comparator and adversarial contract checks pass 9 tests. Item remains PARTIAL pending runner data collection, reporting integration and historical baseline validation."
+      "test_result": "Independent regime/data-shift logic and archive-backed provider aggregation pass 19 tests. Empty archive windows produce PROVIDER_WINDOW_EMPTY rather than a false STABLE status. SL-23-17 remains PARTIAL pending runner/report integration and historically validated provider baselines."
     },
     {
       "id": "SL-23-18",

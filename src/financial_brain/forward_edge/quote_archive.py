@@ -6,6 +6,8 @@ fixtures and cannot be mistaken for vendor or exchange observations.
 from __future__ import annotations
 
 import json
+import hashlib
+import math
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
@@ -13,6 +15,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock
+from financial_brain.forward_edge.data_distribution import ProviderWindow
 from financial_brain.forward_edge.market_events import MarketEvent
 
 
@@ -170,6 +173,89 @@ class QuoteArchive:
         if last is not None:
             last = last.astimezone(timezone.utc)
         return FeedHealth(len(rows), gaps, late, max(lags, default=0.0), last)
+
+    def provider_window(self, *, start: datetime, end: datetime, as_of: datetime,
+                        expected_quote_observations: int,
+                        max_transport_lag: timedelta) -> ProviderWindow:
+        """Build a source-quality window from archived events, preserving empty outages.
+
+        Observation membership follows the source event clock; ``as_of`` limits the report
+        to data that had become available by that time. The expected quote denominator is
+        explicit because an empty archive cannot infer how many packets should have arrived.
+        """
+        if any(value.tzinfo is None or value.utcoffset() is None for value in (start, end, as_of)):
+            raise QuoteArchiveError("provider-window clocks must be timezone aware")
+        if end <= start or as_of < end:
+            raise QuoteArchiveError("provider-window interval and report cutoff are invalid")
+        if type(expected_quote_observations) is not int or expected_quote_observations < 1:
+            raise QuoteArchiveError("expected quote observation count must be positive")
+        if not isinstance(max_transport_lag, timedelta) or max_transport_lag < timedelta(0):
+            raise QuoteArchiveError("maximum transport lag must be non-negative")
+        lower, upper, cutoff = (value.astimezone(timezone.utc).isoformat()
+                                for value in (start, end, as_of))
+        rows = self._con.execute("""SELECT event_id, kind, event_time, received_at,
+            available_at, source, sequence, event_json FROM market_events
+            WHERE event_time>=? AND event_time<? AND available_at<=?
+            ORDER BY received_at, event_id""", [lower, upper, cutoff]).fetchall()
+        sources: dict[str, int] = {}
+        quote_rows: list[tuple[datetime, datetime, dict]] = []
+        schema_keys: dict[str, set[str]] = {}
+        out_of_order = 0
+        previous_event: datetime | None = None
+        previous_sequence: dict[str, int] = {}
+        for row in rows:
+            _, kind, event_raw, received_raw, _, source, sequence, body_raw = row
+            event_at = datetime.fromisoformat(event_raw).astimezone(timezone.utc)
+            received_at = datetime.fromisoformat(received_raw).astimezone(timezone.utc)
+            body = json.loads(body_raw)
+            payload = body.get("payload", {})
+            if not isinstance(payload, dict):
+                payload = {}
+            sources[source] = sources.get(source, 0) + 1
+            schema_keys.setdefault(kind, set()).update(body.keys() | payload.keys())
+            if kind == "quote":
+                quote_rows.append((event_at, received_at, payload))
+            out_of_order_row = previous_event is not None and event_at < previous_event
+            if sequence is not None:
+                prior_sequence = previous_sequence.get(source)
+                if prior_sequence is not None and int(sequence) <= prior_sequence:
+                    out_of_order_row = True
+                previous_sequence[source] = int(sequence)
+            out_of_order += int(out_of_order_row)
+            previous_event = event_at
+
+        valid_quotes = 0
+        stale_quotes = 0
+        for event_at, received_at, payload in quote_rows:
+            bid, ask = payload.get("bid"), payload.get("ask")
+            try:
+                valid = (isinstance(bid, (int, float)) and not isinstance(bid, bool)
+                         and isinstance(ask, (int, float)) and not isinstance(ask, bool)
+                         and 0 < float(bid) <= float(ask) and math.isfinite(float(ask)))
+            except (TypeError, ValueError, OverflowError):
+                valid = False
+            valid_quotes += int(valid)
+            lag = received_at - event_at
+            stale_quotes += int(lag < timedelta(0) or lag > max_transport_lag)
+
+        observation_count = len(rows)
+        source_mix = tuple(sorted((name, count / observation_count)
+                                  for name, count in sources.items())) if observation_count else ()
+        schema = {
+            "archive_columns": [row[1] for row in self._con.execute("PRAGMA table_info(market_events)")],
+            "event_fields_by_kind": {kind: sorted(keys) for kind, keys in sorted(schema_keys.items())},
+        }
+        schema_sha = hashlib.sha256(json.dumps(
+            schema, sort_keys=True, separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+        return ProviderWindow(
+            start.astimezone(timezone.utc), end.astimezone(timezone.utc), observation_count,
+            min(1.0, len(quote_rows) / expected_quote_observations),
+            stale_quotes / len(quote_rows) if quote_rows else 1.0,
+            out_of_order / max(1, observation_count - 1),
+            1.0 - valid_quotes / len(quote_rows) if quote_rows else 1.0,
+            source_mix, schema_sha,
+        )
 
     def count(self) -> int:
         return int(self._con.execute("SELECT count(*) FROM market_events").fetchone()[0])

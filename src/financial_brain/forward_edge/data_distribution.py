@@ -55,18 +55,20 @@ class ProviderWindow:
 
     def __post_init__(self) -> None:
         _window(self.start, self.end, "provider")
-        if type(self.observations) is not int or self.observations < 1:
-            raise DistributionError("provider window needs at least one observation")
+        if type(self.observations) is not int or self.observations < 0:
+            raise DistributionError("provider observation count must be non-negative")
         fractions = (self.quote_coverage, self.stale_fraction, self.out_of_order_fraction,
                      self.missing_payload_fraction)
         if any(not math.isfinite(value) or not 0 <= value <= 1 for value in fractions):
             raise DistributionError("provider rates must be finite fractions in [0, 1]")
-        if not self.source_mix or any(not name.strip() or not math.isfinite(weight) or weight < 0
-                                      for name, weight in self.source_mix):
+        if (self.observations == 0) != (len(self.source_mix) == 0):
+            raise DistributionError("empty provider windows must have an empty source mix")
+        if any(not name.strip() or not math.isfinite(weight) or weight < 0
+               for name, weight in self.source_mix):
             raise DistributionError("source mix requires named sources and non-negative weights")
         if len({name for name, _ in self.source_mix}) != len(self.source_mix):
             raise DistributionError("source mix contains duplicate source names")
-        if not math.isclose(sum(weight for _, weight in self.source_mix), 1.0, abs_tol=1e-6):
+        if self.source_mix and not math.isclose(sum(weight for _, weight in self.source_mix), 1.0, abs_tol=1e-6):
             raise DistributionError("source-mix weights must sum to one")
         if not _SHA256.fullmatch(self.schema_sha256):
             raise DistributionError("schema fingerprint must be a lowercase SHA-256")
@@ -122,21 +124,26 @@ def compare_windows(
     The two booleans are independent by design: a provider shift cannot imply a price
     regime shift, and a price regime shift cannot conceal a degraded feed.
     """
-    windows = (reference_price, current_price, reference_provider, current_provider)
-    for row in windows[1:]:
-        if row.start != reference_price.start or row.end != reference_price.end:
-            raise DistributionError("all reference/current windows must use the same observation interval")
-    if min(reference_price.observations, current_price.observations,
-           reference_provider.observations, current_provider.observations) < thresholds.minimum_observations:
+    reference_duration = reference_price.end - reference_price.start
+    windows = (current_price, reference_provider, current_provider)
+    if any(row.end - row.start != reference_duration for row in windows):
+        raise DistributionError("reference/current windows must use the same window duration")
+    price_supported = min(reference_price.observations, current_price.observations) >= thresholds.minimum_observations
+    provider_supported = min(reference_provider.observations,
+                             current_provider.observations) >= thresholds.minimum_observations
+    if current_provider.observations == 0:
+        return DistributionComparison(False, True, (), ("PROVIDER_WINDOW_EMPTY",), 0.0,
+                                      "PROVIDER_DISTRIBUTION_SHIFT")
+    if not price_supported or not provider_supported or reference_provider.observations == 0:
         return DistributionComparison(False, False, (), (), 0.0, "INSUFFICIENT_SUPPORT")
 
     price_reasons: list[str] = []
     reference_vol = reference_price.realized_volatility
     vol_change = (abs(current_price.realized_volatility - reference_vol) / reference_vol
                   if reference_vol > 0 else (math.inf if current_price.realized_volatility > 0 else 0.0))
-    if vol_change >= thresholds.volatility_relative_change:
+    if vol_change > thresholds.volatility_relative_change:
         price_reasons.append("REALIZED_VOLATILITY_SHIFT")
-    if abs(current_price.net_return - reference_price.net_return) >= thresholds.absolute_return_change:
+    if abs(current_price.net_return - reference_price.net_return) > thresholds.absolute_return_change:
         price_reasons.append("RETURN_DISTRIBUTION_SHIFT")
 
     mix_distance = _mix_distance(reference_provider.source_mix, current_provider.source_mix)
@@ -153,7 +160,7 @@ def compare_windows(
         (mix_distance, thresholds.source_mix_total_variation, "SOURCE_MIX_SHIFT"),
     )
     for difference, limit, reason in comparisons:
-        if difference >= limit:
+        if difference > limit:
             provider_reasons.append(reason)
     if current_provider.schema_sha256 != reference_provider.schema_sha256:
         provider_reasons.append("SCHEMA_FINGERPRINT_CHANGED")
