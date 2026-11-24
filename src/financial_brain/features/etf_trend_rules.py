@@ -12,7 +12,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 
 STRATEGY_ID = "ETF_TREND_MEAN_REVERSION"
 STRATEGY_VERSION = "1.0.0"
@@ -38,7 +38,7 @@ SPEC = {
                            "min_gross_exposure": MIN_GROSS_EXPOSURE,
                            "max_gross_exposure": MAX_GROSS_EXPOSURE,
                            "annualization_sessions": 252},
-    "input_policy": "exact_sourced_sessions_no_fill_no_bridge",
+    "input_policy": "exact_sourced_sessions_no_fill_no_bridge_timezone_aware_availability_at_or_before_as_of",
     "signal_timing": "close_only_for_next_session_review",
     "execution": "none_candidate_only",
 }
@@ -68,7 +68,9 @@ def build_etf_trend_candidates(
     sessions: Sequence[date],
     closes_by_isin: Mapping[str, Mapping[date, float]],
     source_hashes_by_isin: Mapping[str, Mapping[date, str]],
+    available_at_by_isin: Mapping[str, Mapping[date, datetime]],
     symbols_by_isin: Mapping[str, str],
+    as_of: datetime,
 ) -> list[ETFTrendCandidate]:
     """Compute frozen candidate flags from exact sourced close series.
 
@@ -77,18 +79,30 @@ def build_etf_trend_candidates(
     a nonzero 20-session sample standard deviation, and 20 adjacent returns.
     """
     days = tuple(sessions)
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise ValueError("as_of must be timezone aware")
     if not days or any(type(day) is not date for day in days):
         raise ValueError("sessions must be non-empty calendar dates")
     if tuple(sorted(set(days))) != days:
         raise ValueError("sessions must be unique and strictly ordered")
     end = days[-1]
+    cutoff = as_of.astimezone(timezone.utc)
+    if end > cutoff.date():
+        raise ValueError("latest session cannot follow the as_of timestamp")
     output: list[ETFTrendCandidate] = []
     for isin in sorted(closes_by_isin):
         closes = closes_by_isin[isin]
         hashes = source_hashes_by_isin.get(isin, {})
+        availability = available_at_by_isin.get(isin, {})
         if any(day not in days for day in closes):
             continue
-        if len(days) < 201 or any(day not in closes or day not in hashes for day in days[-201:]):
+        if len(days) < 201 or any(day not in closes or day not in hashes or day not in availability
+                                  for day in days[-201:]):
+            continue
+        observed_times = [availability[day] for day in days[-201:]]
+        if any(value.tzinfo is None or value.utcoffset() is None for value in observed_times):
+            raise ValueError(f"{isin} availability timestamps must be timezone aware")
+        if any(value.astimezone(timezone.utc) > cutoff for value in observed_times):
             continue
         values = [closes[day] for day in days[-201:]]
         if any(not math.isfinite(value) or value <= 0 for value in values):
@@ -119,6 +133,8 @@ def build_etf_trend_candidates(
                        max(MIN_GROSS_EXPOSURE, TARGET_ANNUAL_VOLATILITY / annualized_volatility))
         input_hash = hashlib.sha256(json.dumps(
             {"sessions": [day.isoformat() for day in days[-201:]], "source_hashes": used_hashes,
+             "available_at": [value.astimezone(timezone.utc).isoformat() for value in observed_times],
+             "as_of": cutoff.isoformat(),
              "strategy_spec_sha256": SPEC_SHA256}, sort_keys=True, separators=(",", ":")
         ).encode("utf-8")).hexdigest()
         output.append(ETFTrendCandidate(

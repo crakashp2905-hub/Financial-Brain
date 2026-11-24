@@ -2262,16 +2262,15 @@
       "status": "PARTIAL",
       "evidence": [
         "Frozen v1.0.0 candidate contract in docs/edge-program/etf-trend-mean-reversion-v1.md defines trend continuation, moving-average continuation, medium-horizon mean reversion and volatility-target sizing before any performance evaluation.",
-        "src/financial_brain/features/etf_trend_rules.py implements 50/200 and 20/50 trend flags, a fixed 20-session z-score threshold, 20-session volatility sizing target, exact sourced close requirements, frozen strategy/input hashes, and candidate-only/no-order output.",
+        "src/financial_brain/features/etf_trend_rules.py implements 50/200 and 20/50 trend flags, a fixed 20-session z-score threshold, 20-session volatility sizing target, exact sourced closes with timezone-aware availability no later than as_of, frozen strategy/input hashes, and candidate-only/no-order output.",
         "Research governance remains closed: Q4-2026 is exhausted and Q1-2027 is not authorized. No decisive test, backtest, prospective cohort, parameter search, or profitability claim was made."
       ],
       "blocker": "Partial: candidate family is frozen and contract-tested, but no authorized performance evaluation, realistic cost/capacity/tax/benchmark controls, or prospective paper evidence exists. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
       "last_audited_at_utc": "2026-11-24T10:00:00+00:00",
       "commit": "4b9c81cf",
-      "test_result": "Four focused contract tests pass for deterministic rules and hashes, exact sourced history/no-fill policy, calendar and SHA validation, volatility sizing bounds, and the no-order candidate boundary. These are software tests only; profitability is untested.",
+      "test_result": "Five focused contract tests pass for deterministic rules and hashes, exact sourced history/no-fill policy, point-in-time availability, calendar and SHA validation, volatility sizing bounds, and the no-order candidate boundary. These are software tests only; profitability is untested.",
       "test_evidence": [
-        "python -m pytest tests/test_etf_trend_rules.py -q: 4 passed.",
-        "python -m pytest tests/test_etf_trend_rules.py tests/test_etf_momentum.py -q: 9 passed.",
+        "python -m pytest tests/test_etf_trend_rules.py -q: 5 passed.",
         "Ruff passed for the new module and tests; scoped mypy passed for the new module."
       ]
     },

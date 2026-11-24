@@ -3019,7 +3019,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_trend_rules.py",
-      "source_sha256": "287fafc872c91117af2ac1bd20d498d9fed317da515b62ebdc0d770ab1c25750",
+      "source_sha256": "be485b17daeb744eb91dd87e31feb099e18ed51ee59fa6658d2d1e922a5b03c9",
       "test_paths": [
         "tests/test_etf_trend_rules.py"
       ]
