@@ -69,9 +69,10 @@
       "implementations": [
         "src/financial_brain/kernel/net_ev.py",
         "src/financial_brain/kernel/execution_feasibility.py",
+        "src/financial_brain/kernel/entry_constraints.py",
         "src/financial_brain/forward_edge/parameter_freeze.py"
       ],
-      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, execution evidence and costed net EV into reason-coded TRADE/WATCH/REJECT/CASH candidates. It is not wired into the forward session runner and never authorizes broker orders."
+      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence and costed net EV into reason-coded research/paper decisions. It is not wired into the forward session runner and never authorizes broker orders."
     },
     {
       "id": "prospective_strategy_adapter",
@@ -2263,6 +2264,12 @@
       "path": "src/financial_brain/kernel/candidate_publication.py",
       "module_role": "signal_report_or_trader_renderer",
       "module_owner": "src/financial_brain/kernel/candidate_publication.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/entry_constraints.py",
+      "path": "src/financial_brain/kernel/entry_constraints.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/entry_constraints.py"
     },
     {
       "capability_id": "module:src/financial_brain/kernel/execution_model.py",

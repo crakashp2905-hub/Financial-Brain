@@ -101,9 +101,10 @@ def _frozen():
     )
 
 
-def _evaluate(registry, frozen, *, signal=None, estimate=None, execution=None, context=None):
+def _evaluate(registry, frozen, *, signal=None, estimate=None, execution=None, context=None,
+              no_estimate=False):
     return evaluate_trade_admissibility(
-        signal=signal or _signal(), estimate=estimate or _estimate(),
+        signal=signal or _signal(), estimate=None if no_estimate else (estimate or _estimate()),
         execution=execution or _execution(),
         hurdle=TradeHurdle("momentum", "v1", "hurdle-v1", Decimal("1"), Decimal("2")),
         context=context or _context(frozen), freeze_registry=registry,
@@ -164,6 +165,18 @@ def test_missing_calibration_is_watch_and_not_trade(tmp_path):
 
     assert decision.state is DecisionState.WATCH
     assert DecisionReason.CONFIDENCE_UNAVAILABLE in decision.reasons
+    registry.close()
+
+
+def test_missing_net_ev_costed_quote_estimate_cannot_become_trade(tmp_path):
+    registry = StrategyFreezeRegistry(tmp_path / "freeze.sqlite3")
+    frozen = _frozen()
+    registry.freeze(frozen)
+
+    decision = _evaluate(registry, frozen, no_estimate=True)
+
+    assert decision.state is DecisionState.WATCH
+    assert DecisionReason.ESTIMATE_UNAVAILABLE in decision.reasons
     registry.close()
 
 
