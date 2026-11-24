@@ -25,6 +25,8 @@ Research and paper only. Not a verified profitable strategy. Previous failed int
 | FIB_ANCHOR | Daily Fibonacci direction (previous completed day only) | PREV_DAY_LOW_TO_HIGH, PREV_DAY_HIGH_TO_LOW |
 | RETURN_CANDLE | "Without a return candle" | NO_OPPOSITE_CANDLE_SINCE_N3, NO_OPPOSITE_CANDLE_AT_BREAKOUT |
 
+On 2026-11-18 the owner asked for every combination to be tested instead of choosing one. All 128 failed after costs: see [results/README.md](results/README.md). `spec.india_variant(choices, owner=...)` builds any one of them.
+
 Record a choice with `Variant.choose(id, alternative, owner=...)`. Each combination is a separate
 variant and a separate trial; alternatives are never pooled.
 
