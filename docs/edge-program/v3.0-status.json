@@ -16628,17 +16628,20 @@
       "id": "SL-23-17",
       "text": "Distinguish changes in price regime from changes in the provider market-data distribution.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No separate provider-distribution drift monitor (schema, timestamp, quote coverage/source mix) versus price-regime monitor was found."
+        "src/financial_brain/forward_edge/data_distribution.py defines independent PriceWindow and ProviderWindow contracts and compares volatility/return distribution separately from quote coverage, stale/out-of-order/missing-payload rates, source-mix total variation and schema fingerprint.",
+        "The comparator requires matched aware observation windows, source mixes summing to one, valid schema hashes and minimum sample support. It returns independent market/provider shift flags and reasons; insufficient support is not labeled stable.",
+        "This is a diagnostic primitive only. No production feed-window aggregation, runner/dashboard integration or historical provider-shift baseline is available yet."
       ],
-      "blocker": "Market-price regime and market-data-provider distribution shift are not separately measured.",
-      "last_audited_at_utc": "2026-11-24T18:58:57Z",
-      "commit": "56b0fe8f",
+      "blocker": "The independent window comparator is implemented, but provider metrics are not yet collected from the forward paper runner or displayed beside the existing price-regime report; historical source-mix baseline coverage is also unvalidated.",
+      "last_audited_at_utc": "2026-11-25T02:30:00Z",
+      "commit": null,
       "test_evidence": [
-        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+        "tests/test_forward_edge_data_distribution.py: 9 passed; tests distinguish price-only, provider-only, simultaneous and insufficient-support cases, and check malformed metrics and unmatched windows.",
+        "Ruff and mypy passed for data_distribution.py and its tests."
       ],
-      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
+      "test_result": "Independent price-regime versus provider-distribution comparator and adversarial contract checks pass 9 tests. Item remains PARTIAL pending runner data collection, reporting integration and historical baseline validation."
     },
     {
       "id": "SL-23-18",
@@ -19125,7 +19128,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T02:00:00Z",
+    "as_of_utc": "2026-11-25T02:30:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19959,8 +19962,8 @@
     "status_counts": {
       "COMPLETE": 83,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 22,
-      "PARTIAL": 717,
+      "NOT_STARTED": 21,
+      "PARTIAL": 718,
       "UNASSESSED": 551
     },
     "verified_complete_count": 83,
@@ -20088,8 +20091,8 @@
   "counts_by_status": {
     "COMPLETE": 83,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 22,
-    "PARTIAL": 717,
+    "NOT_STARTED": 21,
+    "PARTIAL": 718,
     "UNASSESSED": 551
   }
 }
