@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 698,
+  "source_count": 699,
   "sources": [
     {
       "capability_ids": [],
@@ -5379,7 +5379,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "c822ca9d5296a755fd2bbd56ce6588751c8539110034363f61a2a69af8192824",
+      "source_sha256": "82461d50d1516d376837862f7d3694da59a3f83bfd2abf08229a8b85cd0036bb",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -10968,6 +10968,29 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "financial_brain.forward_edge.clock",
+        "financial_brain.forward_edge.data_permissions",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "kiteconnect",
+        "queue",
+        "threading",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Integration",
+      "parse_status": "ok",
+      "source": "src/financial_brain/providers/kite_stream.py",
+      "source_sha256": "81ab83df688bb1370d41245a2e1f3d83629a1fac546165a88751687f5fbf49b9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decimal",
@@ -12399,6 +12422,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 675,
+  "unassessed_count": 676,
   "unassigned_role_count": 405
 }
