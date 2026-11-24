@@ -267,9 +267,26 @@ class KiteTickerStream:
         return runner.ingest(session_id, config, events)
 
     def health(self) -> dict[str, Any]:
-        """Return bounded operational counters without exposing credentials or quote payloads."""
+        """Return operational counters and an explicit fail-closed entry readiness state."""
         with self._lock:
+            no_entry = (self._state != "CONNECTED" or self._queue_dropped > 0 or
+                        self._stale > 0 or self._rejected > 0 or
+                        self._option_book_rejected > 0)
+            reasons = []
+            if self._state != "CONNECTED":
+                reasons.append(f"stream_state_{self._state.lower()}")
+            if self._queue_dropped:
+                reasons.append("queue_events_dropped")
+            if self._stale:
+                reasons.append("stale_events_discarded")
+            if self._rejected:
+                reasons.append("malformed_events_rejected")
+            if self._option_book_rejected:
+                reasons.append("non_executable_option_books_rejected")
             return {"source": SOURCE_ID, "state": self._state,
+                    "entry_readiness": "NO_ENTRY" if no_entry else "READY",
+                    "evidence_quality": "DEGRADED" if no_entry else "STREAM_HEALTHY_UNATTESTED",
+                    "no_entry_reasons": reasons,
                     "subscribed_instruments": len(self.token_to_instrument),
                     "underlying_subscriptions": len(self.underlying_tokens),
                     "option_subscriptions": len(self.option_tokens),

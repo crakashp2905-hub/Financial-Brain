@@ -36,7 +36,7 @@ def test_frozen_regime_and_volatility_thresholds_produce_bounded_repeatable_size
 
 def test_unknown_regime_and_future_input_fail_closed() -> None:
     plan = _plan()
-    unknown = _decision(plan, regime="UNSEEN")
+    unknown = _decision(plan, regime="REGIME_UNKNOWN")
     assert unknown.final_multiplier == 0
     assert unknown.reason == "UNKNOWN_REGIME_NO_RISK"
     with pytest.raises(RiskThrottleError, match="future regime"):

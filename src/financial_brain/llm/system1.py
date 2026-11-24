@@ -88,6 +88,7 @@ def ollama_decide(model: str, instruction: str, state: str, choices: list[str], 
                   style: str = "letters") -> Decision:
     """``style="letters"`` shows lettered options (general models); ``"words"`` asks for
     the choice word itself (specialists fine-tuned to answer "positive", "negative"...)."""
+    state = untrusted.require_safe(state, source="ollama classifier input")
     if not 2 <= len(choices) <= len(KEYS):
         raise ValueError(f"2..{len(KEYS)} choices")
     keys = KEYS[:len(choices)]
@@ -125,7 +126,9 @@ def ollama_decide(model: str, instruction: str, state: str, choices: list[str], 
         probs = {c: 1 / len(choices) for c in choices}
     else:
         probs = {c: v / total for c, v in mass.items()}
-    label = max(probs, key=probs.get)
+    label = max(probs, key=lambda choice: probs[choice])
+    untrusted.validate_choice_output(label=label, confidence=probs[label],
+                                     probabilities=probs, choices=choices)
     return Decision(label=label, probs=probs, confidence=probs[label], model=model,
                     latency_ms=int((time.perf_counter() - t0) * 1000),
                     input_tokens=out.get("prompt_eval_count", 0),
@@ -141,6 +144,17 @@ def _post(body: dict, timeout: int) -> dict:
 
 
 def finbert_decide(fb: backends.FinBERT, state: str) -> Decision:
+    state = untrusted.require_safe(state, source="finbert classifier input")
     c = fb(state)
-    return Decision(label=c.parsed["label"], probs={}, confidence=c.parsed["confidence"],
+    parsed = c.parsed
+    if not isinstance(parsed, dict):
+        raise backends.BackendUnavailable("finbert returned no typed classification")
+    label, confidence = parsed.get("label"), parsed.get("confidence")
+    if (not isinstance(label, str) or isinstance(confidence, bool)
+            or not isinstance(confidence, (int, float))):
+        raise backends.BackendUnavailable("finbert returned malformed classification fields")
+    confidence = float(confidence)
+    untrusted.validate_choice_output(label=label, confidence=confidence, probabilities={},
+                                     choices=["positive", "negative", "neutral"])
+    return Decision(label=label, probs={}, confidence=confidence,
                     model="finbert", latency_ms=c.latency_ms, input_tokens=c.input_tokens)

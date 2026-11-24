@@ -114,7 +114,8 @@ def test_cli_records_choice_and_terminal_surfaces_decision_language(connection, 
     out = json.loads(capsys.readouterr().out)
     assert out["ok"] and out["decision"]["action"] == "HOLD"
     assert out["physical_orders_authorized"] is False
-    panel = mf_paper_panel(connection, date(2026, 11, 24))
+    panel_date = (cli_decided_at + timedelta(hours=5, minutes=30)).date()
+    panel = mf_paper_panel(connection, panel_date)
     for action in ("SUBSCRIBE", "REDEEM", "SWITCH", "SIP", "HOLD"):
         assert action in panel
     assert "MF actions below are decisions, not current-price orders" in panel

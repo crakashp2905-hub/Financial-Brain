@@ -47,7 +47,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 
 [tool.mypy]
 # Gated in CI: the modules where a type error can send, size or judge an order. Widened as modules are cleaned.

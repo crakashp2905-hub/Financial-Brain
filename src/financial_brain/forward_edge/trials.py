@@ -148,6 +148,10 @@ def protected_trial_scope_sha256(charter: ExperimentCharter, schedule: CohortSch
     """Hash the exact charter and its cohort schedule into the approval scope."""
     if not isinstance(charter, ExperimentCharter) or not isinstance(schedule, CohortSchedule):
         raise TrialGovernanceError("protected trial requires a typed experiment charter and cohort schedule")
+    try:
+        charter.require_preregistration()
+    except CharterError as exc:
+        raise TrialGovernanceError("protected trial requires a complete preregistered design") from exc
     charter_sha = charter.sha256()
     if schedule.charter_sha256 != charter_sha:
         raise TrialGovernanceError("cohort schedule is bound to a different experiment charter")
