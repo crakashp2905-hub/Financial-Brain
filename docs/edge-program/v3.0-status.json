@@ -4299,102 +4299,162 @@
     {
       "id": "FB-1401",
       "text": "Build local single-process first, event bus and durable state second; prove correctness and latency before microservice split.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py is the single-process prospective paper runner with durable session state; docs/edge-program/forward-engine-dependency-graph.v1.json records current ownership and boundaries.",
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ],
+      "blocker": "The repository has not published correctness/latency benchmark evidence establishing a measured threshold before event-bus or service decomposition; the event-bus transition remains an architecture plan, not a proven performance requirement.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1402",
       "text": "Provide deterministic offline fixtures for all five desks; do not need broker credentials to test logic (**IN-HOUSE**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/fixture_adapter.py and tests/test_forward_edge_pipeline_compat.py preserve deterministic fixture/replay behavior; five-desk product scope and offline validation contracts exist in docs/edge-program/product-charter.v1.json.",
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ],
+      "blocker": "Fixtures and focused suites cover all desk domains at component level, but one credential-free end-to-end scenario for every desk through the same signal/risk/paper/report path is not demonstrated.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1403",
       "text": "Validate permitted ETF market data, contract quotes and AMFI history from genuine sources (**EXTERNAL**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "docs/edge-program/market-data-rights-review.v1.md and data-permission register identify unresolved external permissions for ETF quotes, option contracts and AMFI NAV/history; source/use rows remain UNKNOWN_RIGHTS.",
+        "No repository test or synthetic fixture can establish current vendor license, permitted paper use, retention or publication rights."
+      ],
+      "blocker": "Requires source/provider account evidence that grants the specific ETF quote, option contract and AMFI research/retention uses; code cannot produce that permission.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1404",
       "text": "Check live Kite access, quote throughput/limits and options-chain quote entitlement; do not hardcode assumptions (**EXTERNAL**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "The user reports using Kite Connect for live market data, but the repo contains no account-specific capture proving subscribed instrument/option-chain coverage, throughput/rate limits, gaps or retained capture permissions.",
+        "src/financial_brain/providers/kite_stream.py validates health and fails closed; tests/test_kite_stream.py are simulation/unit evidence only."
+      ],
+      "blocker": "Requires a permitted, account-specific Kite session/trace and documented entitlement/throughput limits for equities and options; this environment has no Kite credentials or owner-provided trace.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1405",
       "text": "Obtain actual MF order platform integration or reliable fund confirmation feed only if later enabling live mutual fund subscriptions (**EXTERNAL**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/product-charter.v1.json explicitly scopes broker submission OUT_OF_SCOPE and live cash DISABLED; src/financial_brain/execution/order_policy.py unconditionally denies physical orders.",
+        "tests/test_oms.py hostile legacy path and tests/test_forward_edge_session_runner.py forged live-flag path confirm no MF order platform is required while live mutual-fund subscriptions remain disabled."
+      ],
+      "blocker": "The checklist makes actual MF order-platform/fund-confirmation integration conditional on later enabling live subscriptions; this paper-only configuration keeps that condition false and hard-disables physical orders.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1406",
       "text": "Implement real broker and exchange controls only after separate account, approval, compliance, kill-switch and operational rehearsals (**EXTERNAL**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/product-charter.v1.json and docs/edge-program/launch-gates.v1.json keep broker approval separate and live cash disabled; src/financial_brain/execution/order_policy.py denies every physical order; tests/test_oms.py exercises hostile bypass attempts with no broker transport.",
+        "The user scope is local Kite-fed paper trading; no real broker order path has been enabled."
+      ],
+      "blocker": "Complete as a fail-closed deployment boundary: real broker/exchange control rollout remains unenabled; it is not claimed to have passed a separate-account/compliance/operational rehearsal.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1407",
       "text": "Run independently observed paper sessions across representative regimes; cannot simulate elapsed future evidence (**EXTERNAL time**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "Forward-session runner and decision evidence preserve observed-source clocks, paper receipts and independent-attestation state; docs/edge-program/market-data-rights-review.v1.md still records unresolved permission/custody prerequisites.",
+        "The acceptance explicitly requires independently observed future market sessions and cannot be established by historical replay, fixtures or code tests."
+      ],
+      "blocker": "Requires elapsed, permitted, independently observed prospective paper sessions across representative market regimes; this evidence cannot be generated retrospectively or in a local test.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1408",
       "text": "Add automatic artifact backups and restore verification for DuckDB journals, NAV and quote archives and model versions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/backup_restore.py implements hash-manifest backups and isolated restore verification for files/SQLite; scripts/edge_asset_backup.py snapshots DuckDB files only when no active WAL exists and verifies restored DuckDB readability.",
+        "tests/test_forward_edge_backup_restore.py and tests/test_edge_asset_backup.py cover checksums, integrity, tampering and safe restore; 28 deployment/readiness tests passed."
+      ],
+      "blocker": "Current backups are operator-invoked primitives, not an automated schedule/retention/alert service; complete inventory and repeatable restore evidence for live NAV/quote archives and model versions are not configured.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1409",
       "text": "Document source quotas, rights, licensing, retention and failover; reject a feed when its intended use is not authorized.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/market-data-rights-review.v1.md and data-permission register document source/use permissions, rights, retention boundaries, fail-closed behavior and provider questions; tests/test_market_data_source_validator.py and permission-gate suites cover denial on unknown rights.",
+        "Focused permission/rights audit and readiness suite evidence is linked in the checklist ledger."
+      ],
+      "blocker": "Provider-specific request quotas, observable failover policy, source-by-source retention windows and operational coverage thresholds are not fully documented and enforced.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1410",
       "text": "Publish capability matrix: `IN_HOUSE_IMPLEMENTED`, `FIXTURE_TESTED`, `REAL_FEED_EVIDENCED`, `FORWARD_VALIDATED`, `LIVE_APPROVED`, with independent proof per desk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/forward-edge/capability-matrix.json and scripts/forward_edge_capability_matrix.py generate a checked capability matrix; docs/edge-program/capability-ownership.v1.json tracks canonical owners and module coverage.",
+        "tests/test_capability_matrix.py and generated matrix freshness validator passed as part of the 28-test readiness set."
+      ],
+      "blocker": "The current matrix uses implementation tracker tiers and does not provide independent per-desk proof for all exact requested levels (IN_HOUSE_IMPLEMENTED, FIXTURE_TESTED, REAL_FEED_EVIDENCED, FORWARD_VALIDATED, LIVE_APPROVED); desk claims remain scope-only and permission/forward evidence is unavailable.",
+      "last_audited_at_utc": "2026-11-24T16:45:47Z",
+      "commit": "62d456dc",
+      "test_evidence": [
+        "Focused deployment/readiness suite: tests/test_forward_edge_pipeline_compat.py, tests/test_forward_edge_checkpoints.py, tests/test_product_charter.py, tests/test_forward_edge_backup_restore.py, tests/test_edge_asset_backup.py and tests/test_capability_matrix.py: 28 passed in 87.03s."
+      ]
     },
     {
       "id": "FB-1601",
@@ -16227,7 +16287,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T16:27:00Z",
+    "as_of_utc": "2026-11-24T16:45:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16476,6 +16536,16 @@
       "FB-1318",
       "FB-1319",
       "FB-1320",
+      "FB-1401",
+      "FB-1402",
+      "FB-1403",
+      "FB-1404",
+      "FB-1405",
+      "FB-1406",
+      "FB-1407",
+      "FB-1408",
+      "FB-1409",
+      "FB-1410",
       "FB-1601",
       "FB-1602",
       "FB-1603",
@@ -16556,15 +16626,15 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 326,
+    "audited_count": 336,
     "status_counts": {
-      "COMPLETE": 46,
-      "EXTERNAL_BLOCKED": 1,
+      "COMPLETE": 48,
+      "EXTERNAL_BLOCKED": 4,
       "NOT_STARTED": 2,
-      "PARTIAL": 277,
-      "UNASSESSED": 1052
+      "PARTIAL": 282,
+      "UNASSESSED": 1042
     },
-    "verified_complete_count": 46,
+    "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16687,10 +16757,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 46,
-    "EXTERNAL_BLOCKED": 1,
+    "COMPLETE": 48,
+    "EXTERNAL_BLOCKED": 4,
     "NOT_STARTED": 2,
-    "PARTIAL": 277,
-    "UNASSESSED": 1052
+    "PARTIAL": 282,
+    "UNASSESSED": 1042
   }
 }
