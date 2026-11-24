@@ -4742,7 +4742,7 @@
       "status": "PARTIAL",
       "evidence": [
         "ForwardSessionRunner persists normalized event source, event, exchange, receipt, availability and ingest clocks; decisions now accept a validated optional feature_ready_at, and runner records publish per-decision timing_telemetry joined to risk verdicts, intents and order events.",
-        "Timing telemetry emits source clock rows, feature readiness, signal decision, OMS risk approval, order states, partial/full simulated fill timestamps, stop trigger and exit execution fields, plus explicit missing_stages; unknown clocks are not inferred.",
+        "Timing telemetry emits source clock rows, feature readiness, signal decision, OMS risk assessment and allowed state, order states, and partial/full simulated fill timestamps. Caller-declared stop and position-role values are unverified metadata; observed stop-trigger time stays null and exit execution stays empty until durably recorded. Explicit missing_stages preserve unknown clocks rather than infer them.",
         "docs/edge-program/forward-session-timing-telemetry-audit-2026-11-25.md records the output contract and unfilled operational gaps.",
         "Focused session-runner timing, feature-clock ordering, and durable candidate-to-fill tests: 3 passed. Ruff and mypy passed for session_runner.py.",
         "Still partial: strategy adapters do not consistently provide feature-ready clocks; source/exchange clocks may be absent; stop/exit attribution, permitted captured trace validation, independent live/replay parity, and cockpit latency/coverage publication remain incomplete."

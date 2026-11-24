@@ -45,7 +45,7 @@ DEFAULT_MAX_QUOTE_AGE_MS = 5_000
 def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
     """Join session clocks by decision while keeping absent stages explicitly unknown."""
     events = {row["event_id"]: row for row in records["events"]}
-    risk = {row["decision_id"]: row for row in records["risk_verdicts"]}
+    risk_by_decision = {row["decision_id"]: row for row in records["risk_verdicts"]}
     intents: dict[str, list[dict[str, Any]]] = {}
     for intent in records["intents"]:
         intents.setdefault(intent["decision_id"], []).append(intent)
@@ -85,9 +85,11 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
                 "fills": fills,
             })
         payload = decision.get("payload") or {}
-        risk_stop = payload.get("risk_stop_triggered_at")
-        exit_role = payload.get("position_role") == "EXIT"
-        exit_execution = [fill for order in order_timing for fill in order["fills"]] if exit_role else []
+        # Free-form decision payloads are not custody for a risk-stop or exit event.
+        # Keep caller declarations visible as unverified metadata, never as observed timing.
+        declared_risk_stop = payload.get("risk_stop_triggered_at")
+        declared_position_role = payload.get("position_role")
+        risk_record = risk_by_decision.get(decision_id, {})
         missing = []
         if not source_clocks:
             missing.append("SOURCE_EVENT_CLOCKS")
@@ -99,24 +101,27 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             missing.append("LOCAL_RECEIPT_TIMESTAMP")
         if not decision.get("feature_ready_at"):
             missing.append("FEATURE_READY_TIMESTAMP")
-        if decision["outcome"] == "TRADE" and decision_id not in risk:
-            missing.append("OMS_RISK_APPROVAL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not risk_record:
+            missing.append("OMS_RISK_ASSESSMENT_TIMESTAMP")
         if decision["outcome"] == "TRADE" and not order_timing:
             missing.append("SIMULATED_ORDER_OR_FILL")
         if decision["outcome"] == "TRADE" and not any(row["fills"] for row in order_timing):
             missing.append("SIMULATED_FILL_TIMESTAMP")
-        if decision["outcome"] == "TRADE" and risk_stop is None:
+        if decision["outcome"] == "TRADE":
             missing.append("RISK_STOP_TRIGGER_TIMESTAMP")
-        if decision["outcome"] == "TRADE" and not exit_role:
+        if decision["outcome"] == "TRADE":
             missing.append("EXIT_ROLE_OR_EXECUTION_TIMESTAMP")
         signals.append({
             "decision_id": decision_id, "strategy_id": decision["strategy_id"],
             "outcome": decision["outcome"], "source_clocks": source_clocks,
             "feature_ready_at": decision.get("feature_ready_at"),
             "signal_decision_at": decision["decided_at"],
-            "oms_approval_at": risk.get(decision_id, {}).get("assessed_at"),
-            "orders": order_timing, "risk_stop_triggered_at": risk_stop,
-            "exit_execution": exit_execution,
+            "oms_risk_assessed_at": risk_record.get("assessed_at"),
+            "oms_risk_allowed": risk_record.get("allowed"),
+            "orders": order_timing, "risk_stop_triggered_at": None,
+            "caller_declared_risk_stop_at_unverified": declared_risk_stop,
+            "caller_declared_position_role_unverified": declared_position_role,
+            "exit_execution": [],
             "missing_stages": sorted(set(missing)),
             "status": "COMPLETE" if not missing else "INCOMPLETE",
         })

@@ -148,7 +148,7 @@ def test_session_records_publish_per_signal_timing_telemetry_and_missing_stages(
     row = telemetry["signals"][0]
     assert row["feature_ready_at"] == feature_ready.isoformat()
     assert row["signal_decision_at"] == decided.isoformat()
-    assert row["oms_approval_at"] == approved.isoformat()
+    assert row["oms_risk_assessed_at"] == approved.isoformat()
     assert row["source_clocks"][0]["received_at"] == event.received_at.isoformat()
     assert row["status"] == "INCOMPLETE"
     assert "SIMULATED_FILL_TIMESTAMP" in row["missing_stages"]
