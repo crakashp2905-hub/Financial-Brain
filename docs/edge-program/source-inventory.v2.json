@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 695,
+  "source_count": 696,
   "sources": [
     {
       "capability_ids": [],
@@ -4934,6 +4934,7 @@
       "source": "src/financial_brain/forward_edge/parameter_freeze.py",
       "source_sha256": "e5ff3580e95dec2c27539433a84a09ec4fb8eb8b4555b36e2f9d66dd5cfc51e1",
       "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_trade_admissibility.py"
       ]
     },
@@ -7380,6 +7381,32 @@
       "test_paths": []
     },
     {
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "execution_feasibility",
+        "hashlib",
+        "json",
+        "trader_signal"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/entry_constraints.py",
+      "source_sha256": "11ecec5d3f7c1997a8f31fb8a58e6f4a1d2747bf4fb017d9e89f32080cdc68f0",
+      "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
+        "tests/test_kernel_trade_admissibility.py"
+      ]
+    },
+    {
       "capability_ids": [],
       "human_owner": null,
       "imports": [
@@ -7419,6 +7446,7 @@
       "source": "src/financial_brain/kernel/execution_feasibility.py",
       "source_sha256": "6f12c86e940c027f4a40c8ecad6d39da316902ed1e423ade7eb604995e27c9e3",
       "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_trade_admissibility.py"
       ]
     },
@@ -8014,6 +8042,7 @@
       "source": "src/financial_brain/kernel/net_ev.py",
       "source_sha256": "aff63ba597bcb14aa7eea4e17c1e8c3a706c3960d329de78c975df5378232cc2",
       "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_trade_admissibility.py"
       ]
     },
@@ -8530,6 +8559,7 @@
       "source": "src/financial_brain/kernel/trade_admissibility.py",
       "source_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3",
       "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_trade_admissibility.py"
       ]
     },
@@ -12390,5 +12420,5 @@
     }
   ],
   "unassessed_count": 668,
-  "unassigned_role_count": 401
+  "unassigned_role_count": 402
 }
