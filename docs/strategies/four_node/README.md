@@ -66,6 +66,11 @@ variant and a separate trial; alternatives are never pooled.
   per evaluation; barrier clearance checks only levels ahead in the trade direction. The original
   ambiguity variants remain separate and unresolved until independently recorded; the stream
   machine's pattern candidate is not itself an eligible trade.
+- `Trail.on_quote()` uses the executable exit side (bid for a long, ask for a short); it rejects
+  crossed/non-finite quotes and the trail ratchets without loosening. Tick-rounded initial stops
+  round outward. Risk sizing validates the budget, prices and lot multiple and includes multiplier,
+  spread and slippage. `InstrumentConfig` can retain session hours and a corporate-action factor,
+  but production calendars/actions and validated per-symbol settings are not yet supplied.
 - Stream observation clocks are currently integer bar indices. Kite/provider event clocks, actual
   quote arrival and the M1-only production adapter are still integration work; the backtest and
   stream module remain research/paper utilities.

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import time
 from math import isfinite
 
 from financial_brain.strategies.four_node.indicators import Cluster20
@@ -107,7 +108,17 @@ class Trail:
     tp_active: bool = True
     revisions: list[float] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        if self.side not in {"BUY", "SELL"}:
+            raise ValueError("side must be BUY or SELL")
+        if (not all(isfinite(value) for value in (self.entry, self.stop, self.unit, self.start, self.step))
+                or self.entry <= 0 or self.stop <= 0 or self.unit <= 0 or self.start < 0
+                or self.step <= 0):
+            raise ValueError("trail prices/units must be finite and positive; start nonnegative")
+
     def on_price(self, executable_price: float) -> float:
+        if not isfinite(executable_price) or executable_price <= 0:
+            raise ValueError("executable price must be finite and positive")
         sign = 1 if self.side == "BUY" else -1
         gain = (executable_price - self.entry) * sign / self.unit
         if gain >= self.start:
@@ -118,6 +129,10 @@ class Trail:
                 self.stop = new
                 self.revisions.append(new)
         return self.stop
+
+    def on_quote(self, bid: float, ask: float) -> float:
+        """Update using bid for a long exit and ask for a short exit."""
+        return self.on_price(trail_price(self.side, bid, ask))
 
 
 def round_stop(stop: float, tick: float, side: str) -> float:
@@ -133,6 +148,10 @@ def round_stop(stop: float, tick: float, side: str) -> float:
 
 def trail_price(side: str, bid: float, ask: float) -> float:
     """Trail on the executable exit side: a long exits at the bid, a short at the ask (FB-2523)."""
+    if side not in {"BUY", "SELL"}:
+        raise ValueError("side must be BUY or SELL")
+    if not (isfinite(bid) and isfinite(ask)) or bid <= 0 or ask <= 0:
+        raise ValueError("bid/ask must be finite and positive")
     if ask < bid:
         raise ValueError("crossed quote")
     return bid if side == "BUY" else ask
@@ -171,15 +190,41 @@ class InstrumentConfig:
     atr: float
     spread: float
     slippage: float
+    trading_hours: tuple[str, str] | None = None
+    corporate_action_factor: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not self.symbol.strip():
+            raise ValueError("instrument symbol is required")
+        if type(self.multiplier) is not int or self.multiplier <= 0:
+            raise ValueError("contract multiplier must be a positive integer")
+        if (not all(isfinite(value) for value in (self.tick, self.atr, self.spread,
+                                                  self.slippage, self.corporate_action_factor))
+                or self.tick <= 0 or self.atr <= 0 or self.spread < 0 or self.slippage < 0
+                or self.corporate_action_factor <= 0):
+            raise ValueError("instrument units/costs/action factor are invalid")
+        if self.trading_hours is not None:
+            if len(self.trading_hours) != 2:
+                raise ValueError("trading_hours must contain open and close times")
+            opened, closed = (time.fromisoformat(value) for value in self.trading_hours)
+            if opened >= closed:
+                raise ValueError("instrument trading hours must open before close")
 
 
 def size_by_risk(capital_at_risk: float, entry: float, stop: float, cfg: InstrumentConfig,
                  lot: int = 1) -> int:
     """Units from rupee risk budget, rounded down to whole lots (FB-2526). Never the forex X rule."""
+    if (not all(isfinite(value) for value in (capital_at_risk, entry, stop))
+            or capital_at_risk < 0 or entry <= 0 or stop <= 0):
+        raise ValueError("risk budget and prices must be finite, with nonnegative budget and positive prices")
+    if type(lot) is not int or lot <= 0:
+        raise ValueError("lot must be a positive integer")
     per_unit = abs(entry - stop) * cfg.multiplier + cfg.spread + cfg.slippage
     if per_unit <= 0:
         raise ValueError("zero risk per unit")
-    units = int(capital_at_risk // per_unit)
+    units = int(capital_at_risk / per_unit)
+    while units > 0 and units * per_unit > capital_at_risk:
+        units -= 1
     return units - units % lot
 
 

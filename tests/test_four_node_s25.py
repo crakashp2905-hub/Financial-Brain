@@ -248,6 +248,19 @@ def test_trailing_ratchets_and_never_loosens():
     assert s.on_price(99.0) == pytest.approx(99.5)
 
 
+def test_quote_driven_trailing_uses_executable_side_and_resists_spread_false_trigger():
+    long = Trail("BUY", 100.0, 95.0, 1.0, 10.0, 5.0)
+    assert long.on_quote(109.9, 110.4) == 95.0  # ask crossed, long exit bid did not
+    assert long.tp_active
+    assert long.on_quote(110.0, 110.5) == 105.0
+    assert not long.tp_active
+
+    short = Trail("SELL", 100.0, 105.0, 1.0, 10.0, 5.0)
+    assert short.on_quote(89.5, 90.0) == 95.0  # short cover price is the ask
+    with pytest.raises(ValueError, match="crossed quote"):
+        short.on_quote(100.1, 100.0)
+
+
 def test_significant_candle_unresolved_is_none():
     assert significant_candle(10, 12, 8, 10.5, None) is None
     assert significant_candle(10, 12, 8, 10.5, "BOTH_WICKS_GT_BODY") is True
@@ -257,9 +270,17 @@ def test_significant_candle_unresolved_is_none():
 # ---- 25D Indian adaptation
 
 def test_risk_sizing_rounds_to_lots_not_forex_rule():
-    cfg = InstrumentConfig("NIFTY_OPT", 0.05, 1, 20.0, 0.5, 0.5)
+    cfg = InstrumentConfig("NIFTY_OPT", 0.05, 1, 20.0, 0.5, 0.5,
+                           trading_hours=("09:15", "15:30"), corporate_action_factor=1.0)
     assert size_by_risk(3000, 100, 80, cfg, lot=75) == 75 * 1
     assert size_by_risk(1000, 100, 80, cfg, lot=75) == 0
+    assert size_by_risk(3000, 100, 80, cfg, lot=1) * 21 <= 3000
+    with pytest.raises(ValueError, match="lot must"):
+        size_by_risk(3000, 100, 80, cfg, lot=0)
+    with pytest.raises(ValueError, match="risk budget"):
+        size_by_risk(-1, 100, 80, cfg)
+    with pytest.raises(ValueError, match="trading hours"):
+        InstrumentConfig("BAD", 0.05, 1, 20.0, 0.0, 0.0, trading_hours=("15:30", "09:15"))
 
 
 # ---- 25E funnel and trace
