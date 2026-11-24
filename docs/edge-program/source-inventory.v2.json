@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 723,
+  "source_count": 724,
   "sources": [
     {
       "capability_ids": [],
@@ -12688,6 +12688,29 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.kernel.units",
+        "financial_brain.paper.options",
+        "financial_brain.paper.options_plan",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/four_node/options.py",
+      "source_sha256": "507b913b5af28ec5dce074d1a45095438a627821f41e3aadaba2d356ee61ca3c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections",
         "dataclasses",
         "datetime",
@@ -12932,6 +12955,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 693,
-  "unassigned_role_count": 427
+  "unassessed_count": 694,
+  "unassigned_role_count": 428
 }

@@ -36,8 +36,11 @@ variant and a separate trial; alternatives are never pooled.
 | Pivots | `patterns/pivots.py` reviewed; its confirmation timing differs, so `four_node/nodes.py` keeps `pivot_at` and `confirmed_at` explicitly | yes |
 | SMMA | `kernel/indicators.py` has EMA/SMA, not Wilder SMMA | `four_node/indicators.py` |
 | Minute data | `ingest/kite_minute.py` | — |
-| Option routing | `signals/index_options.py` (underlying signal and option decision stay separate records) | — |
-| Paper exits | `signals/exit_triggers.py`, `signals/exit_plans.py` | Trail rule in `rules.py` |
+| Option candidate routing | `paper/options_plan.py`, `paper/options.py` validate contract, observed quote, depth and cost hurdle; `forward_edge/option_surface.py` computes snapshot IV/Greeks | `four_node/options.py` binds an underlying thesis to a separate CE/PE candidate decision; no candidate ranking or runner wiring |
+| Option replay/fills | `paper/options_runner.py` replays frozen intents against observed quotes and returns no-entry/no-exit outcomes without synthetic fills | Four-Node signal-to-intent integration, tick-driven stop/target/time exits and settlement remain open |
+| Paper exits | `signals/exit_triggers.py`, `signals/exit_plans.py`; `paper/options_runner.py` supports planned-time quote replay | `Trail.on_quote()` in `rules.py`; no unified option position manager |
+
+The earlier `signals/index_options.py` path did not exist and is not part of this architecture. Existing option modules are reusable components, not a complete Four-Node options system.
 
 ## Indicator and node data contracts (FB-2509 to FB-2513)
 - Wilder SMMA is seeded with an n-value SMA; warm-up is `None`; a missing value resets its seed.
