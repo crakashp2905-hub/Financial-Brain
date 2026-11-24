@@ -1,0 +1,38 @@
+{
+  "schema": "fb.checklist_release_evidence_inputs.v1",
+  "snapshot_commit": "c0fbd4196d682dc67ab30ee7a575c0ac367608b0",
+  "scope": "Reproducible source and test snapshot for unified checklist v3.0 progress through SL-00-17. All hashes are local content-integrity hashes. They are not independently timestamped or externally attested.",
+  "snapshot_paths": [
+    ".github/CODEOWNERS",
+    "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
+    "docs/edge-program/V3.0_PROGRESS.md",
+    "docs/edge-program/forward-edge-equivalence-report.v1.json",
+    "docs/edge-program/ownership-map.v1.json",
+    "docs/edge-program/v3.0-status.json",
+    "docs/forward-edge/reference-candidates.v1.json",
+    "pyproject.toml",
+    "requirements-lock.txt",
+    "scripts/forward_edge_equivalence_report.py",
+    "scripts/validate_codeowners_map.py",
+    "scripts/validate_reference_candidates.py",
+    "src/financial_brain/forward_edge/evidence_bundle.py",
+    "src/financial_brain/forward_edge/fixture_adapter.py",
+    "src/financial_brain/forward_edge/fixtures.py",
+    "src/financial_brain/forward_edge/pipeline.py",
+    "src/financial_brain/forward_edge/session_runner.py",
+    "src/financial_brain/paper/zoo_edges.py",
+    "tests/test_codeowners_map.py",
+    "tests/test_forward_edge_equivalence_report.py",
+    "tests/test_forward_edge_evidence_bundle.py",
+    "tests/test_forward_edge_pipeline_compat.py",
+    "tests/test_reference_candidates.py"
+  ],
+  "reproduction_command": [
+    "python -m pytest tests/test_forward_edge_pipeline_compat.py tests/test_forward_edge_equivalence_report.py tests/test_codeowners_map.py tests/test_reference_candidates.py -q"
+  ],
+  "local_tools_included": [
+    ".github/workflows/ci.yml",
+    "scripts/build_checklist_evidence_bundle.py",
+    "tests/test_checklist_evidence_bundle.py"
+  ]
+}

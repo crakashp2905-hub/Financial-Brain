@@ -24,10 +24,14 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
-from financial_brain.strategies.four_node.indicators import FIB_RATIOS
+from financial_brain.strategies.four_node.indicators import (
+    DailyFibSnapshot, FIB_RATIOS, daily_fib_snapshot, smma,
+)
 from financial_brain.strategies.four_node.nodes import build
 from financial_brain.strategies.four_node.spec import AMBIGUITIES, india_v1
 
@@ -53,15 +57,9 @@ def variant_code(v: dict[str, str]) -> str:
 
 
 def _smma(x: np.ndarray, n: int) -> np.ndarray:
-    out = np.full(len(x), np.nan)
-    if len(x) < n:
-        return out
-    s = x[:n].mean()
-    out[n - 1] = s
-    for i in range(n, len(x)):
-        s = (s * (n - 1) + x[i]) / n
-        out[i] = s
-    return out
+    values = [None if np.isnan(v) else float(v) for v in x]
+    result = smma(values, n)
+    return np.array([np.nan if v is None else v for v in result], dtype=float)
 
 
 def _atr(h: np.ndarray, lo: np.ndarray, c: np.ndarray, n: int = 14) -> np.ndarray:
@@ -95,6 +93,7 @@ class Event:
     n4b_ok_both: bool         # breakout-candle N4 passes wick + significance (BOTH rule)
     n4b_ok_comb: bool
     exits: dict[tuple[int, int], tuple[float, float]]   # (n4 idx, sig idx) -> (net ret, R)
+    fib_snapshots: dict[str, DailyFibSnapshot] | None = None
 
 
 def _simulate(side: str, entry: float, stop: float, target: float, unit: float, o, h, lo, c,
@@ -148,25 +147,46 @@ def _simulate(side: str, entry: float, stop: float, target: float, unit: float, 
     return c[BARS - 1]
 
 
-def events_for(o: np.ndarray, h: np.ndarray, lo: np.ndarray, c: np.ndarray, rt_cost: float
+def events_for(o: np.ndarray, h: np.ndarray, lo: np.ndarray, c: np.ndarray, rt_cost: float,
+               *, days: list[str]
                ) -> list[Event]:
-    """All Four-Node events for one instrument; arrays are (days, 75)."""
+    """All Four-Node events; ``days`` binds the previous-session levels to real dates."""
     p = india_v1().params
     nd = o.shape[0]
+    if len(days) != nd:
+        raise ValueError("one session date is required per OHLC row")
+    session_dates = [date.fromisoformat(str(day)[:10]) for day in days]
+    if any(a >= b for a, b in zip(session_dates, session_dates[1:])):
+        raise ValueError("session dates must be unique and strictly increasing")
     fo, fh, fl, fc = (a.reshape(-1) for a in (o, h, lo, c))
     s_lo, s_mid, s_hi = _smma(fl, 20), _smma(fc, 20), _smma(fh, 20)
     ma = [_smma(fc, n) for n in (50, 100, 200)]
     atr = _atr(fh, fl, fc)
-    ratios = np.array(FIB_RATIOS) / 100
+    india_tz = ZoneInfo("Asia/Kolkata")
     out: list[Event] = []
     for d in range(1, nd):
         if np.isnan(c[d]).any() or np.isnan(c[d - 1]).any():
             continue
         pdl, pdh = float(lo[d - 1].min()), float(h[d - 1].max())
-        fib_lh = pdl + (pdh - pdl) * ratios
-        fib_hl = pdh - (pdh - pdl) * ratios
+        prev_date, current_date = session_dates[d - 1], session_dates[d]
+        anchor_close = datetime.combine(prev_date, time(15, 30), tzinfo=india_tz)
+        current_open = datetime.combine(current_date, time(9, 15), tzinfo=india_tz)
+        fib_snapshots = {
+            "PREV_DAY_LOW_TO_HIGH": daily_fib_snapshot(
+                prev_day_low=pdl, prev_day_high=pdh, anchor="PREV_DAY_LOW_TO_HIGH",
+                anchor_session_id=f"NSE:{prev_date.isoformat()}", anchor_close_at=anchor_close,
+                evaluated_session_open_at=current_open,
+            ),
+            "PREV_DAY_HIGH_TO_LOW": daily_fib_snapshot(
+                prev_day_low=pdl, prev_day_high=pdh, anchor="PREV_DAY_HIGH_TO_LOW",
+                anchor_session_id=f"NSE:{prev_date.isoformat()}", anchor_close_at=anchor_close,
+                evaluated_session_open_at=current_open,
+            ),
+        }
+        fib_lh = np.array([fib_snapshots["PREV_DAY_LOW_TO_HIGH"].levels[r] for r in FIB_RATIOS])
+        fib_hl = np.array([fib_snapshots["PREV_DAY_HIGH_TO_LOW"].levels[r] for r in FIB_RATIOS])
         hd, ld = list(h[d]), list(lo[d])
-        z = build(hd, ld)
+        z = build(hd, ld, bar_ids=[f"session:{d}:bar:{i}" for i in range(BARS)])
         seen: set[tuple[int, int, int, str]] = set()
         for t in range(4, LAST_ENTRY_BAR + 1):
             tri = z.last_three(t)
@@ -234,7 +254,7 @@ def events_for(o: np.ndarray, h: np.ndarray, lo: np.ndarray, c: np.ndarray, rt_c
                 wick_ok = wick < p["n4_wick_atr"] * unit
                 ev = Event(d, t, side, path, base, bool(n1_ok), bool(n3_le), bool(n3_ge), bool(n2_le),
                            bool(n2_ge), ret_since, ret_at, bar_lh, bar_hl, wick_ok and not both,
-                           wick_ok and not comb, {})
+                           wick_ok and not comb, {}, fib_snapshots)
                 if t + 1 < BARS and base:
                     entry = float(o[d, t + 1])
                     tp = p["tp_atr"] * unit

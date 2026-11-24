@@ -39,3 +39,14 @@ def fixture_pack() -> dict[str, dict]:
 
 EXPECTED = {"win": "WIN", "loss": "LOSS", "no_trade": "NO_TRADE", "rejection": "REJECTED", "late_quote": "LATE_QUOTE",
             "unknown_order": "UNKNOWN_ORDER", "adverse_fill": "LOSS", "missed_fill": "MISSED_FILL"}
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+
+
+_IM = {"isin": "INE009A01021", "symbol": "INFY", "lot": 1, "tick": "0.05", "status": "ACTIVE", "rights_ok": True}
+
+
+_MK = {"age_s": 1, "spread_bps": 5, "volume": 1000, "circuit_hit": False, "frozen": False, "auction_seen": True}
+

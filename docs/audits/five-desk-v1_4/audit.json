@@ -636,7 +636,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -662,7 +662,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -688,7 +688,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -841,7 +841,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -893,7 +893,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -951,7 +951,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -3082,7 +3082,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -7527,7 +7527,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -8340,7 +8340,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8389,7 +8389,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8415,7 +8415,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8441,7 +8441,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8467,7 +8467,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8519,7 +8519,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -8944,7 +8944,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -9194,7 +9194,7 @@
    "source": [],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     }
@@ -9214,7 +9214,7 @@
    "source": [],
    "test": [
     {
-     "path": "tests/test_index_15m_s24.py",
+     "path": "tests/test_forecasting_index_15m.py",
      "ref": "d2",
      "object": "100fc90306f0"
     },

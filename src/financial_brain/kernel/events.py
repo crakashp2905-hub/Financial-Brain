@@ -16,12 +16,16 @@ Side-effect outbox semantics (FE-0011, FE-0013):
   is never re-run automatically; ``side_effect`` raises ``UnknownOutcome`` until ``resolve_unknown`` records a
   reconciliation (the effect happened, or it provably did not).
 
-The outbox is in-memory only. Durable write-ahead persistence (FE-0012) is not implemented here.
+When ``journal_path`` is provided, event, outbox and reconciliation state are persisted in SQLite WAL mode with
+FULL synchronous writes. On restore, an unresolved PENDING record is treated as UNKNOWN; only a persisted
+reconciliation proving no effect permits a retry. Without a journal path, state remains in memory.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
+import sqlite3
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -52,9 +56,13 @@ class Event:
 
 
 class EventKernel:
-    def __init__(self, *, max_queue: int = 10_000, lateness: timedelta = timedelta(seconds=5)) -> None:
+    def __init__(self, *, max_queue: int = 10_000, lateness: timedelta = timedelta(seconds=5),
+                 journal_path: str | None = None,
+                 connection: sqlite3.Connection | None = None) -> None:
         if max_queue < 1:
             raise ValueError("max_queue must be positive")
+        if journal_path is not None and connection is not None:
+            raise ValueError("pass journal_path or connection, not both")
         self._max = max_queue
         self._lateness = lateness
         self._queue: list[Event] = []
@@ -65,6 +73,87 @@ class EventKernel:
         self._unknown_keys: set[str] = set()
         self.side_effects: list[str] = []
         self.reconciliations: list[tuple[str, bool, str]] = []
+        self._journal_path = journal_path
+        self._store: sqlite3.Connection | None = connection
+        self._owns_store = False
+        if journal_path is not None:
+            path = os.path.abspath(journal_path)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            self._store = sqlite3.connect(path)
+            self._owns_store = True
+        if self._store is not None:
+            self._store.execute("PRAGMA journal_mode=WAL")
+            self._store.execute("PRAGMA synchronous=FULL")
+            self._store.executescript("""
+                CREATE TABLE IF NOT EXISTS events (
+                    sequence INTEGER PRIMARY KEY, event_time TEXT NOT NULL, kind TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS outbox (
+                    key TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('PENDING','DISPATCHED','UNKNOWN')),
+                    reconciled_by TEXT
+                );
+                CREATE TABLE IF NOT EXISTS reconciliations (
+                    reconciliation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    key TEXT NOT NULL, took_effect INTEGER NOT NULL, reconciled_by TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS kernel_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            """)
+            reconciliation_columns = list(self._store.execute("PRAGMA table_info(reconciliations)"))
+            if not any(row[1] == "reconciliation_id" for row in reconciliation_columns):
+                self._store.executescript("""
+                    CREATE TABLE reconciliations_v2 (
+                        reconciliation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        key TEXT NOT NULL, took_effect INTEGER NOT NULL, reconciled_by TEXT NOT NULL
+                    );
+                    INSERT INTO reconciliations_v2 (key, took_effect, reconciled_by)
+                        SELECT key, took_effect, reconciled_by FROM reconciliations;
+                    DROP TABLE reconciliations;
+                    ALTER TABLE reconciliations_v2 RENAME TO reconciliations;
+                """)
+            self._store.commit()
+            self._restore_store()
+
+    def close(self) -> None:
+        if self._store is not None and self._owns_store:
+            self._store.close()
+        self._store = None
+
+    def _restore_store(self) -> None:
+        assert self._store is not None
+        for event_time, sequence, kind, payload_json in self._store.execute(
+                "SELECT event_time, sequence, kind, payload_json FROM events ORDER BY sequence"):
+            pairs = tuple(tuple(row) for row in json.loads(payload_json))
+            self.journal.append(Event(datetime.fromisoformat(event_time), sequence, kind, pairs))
+        meta = dict(self._store.execute("SELECT key, value FROM kernel_meta"))
+        watermark = meta.get("watermark")
+        self.watermark = datetime.fromisoformat(watermark) if watermark else None
+        for key, state, reconciled_by in self._store.execute("SELECT key, state, reconciled_by FROM outbox"):
+            if state == "DISPATCHED":
+                self._dispatched_keys.add(key)
+                self.side_effects.append(key)
+            elif state == "UNKNOWN" or (state == "PENDING" and not reconciled_by):
+                self._unknown_keys.add(key)
+        self.reconciliations = [(key, bool(took_effect), reconciler) for key, took_effect, reconciler in
+                                self._store.execute("SELECT key, took_effect, reconciled_by FROM reconciliations "
+                                                    "ORDER BY reconciliation_id")]
+
+    def _persist_event(self, event: Event) -> None:
+        if self._store is None:
+            return
+        payload = json.dumps(list(event.payload), sort_keys=True, separators=(",", ":"), default=str)
+        self._store.execute("INSERT INTO events VALUES (?, ?, ?, ?)",
+                            [event.sequence, event.event_time.isoformat(), event.kind, payload])
+        self._store.execute("INSERT OR REPLACE INTO kernel_meta VALUES ('watermark', ?)",
+                            [self.watermark.isoformat() if self.watermark else ""])
+        self._store.commit()
+
+    def _persist_outbox(self, key: str, state: str, reconciled_by: str | None = None) -> None:
+        if self._store is None:
+            return
+        self._store.execute("INSERT INTO outbox VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET state=excluded.state, reconciled_by=excluded.reconciled_by",
+                            [key, state, reconciled_by])
+        self._store.commit()
 
     def submit(self, event: Event) -> None:
         if len(self._queue) >= self._max:
@@ -81,6 +170,7 @@ class EventKernel:
             if self.watermark is None or event.event_time > self.watermark:
                 self.watermark = event.event_time
             self.journal.append(event)
+            self._persist_event(event)
             if handler is not None:
                 handler(event)
             processed += 1
@@ -98,13 +188,17 @@ class EventKernel:
             return False
         if key in self._unknown_keys:
             raise UnknownOutcome(f"{key}: outcome unknown; reconcile before replay")
+        if self._store is not None:
+            self._persist_outbox(key, "PENDING")
         try:
             action()
         except Exception as exc:  # noqa: BLE001 - any failure leaves the external effect undetermined
             self._unknown_keys.add(key)
+            self._persist_outbox(key, "UNKNOWN")
             raise UnknownOutcome(f"{key}: action failed, outcome unknown") from exc
         self._dispatched_keys.add(key)
         self.side_effects.append(key)
+        self._persist_outbox(key, "DISPATCHED")
         return True
 
     def resolve_unknown(self, key: str, *, took_effect: bool, reconciled_by: str) -> None:
@@ -115,6 +209,11 @@ class EventKernel:
             raise UnknownOutcome("reconciliation needs a named reconciler")
         self._unknown_keys.discard(key)
         self.reconciliations.append((key, bool(took_effect), reconciled_by))
+        if self._store is not None:
+            self._store.execute("INSERT INTO reconciliations (key, took_effect, reconciled_by) VALUES (?, ?, ?)",
+                                [key, int(bool(took_effect)), reconciled_by])
+            self._store.commit()
+            self._persist_outbox(key, "DISPATCHED" if took_effect else "PENDING", reconciled_by)
         if took_effect:
             self._dispatched_keys.add(key)
             self.side_effects.append(key)
@@ -129,6 +228,7 @@ class EventKernel:
             "watermark": self.watermark.isoformat() if self.watermark else None,
             "dispatched": sorted(self._dispatched_keys),
             "unknown": sorted(self._unknown_keys),
+            "journal_path": self._journal_path,
         }
 
     def resume(self, checkpoint: dict[str, Any], replay: Iterable[Event]) -> None:

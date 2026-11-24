@@ -1,0 +1,215 @@
+{
+  "fixtures": [
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "LOSS",
+      "fixture": "adverse_fill",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "LOSS",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": true,
+        "paper_intent_count": 2,
+        "physical_orders": false,
+        "realized_net_pnl_inr": "-34.001499999999999",
+        "receipt_count": 2,
+        "records_sha256": "05d377c5a0abd79c503b02251af6809dc534fb53cf7890b531b27c47e8dfe829",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "LOSS",
+        "reason": "FILLED_FILLED",
+        "signature": "3e306dadb1995ef9bdfede7cc0b7d0a6ce9282148b2453d402abf22aea45810a"
+      }
+    },
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "LATE_QUOTE",
+      "fixture": "late_quote",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "LATE_QUOTE",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": false,
+        "paper_intent_count": 1,
+        "physical_orders": false,
+        "realized_net_pnl_inr": null,
+        "receipt_count": 1,
+        "records_sha256": "04081a8f25ada883dac7fbac8cd01f3e8d4b4c0f4db1bc5c43ca7f53e413973d",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "LATE_QUOTE",
+        "reason": "FIRST_QUOTE_AFTER_MAX_WAIT",
+        "signature": "e0eb4f3e1b5fb126854d6573d85eab04ce26d73e7a463994fbba321a8589ed29"
+      }
+    },
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "LOSS",
+      "fixture": "loss",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "LOSS",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": true,
+        "paper_intent_count": 2,
+        "physical_orders": false,
+        "realized_net_pnl_inr": "-209.4401499999999995",
+        "receipt_count": 2,
+        "records_sha256": "0dec9e04ffe5f123d0849e975f80d6991263227dfb06e5796cdef77cde56bfe6",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "LOSS",
+        "reason": "FILLED_FILLED",
+        "signature": "a2c0fccd189e19903e374e97ff1dfd47002972b4e766e7e67af7291f645b693d"
+      }
+    },
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "MISSED_FILL",
+      "fixture": "missed_fill",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "MISSED_FILL",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": false,
+        "paper_intent_count": 1,
+        "physical_orders": false,
+        "realized_net_pnl_inr": null,
+        "receipt_count": 1,
+        "records_sha256": "01895d5edadd543ddfa6cabf9129136e97c7d55e752bbab4c06e9edacb96c9b8",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "MISSED_FILL",
+        "reason": "NO_TRADE_THROUGH_LIMIT",
+        "signature": "db081d803371c5db4a7663fab188d5c69ce292b5d6f499b26bbc30bb36cce4de"
+      }
+    },
+    {
+      "divergences_and_explanations": [
+        "No-trade parity is explicitly checked: legacy NO_TRADE maps to integrated NO_TRADE, with zero paper intents and no physical orders."
+      ],
+      "expected_contract_outcome": "NO_TRADE",
+      "fixture": "no_trade",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "NO_TRADE",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": false,
+        "paper_intent_count": 0,
+        "physical_orders": false,
+        "realized_net_pnl_inr": null,
+        "receipt_count": 0,
+        "records_sha256": "50f96e329536618592752e033b1796e442a25b676cfa75ff3fb7ee5041948c06",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "NO_TRADE",
+        "reason": "STALE_QUOTE",
+        "signature": "df26a29031b6e4f7883af60e4cb247d87833f38a0dcdb2ade3972d561ace96d6"
+      }
+    },
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "REJECTED",
+      "fixture": "rejection",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "REJECTED",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": false,
+        "paper_intent_count": 1,
+        "physical_orders": false,
+        "realized_net_pnl_inr": null,
+        "receipt_count": 1,
+        "records_sha256": "450a929bb13810fe640272e596afd07420371d58620fd7bee733f60ead5c39a3",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "REJECTED",
+        "reason": "PRICE_BAND",
+        "signature": "abf1bbe66dd7c408c59a6bb05732bdf809accdb06afb0b1fae7832f92d18fb85"
+      }
+    },
+    {
+      "divergences_and_explanations": [
+        "Integrated session is INCOMPLETE because an order outcome is unresolved; this is intentional fail-closed handling."
+      ],
+      "expected_contract_outcome": "UNKNOWN_ORDER",
+      "fixture": "unknown_order",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "UNKNOWN_ORDER",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": false,
+        "paper_intent_count": 1,
+        "physical_orders": false,
+        "realized_net_pnl_inr": null,
+        "receipt_count": 0,
+        "records_sha256": "cccccae375ff022a0a71dd515683378e3a457be641f268ef3454df4f786aea16",
+        "report_status": "INCOMPLETE"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "UNKNOWN_ORDER",
+        "reason": "ACK_LOST_NO_RESEND",
+        "signature": "c9823b6a1f62181a3594f8174ac1522707e9deba0527b316dc925da348694b2e"
+      }
+    },
+    {
+      "divergences_and_explanations": [],
+      "expected_contract_outcome": "WIN",
+      "fixture": "win",
+      "integrated_paper_journal": {
+        "cash_reconciled": true,
+        "economic_outcome": "WIN",
+        "ledger_balanced": true,
+        "matches_fixture_contract": true,
+        "net_pnl_eligible": true,
+        "paper_intent_count": 2,
+        "physical_orders": false,
+        "realized_net_pnl_inr": "190.43985",
+        "receipt_count": 2,
+        "records_sha256": "149bcd4885716296582b30ee5270f1226a3140cd3d57b8bd369163b5c82c07ef",
+        "report_status": "CLOSED"
+      },
+      "legacy_pipeline": {
+        "matches_frozen_golden": true,
+        "outcome": "WIN",
+        "reason": "FILLED_FILLED",
+        "signature": "d3587cf3efa4299b96204d7c1e2669551a29ac82ebaa79b366f111d806283fae"
+      }
+    }
+  ],
+  "limitations": [
+    "The frozen legacy oracle stores SHA-256 signatures, not complete prior-version decision records, so historic field-by-field migration diffs cannot be reconstructed from it.",
+    "The fixtures are synthetic and establish software compatibility, not market edge, profitability, or execution fidelity.",
+    "A future strategy migration needs archived versioned inputs and full decision outputs for each old and new implementation."
+  ],
+  "schema": "fb.forward_edge.fixture_equivalence_report.v1",
+  "scope": "Deterministic synthetic fixture compatibility only. Compares the current legacy fixture pipeline and its integrated canonical paper journal against fixed fixture outcomes and golden signatures. It does not compare historical source revisions, live market sessions, or strategy performance.",
+  "source_check": {
+    "all_integrated_fixture_contracts_match": true,
+    "all_legacy_fixture_contracts_match": true,
+    "all_physical_orders_disabled": true,
+    "fixtures": 8,
+    "golden_signatures_sha256": "61408f2c20fe5454d929b72eaed19874edd3655de8486132ce8660aa5ab1af6a",
+    "no_trade_fixture_has_zero_intents": true
+  }
+}

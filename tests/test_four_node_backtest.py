@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
+from datetime import date, timedelta
 
 from financial_brain.strategies.four_node import backtest as bt
 
@@ -46,7 +48,38 @@ def test_takes_respects_choices():
 
 
 def test_events_on_flat_data_is_empty():
-    assert bt.events_for(*_flat(), rt_cost=0.0014) == []
+    assert bt.events_for(*_flat(), rt_cost=0.0014,
+                         days=["2026-11-20", "2026-11-23", "2026-11-24"]) == []
+
+
+def test_event_runner_requires_and_attaches_completed_session_fib_timestamps():
+    o, h, lo, c = _flat(days=3)
+    with pytest.raises(TypeError):
+        bt.events_for(o, h, lo, c, rt_cost=0.0014)  # type: ignore[call-arg]
+    with pytest.raises(ValueError, match="strictly increasing"):
+        bt.events_for(o, h, lo, c, rt_cost=0.0014,
+                      days=["2026-11-20", "2026-11-20", "2026-11-24"])
+
+    rng = np.random.default_rng(124)
+    sessions, bars = 40, bt.BARS
+    close = 100 + np.cumsum(rng.normal(0, 0.8, (sessions, bars)), axis=1)
+    open_ = close + rng.normal(0, 0.2, (sessions, bars))
+    high = np.maximum(open_, close) + rng.uniform(0.1, 0.8, (sessions, bars))
+    low = np.minimum(open_, close) - rng.uniform(0.1, 0.8, (sessions, bars))
+    session_days = []
+    day = date(2024, 1, 1)
+    while len(session_days) < sessions:
+        if day.weekday() < 5:
+            session_days.append(day.isoformat())
+        day += timedelta(days=1)
+    events = bt.events_for(open_, high, low, close, rt_cost=0.0014, days=session_days)
+    assert events
+    for event in events:
+        assert event.fib_snapshots is not None
+        for snapshot in event.fib_snapshots.values():
+            assert snapshot.version == "four-node-daily-fib-v1"
+            assert snapshot.anchor_session_id == f"NSE:{session_days[event.day - 1]}"
+            assert snapshot.anchor_close_at < snapshot.evaluated_session_open_at
 
 
 def test_every_grid_variant_is_executable():

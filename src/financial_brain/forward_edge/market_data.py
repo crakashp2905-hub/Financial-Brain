@@ -1,23 +1,272 @@
-"""Market-session capture and data integrity (FE-0033 .. FE-0044). Offline: fixtures only, no live feed.
+"""Normalize the existing Kite read-only quote runner into forward-edge market events.
 
-* Normalized events keep UTC event, received, available and decision clocks, and reject impossible ordering (FE-0033).
-* Venue calendar from an explicit, versioned file; no weekday guessing (FE-0034). The real NSE holiday list is not
-  bundled here: that is a named input, see tracker BLK-DATA / calendar note.
-* Fixture feed replays normalized events; the live Kite adapter is not implemented (FE-0035, blocked).
-* Append-only, hash-chained quote archive with capture-loss counters (FE-0036).
-* Data age, gaps and disconnects trigger abstention; nothing is forward-filled (FE-0037).
-* Decision snapshots hash every input they used (FE-0038). Instrument master gate (FE-0039).
-* Option intents require two-sided executable quotes (FE-0040). Minute and close divergences are recorded, never
-  silently corrected (FE-0041). Data gate reason codes are deterministic (FE-0042).
-* Features use only data at or before their timestamp (FE-0043). Coverage is reported with every claim (FE-0044).
+Kite quote packets expose an exchange `timestamp`, last trade time, and bid/ask depth.
+The event clock uses the quote packet timestamp; receipt and availability use the local
+observation clock. A missing exchange timestamp or two-sided book is rejected rather than
+replaced with the receipt time.
 """
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+import math
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from typing import Any
+from zoneinfo import ZoneInfo
 from pathlib import Path
+
+from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.quote_archive import QuoteArchive
+from financial_brain.forward_edge.clock import ClockProvider, SystemClock, capture_market_clocks
+from financial_brain.kernel.units import Price, UnitError, WholeUnits
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+class KiteQuoteNormalizationError(ValueError):
+    """Kite quote did not contain trustworthy clocks and a two-sided top of book."""
+
+
+def _inr_price(value: Any, label: str) -> float:
+    """Validate a raw Kite price as a positive INR/share value before scalar encoding."""
+    try:
+        return float(Price(Decimal(str(value)), "INR").value)
+    except (UnitError, InvalidOperation, TypeError, ValueError, OverflowError) as exc:
+        raise KiteQuoteNormalizationError(f"{label} must be a positive finite INR price") from exc
+
+
+def _whole_units(value: Any, label: str, *, allow_zero: bool = True) -> int:
+    """Validate share/depth quantities without silently truncating fractions."""
+    try:
+        units = WholeUnits(Decimal(str(value))).units
+    except (UnitError, InvalidOperation, TypeError, ValueError, OverflowError) as exc:
+        raise KiteQuoteNormalizationError(f"{label} must be a whole-unit quantity") from exc
+    if units < 0 or (units == 0 and not allow_zero):
+        raise KiteQuoteNormalizationError(f"{label} must be a non-negative whole-unit quantity")
+    return int(units)
+
+
+def executable_quote(event: MarketEvent) -> dict[str, Any] | None:
+    """Return fill inputs only for a complete, positive-liquidity two-sided quote event.
+
+    Informational ticks and quotes without depth/quantity stay available for analysis but
+    cannot be mistaken for executable prices.
+    """
+    if event.kind is not EventKind.QUOTE:
+        return None
+    payload = event.payload
+    try:
+        bid = Decimal(str(payload["bid"]))
+        ask = Decimal(str(payload["ask"]))
+        bid_quantity = _whole_units(payload["bid_quantity"], "bid quantity")
+        ask_quantity = _whole_units(payload["ask_quantity"], "ask quantity")
+        volume = _whole_units(payload["volume"], "volume")
+    except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
+        return None
+    depth = payload.get("depth")
+    if (not bid.is_finite() or not ask.is_finite() or bid <= 0 or ask <= bid or
+            bid_quantity <= 0 or ask_quantity <= 0 or volume <= 0 or
+            not isinstance(depth, dict) or not depth.get("buy") or not depth.get("sell")):
+        return None
+
+    def level(row: Any) -> tuple[Decimal, int]:
+        if isinstance(row, dict):
+            raw_price, raw_quantity = row["price"], row["quantity"]
+        elif isinstance(row, (list, tuple)) and len(row) == 2:
+            raw_price, raw_quantity = row
+        else:
+            raise ValueError("invalid depth level")
+        price = Decimal(str(raw_price))
+        quantity = WholeUnits(Decimal(str(raw_quantity))).units
+        if quantity < 0:
+            raise ValueError("depth quantity cannot be negative")
+        Price(price, "INR")
+        return price, int(quantity)
+
+    try:
+        bid_levels = [level(row) for row in depth["buy"]]
+        ask_levels = [level(row) for row in depth["sell"]]
+    except (KeyError, TypeError, ValueError, InvalidOperation, OverflowError):
+        return None
+    if (any(not price.is_finite() or price <= 0 or quantity <= 0 for price, quantity in bid_levels + ask_levels)
+            or any(bid_levels[index][0] < bid_levels[index + 1][0] for index in range(len(bid_levels) - 1))
+            or any(ask_levels[index][0] > ask_levels[index + 1][0] for index in range(len(ask_levels) - 1))
+            or bid_levels[0] != (bid, bid_quantity) or ask_levels[0] != (ask, ask_quantity)):
+        return None
+    try:
+        lower = Decimal(str(payload["lower_circuit_limit"])) if payload.get("lower_circuit_limit") is not None else None
+        upper = Decimal(str(payload["upper_circuit_limit"])) if payload.get("upper_circuit_limit") is not None else None
+    except InvalidOperation:
+        return None
+    if ((lower is not None and (not lower.is_finite() or lower <= 0 or bid <= lower))
+            or (upper is not None and (not upper.is_finite() or upper <= 0 or ask >= upper))):
+        return None
+    status = str(payload.get("exchange_status", "")).strip().upper()
+    phase = str(payload.get("session_phase", "")).strip().upper()
+    if (status and status not in {"OPEN", "NORMAL", "CONTINUOUS", "TRADING"}) or \
+            (phase and phase != "CONTINUOUS"):
+        return None
+    return {"bid": bid, "ask": ask, "bid_quantity": bid_quantity,
+            "ask_quantity": ask_quantity, "volume": volume,
+            "depth": depth, "bid_levels": tuple(bid_levels), "ask_levels": tuple(ask_levels),
+            "source": event.source, "event_id": event.event_id,
+            "event_time": event.event_time, "received_at": event.received_at,
+            "available_at": event.available_at}
+
+
+def _exchange_timestamp(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        try:
+            parsed = datetime.fromisoformat(value.strip())
+        except ValueError as exc:
+            raise KiteQuoteNormalizationError("Kite exchange timestamp is malformed") from exc
+    else:
+        raise KiteQuoteNormalizationError("Kite exchange timestamp is missing")
+    # Kite's REST response serializes exchange time without an offset; interpret that
+    # documented exchange-local clock as India Standard Time. Never infer from receipt.
+    return parsed.replace(tzinfo=IST) if parsed.tzinfo is None else parsed
+
+
+def normalize_kite_quote(instrument: str, quote: dict[str, Any], *,
+                         received_at: datetime | None = None,
+                         clock: ClockProvider | None = None,
+                         availability_delay: timedelta = timedelta(0),
+                         max_future_skew: timedelta = timedelta(seconds=2)) -> MarketEvent:
+    """Convert one full Kite quote to a source-labeled event with explicit clocks."""
+    if not isinstance(availability_delay, timedelta) or availability_delay < timedelta(0):
+        raise KiteQuoteNormalizationError("availability delay cannot be negative")
+    if not isinstance(max_future_skew, timedelta) or max_future_skew < timedelta(0):
+        raise KiteQuoteNormalizationError("maximum future skew must be a non-negative duration")
+    try:
+        venue, symbol = instrument.split(":", 1)
+    except ValueError as exc:
+        raise KiteQuoteNormalizationError("instrument must be EXCHANGE:TRADINGSYMBOL") from exc
+    if not venue.strip() or not symbol.strip():
+        raise KiteQuoteNormalizationError("instrument venue and symbol are required")
+    timestamp = _exchange_timestamp(quote.get("timestamp"))
+    if received_at is None:
+        try:
+            clocks = capture_market_clocks(exchange_at=timestamp, provider=clock or SystemClock(),
+                                           availability_delay=availability_delay)
+        except ValueError as exc:
+            raise KiteQuoteNormalizationError(str(exc)) from exc
+        received_at, available_at = clocks.received_at, clocks.available_at
+    else:
+        if received_at.tzinfo is None or received_at.utcoffset() is None:
+            raise KiteQuoteNormalizationError("received_at must be timezone aware")
+        available_at = received_at + availability_delay
+    if timestamp.astimezone(received_at.tzinfo) > received_at + max_future_skew:
+        raise KiteQuoteNormalizationError(
+            f"Kite exchange timestamp exceeds the configured future-skew tolerance of {max_future_skew}"
+        )
+    try:
+        last_price = _inr_price(quote["last_price"], "Kite last price")
+        volume = _whole_units(quote.get("volume", 0), "Kite volume")
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise KiteQuoteNormalizationError("Kite quote contains invalid last price or volume") from exc
+    if not math.isfinite(last_price) or last_price <= 0 or volume < 0:
+        raise KiteQuoteNormalizationError("Kite quote last price must be positive and volume non-negative")
+    depth = quote.get("depth")
+    bids = depth.get("buy") if isinstance(depth, dict) else None
+    asks = depth.get("sell") if isinstance(depth, dict) else None
+    bid_rows = bids if isinstance(bids, list) else []
+    ask_rows = asks if isinstance(asks, list) else []
+    executable = bool(bid_rows) and bool(ask_rows)
+    kind = EventKind.QUOTE if executable else EventKind.TICK
+    if executable:
+        try:
+            bid = _inr_price(bid_rows[0]["price"], "Kite bid")
+            ask = _inr_price(ask_rows[0]["price"], "Kite ask")
+            bid_quantity = _whole_units(bid_rows[0].get("quantity", 0), "Kite bid quantity")
+            ask_quantity = _whole_units(ask_rows[0].get("quantity", 0), "Kite ask quantity")
+            payload: dict[str, Any] = {
+                "bid": bid, "ask": ask,
+                "bid_quantity": bid_quantity,
+                "ask_quantity": ask_quantity,
+                "last_price": last_price,
+                "volume": volume,
+                "depth": {"buy": bid_rows, "sell": ask_rows},
+            }
+        except KiteQuoteNormalizationError:
+            raise
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise KiteQuoteNormalizationError("Kite quote contains invalid depth") from exc
+    else:
+        payload = {"price": last_price, "volume": volume,
+                   "non_executable_reason": "TWO_SIDED_DEPTH_UNAVAILABLE"}
+        if quote.get("last_quantity") is not None:
+            try:
+                payload["quantity"] = _whole_units(quote["last_quantity"], "Kite last quantity")
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise KiteQuoteNormalizationError("Kite last-trade quantity is invalid") from exc
+    ohlc = quote.get("ohlc") or {}
+    if isinstance(ohlc, dict):
+        for source_key, payload_key in (("open", "session_open"), ("high", "session_high"),
+                                        ("low", "session_low"), ("close", "previous_close")):
+            if ohlc.get(source_key) is not None:
+                try:
+                    value = float(Price(Decimal(str(ohlc[source_key])), "INR").value)
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise KiteQuoteNormalizationError(
+                        f"Kite OHLC {source_key} must be positive and finite"
+                    ) from exc
+                if not math.isfinite(value) or value <= 0:
+                    raise KiteQuoteNormalizationError(f"Kite OHLC {source_key} must be positive and finite")
+                payload[payload_key] = value
+    for key in ("lower_circuit_limit", "upper_circuit_limit"):
+        if quote.get(key) is not None:
+                payload[key] = _inr_price(quote[key], f"Kite {key}")
+    exchange_status = quote.get("exchange_status", quote.get("market_status"))
+    if exchange_status is not None:
+        payload["exchange_status"] = str(exchange_status)
+    if quote.get("session_phase") is not None:
+        payload["session_phase"] = str(quote["session_phase"])
+    packet_hash = hashlib.sha256(json.dumps(quote, sort_keys=True, default=str,
+                                             separators=(",", ":")).encode("utf-8")).hexdigest()
+    receipt_iso = received_at.isoformat()
+    event_id = f"kite:{venue.upper()}:{symbol}:{timestamp.isoformat()}:{receipt_iso}:{packet_hash[:16]}"
+    return MarketEvent(event_id=event_id, kind=kind, venue=venue.upper(),
+                       instrument_id=f"{venue.upper()}:{symbol}", event_time=timestamp,
+                       received_at=received_at, available_at=available_at, payload=payload,
+                       source="KITE_CONNECT_READ_ONLY", evidence_id=packet_hash,
+                       source_at=timestamp, exchange_at=timestamp)
+
+
+def archive_kite_quote_batch(archive: QuoteArchive, quotes: dict[str, dict[str, Any]], *,
+                             received_at: datetime | None = None,
+                             clock: ClockProvider | None = None) -> dict[str, int]:
+    """Append normalized observations from one existing Kite quote response batch."""
+    counts = {"received": len(quotes), "archived": 0, "rejected": 0}
+    if received_at is None and quotes:
+        received_at = (clock or SystemClock()).now()
+    for instrument, quote in sorted(quotes.items()):
+        try:
+            event = normalize_kite_quote(instrument, quote, received_at=received_at)
+            archive.append(event)
+            counts["archived"] += 1
+        except (KiteQuoteNormalizationError, ValueError, TypeError):
+            counts["rejected"] += 1
+    return counts
+
+
+def archive_kite_quote_batch_to_path(path: Path, quotes: dict[str, dict[str, Any]], *,
+                                    received_at: datetime | None = None,
+                                    clock: ClockProvider | None = None) -> dict[str, int]:
+    """Persist one poll batch durably without retaining a file handle across runner exits."""
+    archive = QuoteArchive(path, clock=clock)
+    try:
+        return archive_kite_quote_batch(archive, quotes, received_at=received_at, clock=clock)
+    finally:
+        archive.close()
+
+
+# ---- merged from main (2026-11-18): definitions main's modules depend on; the branch's own
+# ---- definitions above are unchanged.
+from dataclasses import dataclass
+from datetime import date, timezone
 
 
 class DataError(ValueError):
@@ -65,23 +314,6 @@ def decision_visible(event: NormalizedEvent, decision_utc: datetime) -> bool:
     return _aware(event.available_utc, "a") <= _aware(decision_utc, "decision")
 
 
-def executable_quote(event: NormalizedEvent) -> tuple[bool, str]:
-    """Return whether normalized quote evidence contains a valid two-sided displayed market."""
-    payload = dict(event.payload)
-    if event.kind != "QUOTE":
-        return False, "NOT_A_QUOTE"
-    try:
-        bid, ask = float(payload["bid_price"]), float(payload["ask_price"])
-        bid_qty, ask_qty = int(payload["bid_qty"]), int(payload["ask_qty"])
-    except (KeyError, TypeError, ValueError):
-        return False, "LTP_ONLY_OR_MISSING_DEPTH"
-    if bid <= 0 or ask < bid or ask_qty <= 0 or bid_qty <= 0:
-        return False, "INVALID_OR_EMPTY_BOOK"
-    return True, "EXECUTABLE_TOP_OF_BOOK"
-
-
-# ---- calendar (FE-0034) ----
-
 @dataclass(frozen=True)
 class Calendar:
     version: str
@@ -111,8 +343,6 @@ def load_calendar(path: Path) -> Calendar:
                     special_sessions=frozenset(date.fromisoformat(d) for d in data.get("special_sessions", [])))
 
 
-# ---- fixture feed (FE-0035 offline half) ----
-
 def fixture_feed(path: Path) -> list[NormalizedEvent]:
     """Replay normalized events from a JSON fixture, in (event, sequence) order."""
     rows = json.loads(path.read_text(encoding="utf-8"))
@@ -128,46 +358,7 @@ def fixture_feed(path: Path) -> list[NormalizedEvent]:
     return sorted(events, key=lambda e: (e.event_utc, e.instrument, e.kind))
 
 
-# ---- append-only hash-chained archive (FE-0036) ----
 
-class QuoteArchive:
-    """Append-only JSONL. Each record names the previous record's hash; an edited or dropped record breaks the chain."""
-
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.touch(exist_ok=True)
-        self.dropped_updates = 0
-
-    def _last_hash(self) -> str:
-        lines = [ln for ln in self.path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-        return json.loads(lines[-1])["hash"] if lines else "GENESIS"
-
-    def append(self, event: NormalizedEvent) -> str:
-        prev = self._last_hash()
-        digest = hashlib.sha256((prev + event.content_sha256()).encode("utf-8")).hexdigest()
-        with self.path.open("a", encoding="utf-8", newline="\n") as fh:
-            fh.write(json.dumps({"prev": prev, "hash": digest, "content": event.content_sha256()}, sort_keys=True) + "\n")
-        return digest
-
-    def record_drop(self) -> None:
-        self.dropped_updates += 1
-
-    def verify(self) -> bool:
-        prev = "GENESIS"
-        for line in self.path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            if row["prev"] != prev:
-                return False
-            if hashlib.sha256((prev + row["content"]).encode("utf-8")).hexdigest() != row["hash"]:
-                return False
-            prev = row["hash"]
-        return True
-
-
-# ---- health gate: abstain, never forward-fill (FE-0037) ----
 
 @dataclass(frozen=True)
 class FeedHealth:
@@ -192,8 +383,6 @@ def entry_allowed(health: FeedHealth, now: datetime, *, max_age: timedelta = tim
     return (not reasons), reasons
 
 
-# ---- decision snapshot (FE-0038) ----
-
 @dataclass(frozen=True)
 class DecisionSnapshot:
     decision_utc: datetime
@@ -204,8 +393,6 @@ class DecisionSnapshot:
                           sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
-
-# ---- instrument master (FE-0039) ----
 
 @dataclass(frozen=True)
 class Instrument:
@@ -231,8 +418,6 @@ def instrument_gate(inst: Instrument, as_of: date) -> list[str]:
     return reasons
 
 
-# ---- options (FE-0040) ----
-
 def option_quote_executable(bid: float | None, ask: float | None, bid_qty: int, ask_qty: int) -> tuple[bool, str]:
     if bid is None or ask is None:
         return False, "ONE_SIDED_OR_MID_ONLY"
@@ -243,8 +428,6 @@ def option_quote_executable(bid: float | None, ask: float | None, bid_qty: int, 
     return True, "EXECUTABLE"
 
 
-# ---- EOD reconciliation (FE-0041) ----
-
 def reconcile_close(live_close: float, authoritative_close: float, *, tolerance: float = 0.0) -> dict:
     """Record divergence as data. Nothing is overwritten."""
     diff = authoritative_close - live_close
@@ -252,8 +435,6 @@ def reconcile_close(live_close: float, authoritative_close: float, *, tolerance:
     return {"status": status, "live_close": live_close, "authoritative_close": authoritative_close,
             "difference": round(diff, 10), "version": "close-recon-v1"}
 
-
-# ---- data gate reason codes (FE-0042) ----
 
 def data_gate(*, age_s: float, spread_bps: float | None, volume: int, circuit_hit: bool, frozen: bool,
               auction_seen: bool, max_age_s: float = 5.0, max_spread_bps: float = 50.0) -> list[str]:
@@ -273,8 +454,6 @@ def data_gate(*, age_s: float, spread_bps: float | None, volume: int, circuit_hi
     return sorted(codes)
 
 
-# ---- prefix-safe features (FE-0043) ----
-
 def feature_at(closes: list[float], timestamps: list[datetime], t: datetime, window: int = 5) -> float | None:
     """Mean of the last ``window`` closes whose timestamp is <= t. Future bars cannot change the value."""
     idx = [i for i, ts in enumerate(timestamps) if _aware(ts, "bar") <= _aware(t, "t")]
@@ -283,8 +462,6 @@ def feature_at(closes: list[float], timestamps: list[datetime], t: datetime, win
     last = idx[-window:]
     return sum(closes[i] for i in last) / window
 
-
-# ---- coverage (FE-0044) ----
 
 def coverage(sessions: dict[str, int], names: dict[str, bool], intents: list[tuple[float, bool]],
              min_quotes: int = 1) -> dict[str, float]:
@@ -300,3 +477,4 @@ def coverage(sessions: dict[str, int], names: dict[str, bool], intents: list[tup
         "names_pct": round(100.0 * good_names / total_names, 4) if total_names else 0.0,
         "intent_notional_pct": round(100.0 * covered / total_notional, 4) if total_notional else 0.0,
     }
+

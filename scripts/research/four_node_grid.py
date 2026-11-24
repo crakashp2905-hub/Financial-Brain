@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import json
 import math
-import sys
+import argparse
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -34,9 +35,9 @@ def _period(day: str) -> str:
 
 
 def run_one(path: str) -> dict[str, list[tuple[str, str, float, float]]]:
-    z = np.load(path, allow_pickle=True)
-    days = [str(d) for d in z["days"]]
-    evs = events_for(z["o"], z["h"], z["l"], z["c"], RT)
+    with np.load(path, allow_pickle=False) as z:
+        days = [str(d) for d in z["days"]]
+        evs = events_for(z["o"], z["h"], z["l"], z["c"], RT, days=days)
     sym = Path(path).stem
     out: dict[str, list[tuple[str, str, float, float]]] = {}
     for v in all_variants():
@@ -45,7 +46,7 @@ def run_one(path: str) -> dict[str, list[tuple[str, str, float, float]]]:
     return out
 
 
-def stats(rows: list[tuple[str, str, float, float]]) -> dict:
+def stats(rows: list[tuple[str, str, float, float]]) -> dict[str, int | float]:
     n = len(rows)
     if n < 2:
         return {"n": n}
@@ -59,23 +60,32 @@ def stats(rows: list[tuple[str, str, float, float]]) -> dict:
 
 
 def main(src: Path, dst: Path, limit: int | None) -> None:
+    if not src.is_dir():
+        raise FileNotFoundError(f"NPZ source directory does not exist: {src}")
+    if limit is not None and limit < 1:
+        raise ValueError("limit must be positive")
     files = sorted(str(p) for p in src.glob("*.npz"))[:limit]
-    merged: dict[str, list] = {variant_code(v): [] for v in all_variants()}
+    if not files:
+        raise ValueError(f"no minute-bar NPZ inputs found in {src}")
+    merged: dict[str, list[tuple[str, str, float, float]]] = {variant_code(v): [] for v in all_variants()}
     with ProcessPoolExecutor(max_workers=7) as ex:
         for i, part in enumerate(ex.map(run_one, files, chunksize=1)):
             for k, rows in part.items():
                 merged[k] += rows
             print(f"{i + 1}/{len(files)}", flush=True)
     variants = {variant_code(v): v for v in all_variants()}
-    table = []
+    table: list[dict[str, Any]] = []
     for code, rows in merged.items():
         by = {name: [r for r in rows if _period(r[1]) == name] for name, _, _ in PERIODS}
         table.append({"code": code, "choices": variants[code],
                       **{name: stats(by[name]) for name in by}})
     # Holm correction across all 128 on DISCOVERY
-    ps = sorted((t["DISCOVERY"].get("p_one_sided", 1.0), t["code"]) for t in table)
+    ps: list[tuple[float, str]] = sorted(
+        (float(t["DISCOVERY"].get("p_one_sided", 1.0)), str(t["code"])) for t in table
+    )
     m = len(ps)
-    holm, running = {}, 0.0
+    holm: dict[str, float] = {}
+    running = 0.0
     for i, (p, code) in enumerate(ps):
         running = max(running, min(1.0, (m - i) * p))
         holm[code] = running
@@ -89,5 +99,9 @@ def main(src: Path, dst: Path, limit: int | None) -> None:
 
 
 if __name__ == "__main__":
-    lim = int(sys.argv[sys.argv.index("--limit") + 1]) if "--limit" in sys.argv else None
-    main(Path(sys.argv[1]), Path(sys.argv[2]), lim)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("npz_dir", type=Path, help="authorized source directory of minute OHLC arrays")
+    parser.add_argument("out_dir", type=Path, help="destination for the research result JSON")
+    parser.add_argument("--limit", type=int, help="limit input files for a smoke run")
+    args = parser.parse_args()
+    main(args.npz_dir, args.out_dir, args.limit)

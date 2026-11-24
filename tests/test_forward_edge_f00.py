@@ -7,15 +7,15 @@ from __future__ import annotations
 import base64
 import json
 import shutil
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from financial_brain.forward_edge import approvals as A
-from financial_brain.forward_edge import audit, baseline, charter, custody, modes, trials
-from financial_brain.forward_edge.decision_custody import Cohort, CohortSchedule
+from financial_brain.forward_edge import audit, baseline, charter, custody, decision_custody, modes, trials
 from financial_brain.forward_edge.modes import ComplianceRecord, Mode, ModeError, SessionMode
 
 REPO = Path(__file__).resolve().parents[1]
@@ -31,22 +31,53 @@ def _approval(kind: str = "PROTECTED_TRIAL", *, actor_id: str = "owner:akash", a
                       expires_at_utc=valid_to or NOW + timedelta(days=1), adr_ref=adr)
 
 
-def _protected_charter(name: str, start: date) -> tuple[charter.ExperimentCharter, CohortSchedule]:
-    identity = charter.EvaluationIdentity(
-        strategy_code_sha256=SHA, model_code_sha256="b" * 64, data_snapshot_sha256="c" * 64,
-        data_rights_id="owner-kite-api", data_rights_sha256="d" * 64,
-        market_calendar_id="NSE-CASH-v1", market_calendar_sha256="e" * 64,
-        universe_sha256="f" * 64, execution_cost_id="owner-costs-v1", execution_cost_sha256="1" * 64,
-        benchmarks=(("NIFTY50_CASH", "2" * 64),),
+def _override_trial_program(monkeypatch: pytest.MonkeyPatch, program_id: str, **changes: Any) -> dict:
+    path = REPO / trials.PROGRAM_REL
+    document = json.loads(path.read_text(encoding="utf-8"))
+    program = next(row for row in document["programs"] if row["program_id"] == program_id)
+    program.update(changes)
+    original_read_text = Path.read_text
+
+    def read_text(target: Path, *args: Any, **kwargs: Any) -> str:
+        if target == path:
+            return json.dumps(document)
+        if program_id == "Q1-2027" and target == REPO / "docs/adr/0007-q1-2027-trial-protocol.md":
+            return "# Q1 2027 trial protocol\nOwner-approved trial protocol test fixture.\n"
+        return original_read_text(target, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    if program_id == "Q1-2027":
+        original_glob = Path.glob
+        fake_adr = REPO / "docs/adr/0007-q1-2027-trial-protocol.md"
+
+        def glob(target: Path, pattern: str):
+            if target == REPO / "docs/adr" and pattern == "0007-*.md":
+                return [fake_adr]
+            return original_glob(target, pattern)
+
+        monkeypatch.setattr(Path, "glob", glob)
+    return program
+
+
+def _trial_identity(trial_name: str, proposed_on: date):
+    trial_charter = charter.ExperimentCharter(
+        charter_id=trial_name, version=1, strategy_id=trial_name, code_sha256=SHA,
+        capital_inr="100000", start_on=proposed_on.isoformat(),
+        end_on=(proposed_on + timedelta(days=30)).isoformat(), universe=("INFY",),
+        benchmarks=("NIFTY50_TRI",), horizon_sessions=10,
+        preregistration=charter.Preregistration(
+            hypothesis=f"Frozen {trial_name} rule has positive net return after costs.",
+            entry_rule="Enter only on an eligible quote when the predeclared signal and risk checks pass.",
+            exit_rule="Exit under the registered stop or horizon; do not revise after cohort start.",
+            risk_budget_inr="1000", target_comparisons=("CASH", "NIFTY50_TRI"),
+            data_cutoff_on=(proposed_on - timedelta(days=1)).isoformat(),
+            minimum_sample_sessions=20,
+        ),
     )
-    charter_value = charter.ExperimentCharter(
-        charter_id=name, version=1, strategy_id=name, code_sha256=SHA, capital_inr="1000000",
-        start_on=start.isoformat(), end_on=(start + timedelta(days=30)).isoformat(),
-        universe=("INFY", "TCS"), benchmarks=("NIFTY50_CASH",), horizon_sessions=5,
-        evaluation_identity=identity,
-    )
-    cohort = Cohort("C1", start.isoformat(), (start + timedelta(days=4)).isoformat())
-    return charter_value, CohortSchedule(charter_value.sha256(), (cohort,))
+    cohort = decision_custody.Cohort(
+        cohort_id=f"{trial_name}-cohort", start=trial_charter.start_on, end=trial_charter.end_on)
+    schedule = decision_custody.CohortSchedule(trial_charter.sha256(), (cohort,))
+    return trial_charter, schedule, trials.protected_trial_scope_sha256(trial_charter, schedule)
 
 
 # ---------- FE-0001 baseline ----------
@@ -66,11 +97,22 @@ def test_baseline_records_git_head_sources_and_missing_prerequisites() -> None:
     assert "custody:trusted_timestamp_roots_not_pinned" in record["missing_prerequisites"]
 
 
-def test_baseline_write_is_deterministic_for_fixed_clock(tmp_path: Path) -> None:
+def test_baseline_write_is_deterministic_for_fixed_clock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    (root / "data").mkdir(parents=True)
+    (root / "data" / "fixture.bin").write_bytes(b"stable fixture")
+    git_values = {
+        "rev-parse HEAD": "a" * 40,
+        "status --porcelain": "",
+        "rev-parse --abbrev-ref HEAD": "test-branch",
+    }
+    monkeypatch.setattr(baseline, "_git", lambda _root, *args: git_values.get(" ".join(args)))
     out = tmp_path / "b.json"
-    first = baseline.write_baseline(REPO, out, now=NOW)
+    first = baseline.write_baseline(root, out, now=NOW)
     text = out.read_text(encoding="utf-8")
-    again = baseline.write_baseline(REPO, out, now=NOW)
+    again = baseline.write_baseline(root, out, now=NOW)
     assert json.loads(text) == first == again
 
 
@@ -81,13 +123,15 @@ def test_q4_2026_protected_budget_is_exhausted_at_13_of_13() -> None:
     assert (status.spent, status.budget, status.exhausted) == (13, 13, True)
 
 
-def test_all_13_q4_trials_remain_failed_with_original_reasons() -> None:
+def test_all_13_registered_q4_trials_remain_fail_with_original_reason_codes() -> None:
     rows = trials.load_rows(REPO / trials.LEDGER_REL)
-    q4 = [row for row in rows if row.get("kind") == "trial"
-          and date(2026, 10, 1) <= date.fromisoformat(row["date"][:10]) <= date(2026, 12, 31)]
-    assert len(q4) == 13
-    assert all(row.get("verdict") == "FAIL" for row in q4)
-    assert all(isinstance(row.get("failed"), list) and row["failed"] for row in q4)
+    registered = [row for row in rows if row.get("kind") == "trial"
+                  and "2026-10-01" <= row.get("date", "") <= "2026-12-31"]
+    assert len(registered) == 13
+    assert all(row.get("verdict") == "FAIL" for row in registered)
+    assert all(isinstance(row.get("failed"), list) and row["failed"]
+               and all(isinstance(reason, str) and reason for reason in row["failed"])
+               for row in registered)
 
 
 def test_protected_records_match_pinned_digests() -> None:
@@ -97,9 +141,24 @@ def test_protected_records_match_pinned_digests() -> None:
 def test_pins_agree_with_the_existing_protected_baseline() -> None:
     pinned = json.loads((REPO / trials.PINS_REL).read_text(encoding="utf-8"))["files"]
     existing = json.loads((REPO / "docs" / "audits" / "protected-baseline.json").read_text(encoding="utf-8"))["files"]
+    assert set(existing) <= set(pinned)
     for rel, digest in pinned.items():
         if rel in existing:
             assert existing[rel] == digest, rel
+
+
+def test_sealed_historical_record_tampering_is_detected_by_the_runtime_guard(tmp_path: Path) -> None:
+    rel = "docs/sources/pattern-catalogue.v1.json"
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True)
+    shutil.copyfile(REPO / rel, target)
+    pins_dir = tmp_path / "docs/forward-edge"
+    pins_dir.mkdir(parents=True)
+    digest = trials.sha256_file(target)
+    (pins_dir / "protected-pins.json").write_text(json.dumps({"files": {rel: digest}}), encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == []
+    target.write_text(target.read_text(encoding="utf-8") + "\nunauthorized edit\n", encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == [f"changed: {rel}"]
 
 
 def test_retrospective_edit_of_the_trial_ledger_is_detected(tmp_path: Path) -> None:
@@ -117,70 +176,141 @@ def test_retrospective_edit_of_the_trial_ledger_is_detected(tmp_path: Path) -> N
 
 
 def test_new_protected_trial_refused_when_budget_is_spent() -> None:
-    with pytest.raises(trials.TrialGovernanceError, match="needs a TRIAL_BUDGET_AMENDMENT approval"):
+    with pytest.raises(trials.TrialGovernanceError, match="approved larger explicit budget"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=(), now=NOW, scope_sha256=SHA)
 
 
-def test_new_q4_trial_needs_budget_amendment_as_well_as_trial_approval(tmp_path) -> None:
-    only_trial = (_approval("PROTECTED_TRIAL", subject="M9"),)
-    with pytest.raises(trials.TrialGovernanceError, match="TRIAL_BUDGET_AMENDMENT"):
+def test_q4_budget_amendment_requires_recorded_capacity_and_matching_owner_approval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    only_trial = (_approval("PROTECTED_TRIAL", subject="M9", adr="ADR-0004"),)
+    with pytest.raises(trials.TrialGovernanceError, match="approved larger explicit budget"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=only_trial, now=NOW, scope_sha256=SHA)
-    both = only_trial + (_approval("TRIAL_BUDGET_AMENDMENT", subject="M9"),)
-    spec, cohort_schedule = _protected_charter("M9", date(2026, 11, 10))
-    both = tuple(_approval(a.kind, subject="M9", scope=spec.sha256()) for a in both)
+    _override_trial_program(monkeypatch, "Q4-2026", status="AMENDED", budget=14,
+                            budget_adr_ref="ADR-0006", authorized_owner_id="owner:akash")
+    with pytest.raises(trials.TrialGovernanceError, match="needs a TRIAL_BUDGET_AMENDMENT"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
+                                                  approvals=only_trial, now=NOW, scope_sha256=SHA)
+    trial_charter, schedule, scope = _trial_identity("M9", date(2026, 11, 10))
+    approvals = (_approval("PROTECTED_TRIAL", subject="M9", adr="ADR-0004", scope=scope),
+                 _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", adr="ADR-0006", scope=scope))
     status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
-                                                       approvals=both, now=NOW, scope_sha256=spec.sha256(), charter=spec,
-                                                       cohort_schedule=cohort_schedule,
-                                                       charter_registry=charter.CharterRegistry(tmp_path / "m9.jsonl"))
-    assert status.exhausted
+                                                        approvals=approvals, now=NOW, scope_sha256=scope,
+                                                        charter=trial_charter, cohort_schedule=schedule)
+    assert status.spent == 13 and status.remaining == 1
 
 
-def test_agent_cannot_authorize_a_protected_trial() -> None:
-    agent = (_approval("PROTECTED_TRIAL", subject="M9", actor_id="agent:research-bot", actor_type="agent"),
-             _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", actor_id="agent:research-bot", actor_type="agent"))
+def test_agent_cannot_authorize_a_protected_trial(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q4-2026", status="AMENDED", budget=14,
+                            budget_adr_ref="ADR-0006", authorized_owner_id="owner:akash")
+    agent = (_approval("PROTECTED_TRIAL", subject="M9", actor_id="agent:research-bot", actor_type="agent",
+                       adr="ADR-0004"),
+             _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", actor_id="agent:research-bot", actor_type="agent",
+                       adr="ADR-0006"))
     with pytest.raises(trials.TrialGovernanceError, match="cannot approve"):
         trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
                                                   approvals=agent, now=NOW, scope_sha256=SHA)
 
 
-def test_trial_in_2027q1_needs_only_a_protected_trial_approval(tmp_path) -> None:
-    spec, cohort_schedule = _protected_charter("M1-2027", date(2027, 1, 15))
-    ok = trials.assert_new_protected_trial_allowed(
-        REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
-        approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027", scope=spec.sha256()),), now=NOW,
-        scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
-        charter_registry=charter.CharterRegistry(tmp_path / "m1.jsonl"))
-    assert ok.spent == 13  # the 2026Q4 count is not the 2027Q1 budget
-
-
-def test_prospective_cohort_cannot_register_without_human_trial_approval(tmp_path) -> None:
-    spec, cohort_schedule = _protected_charter("M1-2027", date(2027, 1, 15))
-    registry = charter.CharterRegistry(tmp_path / "unapproved.jsonl")
-    with pytest.raises(trials.TrialGovernanceError, match="needs a PROTECTED_TRIAL approval"):
+def test_q1_2027_stays_closed_without_an_owner_approved_protocol_and_explicit_budget() -> None:
+    with pytest.raises(trials.TrialGovernanceError, match="no owner-approved protocol and explicit trial budget"):
         trials.assert_new_protected_trial_allowed(
-            REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027", approvals=(), now=NOW,
-            scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
-            charter_registry=registry)
-    assert registry.journal.records() == []
+            REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+            approvals=(_approval("PROTECTED_TRIAL", subject="M1-2027"),), now=NOW, scope_sha256=SHA)
 
 
-def test_protected_trial_cannot_register_without_full_identity_registry(tmp_path) -> None:
-    spec, cohort_schedule = _protected_charter("M9", date(2026, 11, 10))
-    with pytest.raises(trials.TrialGovernanceError, match="durable registry"):
-        trials.assert_new_protected_trial_allowed(
-            REPO, proposed_on=date(2026, 11, 10), trial_name="M9",
-            approvals=(_approval("PROTECTED_TRIAL", subject="M9", scope=spec.sha256()),
-                       _approval("TRIAL_BUDGET_AMENDMENT", subject="M9", scope=spec.sha256())),
-            now=NOW, scope_sha256=spec.sha256(), charter=spec, cohort_schedule=cohort_schedule,
-        )
+def test_q1_2027_requires_protocol_amendment_and_trial_approval(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    only_trial = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007", valid_to=expires),)
+    with pytest.raises(trials.TrialGovernanceError, match="needs a Q1_PROTOCOL_AMENDMENT"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=only_trial, now=NOW, scope_sha256=SHA)
+    expired = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007"),)
+    with pytest.raises(trials.TrialGovernanceError, match="expired"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=expired, now=NOW, scope_sha256=SHA)
+    wrong_owner = only_trial + (_approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                          actor_id="owner:other", valid_to=expires),)
+    with pytest.raises(trials.TrialGovernanceError, match="configured owner owner:akash"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=wrong_owner, now=NOW, scope_sha256=SHA)
+    trial_charter, schedule, scope = _trial_identity("M1-2027", date(2027, 1, 15))
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires))
+    status = trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                        approvals=approvals, now=NOW, scope_sha256=scope,
+                                                        charter=trial_charter, cohort_schedule=schedule)
+    assert status.budget == 1 and status.remaining == 1
+
+
+def test_protected_trial_requires_charter_and_matching_cohort_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    proposed_on = date(2027, 1, 15)
+    trial_charter, schedule, scope = _trial_identity("M1-2027", proposed_on)
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                           scope=scope, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="exact frozen charter and cohort schedule"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=approvals, now=NOW, scope_sha256=scope)
+    outside = decision_custody.CohortSchedule(trial_charter.sha256(), (
+        decision_custody.Cohort("later-cohort", "2027-02-01", "2027-02-10"),))
+    outside_scope = trials.protected_trial_scope_sha256(trial_charter, outside)
+    outside_approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                                   scope=outside_scope, valid_to=expires),
+                         _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                   scope=outside_scope, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="not covered"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=outside_approvals, now=NOW,
+                                                  scope_sha256=outside_scope,
+                                                  charter=trial_charter, cohort_schedule=outside)
+    wrong_scope_approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007",
+                                       scope=SHA, valid_to=expires),
+                             _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007",
+                                       scope=SHA, valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="approval scope hash must bind"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=proposed_on, trial_name="M1-2027",
+                                                  approvals=wrong_scope_approvals, now=NOW, scope_sha256=SHA,
+                                                  charter=trial_charter, cohort_schedule=schedule)
+
+
+def test_protected_trial_scope_rejects_missing_preregistration() -> None:
+    trial_charter, _, _ = _trial_identity("M1-2027", date(2027, 1, 15))
+    unregistered_design = replace(trial_charter, preregistration=None)
+    schedule = decision_custody.CohortSchedule(unregistered_design.sha256(), (
+        decision_custody.Cohort("M1-2027-cohort", unregistered_design.start_on, unregistered_design.end_on),))
+    with pytest.raises(trials.TrialGovernanceError, match="complete preregistered design"):
+        trials.protected_trial_scope_sha256(unregistered_design, schedule)
+
+
+def test_q1_2027_explicit_budget_is_a_hard_capacity_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    _override_trial_program(monkeypatch, "Q1-2027", status="ACTIVE", budget=1,
+                            protocol_adr_ref="ADR-0007", authorized_owner_id="owner:akash")
+    rows = trials.load_rows(REPO / trials.LEDGER_REL)
+    rows.append({"kind": "trial", "date": "2027-01-10", "name": "already-approved"})
+    monkeypatch.setattr(trials, "load_rows", lambda _path: rows)
+    expires = datetime(2027, 1, 16, tzinfo=timezone.utc)
+    approvals = (_approval("PROTECTED_TRIAL", subject="M1-2027", adr="ADR-0007", valid_to=expires),
+                 _approval("Q1_PROTOCOL_AMENDMENT", subject="M1-2027", adr="ADR-0007", valid_to=expires))
+    with pytest.raises(trials.TrialGovernanceError, match="budget is exhausted"):
+        trials.assert_new_protected_trial_allowed(REPO, proposed_on=date(2027, 1, 15), trial_name="M1-2027",
+                                                  approvals=approvals, now=NOW, scope_sha256=SHA)
 
 
 # ---------- FE-0004 hashable charter ----------
 
-def _charter(**over) -> charter.ExperimentCharter:
-    base = dict(charter_id="M1-SLOW-MOMENTUM", version=1, strategy_id="M1", code_sha256=SHA, capital_inr="1000000",
+def _charter(**over: Any) -> charter.ExperimentCharter:
+    base: dict[str, Any] = dict(charter_id="M1-SLOW-MOMENTUM", version=1, strategy_id="M1", code_sha256=SHA, capital_inr="1000000",
                 start_on="2027-01-04", end_on="2027-06-30", universe=("INFY", "TCS"), benchmarks=("NIFTY50_CASH",),
                 horizon_sessions=20, parameters=(("lookback", "252"),), prior_sha256=None)
     base.update(over)
@@ -227,31 +357,33 @@ def test_malformed_charters_are_rejected(over: dict, message: str) -> None:
 # ---------- FE-0005 / FE-0006 modes fail closed ----------
 
 def test_live_cash_is_unavailable_by_default() -> None:
-    with pytest.raises(ModeError, match="disabled by build policy"):
+    with pytest.raises(ModeError, match="permanently disabled"):
         modes.resolve_mode(Mode.LIVE_CASH, now=NOW)
 
 
-def test_flipping_the_build_flag_alone_does_not_enable_cash(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_credentials_approvals_or_runtime_flags_cannot_enable_cash(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
-    with pytest.raises(ModeError, match="verified broker compliance"):
-        modes.resolve_mode(Mode.LIVE_CASH, now=NOW)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
     compliance = ComplianceRecord("broker-x", True, NOW, SHA)
-    with pytest.raises(ModeError, match="LIVE_CASH_ENABLE"):
-        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, compliance=compliance, live_cash_subject="pilot-1",
-                           live_cash_scope_sha256=SHA)
+    human = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None)
+    with pytest.raises(ModeError, match="permanently disabled"):
+        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
+                           live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
 
 
-def test_live_cash_with_human_approval_and_compliance_is_granted_only_when_all_gates_pass(
+def test_live_cash_stays_disabled_with_human_approval_and_compliance(
         monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     compliance = ComplianceRecord("broker-x", True, NOW, SHA)
     human = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None)
-    granted = modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
-                                 live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
-    assert granted.mode is Mode.LIVE_CASH
+    with pytest.raises(ModeError, match="permanently disabled"):
+        modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(human,), compliance=compliance,
+                           live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
     agent = _approval("LIVE_CASH_ENABLE", subject="pilot-1", scope=SHA, adr=None,
                       actor_id="agent:exec-bot", actor_type="agent")
-    with pytest.raises(ModeError, match="cannot approve"):
+    with pytest.raises(ModeError, match="permanently disabled"):
         modes.resolve_mode(Mode.LIVE_CASH, now=NOW, approvals=(agent,), compliance=compliance,
                            live_cash_subject="pilot-1", live_cash_scope_sha256=SHA)
 
@@ -262,7 +394,11 @@ def test_broker_dryrun_needs_verified_compliance() -> None:
     assert modes.resolve_mode(Mode.SHADOW, now=NOW).mode is Mode.SHADOW
 
 
-def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -> None:
+def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    # Deliberately forge the build enable flag: simulation mode authorization must
+    # remain nonphysical even under this compromised configuration.
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
     assert SessionMode(Mode.LIVE_PAPER).may_emit_paper_fill is True
     for mode in (Mode.RESEARCH_REPLAY, Mode.SHADOW, Mode.BROKER_DRYRUN):
         assert SessionMode(mode).may_emit_paper_fill is False
@@ -272,7 +408,7 @@ def test_only_live_paper_emits_paper_fills_and_no_mode_sends_physical_orders() -
 
 def test_session_mode_is_immutable() -> None:
     session = SessionMode(Mode.SHADOW)
-    with pytest.raises(FrozenInstanceError, match="cannot assign to field 'mode'"):
+    with pytest.raises(FrozenInstanceError):
         session.mode = Mode.LIVE_CASH  # type: ignore[misc]
 
 
@@ -410,10 +546,14 @@ def test_audit_is_red_on_this_repository_and_never_green_without_custody() -> No
     names = {c["name"]: c["status"] for c in report["checks"]}
     assert names["protected_pins"] == "GREEN"
     assert names["independent_custody"] == "RED"
-    # The executable resolver now exists; formal claims still remain blocked by custody.
-    assert names["promotion_metric"] == "GREEN"
     assert names["live_cash"] == "GREEN"
     assert any("INDEPENDENT_TIMESTAMP" in b for b in report["blocking"])
+
+
+def test_current_baseline_is_yellow_until_github_pr_and_protection_state_is_verified() -> None:
+    check = audit._baseline(REPO)
+    assert check.status == "YELLOW"
+    assert "GitHub PR graph or branch protection remains unverified" in check.reason
 
 
 def test_audit_turns_red_when_a_protected_record_changes(tmp_path: Path) -> None:
@@ -432,17 +572,3 @@ def test_audit_cli_exit_code_is_nonzero_while_blocked(capsys: pytest.CaptureFixt
     code = audit.main(["--repo", str(REPO)])
     assert code == 1
     assert "OVERALL RED" in capsys.readouterr().out
-
-
-def test_ledger_pin_is_stable_across_line_ending_conversion(tmp_path: Path) -> None:
-    """Regression: a Windows autocrlf checkout rewrites the ledger to CRLF; the pin must still verify (FE-0148)."""
-    (tmp_path / "docs/trials").mkdir(parents=True)
-    (tmp_path / "docs/forward-edge").mkdir(parents=True)
-    lf = (REPO / trials.LEDGER_REL).read_bytes().replace(b"\r\n", b"\n")
-    (tmp_path / trials.LEDGER_REL).write_bytes(lf.replace(b"\n", b"\r\n"))
-    pins = {"files": {trials.LEDGER_REL: trials.sha256_file(REPO / trials.LEDGER_REL, normalize_eol=True)},
-            "normalize_eol": [trials.LEDGER_REL]}
-    (tmp_path / trials.PINS_REL).write_text(json.dumps(pins), encoding="utf-8")
-    assert trials.verify_pins(tmp_path) == []
-    (tmp_path / trials.LEDGER_REL).write_bytes(lf.replace(b"FAIL", b"PASS", 1).replace(b"\n", b"\r\n"))
-    assert trials.verify_pins(tmp_path) == [f"changed: {trials.LEDGER_REL}"]

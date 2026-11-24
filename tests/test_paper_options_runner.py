@@ -5,6 +5,7 @@ import duckdb
 from financial_brain.ingest.options_quotes import SCHEMA
 from financial_brain.paper.options import Quote
 from financial_brain.paper.options_runner import Intent, archive_quotes, replay_cohort, run_intent
+from financial_brain.kernel.units import OptionLots
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -37,6 +38,13 @@ def test_options_runner_skips_cost_dominated_or_thin_entry():
     assert run_intent(intent(expected=101.01), [entry])["status"] == "SKIPPED_COST_OR_LIQUIDITY"
     assert run_intent(intent(), [quote(D + timedelta(seconds=10), ask_qty=10)])[
         "status"] == "SKIPPED_COST_OR_LIQUIDITY"
+
+
+def test_option_intent_normalizes_nominal_lots_before_replay():
+    base = intent()
+    typed = Intent(base.signal_id, base.cohort, base.rule_version, base.token, base.decided_at,
+                   base.planned_exit_at, base.expected_exit_bid, lots=OptionLots(2))
+    assert typed.lots == 2
 
 
 def test_archive_requires_fresh_broker_timestamp():

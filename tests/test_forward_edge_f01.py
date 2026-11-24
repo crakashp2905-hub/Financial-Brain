@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import random
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
-from financial_brain.kernel.events import EventKernel, UnknownOutcome
+from financial_brain.kernel.events import Event, EventKernel, UnknownOutcome, snapshot_checksum
 from financial_brain.kernel.oms import Oms, OmsError, State
 from financial_brain.kernel.pilot import run_pilot, synthetic_tape
 
@@ -96,6 +97,73 @@ def test_unknown_state_survives_checkpoint_and_resume() -> None:
     restored.resume(cp, [])
     with pytest.raises(UnknownOutcome):
         restored.side_effect("order-9", lambda: pytest.fail("replayed an UNKNOWN key"))
+
+
+def test_durable_kernel_recovers_events_and_outbox_after_restart(tmp_path: Path) -> None:
+    db = tmp_path / "kernel.sqlite3"
+    from datetime import datetime, timezone
+
+    first = EventKernel(journal_path=str(db))
+    first.submit(Event(datetime(2026, 11, 15, tzinfo=timezone.utc), 1, "quote", (("bid", 100.0),)))
+    first.drain()
+    assert first.side_effect("sent", lambda: None)
+    with pytest.raises(UnknownOutcome):
+        first.side_effect("uncertain", _boom)
+    checksum = snapshot_checksum(first.journal)
+    first.close()
+
+    restored = EventKernel(journal_path=str(db))
+    assert snapshot_checksum(restored.journal) == checksum
+    assert restored.side_effect("sent", lambda: pytest.fail("replayed acknowledged send")) is False
+    with pytest.raises(UnknownOutcome):
+        restored.side_effect("uncertain", lambda: pytest.fail("replayed unknown send"))
+    restored.resolve_unknown("uncertain", took_effect=False, reconciled_by="operator:test")
+    restored.close()
+
+
+def test_durable_reconciliation_allows_retry_after_restart_only_when_no_effect_proven(tmp_path: Path) -> None:
+    db = tmp_path / "reconciled-kernel.sqlite3"
+    first = EventKernel(journal_path=str(db))
+    with pytest.raises(UnknownOutcome):
+        first.side_effect("retryable", _boom)
+    first.resolve_unknown("retryable", took_effect=False, reconciled_by="operator:test")
+    first.close()
+
+    restored = EventKernel(journal_path=str(db))
+    assert "retryable" not in restored.unknown_keys
+    calls: list[str] = []
+    assert restored.side_effect("retryable", lambda: calls.append("executed")) is True
+    assert calls == ["executed"]
+    restored.close()
+
+
+def test_durable_reconciliation_that_found_effect_survives_restart_without_retry(tmp_path: Path) -> None:
+    db = tmp_path / "effect-kernel.sqlite3"
+    first = EventKernel(journal_path=str(db))
+    with pytest.raises(UnknownOutcome):
+        first.side_effect("already-done", _boom)
+    first.resolve_unknown("already-done", took_effect=True, reconciled_by="operator:test")
+    first.close()
+
+    restored = EventKernel(journal_path=str(db))
+    assert restored.side_effect("already-done", lambda: pytest.fail("replayed reconciled effect")) is False
+    restored.close()
+
+
+def test_durable_kernel_migrates_legacy_reconciliation_table(tmp_path: Path) -> None:
+    import sqlite3
+
+    db = tmp_path / "legacy-reconciliations.sqlite3"
+    EventKernel(journal_path=str(db)).close()
+    with sqlite3.connect(db) as con:
+        con.execute("DROP TABLE reconciliations")
+        con.execute("CREATE TABLE reconciliations (key TEXT NOT NULL, took_effect INTEGER NOT NULL, "
+                    "reconciled_by TEXT NOT NULL, PRIMARY KEY(key, reconciled_by))")
+        con.execute("INSERT INTO reconciliations VALUES ('legacy-key', 0, 'operator:legacy')")
+
+    restored = EventKernel(journal_path=str(db))
+    assert restored.reconciliations == [("legacy-key", False, "operator:legacy")]
+    restored.close()
 
 
 # ---------- OMS helpers ----------

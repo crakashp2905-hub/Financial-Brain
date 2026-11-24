@@ -20,7 +20,7 @@ from uuid import uuid4
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
 from financial_brain.kernel.oms import Oms, OmsError, State
-from financial_brain.kernel.units import Money
+from financial_brain.kernel.units import Money, Price, UnitError, WholeUnits
 
 
 class PaperAccountError(ValueError):
@@ -258,24 +258,52 @@ class PaperAccount:
         self, *, client_id: str, symbol: str, side: str, quantity: int,
         limit: Decimal | None, reserve: Decimal,
     ) -> None:
+        """Compatibility boundary for cash-equity intents, normalized through typed units."""
+        if type(quantity) is not int:
+            raise PaperAccountError("quantity must be a whole-unit integer")
+        try:
+            typed_quantity = WholeUnits(Decimal(quantity))
+            typed_limit = Price(limit, self.currency) if limit is not None else None
+            typed_reserve = Money(reserve, self.currency)
+        except (UnitError, TypeError, ValueError) as exc:
+            raise PaperAccountError(f"invalid typed order units: {exc}") from exc
+        self.submit_typed_intent(
+            client_id=client_id, symbol=symbol, side=side, quantity=typed_quantity,
+            limit=typed_limit, reserve=typed_reserve,
+        )
+
+    def submit_typed_intent(
+        self, *, client_id: str, symbol: str, side: str, quantity: WholeUnits,
+        limit: Price | None, reserve: Money,
+    ) -> None:
+        """Submit a cash-equity intent with explicit quantity, price and currency units."""
         if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", symbol or ""):
             raise PaperAccountError("symbol must be a stable identifier")
         side = side.upper()
-        if side not in {"BUY", "SELL"} or type(quantity) is not int or quantity <= 0:
+        if not isinstance(quantity, WholeUnits) or quantity.units <= 0:
             raise PaperAccountError("invalid side or quantity")
-        if side == "BUY" and limit is not None and reserve < limit * quantity:
+        if not isinstance(reserve, Money) or reserve.currency != self.currency or reserve.amount < 0:
+            raise PaperAccountError("reserve must be nonnegative Money in the account currency")
+        if limit is not None and (not isinstance(limit, Price) or limit.currency != self.currency):
+            raise PaperAccountError("limit must be Price in the account currency")
+        if side not in {"BUY", "SELL"}:
+            raise PaperAccountError("invalid side or quantity")
+        quantity_value = int(quantity.units)
+        limit_value = limit.value if limit is not None else None
+        reserve_value = reserve.amount
+        if side == "BUY" and limit_value is not None and reserve_value < limit_value * quantity_value:
             raise PaperAccountError("buy reserve must cover the limit notional")
-        if side == "BUY" and limit is not None and self.fee_schedule is not None:
-            minimum_buffer = self.fee_schedule.calculate(side="BUY", notional=limit * quantity)
-            if reserve < limit * quantity + minimum_buffer:
+        if side == "BUY" and limit_value is not None and self.fee_schedule is not None:
+            minimum_buffer = self.fee_schedule.calculate(side="BUY", notional=limit_value * quantity_value)
+            if reserve_value < limit_value * quantity_value + minimum_buffer:
                 raise PaperAccountError("buy reserve must also cover the scheduled fee buffer")
         existing = next((r for r in self.journal.records()
                          if r.get("t") == "INTENT" and r.get("client_id") == client_id), None)
         if existing is not None:
             proposed = {
                 "t": "INTENT", "client_id": client_id, "symbol": symbol, "side": side,
-                "quantity": quantity, "limit": str(limit) if limit is not None else None,
-                "reserve": str(reserve),
+                "quantity": quantity_value, "limit": str(limit_value) if limit_value is not None else None,
+                "reserve": str(reserve_value),
             }
             if existing != proposed:
                 raise PaperAccountError(f"client id {client_id} reused with different content")
@@ -283,12 +311,12 @@ class PaperAccount:
         if side == "SELL" and self.position(symbol).quantity - sum(
             qty for cid, qty in self._sell_reserved.items()
             if self.oms.order(cid).state not in {State.CANCELED, State.REJECTED, State.EXPIRED, State.FILLED}
-        ) < quantity:
+        ) < quantity_value:
             raise PaperAccountError("sell quantity exceeds unreserved long inventory")
         rec = {
             "t": "INTENT", "client_id": client_id, "symbol": symbol, "side": side,
-            "quantity": quantity, "limit": str(limit) if limit is not None else None,
-            "reserve": str(reserve),
+            "quantity": quantity_value, "limit": str(limit_value) if limit_value is not None else None,
+            "reserve": str(reserve_value),
         }
         self._validate_and_commit(rec)
 
@@ -297,6 +325,28 @@ class PaperAccount:
 
     def record_fill(self, client_id: str, *, fill_id: str, quantity: int, price: Decimal,
                     filled_on: date | None = None) -> None:
+        """Compatibility boundary for fills, normalized through typed units."""
+        if type(quantity) is not int:
+            raise PaperAccountError("fill quantity must be a whole-unit integer")
+        try:
+            typed_quantity = WholeUnits(Decimal(quantity))
+            typed_price = Price(price, self.currency)
+        except (UnitError, TypeError, ValueError) as exc:
+            raise PaperAccountError(f"invalid typed fill units: {exc}") from exc
+        self.record_typed_fill(
+            client_id, fill_id=fill_id, quantity=typed_quantity, price=typed_price,
+            filled_on=filled_on,
+        )
+
+    def record_typed_fill(self, client_id: str, *, fill_id: str, quantity: WholeUnits,
+                          price: Price, filled_on: date | None = None) -> None:
+        """Record a fill with explicit whole-unit quantity and account-currency price."""
+        if not isinstance(quantity, WholeUnits) or quantity.units <= 0:
+            raise PaperAccountError("fill quantity must be positive whole units")
+        if not isinstance(price, Price) or price.currency != self.currency:
+            raise PaperAccountError("fill price must use the account currency")
+        quantity_value = int(quantity.units)
+        price_value = price.value
         order = self.oms.order(client_id)
         fee_amount = Decimal(0)
         if self.fee_schedule is not None:
@@ -304,15 +354,15 @@ class PaperAccount:
                 raise PaperAccountError("filled_on is required by the effective-dated fee schedule")
             if filled_on < self.fee_schedule.effective_from:
                 raise PaperAccountError("fee schedule is not yet effective on the fill date")
-            fee_amount = self.fee_schedule.calculate(side=order.side, notional=price * quantity)
+            fee_amount = self.fee_schedule.calculate(side=order.side, notional=price_value * quantity_value)
         rec = {
             "t": "FILL", "client_id": client_id, "fill_id": fill_id,
             "symbol": self._symbol_for(client_id), "side": order.side,
-            "quantity": quantity, "price": str(price), "fee_amount": str(fee_amount),
+            "quantity": quantity_value, "price": str(price_value), "fee_amount": str(fee_amount),
             "fee_schedule_id": self.fee_schedule.schedule_id if self.fee_schedule else None,
             "filled_on": filled_on.isoformat() if filled_on else None,
         }
-        content = (client_id, rec["symbol"], quantity, str(price), str(fee_amount),
+        content = (client_id, rec["symbol"], quantity_value, str(price_value), str(fee_amount),
                    rec["fee_schedule_id"], rec["filled_on"])
         if fill_id in self._fill_content:
             if self._fill_content[fill_id] != content:

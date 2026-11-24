@@ -1,0 +1,265 @@
+{
+  "candidates": [
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-001",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-001"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-002",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-002"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-003",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-003"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-004",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-004"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-005",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-005"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-006",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-006"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-007",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-007"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. Source is an indicator, article or concept; it is not a validated executable strategy.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#MQ-008",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "MQ-008"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-001",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-001"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-002",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-002"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-003",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-003"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-004",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-004"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-005",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-005"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-006",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-006"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-007",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-007"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-008",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-008"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-009",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-009"
+    },
+    {
+      "exclusion_reason": "Reference-only rights; no third-party source code may be copied or executed. External-source strategy is descriptive only until clean-room adaptation and local validation.",
+      "source_ref": "docs/sources/algorithm-source-registry.json#TV-010",
+      "source_sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979",
+      "source_type": "external_reference",
+      "status": "EXPLORATORY",
+      "strategy_id": "TV-010"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#A10 published price anomalies (16-anomaly family)",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:A10 published price anomalies (16-anomaly family)"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#B4 index mean reversion and VWAP (9-rule family)",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:B4 index mean reversion and VWAP (9-rule family)"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#BAB betting against beta in futures",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:BAB betting against beta in futures"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#C1 rich-basis carry",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:C1 rich-basis carry"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#D1 delivery share long-short in futures",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:D1 delivery share long-short in futures"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#EAP earnings-announcement premium in futures",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:EAP earnings-announcement premium in futures"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#F3 short build-up avoid filter",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:F3 short build-up avoid filter"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#I/S intraday and swing family on minute bars (9 rules)",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:I/S intraday and swing family on minute bars (9 rules)"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#K7 chart and candle setups in futures (17-setup family)",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:K7 chart and candle setups in futures (17-setup family)"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#M1 cost-aware momentum book",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:M1 cost-aware momentum book"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#MF multi-factor quality value low-risk book",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:MF multi-factor quality value low-risk book"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#N2F rejected results as hedged futures short",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:N2F rejected results as hedged futures short"
+    },
+    {
+      "exclusion_reason": "Historical preregistered trial failed; historical result remains binding and cannot be promoted by shadow results.",
+      "source_ref": "docs/trials/ledger.jsonl#X3 earnings surprise drift out of sample",
+      "source_sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1",
+      "source_type": "historical_trial",
+      "status": "FAILED",
+      "strategy_id": "trial:X3 earnings surprise drift out of sample"
+    }
+  ],
+  "catalogue_sha256": "78afc26d72a2a0c57a2a28efaadc92df261fcd26c7e7146bcbc9e5e3d01e41cc",
+  "catalogue_version": 1,
+  "schema": "fb.forward-edge.eligibility.v1",
+  "sources": {
+    "external_registry": {
+      "path": "docs/sources/algorithm-source-registry.json",
+      "sha256": "6348aac7f6e860553d5131ae45f3941e21ca2cb99f085e8da653219f6df73979"
+    },
+    "historical_trials": {
+      "path": "docs/trials/ledger.jsonl",
+      "sha256": "fec6b33b303d934060ea1f6c7f2308d6d4316376a1c1b90b88d980713c0a15c1"
+    }
+  }
+}

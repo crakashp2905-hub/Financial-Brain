@@ -1,0 +1,27 @@
+{
+  "schema": "fb.forward_edge.trial_program.v1",
+  "scope": "Protected confirmatory trial windows and explicit per-window budgets. Exploratory analysis is not authorized by this registry.",
+  "programs": [
+    {
+      "program_id": "Q4-2026",
+      "start_date": "2026-10-01",
+      "end_date": "2026-12-31",
+      "status": "EXHAUSTED",
+      "budget": 13,
+      "protocol_adr_ref": "ADR-0004",
+      "budget_adr_ref": null,
+      "authorized_owner_id": null
+    },
+    {
+      "program_id": "Q1-2027",
+      "start_date": "2027-01-01",
+      "end_date": "2027-03-31",
+      "status": "NOT_AUTHORIZED",
+      "budget": null,
+      "protocol_adr_ref": null,
+      "budget_adr_ref": null,
+      "authorized_owner_id": null
+    }
+  ],
+  "authorization_rule": "A confirmatory trial requires an exact-scope human PROTECTED_TRIAL approval. Q1-2027 additionally requires a Q1_PROTOCOL_AMENDMENT from the configured owner, an active protocol ADR, and a positive explicit budget. An exhausted budget requires a recorded budget increase and matching TRIAL_BUDGET_AMENDMENT from the configured owner; an approval by itself does not create capacity."
+}

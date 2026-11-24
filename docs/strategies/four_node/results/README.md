@@ -2,6 +2,8 @@
 
 **Verdict: FAIL. No variant has positive net expectancy after costs, in discovery or validation. Four-Node stays research-only; nothing is promoted.**
 
+> **Holdout integrity correction:** the committed `grid.json` contains 2024+ `TEST` metrics for **all 128 variants**, not only the top-ranked variant. Therefore the TEST period was not isolated as the original protocol text claimed. Treat every 2024+ result here as exploratory and correlated with the search; there is no untouched historical test left for these variants. The committed NPZ market inputs are also absent from this repository, so this artifact is not independently rerunnable from the checkout. Do not describe its TEST column as independent validation or promotion evidence.
+
 ## Setup
 
 - Data: 5-minute NSE bars for 207 stocks, 2016-01 to 2026-11 (`data/_explore_5m`).
@@ -9,7 +11,7 @@
 - Every combination of the seven choices in `spec.AMBIGUITIES` (2^7 = 128). Distances use the `india_v1` ATR multiples, which were fixed before this run and not tuned.
 - Entry at the next bar's open. Exits are adverse-first, a gap through the stop fills at the open, and every position is flattened at 15:15.
 - Costs: intraday round trip from `costs.india.CostModel`, mega bucket with impact = 14.0 bps.
-- Periods were fixed before the run. DISCOVERY (2016-2021) is the only period used for ranking. VALIDATION (2022-2023) checks the ranking. TEST (2024 onward) was read for the top-ranked variant only.
+- The intended periods were DISCOVERY (2016-2021), VALIDATION (2022-2023) and TEST (2024 onward). The actual committed artifact exposes TEST results for every candidate; that period is contaminated for all 128 variants and is descriptive only.
 - Multiple comparisons: Holm correction across all 128 one-sided discovery p-values.
 
 ## Result
@@ -155,7 +157,7 @@
 - FIB_ANCHOR: `PREV_DAY_HIGH_TO_LOW`
 - RETURN_CANDLE: `NO_OPPOSITE_CANDLE_SINCE_N3`
 
-TEST period: n=759, net -12.4 bps per trade, t=-11.78, win rate 22%.
+Exploratory TEST column for the top-ranked row: n=759, net -12.4 bps per trade, t=-11.78, win rate 22%. This is not a held-out result.
 
 ## Why it fails
 

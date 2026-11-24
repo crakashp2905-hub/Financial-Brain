@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from financial_brain.execution.order_policy import PhysicalOrderDenied
+
 from financial_brain.execution.oms import kite_broker
 from financial_brain.forward_edge import modes
 
@@ -55,5 +57,9 @@ def test_accidental_env_flip_still_blocked_by_stage(monkeypatch, tmp_path):
 
 def test_broker_refuses_unlisted_endpoint():
     b = kite_broker.KiteBroker("X", opener=lambda *a, **k: None)
+    # Reads go through the endpoint allow-list; anything unlisted is refused.
     with pytest.raises(kite_broker.BrokerError):
+        b._request("GET", "/margins/equity")
+    # Writes never reach the allow-list: the build policy denies every physical order first.
+    with pytest.raises(PhysicalOrderDenied):
         b._request("POST", "/margins/equity")

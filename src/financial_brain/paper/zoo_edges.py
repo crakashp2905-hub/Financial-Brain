@@ -8,6 +8,8 @@ the month before - one session's shift); state between evenings is kept in ``zoo
     edge_p1_residual_mom      P1 residual momentum, top 20 of 500, monthly
     edge_p2_volmanaged_mom    P2 momentum top 20 scaled by 12% / trailing 6-month vol (cap 1.5x), monthly
     edge_p3_frog_in_pan       P3 momentum top 20 among the continuous-information half, monthly
+    edge_h003_riskadj_mom     H003 12-1 momentum / 250-day volatility, top 20, monthly (added 2026-11-18)
+    edge_h005_industry_mom    H005 best 20 names in the top 3 industries by 6-month return, monthly (added 2026-11-18)
     edge_s1_no_news_reversal  S1 bottom decile of 5-session excess without material news, every 5 sessions
     edge_s2_reaction_drift    S2 top-fifth results reaction, bought the session after, held 20 sessions
     edge_f1_long_buildup      F1 price up and OI change top quintile, F&O names, every 5 sessions
@@ -50,7 +52,7 @@ def monthly_targets(rcon, day: date) -> dict[str, dict]:
     from ..evaluation import edges as E
     P = _panel(rcon, day)
     last = P["C"].index[-1]
-    out = {}
+    out: dict[str, dict] = {}
     mom = E.momentum_scores(P)
     res = E.residual_scores(P)
     idd = E.info_discreteness(P)
@@ -62,14 +64,70 @@ def monthly_targets(rcon, day: date) -> dict[str, dict]:
     low = idd.loc[last, m.index] <= idd.loc[last, uni].median()
     pick = m[low.fillna(False)].nlargest(20).index
     out["edge_p3_frog_in_pan"] = {k: 1.0 / len(pick) for k in pick}
+    out.update(h_targets(rcon, P))
     # P2: the plain momentum book's monthly net history decides the scale
-    picks = E.top_picks(P, mom)
-    picks[last] = list(m.nlargest(20).index)
-    hist = E.monthly_selection(P, picks)["net"]
+    # A P2 failure must not block the other books: on 2026-11-02 a gap in P2's history
+    # (2023-11-30, INE509F01029) raised here and every monthly book kept October's targets.
+    # When P2 cannot be computed it is left out, and the caller keeps P2's previous targets.
+    try:
+        picks = E.top_picks(P, mom)
+        picks[last] = list(m.nlargest(20).index)
+        hist = E.monthly_selection(P, picks)["net"]
+    except ValueError as e:
+        out["_errors"] = {"edge_p2_volmanaged_mom": str(e)[:200]}
+        return out
     vol = hist.tail(6).std(ddof=1) * np.sqrt(12) if len(hist) >= 6 else np.nan
     w = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
     top = m.nlargest(20).index
     out["edge_p2_volmanaged_mom"] = {k: w / len(top) for k in top}
+    return out
+
+
+VERDICT.update({
+    "edge_h003_riskadj_mom": "CANDIDATE_SMALL under ADR-0007 (hundred, 2026-11-17); forward shadow from 2026-11-18",
+    "edge_h005_industry_mom": "CANDIDATE_SMALL under ADR-0007 (hundred, 2026-11-17); forward shadow from 2026-11-18"})
+
+
+def _industries(rcon, lineages, as_of: date) -> pd.Series:
+    """Resolve each lineage's latest NIFTY 500 industry known on the decision date."""
+    df = rcon.execute("""WITH security_asof AS (
+                            SELECT lineage, isin,
+                                   ROW_NUMBER() OVER (PARTITION BY lineage ORDER BY business_date DESC) AS rn
+                            FROM adjusted_prices
+                            WHERE business_date <= ? AND lineage IN (SELECT UNNEST(?)) AND isin IS NOT NULL
+                        ), membership_asof AS (
+                            SELECT s.lineage, m.industry,
+                                   ROW_NUMBER() OVER (PARTITION BY s.lineage
+                                                      ORDER BY m.as_of DESC, m.observed_at DESC) AS rn
+                            FROM security_asof s JOIN index_membership m USING (isin)
+                            WHERE s.rn = 1 AND m.index_name = 'NIFTY 500' AND m.as_of <= ?
+                        )
+                        SELECT lineage, industry FROM membership_asof WHERE rn = 1""",
+                       [as_of, list(lineages), as_of]).df()
+    return df.drop_duplicates("lineage").set_index("lineage")["industry"].reindex(list(lineages))
+
+
+def h_targets(rcon, P: dict) -> dict[str, dict]:
+    """H003 and H005 on the last session of ``P``, as in the registered study (hundred.py, 2026-11-17):
+    daily 12-1 momentum = close(t-21) / close(t-252) - 1 over the top-500 universe."""
+    C, U = P["C"], P["U"]
+    last = C.index[-1]
+    u = U.loc[last].fillna(False).astype(bool) & C.loc[last].notna()
+    mom = C.shift(21) / C.shift(252) - 1
+    vol = C.pct_change(fill_method=None).rolling(250, min_periods=200).std()
+    out: dict[str, dict] = {}
+    s = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
+    pick = s.nlargest(20).index
+    out["edge_h003_riskadj_mom"] = {k: 1.0 / len(pick) for k in pick}
+    ind = _industries(rcon, C.columns, last.date())
+    r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
+    g = r6.groupby(ind).mean().dropna()
+    cnt = u.groupby(ind).sum()
+    g = g[cnt.reindex(g.index) >= 8]
+    best = set(g.nlargest(3).index)
+    s = mom.loc[last].where(u & ind.isin(best)).dropna()
+    pick = s.nlargest(20).index
+    out["edge_h005_industry_mom"] = {k: 1.0 / len(pick) for k in pick}
     return out
 
 
@@ -231,7 +289,7 @@ def index_day(day: date) -> dict:
     if not bars or len(daily) < 2:
         return {}
     b = pd.DataFrame(bars)
-    out = {}
+    out: dict[str, float] = {}
     dd = pd.DataFrame(daily)
     dd["d"] = pd.to_datetime(dd["ts"]).dt.tz_localize(None).dt.normalize()
     dd = dd.set_index("d")
@@ -522,7 +580,7 @@ def k7_targets(rcon, day: date, fno_lins: list[str]) -> dict[str, dict]:
                         last = i
                 if any(n - 6 <= i <= n - 2 for i in keep):        # fired at s in [today-5, today-1]
                     held[setup].add(lin)
-    out = {}
+    out: dict[str, dict[str, float]] = {}
     for setup, (side, _) in K.SETUPS.items():
         names = held[setup]
         if not names:

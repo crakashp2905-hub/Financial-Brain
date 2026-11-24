@@ -1,0 +1,107 @@
+{
+  "schema": "fb.edge_program.release_semantics.v1",
+  "scope": "Infrastructure, research, paper trading, and live-cash verdicts are independent. A higher verdict in one domain never promotes another domain.",
+  "status_order": ["RED", "YELLOW", "GREEN"],
+  "unknown_evidence_policy": "YELLOW unless the unknown concerns a safety, integrity, or authorization invariant; those cases are RED.",
+  "domains": {
+    "infrastructure": {
+      "green_requires_all": [
+        "all_required_ci_jobs_pass_on_linux_and_windows_for_current_commit",
+        "lint_types_migrations_dependency_audit_and_coverage_gates_pass",
+        "main_branch_protection_and_required_checks_verified_from_github",
+        "protected_baseline_hashes_match"
+      ],
+      "yellow_when_any": [
+        "current_ci_result_pending_or_unavailable",
+        "main_branch_protection_or_required_checks_unverified",
+        "noncritical_infrastructure_evidence_missing"
+      ],
+      "red_when_any": [
+        "any_required_ci_job_fails",
+        "protected_record_hash_mismatch",
+        "required_branch_protection_is_disabled",
+        "release_artifact_or_migration_integrity_check_fails"
+      ]
+    },
+    "research": {
+      "green_requires_all": [
+        "candidate_family_and_cohort_frozen_before_observation",
+        "independent_pre_entry_custody_verified_for_every_qualifying_session",
+        "all_planned_sessions_no_trade_denominators_and_missing_outcomes_accounted_for",
+        "actual_orders_fills_itemized_costs_and_cash_days_reconciled",
+        "dependence_robust_multiplicity_adjusted_inference_passes_preregistered_method",
+        "after_cost_net_alpha_lower_confidence_bound_exceeds_zero_and_policy_threshold",
+        "capacity_and_cost_stress_gates_pass"
+      ],
+      "yellow_when_any": [
+        "prospective_observation_is_still_running",
+        "sample_is_below_preregistered_minimum",
+        "custody_or_outcome_coverage_is_incomplete_without_detected_tampering",
+        "result_is_diagnostic_or_historical_only"
+      ],
+      "red_when_any": [
+        "lookahead_survivorship_or_source_integrity_violation_detected",
+        "protected_trial_failure_relabelled_or_budget_bypass_attempted",
+        "net_alpha_or_cost_stress_fails_the_frozen_promotion_policy",
+        "missing_or_unknown_outcomes_are_dropped_from_the_denominator"
+      ],
+      "explicit_non_inputs_to_green": [
+        "infrastructure_green",
+        "unit_or_integration_tests_pass",
+        "positive_historical_mean_without_promotion_grade_forward_evidence",
+        "a_profitable_week"
+      ]
+    },
+    "trading": {
+      "paper": {
+        "green_requires_all": [
+          "data_source_authorization_and_quote_freshness_gates_pass",
+          "every_planned_session_is_closed_no_trade_or_explicitly_incomplete",
+          "orders_fills_positions_cash_costs_and_pnl_reconcile_after_every_event",
+          "risk_preflight_kill_switch_and_stale_data_abstention_are_active",
+          "no_unknown_orders_or_unresolved_accounting_events"
+        ],
+        "yellow_when_any": [
+          "paper_session_is_not_complete_or_prospective_evidence_is_still_accumulating",
+          "quote_depth_coverage_or_latency_is_insufficient_for_the_claimed_strategy_horizon",
+          "cost_or_fill_model_is_not_calibrated_to_observed_execution_evidence"
+        ],
+        "red_when_any": [
+          "order_fill_position_cash_or_pnl_reconciliation_mismatch",
+          "risk_gate_or_kill_switch_bypass_detected",
+          "physical_order_effect_occurs_in_a_non_live_mode"
+        ]
+      },
+      "live_cash": {
+        "green_requires_all": [
+          "paper_trading_green_for_the_same_strategy_account_and_risk_scope",
+          "research_green_for_the_exact_frozen_strategy_and_promotion_cohort",
+          "broker_and_exchange_compliance_verified_for_the_exact_route",
+          "current_scoped_human_capital_and_strategy_approvals_verified",
+          "live_order_reconciliation_and_failure_recovery_rehearsal_passes",
+          "physical_order_enablement_is_explicit_and_audited"
+        ],
+        "yellow_when_any": [
+          "live_cash_is_disabled_and_no_live_order_is_requested",
+          "required_live_authorization_or_rehearsal_is_pending"
+        ],
+        "red_when_any": [
+          "unauthorized_physical_order_is_attempted_or_observed",
+          "broker_state_or_cash_position_reconciliation_is_unknown_or_mismatched",
+          "risk_limit_or_emergency_stop_is_bypassed"
+        ],
+        "explicit_non_inputs_to_green": [
+          "infrastructure_green",
+          "paper_trading_green_without_research_green",
+          "a_passing_test_suite",
+          "a_user_interface_or_broker_connector_existing"
+        ]
+      }
+    }
+  },
+  "aggregation": {
+    "within_each_subdomain": "RED if any red_when_any condition is true; otherwise YELLOW if any yellow_when_any condition is true or any green requirement is unknown; otherwise GREEN only if every green_requires_all condition is evidenced.",
+    "between_domains": "Report infrastructure, research, trading.paper, and trading.live_cash separately. Do not copy or infer a status across domains.",
+    "overall_release": "For a named release scope, RED if any required subdomain is RED; YELLOW if none are RED and any required subdomain is YELLOW or unknown; GREEN only if every subdomain required by that exact release scope is GREEN. A paper release never implies live-cash authorization."
+  }
+}

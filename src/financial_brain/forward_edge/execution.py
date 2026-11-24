@@ -14,6 +14,8 @@ Rules enforced:
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_EVEN, Decimal
@@ -38,6 +40,8 @@ class Quote:
     ask: Decimal
     bid_qty: int
     ask_qty: int
+    source: str = "UNSPECIFIED"
+    exchange: str = "UNSPECIFIED"
 
 
 @dataclass(frozen=True)
@@ -67,6 +71,29 @@ class ExecResult:
     reason: str
     fidelity: str = "SIMULATED_QUOTE"
     queue_position_known: bool = True
+    quote_provenance_hash: str | None = None
+    quote_available_utc: datetime | None = None
+    quote_source: str | None = None
+    quote_exchange: str | None = None
+
+    @property
+    def simulation_fidelity(self) -> str:
+        return "OBSERVED_QUOTE_SIM" if self.fidelity == "SIMULATED_QUOTE" else self.fidelity
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "status": self.status,
+            "filled_qty": self.filled_qty,
+            "avg_price": str(self.avg_price) if self.avg_price is not None else None,
+            "reason": self.reason,
+            "fidelity": self.fidelity,
+            "simulation_fidelity": self.simulation_fidelity,
+            "quote_provenance_hash": self.quote_provenance_hash,
+            "quote_available_utc": self.quote_available_utc.isoformat() if self.quote_available_utc else None,
+            "quote_source": self.quote_source,
+            "quote_exchange": self.quote_exchange,
+            "queue_position_known": self.queue_position_known,
+        }
 
 
 # ---- FE-0055: one canonical intent, whichever engine produced the signal ----
@@ -109,8 +136,20 @@ def marketable_limit(intent: OrderIntent, quotes: list[Quote], latency: timedelt
     filled = min(intent.quantity, size)
     if filled <= 0:
         return ExecResult("MISSED", 0, None, "NO_VISIBLE_SIZE")
+    provenance = {
+        "available_utc": _aware(q.available_utc).isoformat(),
+        "bid": str(q.bid),
+        "ask": str(q.ask),
+        "bid_qty": q.bid_qty,
+        "ask_qty": q.ask_qty,
+        "source": q.source,
+        "exchange": q.exchange,
+    }
+    quote_hash = hashlib.sha256(json.dumps(provenance, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return ExecResult("FILLED" if filled == intent.quantity else "PARTIAL", filled, price,
-                      "AT_TOUCH" if filled == intent.quantity else "VISIBLE_SIZE_CAP")
+                      "AT_TOUCH" if filled == intent.quantity else "VISIBLE_SIZE_CAP",
+                      quote_provenance_hash=quote_hash, quote_available_utc=_aware(q.available_utc),
+                      quote_source=q.source, quote_exchange=q.exchange)
 
 
 def passive_limit(intent: OrderIntent, trades: list[tuple[datetime, Decimal, int]],
@@ -244,6 +283,23 @@ class ExecutionReceipt:
     quantity: int
     price: Decimal
 
+    @property
+    def simulation_fidelity(self) -> str:
+        return {
+            "SIMULATED_QUOTE": "OBSERVED_QUOTE_SIM",
+            "SIMULATED_BAR": "BAR_PROXY_SIM",
+            "OBSERVED_BROKER": "OBSERVED_BROKER",
+        }[self.fidelity]
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "order_ref": self.order_ref,
+            "fidelity": self.fidelity,
+            "simulation_fidelity": self.simulation_fidelity,
+            "quantity": self.quantity,
+            "price": str(self.price),
+        }
+
     def __post_init__(self) -> None:
         if self.fidelity not in FIDELITIES:
             raise ExecutionError("unknown fidelity")
@@ -253,6 +309,15 @@ def totals_by_fidelity(receipts: list[ExecutionReceipt]) -> dict[str, Decimal]:
     out: dict[str, Decimal] = {}
     for r in receipts:
         out[r.fidelity] = out.get(r.fidelity, Decimal(0)) + r.quantity * r.price
+    return out
+
+
+def totals_by_simulation_fidelity(receipts: list[ExecutionReceipt]) -> dict[str, Decimal]:
+    """Return notional partitioned by canonical execution provenance labels."""
+    out: dict[str, Decimal] = {}
+    for receipt in receipts:
+        fidelity = receipt.simulation_fidelity
+        out[fidelity] = out.get(fidelity, Decimal(0)) + receipt.quantity * receipt.price
     return out
 
 
@@ -270,9 +335,9 @@ def fill_bounds(side: str, quotes: list[Quote]) -> tuple[Decimal, Decimal, Decim
         raise ExecutionError("no quotes in the window")
     if side == "BUY":
         prices = [q.ask for q in quotes]
-        return min(prices), sum(prices) / len(prices), max(prices)
+        return min(prices), sum(prices) / Decimal(len(prices)), max(prices)
     prices = [q.bid for q in quotes]
-    return max(prices), sum(prices) / len(prices), min(prices)
+    return max(prices), sum(prices) / Decimal(len(prices)), min(prices)
 
 
 # ---- FE-0067 post-trade identity ----
