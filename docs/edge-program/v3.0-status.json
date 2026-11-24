@@ -4393,12 +4393,21 @@
     {
       "id": "FB-1607",
       "text": "Version and validate probabilistic forecasts with Brier/log loss, reliability diagrams and out-of-time calibration; explicitly label unreliable low-sample buckets as uncalibrated.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/probability_calibration.py versions calibration windows/model hashes, enforces forecast timestamps strictly after training end, requires matured outcomes and emits Brier, clipped log loss, Wilson reliability bins, and explicit low-sample labels per context/probability bucket.",
+        "The scorer reuses kernel.learning_tools.brier_score; immutable policy and report digests bind the model, holdout window, forecast IDs and observation source hashes. It labels results OUT_OF_TIME_EVALUATED, not as a calibrated/profitable strategy.",
+        "tests/test_kernel_probability_calibration.py and related scoring tests: 33 passed; Ruff and targeted mypy passed; capability/source inventories and dependency graph validate."
+      ],
+      "blocker": "Partial: only the scoring/validation contract exists. Forecast generation is not wired to this evaluator, no real prospective out-of-time dataset is registered, no probability mapping is fitted, and small or absent buckets remain uncalibrated.",
+      "last_audited_at_utc": "2026-11-24T04:17:43Z",
+      "commit": "25bf9fb7",
+      "test_evidence": [
+        "tests/test_kernel_probability_calibration.py",
+        "tests/test_kernel_learning_tools.py"
+      ],
+      "artifact_sha256": "8bdac6713d122367e933ac798366b0a2e83b30768c1f50ed56bdffcaf48c2ba3"
     },
     {
       "id": "FB-1608",
@@ -15798,7 +15807,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T04:10:33Z",
+    "as_of_utc": "2026-11-24T04:17:43Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16033,6 +16042,7 @@
       "FB-1604",
       "FB-1605",
       "FB-1606",
+      "FB-1607",
       "FB-1608",
       "SL-00-01",
       "SL-00-02",
@@ -16054,13 +16064,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 253,
+    "audited_count": 254,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 0,
-      "PARTIAL": 210,
-      "UNASSESSED": 1125
+      "PARTIAL": 211,
+      "UNASSESSED": 1124
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16109,6 +16119,7 @@
       "src/financial_brain/forward_edge/tracker.py",
       "src/financial_brain/ingest/mf_scheme_master.py",
       "src/financial_brain/kernel/entry_constraints.py",
+      "src/financial_brain/kernel/probability_calibration.py",
       "src/financial_brain/kernel/trade_admissibility.py",
       "src/financial_brain/kernel/trade_economics_receipt.py",
       "src/financial_brain/learning_audit.py",
@@ -16129,6 +16140,7 @@
       "tests/test_forward_edge_integrity_gates.py",
       "tests/test_forward_edge_pipeline_compat.py",
       "tests/test_kernel_entry_constraints.py",
+      "tests/test_kernel_probability_calibration.py",
       "tests/test_kernel_trade_admissibility.py",
       "tests/test_kernel_trade_economics_receipt.py",
       "tests/test_launch_gates.py",
@@ -16139,13 +16151,13 @@
       "tests/test_oms.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 0,
-    "PARTIAL": 210,
-    "UNASSESSED": 1125
+    "PARTIAL": 211,
+    "UNASSESSED": 1124
   }
 }
