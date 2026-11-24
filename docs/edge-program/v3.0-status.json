@@ -13460,182 +13460,294 @@
     {
       "id": "SL-15-01",
       "text": "Create probabilistic transition model for observable returns, liquidity, spreads, volatility and missingness conditional on regime.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing forecasting nulls model price returns only; there is no conditional multi-observable transition model for returns, liquidity, spreads, volatility and missingness.",
+        "No dedicated `learning/world_model` transition estimator was found before this package."
+      ],
+      "blocker": "Conditional multivariate transition model and calibrated observable dynamics are absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/null.py, forecasting/distribution.py, regime modules and learning package."
+      ],
+      "test_result": "Source audit of forecasting/null.py, forecasting/distribution.py, regime modules and learning package."
     },
     {
       "id": "SL-15-02",
       "text": "Build stationary/block-bootstrap, AR, volatility and resampled-residual world-model nulls before neural sequence models.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/null.py provides RandomWalk, Drift and stationary-block Climatology; no AR, explicit volatility, or resampled-residual world-model null suite."
+      ],
+      "blocker": "Only part of the requested null family exists; AR/volatility/residual-bootstrap comparisons remain absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py (forecast null and scoring contracts)."
+      ],
+      "test_result": "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py (forecast null and scoring contracts)."
     },
     {
       "id": "SL-15-03",
       "text": "Implement probabilistic temporal encoder with past-only attention and explicit per-horizon uncertainty.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No in-house probabilistic past-only temporal-attention encoder with explicit horizon uncertainty found; forecasting/kronos.py is an external model adapter, not this owned architecture."
+      ],
+      "blocker": "Owned temporal encoder and evidence-controlled horizon uncertainty are not implemented.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/kronos.py, forecasting/distribution.py and learning modules."
+      ],
+      "test_result": "Source audit of forecasting/kronos.py, forecasting/distribution.py and learning modules."
     },
     {
       "id": "SL-15-04",
       "text": "Keep agent impact models separate from exogenous market dynamics and calibrate only at observed participation levels.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Execution cost and market forecast components exist separately; no independently calibrated agent-impact model restricted to observed participation levels is connected to exogenous world dynamics."
+      ],
+      "blocker": "Agent impact and exogenous dynamics are not separated in a shared calibrated environment.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of execution scenario, cost, forecasting and forward-edge modules."
+      ],
+      "test_result": "Source audit of execution scenario, cost, forecasting and forward-edge modules."
     },
     {
       "id": "SL-15-05",
       "text": "Generate future scenario paths consistent with positivity, market hours, corporate actions and observed contract lifetimes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForecastDistribution constrains price paths positive; no scenario generator enforces market sessions, corporate-action adjustments and actual contract expiry/lifetime together."
+      ],
+      "blocker": "Market-calendar, corporate-action and instrument-lifetime constraints are not integrated into generated paths.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/distribution.py, corpactions and options contract-lifecycle modules."
+      ],
+      "test_result": "Source audit of forecasting/distribution.py, corpactions and options contract-lifecycle modules."
     },
     {
       "id": "SL-15-06",
       "text": "Apply proper scoring rules (CRPS, pinball, PIT, calibration, sharpness) against stationary bootstrap nulls.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/forecasting/calibration.py implements fair CRPS, pinball, PIT, coverage/calibration, sharpness and same-sample CRPS skill; forecasting/null.py supplies stationary bootstrap reference."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py; current focused run: 68 passed."
+      ],
+      "test_result": "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py; current focused run: 68 passed."
     },
     {
       "id": "SL-15-07",
       "text": "Detect model exploitation via adversarial optimizer: optimize a policy in learned world and test it in independent replay simulator.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No adversarial policy optimizer over a learned market model with evaluation in a separately implemented replay simulator."
+      ],
+      "blocker": "Learned-world exploitation search and independent replay comparison are absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of learning/world-model, evaluation/replay, and forward-session simulator modules."
+      ],
+      "test_result": "Source audit of learning/world-model, evaluation/replay, and forward-session simulator modules."
     },
     {
       "id": "SL-15-08",
       "text": "Use pessimistic rollout values when model uncertainty grows with planning horizon.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forecast distributions expose horizon paths and quantiles, but no planner discounts rollout values as model uncertainty grows with horizon."
+      ],
+      "blocker": "Pessimistic uncertainty-aware model rollout valuation is not implemented.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/distribution.py and learning package."
+      ],
+      "test_result": "Source audit of forecasting/distribution.py and learning package."
     },
     {
       "id": "SL-15-09",
       "text": "Implement ensembles with disagreement-triggered policy fallback rather than fabricated confidence.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/ensemble.py provides regime-based scoring and a low-sample fallback, not model-disagreement triggers tied to policy fallback."
+      ],
+      "blocker": "Disagreement-based ensemble fallback is not integrated with policy execution.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/ensemble.py and regime router tests."
+      ],
+      "test_result": "Source audit of forecasting/ensemble.py and regime router tests."
     },
     {
       "id": "SL-15-10",
       "text": "Keep train-only model fitting, validation-only tuning and one-time protected holdout for final performance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Walk-forward and holdout evaluation infrastructure exists, but no world-model fitting API enforces train-only fitting, validation-only tuning and a one-time protected holdout."
+      ],
+      "blocker": "World-model training/tuning data partitions and one-time holdout custody are not wired.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/walkforward.py, protected trial registry and model training paths."
+      ],
+      "test_result": "Source audit of forecasting/walkforward.py, protected trial registry and model training paths."
     },
     {
       "id": "SL-15-11",
       "text": "Include cross-validation across independent liquidity and stress regimes, not only next-bar one-step prediction.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Regime and chronological cohort tools exist, but no model validation across independently frozen liquidity and stress regimes at multi-step horizons."
+      ],
+      "blocker": "Independent liquidity/stress regime validation is not part of model evaluation.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/walkforward.py, forward_edge/cohort_blocks.py, and regime/stress modules."
+      ],
+      "test_result": "Source audit of forecasting/walkforward.py, forward_edge/cohort_blocks.py, and regime/stress modules."
     },
     {
       "id": "SL-15-12",
       "text": "Run no-trade randomized agent on model and real replay; reject world model that manufactures systematic easy profit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No randomized no-trade agent is evaluated both in a learned world model and independent real-data replay to detect manufactured easy profit."
+      ],
+      "blocker": "The required negative-control agent and paired falsification harness are absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of learning, evaluation/replay and forecast benchmark modules."
+      ],
+      "test_result": "Source audit of learning, evaluation/replay and forecast benchmark modules."
     },
     {
       "id": "SL-15-13",
       "text": "Validate path-level skew, tail, autocorrelation, gap and spread processes rather than just RMSE.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Climatology preserves sampled return blocks, while current forecast reports focus on terminal distribution metrics; path-level gaps, spreads, tails and autocorrelation fidelity are not jointly assessed."
+      ],
+      "blocker": "No path-level world-model fidelity report across all listed financial processes.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/null.py, forecasting/calibration.py and liquidity/spread modules."
+      ],
+      "test_result": "Source audit of forecasting/null.py, forecasting/calibration.py and liquidity/spread modules."
     },
     {
       "id": "SL-15-14",
       "text": "Introduce multi-step lookahead only if benefit survives conservative evaluation of model forecast degradation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forecasting supports multiple horizons, but no planning benefit gate accounts for horizon-dependent forecast degradation."
+      ],
+      "blocker": "Multi-step lookahead is not gated by conservative model-error-adjusted benefit.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forecasting/walkforward.py and learning package."
+      ],
+      "test_result": "Source audit of forecasting/walkforward.py and learning package."
     },
     {
       "id": "SL-15-15",
       "text": "Test offline policy ranking sensitivity to alternative world models and parameter bootstrap.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Stationary bootstrap inference and separate forecast nulls exist, but no offline policy ranking sensitivity study across world-model variants and parameter bootstrap."
+      ],
+      "blocker": "Alternative world-model policy-ranking robustness study is absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of forward_edge/bootstrap.py, forecasting/null.py and learning package."
+      ],
+      "test_result": "Source audit of forward_edge/bootstrap.py, forecasting/null.py and learning package."
     },
     {
       "id": "SL-15-16",
       "text": "Log `WORLD_MODEL_ONLY` evidence status for synthetic rollouts and prohibit promotion based on modeled trajectories alone.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/world_model.py now emits hash-pinned `WORLD_MODEL_ONLY` rollout evidence with `promotion_allowed=false`; learning/trajectory.py also distinguishes replay/fixture/forward evidence."
+      ],
+      "blocker": "The non-promotable label primitive is implemented, but rollout storage, consumers, and an integrated promotion rejection path are not wired.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_world_model.py::test_rollout_manifest_is_hash_pinned_world_model_only_and_never_promotion_eligible",
+        "Focused world-model/learning tests passed; no generator or promotion pipeline integration."
+      ],
+      "test_result": "tests/test_learning_world_model.py::test_rollout_manifest_is_hash_pinned_world_model_only_and_never_promotion_eligible; Focused world-model/learning tests passed; no generator or promotion pipeline integration."
     },
     {
       "id": "SL-15-17",
       "text": "Create counterfactual reconstruction of hypothetical decisions with explicit uncertainty and observability limits.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Opportunity counterfactual primitives exist, but no common hypothetical-decision reconstruction binds visibility, selection, uncertainty, and observability limits into the world-model evidence pipeline."
+      ],
+      "blocker": "Counterfactual reconstruction is not integrated with model uncertainty and observable evidence boundaries.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "Source audit of opportunity learning/counterfactual and evaluation modules."
+      ],
+      "test_result": "Source audit of opportunity learning/counterfactual and evaluation modules."
     },
     {
       "id": "SL-15-18",
       "text": "Retire models that become overconfident or fail basic distributional calibration even if their induced simulated trades show profit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/learning/world_model.py adds a preregistered coverage/PIT/sample-size gate returning RETIRE on calibration failure independent of trading P&L."
+      ],
+      "blocker": "Calibration decision helper exists, but monitoring, registry retirement and policy adapter enforcement remain absent.",
+      "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
+      "commit": "PENDING",
+      "test_evidence": [
+        "tests/test_learning_world_model.py::test_calibration_gate_retires_an_overconfident_forecast_independent_of_returns",
+        "tests/test_learning_world_model.py::test_calibration_gate_only_grants_research_eligibility_after_all_checks",
+        "No persistent model registry or automatic runtime retirement wiring."
+      ],
+      "test_result": "tests/test_learning_world_model.py::test_calibration_gate_retires_an_overconfident_forecast_independent_of_returns; tests/test_learning_world_model.py::test_calibration_gate_only_grants_research_eligibility_after_all_checks; No persistent model registry or automatic runtime retirement wiring."
     },
     {
       "id": "SL-16-01",
@@ -17755,17 +17867,35 @@
       "SL-14-15",
       "SL-14-16",
       "SL-14-17",
-      "SL-14-18"
+      "SL-14-18",
+      "SL-15-01",
+      "SL-15-02",
+      "SL-15-03",
+      "SL-15-04",
+      "SL-15-05",
+      "SL-15-06",
+      "SL-15-07",
+      "SL-15-08",
+      "SL-15-09",
+      "SL-15-10",
+      "SL-15-11",
+      "SL-15-12",
+      "SL-15-13",
+      "SL-15-14",
+      "SL-15-15",
+      "SL-15-16",
+      "SL-15-17",
+      "SL-15-18"
     ],
-    "audited_count": 515,
+    "audited_count": 533,
     "status_counts": {
-      "COMPLETE": 49,
-      "PARTIAL": 461,
+      "COMPLETE": 50,
+      "PARTIAL": 478,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 0,
-      "UNASSESSED": 863
+      "UNASSESSED": 845
     },
-    "verified_complete_count": 49,
+    "verified_complete_count": 50,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -17888,10 +18018,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate."
   },
   "counts_by_status": {
-    "COMPLETE": 49,
-    "PARTIAL": 461,
+    "COMPLETE": 50,
+    "PARTIAL": 478,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 0,
-    "UNASSESSED": 863
+    "UNASSESSED": 845
   }
 }

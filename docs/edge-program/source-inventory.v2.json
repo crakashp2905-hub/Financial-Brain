@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 705,
+  "source_count": 706,
   "sources": [
     {
       "capability_ids": [],
@@ -8867,6 +8867,26 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/world_model.py",
+      "source_sha256": "0396ec41055bd245f4115454f3a05a55241cf7ccf3b01f8e6887a90ae85752c9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "json",
         "pathlib"
       ],
@@ -12613,6 +12633,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 675,
-  "unassigned_role_count": 411
+  "unassessed_count": 676,
+  "unassigned_role_count": 412
 }
