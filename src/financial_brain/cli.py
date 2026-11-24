@@ -9,6 +9,7 @@ import argparse
 import json
 import sys
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from .config import load
 from .corpactions import actions as ca
@@ -934,6 +935,34 @@ def cmd_mf_decision(args) -> int:
         return 2
     print(json.dumps({"ok": True, "inserted": inserted, "decision": decision.body(),
                       "decision_sha256": decision.digest(), "physical_orders_authorized": False}, sort_keys=True))
+    return 0
+
+
+def cmd_mf_policy(args) -> int:
+    """Persist owner-local MF/SIP settings; never touches a live folio or order API."""
+    from .paper.mf_allocation_policy import MFOwnerAllocationPolicy, record_policy
+
+    try:
+        policy = MFOwnerAllocationPolicy(
+            policy_id=args.policy_id, owner_label=args.owner_label, version=args.version,
+            effective_from=date.fromisoformat(args.effective_from),
+            effective_to=date.fromisoformat(args.effective_to) if args.effective_to else None,
+            cash_reserve_fraction=args.cash_reserve_fraction,
+            max_equity_fraction=args.max_equity_fraction,
+            max_debt_fraction=args.max_debt_fraction,
+            max_etf_fraction=args.max_etf_fraction,
+            rebalance_band_fraction=args.rebalance_band_fraction,
+            sip_amount_inr=args.sip_amount_inr, sip_frequency=args.sip_frequency,
+            sip_day=args.sip_day,
+        )
+        database = Database(load())
+        database.migrate()
+        with database.connect() as con:
+            result = record_policy(con, policy, recorded_at=datetime.now().astimezone())
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "external_fund_transactions": False}))
+        return 2
+    print(json.dumps({"ok": True, **result, "policy": policy.body()}, sort_keys=True))
     return 0
 
 
@@ -2823,6 +2852,22 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--sip-start", help="YYYY-MM-DD")
     g.add_argument("--sip-end", help="YYYY-MM-DD")
     g.set_defaults(fn=cmd_mf_decision)
+
+    g = sub.add_parser("mf-policy", help="record versioned owner MF/SIP preferences; no folio or order API")
+    g.add_argument("--policy-id", required=True)
+    g.add_argument("--owner-label", required=True, help="self-declared local owner label")
+    g.add_argument("--version", type=int, required=True)
+    g.add_argument("--effective-from", required=True, help="YYYY-MM-DD")
+    g.add_argument("--effective-to", help="optional YYYY-MM-DD")
+    g.add_argument("--cash-reserve-fraction", required=True, type=Decimal)
+    g.add_argument("--max-equity-fraction", required=True, type=Decimal)
+    g.add_argument("--max-debt-fraction", required=True, type=Decimal)
+    g.add_argument("--max-etf-fraction", required=True, type=Decimal)
+    g.add_argument("--rebalance-band-fraction", required=True, type=Decimal)
+    g.add_argument("--sip-amount-inr", type=Decimal)
+    g.add_argument("--sip-frequency", choices=["WEEKLY", "FORTNIGHTLY", "MONTHLY"])
+    g.add_argument("--sip-day", type=int, help="calendar day; no installment is created by this command")
+    g.set_defaults(fn=cmd_mf_policy)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])

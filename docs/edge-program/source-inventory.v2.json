@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 689,
+  "source_count": 690,
   "sources": [
     {
       "capability_ids": [],
@@ -217,6 +217,7 @@
         "costs.india",
         "costs.tax",
         "datetime",
+        "decimal",
         "decisions",
         "docintel",
         "duckdb",
@@ -246,6 +247,7 @@
         "os",
         "pandas",
         "paper",
+        "paper.mf_allocation_policy",
         "paper.mf_decisions",
         "pathlib",
         "pit.observations",
@@ -273,7 +275,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "edcbf2235dc99aead724c2de889bfc14b071621ec3a3f42882070e516f852835",
+      "source_sha256": "55bc68d6acaf01005462bb543cfa67e92b7f0dbdaf696a1082d921d1bd1235a5",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -9178,6 +9180,25 @@
       "test_paths": []
     },
     {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/mf_allocation_policy.py",
+      "source_sha256": "acd125d67f955cd456f0a3f4a475bbd2aa5ca241a1bbb1107dca36214b93e16e",
+      "test_paths": []
+    },
+    {
       "capability_ids": [
         "mf-action-decision-journal"
       ],
@@ -12241,6 +12262,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 666,
+  "unassessed_count": 667,
   "unassigned_role_count": 398
 }

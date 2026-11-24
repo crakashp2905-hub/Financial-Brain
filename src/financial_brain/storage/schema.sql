@@ -879,6 +879,30 @@ CREATE TABLE IF NOT EXISTS mf_paper_sip_plans (
     created_at TIMESTAMPTZ NOT NULL
 );
 
+-- Owner-local MF/SIP preferences are versioned policy, never a broker instruction.
+CREATE TABLE IF NOT EXISTS mf_owner_allocation_policies (
+    policy_id VARCHAR NOT NULL,
+    owner_label VARCHAR NOT NULL,
+    version INTEGER NOT NULL CHECK (version > 0),
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    cash_reserve_fraction DECIMAL(12,10) NOT NULL CHECK (cash_reserve_fraction BETWEEN 0 AND 1),
+    max_equity_fraction DECIMAL(12,10) NOT NULL CHECK (max_equity_fraction BETWEEN 0 AND 1),
+    max_debt_fraction DECIMAL(12,10) NOT NULL CHECK (max_debt_fraction BETWEEN 0 AND 1),
+    max_etf_fraction DECIMAL(12,10) NOT NULL CHECK (max_etf_fraction BETWEEN 0 AND 1),
+    rebalance_band_fraction DECIMAL(12,10) NOT NULL CHECK (rebalance_band_fraction BETWEEN 0 AND 1),
+    sip_amount_inr DECIMAL(38,18) CHECK (sip_amount_inr IS NULL OR sip_amount_inr > 0),
+    sip_frequency VARCHAR CHECK (sip_frequency IS NULL OR sip_frequency IN ('WEEKLY','FORTNIGHTLY','MONTHLY')),
+    sip_day INTEGER CHECK (sip_day IS NULL OR sip_day BETWEEN 1 AND 31),
+    payload_sha256 VARCHAR NOT NULL,
+    payload_json VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (policy_id, version),
+    CHECK (effective_to IS NULL OR effective_to >= effective_from),
+    CHECK ((sip_amount_inr IS NULL AND sip_frequency IS NULL AND sip_day IS NULL)
+        OR (sip_amount_inr IS NOT NULL AND sip_frequency IS NOT NULL AND sip_day IS NOT NULL))
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_sip_installments (
     installment_id VARCHAR PRIMARY KEY,
     plan_id VARCHAR NOT NULL,
