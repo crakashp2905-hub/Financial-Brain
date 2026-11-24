@@ -546,18 +546,22 @@ class ForwardSessionRunner:
         if len(unique_ids) != len(input_event_ids):
             raise ForwardSessionRunnerError("decision input event IDs must be unique")
         rows = self._con.execute(
-            f"SELECT event_id, kind, available_at FROM runner_events WHERE session_id=? "
+            f"SELECT event_id, kind, available_at, event_json FROM runner_events WHERE session_id=? "
             f"AND kind NOT IN ('preflight','calendar_plan') AND event_id IN ({','.join('?' for _ in unique_ids)})",
             [session_id, *unique_ids]).fetchall()
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
         clock = decided_at.astimezone(timezone.utc)
-        if any(datetime.fromisoformat(available) > clock for _, _, available in rows):
+        if any(datetime.fromisoformat(available) > clock for _, _, available, _ in rows):
             raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
         max_quote_age = self._max_quote_age(session_id)
-        stale = [event_id for event_id, kind, available in rows
-                 if kind == "quote" and clock - datetime.fromisoformat(available) >
-                 timedelta(milliseconds=max_quote_age)]
+        stale = []
+        for event_id, kind, _, event_json in rows:
+            if kind != "quote":
+                continue
+            source_time = MarketEvent.from_dict(json.loads(event_json)).event_time.astimezone(timezone.utc)
+            if source_time > clock or clock - source_time > timedelta(milliseconds=max_quote_age):
+                stale.append(event_id)
         if stale:
             raise ForwardSessionRunnerError(
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
@@ -1163,9 +1167,10 @@ class ForwardSessionRunner:
             signal_event = (matching or signal_events)[0]
         if event.available_at > simulated_at.astimezone(timezone.utc):
             raise ForwardSessionRunnerError("paper fill quote was unavailable at simulated execution time")
-        quote_age = simulated_at.astimezone(timezone.utc) - event.available_at
+        execution_time = simulated_at.astimezone(timezone.utc)
+        quote_age = execution_time - event.event_time.astimezone(timezone.utc)
         max_quote_age = self._max_quote_age(session_id)
-        if quote_age > timedelta(milliseconds=max_quote_age):
+        if quote_age < timedelta(0) or quote_age > timedelta(milliseconds=max_quote_age):
             raise ForwardSessionRunnerError(
                 f"paper fill quote exceeds configured maximum age of {max_quote_age}ms")
         selected = next((row for row in manifest["selections"]
