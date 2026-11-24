@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..evaluation import models as bench
+from ..security import untrusted
 from . import system1
 
 REGISTRY = Path(__file__).with_name("models.toml")
@@ -127,8 +128,29 @@ def _record(con, task: str, state: str, d: system1.Decision, t: int) -> None:
                  task, t, d.latency_ms, cost])
 
 
+def _guard_external_fields(con, value, *, subject: str, path: str):
+    """Reject steering attempts in every textual field that can reach a model adapter."""
+    if isinstance(value, str):
+        safe, findings = untrusted.guard(con, value, subject=subject, where=path)
+        if findings or safe is None:
+            raise untrusted.UnsafeExternalText(f"untrusted model input rejected at {path}")
+        untrusted.require_safe(safe, source=path)
+        return safe
+    if isinstance(value, dict):
+        return {key: _guard_external_fields(con, item, subject=subject, path=f"{path}.{key}")
+                for key, item in value.items()}
+    if isinstance(value, list):
+        return [_guard_external_fields(con, item, subject=subject, path=f"{path}[]") for item in value]
+    if isinstance(value, tuple):
+        return tuple(_guard_external_fields(con, item, subject=subject, path=f"{path}[]") for item in value)
+    return value
+
+
 def decide(con, task: str, row: dict, *, steps: list[dict] | None = None) -> Routed:
     """``row`` is a benchmark-shaped input: {"state": text, ...task extras}."""
+    if not isinstance(row, dict):
+        raise ValueError("model input row must be an object")
+    row = _guard_external_fields(con, row, subject=str(row.get("id", task)), path=f"llm_input:{task}")
     steps = plan(con, task) if steps is None else steps
     if not steps:
         raise RuntimeError(f"no benchmarked model clears its bar for {task!r}; run "
@@ -136,6 +158,8 @@ def decide(con, task: str, row: dict, *, steps: list[dict] | None = None) -> Rou
     route, last = [], None
     for s in steps:
         d = bench.decider(task, s["model"])(row)
+        untrusted.validate_choice_output(label=d.label, confidence=d.confidence,
+                                         probabilities=d.probs, choices=bench.choices(task))
         if s["model"] not in BUILTIN_TIER:
             _record(con, task, row["state"], d, s["tier"])
         ok = bench.accepts(s, d.label, d.confidence)
@@ -144,4 +168,6 @@ def decide(con, task: str, row: dict, *, steps: list[dict] | None = None) -> Rou
         last = d
         if ok:
             return Routed(d, True, route)
+    if last is None:
+        raise RuntimeError("model route contains no usable steps")
     return Routed(last, False, route)

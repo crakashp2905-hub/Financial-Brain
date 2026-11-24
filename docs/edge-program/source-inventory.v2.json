@@ -9134,7 +9134,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/llm/laya.py",
-      "source_sha256": "f87e524c6b9302d748a590d9d7f246b51f11be07b903725d23ddf30985a92e61",
+      "source_sha256": "60dcb684d46fa9733bc14fbba8cb9cda9a8eb27c809fbde94f1c6db71a92c28b",
       "test_paths": []
     },
     {
@@ -9149,13 +9149,14 @@
         "json",
         "os",
         "pathlib",
+        "security",
         "tomllib"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/llm/router.py",
-      "source_sha256": "0aa686c160cd5fca4bc52bd1c70c0a3c398b356c8bc172220218a731680abea8",
+      "source_sha256": "31cc3d8cda20cb85cdc438ef4ee985c512b6b67e0af3d79b9969f8877c3ca249",
       "test_paths": []
     },
     {
@@ -9177,7 +9178,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/llm/system1.py",
-      "source_sha256": "7cc2270281749e3966fed732d406b67e00229c857386b4d8ed20e3838ac5e2c8",
+      "source_sha256": "15ebead27be004dd9abb149e34ea6f7e9788eaf1b2bfa018dede378ed8ce6491",
       "test_paths": []
     },
     {
@@ -12339,13 +12340,14 @@
       "imports": [
         "__future__",
         "datetime",
+        "math",
         "re"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/security/untrusted.py",
-      "source_sha256": "6014cbc50b0aee1c994ef3a40810cc9e0902f77cbe1df4b7adddfe0d65a2c082",
+      "source_sha256": "073cde5c9b29958453f15f821a168143dd0c89baa3ea9afa2033b5650b0d6e11",
       "test_paths": []
     },
     {
