@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 694,
+  "source_count": 695,
   "sources": [
     {
       "capability_ids": [],
@@ -4915,7 +4915,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -4926,12 +4928,14 @@
         "pathlib",
         "sqlite3"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/parameter_freeze.py",
       "source_sha256": "e5ff3580e95dec2c27539433a84a09ec4fb8eb8b4555b36e2f9d66dd5cfc51e1",
-      "test_paths": []
+      "test_paths": [
+        "tests/test_kernel_trade_admissibility.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -7398,7 +7402,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -7407,12 +7413,14 @@
         "decimal",
         "enum"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/execution_feasibility.py",
       "source_sha256": "6f12c86e940c027f4a40c8ecad6d39da316902ed1e423ade7eb604995e27c9e3",
-      "test_paths": []
+      "test_paths": [
+        "tests/test_kernel_trade_admissibility.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -7984,7 +7992,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -7998,12 +8008,14 @@
         "trader_signal",
         "zoneinfo"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/net_ev.py",
       "source_sha256": "aff63ba597bcb14aa7eea4e17c1e8c3a706c3960d329de78c975df5378232cc2",
-      "test_paths": []
+      "test_paths": [
+        "tests/test_kernel_trade_admissibility.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -8493,6 +8505,33 @@
       "source": "src/financial_brain/kernel/ticks.py",
       "source_sha256": "41f57eea7c31ee966c5487a132d12080d876d6722f67330ee5500bdeb90652e2",
       "test_paths": []
+    },
+    {
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "execution_feasibility",
+        "financial_brain.forward_edge.parameter_freeze",
+        "net_ev",
+        "re",
+        "trader_signal",
+        "zoneinfo"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trade_admissibility.py",
+      "source_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3",
+      "test_paths": [
+        "tests/test_kernel_trade_admissibility.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -12350,6 +12389,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 671,
-  "unassigned_role_count": 400
+  "unassessed_count": 668,
+  "unassigned_role_count": 401
 }
