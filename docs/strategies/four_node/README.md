@@ -48,8 +48,9 @@ variant and a separate trial; alternatives are never pooled.
   High, with equal-length OHLC arrays and the same explicit reset policy.
 - Daily Fibonacci snapshots carry version `four-node-daily-fib-v1`, a named anchor direction,
   source session ID and timezone-aware close/open timestamps. A source session closing at or
-  after the evaluated session open is rejected. The legacy numeric-level helper remains useful
-  for fixtures but does not itself prove session-date provenance.
+  after the evaluated session open is rejected. `events_for()` requires the dataset's ordered
+  session dates and attaches both unmerged anchor hypotheses to each research event. The legacy
+  numeric-level helper remains useful for fixtures but does not itself prove session-date provenance.
 - Fractal ties are configurable as `STRICT`, `LEFTMOST` or `RIGHTMOST`; left/right windows must be
   positive. `build(..., min_swing=...)` enforces alternating highs/lows and the minimum price
   distance. Nodes retain pivot, confirmation and observation indices, stable IDs, parent ancestry

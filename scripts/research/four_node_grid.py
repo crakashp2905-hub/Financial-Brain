@@ -37,7 +37,7 @@ def _period(day: str) -> str:
 def run_one(path: str) -> dict[str, list[tuple[str, str, float, float]]]:
     with np.load(path, allow_pickle=False) as z:
         days = [str(d) for d in z["days"]]
-        evs = events_for(z["o"], z["h"], z["l"], z["c"], RT)
+        evs = events_for(z["o"], z["h"], z["l"], z["c"], RT, days=days)
     sym = Path(path).stem
     out: dict[str, list[tuple[str, str, float, float]]] = {}
     for v in all_variants():
