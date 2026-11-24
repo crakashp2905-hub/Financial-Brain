@@ -186,6 +186,8 @@ def trace(setup: Setup, nodes: tuple[Node, Node, Node], c20: Cluster20, d1: floa
     return {"status": setup.status, "side": setup.side, "passed": list(setup.passed),
             "failed": list(setup.failed),
             "nodes": [{"side": n.side, "price": n.price, "pivot_at": n.pivot_at,
-                       "confirmed_at": n.confirmed_at} for n in nodes],
+                       "confirmed_at": n.confirmed_at, "observable_at": n.observable_at,
+                       "node_id": n.node_id, "parent_chain": list(n.parent_chain),
+                       "source_bar_ids": list(n.source_bar_ids)} for n in nodes],
             "c20": {"low": c20.low, "mid": c20.mid, "high": c20.high},
             "d1": d1, "d2": d2, "stop": setup.stop, "target": setup.target}

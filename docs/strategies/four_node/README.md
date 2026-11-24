@@ -39,6 +39,23 @@ variant and a separate trial; alternatives are never pooled.
 | Option routing | `signals/index_options.py` (underlying signal and option decision stay separate records) | — |
 | Paper exits | `signals/exit_triggers.py`, `signals/exit_plans.py` | Trail rule in `rules.py` |
 
+## Indicator and node data contracts (FB-2509 to FB-2513)
+- Wilder SMMA is seeded with an n-value SMA; warm-up is `None`; a missing value resets its seed.
+- The indicator API defaults to continuous-across-session smoothing. Callers can select
+  `ON_SESSION_CHANGE` and pass aligned session IDs to reset each session. The 5-minute research
+  study uses the continuous policy and does not infer a reset from bar spacing.
+- Close SMMA periods are 8, 50, 100 and 200. The 20C cluster separately smooths Low, Close and
+  High, with equal-length OHLC arrays and the same explicit reset policy.
+- Daily Fibonacci snapshots carry version `four-node-daily-fib-v1`, a named anchor direction,
+  source session ID and timezone-aware close/open timestamps. A source session closing at or
+  after the evaluated session open is rejected. The legacy numeric-level helper remains useful
+  for fixtures but does not itself prove session-date provenance.
+- Fractal ties are configurable as `STRICT`, `LEFTMOST` or `RIGHTMOST`; left/right windows must be
+  positive. `build(..., min_swing=...)` enforces alternating highs/lows and the minimum price
+  distance. Nodes retain pivot, confirmation and observation indices, stable IDs, parent ancestry
+  and source bar IDs. Without supplied source IDs, deterministic local bar-index IDs are used;
+  production ingestion should supply provider event IDs.
+
 ## Evaluation gates (FB-2534 to FB-2544)
 No backtest has been run. Any test must first be preregistered in the trial ledger with universe,
 parameter bounds, costs and gates; the 2026Q4 protected budget is spent, so a protected test needs

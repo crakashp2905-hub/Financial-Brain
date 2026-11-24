@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from financial_brain.strategies.four_node.indicators import FIB_RATIOS
+from financial_brain.strategies.four_node.indicators import FIB_RATIOS, smma
 from financial_brain.strategies.four_node.nodes import build
 from financial_brain.strategies.four_node.spec import AMBIGUITIES, india_v1
 
@@ -53,15 +53,9 @@ def variant_code(v: dict[str, str]) -> str:
 
 
 def _smma(x: np.ndarray, n: int) -> np.ndarray:
-    out = np.full(len(x), np.nan)
-    if len(x) < n:
-        return out
-    s = x[:n].mean()
-    out[n - 1] = s
-    for i in range(n, len(x)):
-        s = (s * (n - 1) + x[i]) / n
-        out[i] = s
-    return out
+    values = [None if np.isnan(v) else float(v) for v in x]
+    result = smma(values, n)
+    return np.array([np.nan if v is None else v for v in result], dtype=float)
 
 
 def _atr(h: np.ndarray, lo: np.ndarray, c: np.ndarray, n: int = 14) -> np.ndarray:
@@ -166,7 +160,7 @@ def events_for(o: np.ndarray, h: np.ndarray, lo: np.ndarray, c: np.ndarray, rt_c
         fib_lh = pdl + (pdh - pdl) * ratios
         fib_hl = pdh - (pdh - pdl) * ratios
         hd, ld = list(h[d]), list(lo[d])
-        z = build(hd, ld)
+        z = build(hd, ld, bar_ids=[f"session:{d}:bar:{i}" for i in range(BARS)])
         seen: set[tuple[int, int, int, str]] = set()
         for t in range(4, LAST_ENTRY_BAR + 1):
             tri = z.last_three(t)

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
-from financial_brain.strategies.four_node.indicators import FIB_RATIOS, Cluster20, fib_levels, smma
-from financial_brain.strategies.four_node.nodes import Node, build, pivots
+from financial_brain.strategies.four_node.indicators import (
+    FIB_RATIOS, Cluster20, close_smma_bands, cluster20, daily_fib_snapshot, fib_levels, smma,
+)
+from financial_brain.strategies.four_node.nodes import Node, Zigzag, build, pivots
 from financial_brain.strategies.four_node.rules import (
     Funnel,
     InstrumentConfig,
@@ -65,12 +68,59 @@ def test_smma_matches_wilder_reference():
     assert smma([1.0, None, 2, 3, 4], 2)[1:] == [None, None, 2.5, 3.25]
 
 
+def test_smma_session_reset_is_explicit_and_bands_have_golden_ohlc_values():
+    assert smma([1.0, 2.0, 3.0, 4.0], 2,
+                session_ids=["A", "A", "B", "B"], reset_policy="ON_SESSION_CHANGE") == [
+                    None, 1.5, None, 3.5]
+    with pytest.raises(ValueError, match="session_ids are required"):
+        smma([1.0], 1, reset_policy="ON_SESSION_CHANGE")
+    c20 = cluster20([float(i) for i in range(1, 21)],
+                    [float(i + 1) for i in range(1, 21)],
+                    [float(i + 2) for i in range(1, 21)])
+    assert c20[:19] == [None] * 19
+    assert c20[19] == Cluster20(10.5, 11.5, 12.5)
+
+
+def test_close_smma_periods_align_and_match_independent_wilder_reference():
+    values = [float(i) for i in range(1, 221)]
+    bands = close_smma_bands(values)
+    assert set(bands) == {8, 50, 100, 200}
+    for n, actual in bands.items():
+        assert len(actual) == len(values)
+        assert actual[:n - 1] == [None] * (n - 1)
+        expected = sum(values[:n]) / n
+        assert actual[n - 1] == pytest.approx(expected)
+        for value in values[n:]:
+            expected = (expected * (n - 1) + value) / n
+        assert actual[-1] == pytest.approx(expected)
+
+
 def test_fib_ratio_set_and_prior_day_levels():
     assert len(FIB_RATIOS) == 27
     lv = fib_levels(100, 200, "PREV_DAY_LOW_TO_HIGH")
     assert lv[0.0] == 100 and lv[100.0] == 200 and lv[-100.0] == 0
     with pytest.raises(ValueError):
         fib_levels(100, 200, "TODAY")
+
+
+def test_daily_fib_snapshot_binds_levels_to_completed_session_and_version():
+    snapshot = daily_fib_snapshot(
+        prev_day_low=100, prev_day_high=200, anchor="PREV_DAY_LOW_TO_HIGH",
+        anchor_session_id="NSE:2026-11-24",
+        anchor_close_at=datetime(2026, 11, 24, 10, 0, tzinfo=timezone.utc),
+        evaluated_session_open_at=datetime(2026, 11, 25, 3, 45, tzinfo=timezone.utc),
+    )
+    assert snapshot.version == "four-node-daily-fib-v1"
+    assert snapshot.anchor_session_id == "NSE:2026-11-24"
+    assert snapshot.anchor_close_at < snapshot.evaluated_session_open_at
+    assert snapshot.levels[100.0] == 200
+    with pytest.raises(ValueError, match="must be completed"):
+        daily_fib_snapshot(
+            prev_day_low=100, prev_day_high=200, anchor="PREV_DAY_LOW_TO_HIGH",
+            anchor_session_id="current-session",
+            anchor_close_at=datetime(2026, 11, 25, 4, 0, tzinfo=timezone.utc),
+            evaluated_session_open_at=datetime(2026, 11, 25, 3, 45, tzinfo=timezone.utc),
+        )
 
 
 def test_pivot_confirmation_delay_and_no_repaint():
@@ -81,6 +131,33 @@ def test_pivot_confirmation_delay_and_no_repaint():
     assert top.pivot_at == 2 and top.confirmed_at == 4
     longer = pivots(highs + [9, 9, 9], lows + [8, 8, 8], 2, 2)
     assert top in longer      # future bars do not change an emitted node
+
+
+def test_pivot_tie_policy_minimum_swing_and_node_lineage():
+    highs = [1, 4, 4, 2, 1, 3, 1]
+    lows = [h - 1 for h in highs]
+    strict = pivots(highs, lows, 1, 1, bar_ids=[f"b{i}" for i in range(len(highs))])
+    leftmost = pivots(highs, lows, 1, 1, tie_policy="LEFTMOST")
+    rightmost = pivots(highs, lows, 1, 1, tie_policy="RIGHTMOST")
+    assert not any(n.side == 1 and n.pivot_at in (1, 2) for n in strict)
+    assert any(n.side == 1 and n.pivot_at == 1 for n in leftmost)
+    assert any(n.side == 1 and n.pivot_at == 2 for n in rightmost)
+    pivot = next(n for n in strict if n.side == 1 and n.pivot_at == 5)
+    assert pivot.observable_at == pivot.confirmed_at == 6
+    assert pivot.source_bar_ids == ("b4", "b5", "b6")
+    assert pivot.node_id
+    with pytest.raises(ValueError, match="before confirmation"):
+        Node(1, 5, 2, 4, observable_at=3)
+    delayed = Node(1, 9, 2, 4, observable_at=5)
+    eligibility = Zigzag(nodes=[Node(1, 10, 0, 2), Node(-1, 8, 3, 4), delayed])
+    assert eligibility.last_three(4) is None
+    assert eligibility.last_three(5) == (eligibility.nodes[0], eligibility.nodes[1], delayed)
+
+    z = build([1, 5, 2, 4, 1, 6, 2, 4, 1],
+              [0, 4, 1, 3, 0, 5, 1, 3, 0], left=1, right=1, min_swing=3)
+    assert all(a.side != b.side for a, b in zip(z.nodes, z.nodes[1:]))
+    assert all(abs(a.price - b.price) >= 3 for a, b in zip(z.nodes, z.nodes[1:]))
+    assert all(n.parent_chain for n in z.nodes[1:])
 
 
 def test_zigzag_alternates_and_observability():
