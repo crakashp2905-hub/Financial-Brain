@@ -2297,14 +2297,21 @@
       "id": "FB-0504",
       "text": "ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "ETF bars and quote/liquidity diagnostics exist, but no short-horizon ETF signal study connects spread/depth admissibility to cost-adjusted intraday outcomes."
+        "Frozen v1.0.0 candidate and screen rules are documented in docs/edge-program/etf-intraday-opening-range-v1.md: six complete five-minute opening-range bars, point-in-time availability, a close breakout, source event lineage, and explicit no-order output.",
+        "src/financial_brain/features/etf_intraday_screen.py gates a candidate on observed quotes, estimated round-trip cost limits, two-sided top-book depth, and observed breakout extension at least 2x its cost proxy. The extension is not treated as expected alpha.",
+        "src/financial_brain/features/etf_bars.py now emits source event IDs and an input digest per bar. src/financial_brain/features/etf_liquidity.py now uses the full quoted spread for round-trip spread cost (buy ask, sell bid), plus Amihud proxy and caller costs.",
+        "Q4-2026 protected trial budget is exhausted and Q1-2027 is not authorized. No backtest, parameter selection, forward cohort, calibrated fill, or profitability claim was made."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
+      "blocker": "Partial: only the research candidate and cost/liquidity screen are implemented. Cost model is not execution-calibrated; no authorized performance study, capacity/tax/benchmark controls, or prospective evidence exists. Q4-2026 is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T12:00:00+00:00",
       "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "test_result": "Ten focused tests pass for bar event lineage, complete contiguous point-in-time bars, breakout candidates, stale/wide quote and depth rejection, estimated cost gating, and full quoted spread round-trip cost arithmetic. Tests prove software behavior only.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_intraday_screen.py tests/test_etf_bars.py tests/test_etf_liquidity.py -q: 10 passed.",
+        "Capability matrix validation passed; Ruff and scoped mypy passed for the changed modules."
+      ]
     },
     {
       "id": "FB-0505",
@@ -15692,7 +15699,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T11:00:00Z",
+    "as_of_utc": "2026-11-24T12:00:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15945,8 +15952,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 12,
-      "PARTIAL": 191,
+      "NOT_STARTED": 11,
+      "PARTIAL": 192,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16019,13 +16026,13 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 12,
-    "PARTIAL": 191,
+    "NOT_STARTED": 11,
+    "PARTIAL": 192,
     "UNASSESSED": 1132
   }
 }

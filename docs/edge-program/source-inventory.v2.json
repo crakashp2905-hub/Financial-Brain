@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 686,
+  "source_count": 687,
   "sources": [
     {
       "capability_ids": [],
@@ -2907,7 +2907,9 @@
       "test_paths": []
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "etf-intraday-opening-range-screen"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -2915,15 +2917,21 @@
         "datetime",
         "financial_brain.forward_edge.market_events",
         "financial_brain.forward_edge.venue_calendar",
+        "hashlib",
+        "json",
         "math",
         "typing"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_bars.py",
-      "source_sha256": "d9ca5460325446d79a674a10bd369e1649d4e7b621cd27adc41dd7b3927ab110",
-      "test_paths": []
+      "source_sha256": "138a228bea82879c9c837eb14d7e20a2fd15f6e49bf07d2fe0dd1256957ca846",
+      "test_paths": [
+        "tests/test_etf_bars.py",
+        "tests/test_etf_intraday_screen.py",
+        "tests/test_etf_liquidity.py"
+      ]
     },
     {
       "capability_ids": [
@@ -2950,7 +2958,37 @@
       ]
     },
     {
-      "capability_ids": [],
+      "capability_ids": [
+        "etf-intraday-opening-range-screen"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "financial_brain.features.etf_liquidity",
+        "financial_brain.forward_edge.market_events",
+        "hashlib",
+        "json",
+        "math",
+        "typing"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/features/etf_intraday_screen.py",
+      "source_sha256": "45d54d02d79dcfdf95fda940777e4685fc00fc1b3c138cdeee28fcec81c84687",
+      "test_paths": [
+        "tests/test_etf_bars.py",
+        "tests/test_etf_intraday_screen.py",
+        "tests/test_etf_liquidity.py"
+      ]
+    },
+    {
+      "capability_ids": [
+        "etf-intraday-opening-range-screen"
+      ],
       "human_owner": null,
       "imports": [
         "__future__",
@@ -2962,12 +3000,16 @@
         "statistics",
         "typing"
       ],
-      "maturity": "unassessed",
+      "maturity": "locally_mapped",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_liquidity.py",
-      "source_sha256": "734948c655f59b9bfdd2b2bc2b57633564523bd368bd3ac154a90f55b5742f59",
-      "test_paths": []
+      "source_sha256": "6c84df78b56dfeb2468a5ed1a7d3019cb9c06ea463c5e47aa9735aa2156ffab1",
+      "test_paths": [
+        "tests/test_etf_bars.py",
+        "tests/test_etf_intraday_screen.py",
+        "tests/test_etf_liquidity.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -12143,6 +12185,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 669,
+  "unassessed_count": 667,
   "unassigned_role_count": 398
 }

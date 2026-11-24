@@ -107,7 +107,9 @@ def analyze_etf_liquidity(
     median_ask_depth = median([row[2] for row in valid_quotes]) if valid_quotes else None
     capacity_fraction = intended_notional_inr / median_turnover if median_turnover else None
     impact_bps = (amihud_median * intended_notional_inr * 10000) if amihud_median is not None else None
-    estimated_cost = ((median_spread / 2) + impact_bps + other_round_trip_cost_bps
+    # A round trip crosses the displayed spread once (buy at ask, sell at bid).
+    # Use the full quoted spread; half-spread is only a one-sided estimate.
+    estimated_cost = (median_spread + impact_bps + other_round_trip_cost_bps
                       if median_spread is not None and impact_bps is not None else None)
     sufficient = bool(sessions and observations and adjacent_returns and valid_quotes)
     limits_met = bool(
@@ -140,7 +142,7 @@ def analyze_etf_liquidity(
         "other_round_trip_cost_bps": other_round_trip_cost_bps,
         "estimated_all_in_round_trip_cost_bps": estimated_cost,
         "limits_met": limits_met,
-        "cost_model_label": "Amihud size proxy plus observed half-spread plus caller-supplied other round-trip costs; not execution-calibrated",
+        "cost_model_label": "Amihud size proxy plus full observed spread for a round trip plus caller-supplied other round-trip costs; not execution-calibrated",
     }
 
 

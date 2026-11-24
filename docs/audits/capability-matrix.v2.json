@@ -145,6 +145,17 @@
       "source": ["src/financial_brain/features/etf_cross_asset_rotation.py"],
       "tests": ["tests/test_etf_cross_asset_rotation.py"],
       "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No return, cost, tax, turnover, capacity, or prospective cohort evaluation"]
+    },
+    {
+      "id": "etf-intraday-opening-range-screen",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Opening-range ETF candidate is emitted only after point-in-time complete bars, observed quote/spread, two-sided depth, and estimated cost gates; full spread is counted round trip. No performance evidence or order authority.",
+      "evidence": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "source": ["src/financial_brain/features/etf_intraday_screen.py", "src/financial_brain/features/etf_bars.py", "src/financial_brain/features/etf_liquidity.py"],
+      "tests": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "Spread/Amihud/caller-cost estimate is not calibrated execution or profitability evidence"]
     }
   ]
 }
