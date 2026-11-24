@@ -16453,182 +16453,290 @@
     {
       "id": "SL-25-01",
       "text": "Implement append-only PolicyRegistry with `CANDIDATE`, `OOS_PASSED`, `SHADOW`, `FORWARD_UNPROVEN`, `REVIEW_ELIGIBLE`, `RETIRED`, `BLOCKED`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Added SQLite `learning/policy_registry.py::PolicyRegistry` with the requested append-only CANDIDATE/OOS_PASSED/SHADOW/FORWARD_UNPROVEN/REVIEW_ELIGIBLE/RETIRED/BLOCKED lifecycle. Update/delete triggers and hash-chain verification protect the transition history; tests cover legal and terminal transitions."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-02",
       "text": "Create immutable policy artifact binding code hash, weights, reward, training data hash, feature versions, risk caps, source rights and evaluation protocol.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Immutable `PolicyArtifact` binds code, weights, reward definition, training data, feature versions, risk caps, source-rights evidence and evaluation protocol hashes. Duplicate policy IDs cannot change the artifact; all fields participate in the artifact digest."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-03",
       "text": "Freeze champion weights, feature logic and decision clock for each prospective cohort.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Policy artifacts are immutable and champion governance freezes policies, but the registry does not bind frozen champion weights/features/decision clock to each prospective cohort session."
+      ],
+      "blocker": "Per-cohort immutable model/configuration and decision-clock snapshot is not integrated.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-04",
       "text": "Run challenger and champion on same eligible market snapshots with identical capital, costs and refusal rules.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/champion_challenger.py` compares the champion and frozen challenger family on identical required sessions, equal allocated capital, and itemized cost P&L; exact shared market snapshots and refusal-rule parity are not validated."
+      ],
+      "blocker": "Same-snapshot and refusal-policy identity are not enforced by the comparison schema.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-05",
       "text": "Create paired-session net-return differences including cash days and unresolved positions rather than cherry-picked trades.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion comparison pairs every expected session and requires complete challenger rows; it can represent zero-return cash days, but open-position marks/unresolved outcomes are not an explicit required state."
+      ],
+      "blocker": "Cash and unresolved-position semantics are not mandatory fields in paired sessions.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-06",
       "text": "Require pre-registered superiority or non-inferiority margin and dependence-aware lower confidence bound for champion replacement.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion/challenger inference uses aligned net returns and dependence-preserving block resampling with family-wise p-values; no pre-registered superiority/non-inferiority margin and explicit dependence-aware lower confidence bound are enforced together."
+      ],
+      "blocker": "Promotion threshold margin and confidence-bound contract remain incomplete.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-07",
       "text": "Implement risk-based automatic demotion when current champion breaches a hard operational or financial safety gate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`ChampionGovernanceStore.automatic_rollback` demotes to a frozen safe policy and halts entries for drift, outage, accounting mismatch or manual pause; financial hard-limit trigger coverage is not complete."
+      ],
+      "blocker": "Financial breach monitoring and automatic demotion triggers are not comprehensively wired.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-08",
       "text": "Allow automatic *reduction* of risk or return to cash on degradation; no automatic increase in cash exposure limits.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Risk throttle and champion rollback can reduce risk or move to SAFE_HOLD; no invariant proves automated policy paths can reduce exposure but never raise cash/risk caps."
+      ],
+      "blocker": "Global monotone-risk-decrease contract is not enforced across policy updates.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-09",
       "text": "Add model registry compare command returning the exact evidence for score deltas and confidence.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion/challenger reports include aligned net score deltas, family-wise inference, session count and report hash; no model-registry CLI compare command resolves the exact artifact/evaluation evidence packet."
+      ],
+      "blocker": "Registry-to-report comparison command and evidence fetch are absent.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-10",
       "text": "Prevent strategy-generator or LLM from approving its own output, falsification test or live-stage promotion.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Registry transitions reject GENERATOR actors; REVIEW_ELIGIBLE requires a HUMAN_REVIEWER plus approval SHA-256. Tests prove candidate agents cannot promote their output and evaluator-only approval is refused."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-11",
       "text": "Build retrain policy that does not overwrite champion checkpoint; it produces a new immutable candidate artifact.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Every retrained candidate can be registered as a new immutable artifact and cannot overwrite a prior policy ID; no automated retraining scheduler/checkpoint pipeline is implemented."
+      ],
+      "blocker": "Training lifecycle does not yet create versioned candidates from matured data automatically.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-12",
       "text": "Separate scheduled retraining from performance-triggered retraining and count each as a new selection decision.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No scheduled-versus-performance-triggered retraining policy with separate selection-decision accounting was found."
+      ],
+      "blocker": "Retraining triggers/cadence and multiplicity records are absent.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-13",
       "text": "Include strict sequential testing review frequency; a thousand daily comparisons cannot be treated as a single independent experiment.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trial budgets and frozen prospective windows exist; no strict sequential review frequency or alpha-spending ledger governs repeated daily champion comparisons."
+      ],
+      "blocker": "Sequential comparison error spending is not implemented.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-14",
       "text": "Implement rollback to prior champion or CASH with deterministic state transfer and no double execution of pending orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion governance can persist safe-policy rollback and unknown-order counts; full deterministic transfer of learner state plus pending-order deduplication across restart is not demonstrated by the policy registry."
+      ],
+      "blocker": "Model-state and in-flight order restore/rollback acceptance remains incomplete.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-15",
       "text": "Expose `EVIDENCE_INSUFFICIENT` when replay advantage is positive but forward sample too short.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Champion comparison reports `INSUFFICIENT_SESSIONS` and disallows promotion below the floor; the explicit `EVIDENCE_INSUFFICIENT` surface for replay-positive/forward-short cohorts is not wired to every evaluator."
+      ],
+      "blocker": "Insufficient-forward-evidence label is not standardized across the platform.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-16",
       "text": "Archive every candidate, including harmful models, with metadata needed to reproduce why they were rejected.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Policy registry archives every immutable candidate artifact and append-only status/reason/evidence event, including BLOCKED/RETIRED candidates. The artifact records code, weights, reward, training data, features, risk caps, rights and evaluation hashes; tests verify immutability and retained rejection reason."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-17",
       "text": "Include owner-controlled release sign-off and explicit effective time; policy switch mid-session is forbidden by default.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The registry requires human approval evidence for REVIEW_ELIGIBLE and champion changes require owner approvals; it does not store a unified release-effective session/time gate that forbids all mid-session switches."
+      ],
+      "blocker": "Effective-time/session-boundary enforcement is not integrated across promotion and session runner.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-25-18",
       "text": "Test false promotion, reward tampering, changed risk cap, unsigned artifact, lost journal and expired owner authorization.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Registry tests cover generator promotion denial, missing human approval, changed artifact and terminal state; reward-tampering, changed risk caps, unsigned evidence, lost journal and expired owner-authorization adversarial cases are not all exercised in one gate."
+      ],
+      "blocker": "Full false-promotion and recovery fault matrix is incomplete.",
+      "last_audited_at_utc": "2026-11-24T19:15:26Z",
+      "commit": "5e649584",
+      "test_evidence": [
+        "Champion/policy-governance verification: 35 passed across tests/test_learning_policy_registry.py, test_forward_edge_champion_governance.py, test_forward_edge_champion_challenger.py, test_forward_edge_registry.py, test_phase5_champion.py and test_trial_preservation_audit.py after adding repository root to pytest pythonpath; Ruff and mypy passed for the new registry."
+      ],
+      "test_result": "Policy registry/champion governance: 35 tests passed; Ruff and targeted mypy passed for the registry."
     },
     {
       "id": "SL-26-01",
@@ -18372,7 +18480,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T19:04:33Z",
+    "as_of_utc": "2026-11-24T19:15:26Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19074,17 +19182,35 @@
       "SL-24-17",
       "SL-24-18",
       "SL-24-19",
-      "SL-24-20"
+      "SL-24-20",
+      "SL-25-01",
+      "SL-25-02",
+      "SL-25-03",
+      "SL-25-04",
+      "SL-25-05",
+      "SL-25-06",
+      "SL-25-07",
+      "SL-25-08",
+      "SL-25-09",
+      "SL-25-10",
+      "SL-25-11",
+      "SL-25-12",
+      "SL-25-13",
+      "SL-25-14",
+      "SL-25-15",
+      "SL-25-16",
+      "SL-25-17",
+      "SL-25-18"
     ],
-    "audited_count": 701,
+    "audited_count": 719,
     "status_counts": {
-      "COMPLETE": 60,
-      "PARTIAL": 624,
+      "COMPLETE": 64,
+      "PARTIAL": 637,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 12,
-      "UNASSESSED": 677
+      "NOT_STARTED": 13,
+      "UNASSESSED": 659
     },
-    "verified_complete_count": 60,
+    "verified_complete_count": 64,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -19204,13 +19330,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing. SL-24-01..SL-24-20 off-policy evaluation requirements were source-audited: 3 COMPLETE, 16 PARTIAL and 1 NOT_STARTED. Added support-checked contextual DM/IPS/SNIPS/DR estimates with positivity/ESS gates and explicit NO_VALID_OPE refusal; 24 OPE/learning/evaluation tests passed, Ruff and mypy passed. Sequential trajectory OPE, confidence intervals, registered sensitivity variants and fully captured trial multiplicity remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing. SL-24-01..SL-24-20 off-policy evaluation requirements were source-audited: 3 COMPLETE, 16 PARTIAL and 1 NOT_STARTED. Added support-checked contextual DM/IPS/SNIPS/DR estimates with positivity/ESS gates and explicit NO_VALID_OPE refusal; 24 OPE/learning/evaluation tests passed, Ruff and mypy passed. Sequential trajectory OPE, confidence intervals, registered sensitivity variants and fully captured trial multiplicity remain open. SL-25-01..SL-25-18 champion/retraining requirements were source-audited: 4 COMPLETE, 13 PARTIAL and 1 NOT_STARTED. Added an append-only policy registry with immutable code/weights/reward/data/features/risk/rights/protocol artifact binding, reasoned hash-chained events, generator transition denial and human approval for REVIEW_ELIGIBLE; 35 governance tests passed. Automated retraining, sequential alpha spending, cohort-bound model snapshots and release-time gating remain incomplete."
   },
   "counts_by_status": {
-    "COMPLETE": 60,
-    "PARTIAL": 624,
+    "COMPLETE": 64,
+    "PARTIAL": 637,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 12,
-    "UNASSESSED": 677
+    "NOT_STARTED": 13,
+    "UNASSESSED": 659
   }
 }

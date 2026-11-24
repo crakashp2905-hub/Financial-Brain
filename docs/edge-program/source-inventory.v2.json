@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 711,
+  "source_count": 712,
   "sources": [
     {
       "capability_ids": [],
@@ -8882,6 +8882,28 @@
         "datetime",
         "hashlib",
         "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/policy_registry.py",
+      "source_sha256": "1f887bdf9b9f49bf40ee909030732163675094a3c4c3f9a8c07071c658beca08",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
         "math",
         "pathlib",
         "re",
@@ -12724,6 +12746,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 681,
-  "unassigned_role_count": 417
+  "unassessed_count": 682,
+  "unassigned_role_count": 418
 }
