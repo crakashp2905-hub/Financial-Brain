@@ -10539,202 +10539,303 @@
     {
       "id": "SL-04-01",
       "text": "Model the task as a partially observable sequential decision process, not a fully known future price trajectory.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing timestamped event, forward session and replay components provide chronological inputs, but no RL/POMDP environment or sequential policy-learning interface exists.",
+        "Evidence: src/financial_brain/forward_edge/market_events.py; src/financial_brain/forward_edge/session_runner.py; src/financial_brain/kernel/exit_scenarios.py."
+      ],
+      "blocker": "Learner-facing state/action/transition/reward environment is absent.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-02",
       "text": "Define state `s_t = (point-in-time market features, holdings, cash, drawdown, orders, remaining time, data health, model uncertainty)`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Portfolio ledger and forward-run state store capture cash/positions and session evidence independently; no canonical learner observation combines market features, holdings, cash, drawdown, orders, time, feed health and uncertainty."
+      ],
+      "blocker": "Unified point-in-time learner observation schema is absent.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-03",
       "text": "Define policy action as abstract desired position/option intent; the risk governor projects it into a feasible trade or NO_TRADE.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trade admissibility and portfolio risk gates can reject or admit paper candidates, but no abstract desired-position action schema is projected by a shared RL risk governor."
+      ],
+      "blocker": "No action projection adapter links a policy intent to the existing paper risk gates.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-04",
       "text": "Create configurable episode boundaries by instrument/session/month/expiry; no accidental carry across account restarts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forward sessions and replay samples have session/horizon boundaries; no reusable RL episode boundary policy for instrument/month/option expiry or restart isolation was found."
+      ],
+      "blocker": "RL episode manager and restart/carry invariants are absent.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-05",
       "text": "Add event-driven transitions for quote, bar close, trade, fill, cancel, rejection, halt, corporate action, cash flow and model update.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MarketEvent supports quote, bar, halt, auction, corporate-action and broker-update events; runner persists market and order events. Cash-flow/model-update events and one sequential learner transition loop are not integrated."
+      ],
+      "blocker": "Event kinds are split across modules without unified agent transition/reward handling.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-06",
       "text": "Make market events immutable and independent of policy action except explicitly modeled impact and marketable participation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MarketEvent is a frozen dataclass with canonical SHA-256 and availability clocks; no environment enforces immutable exogenous event streams plus separately modeled policy impact/participation."
+      ],
+      "blocker": "No event-stream/environment coupling contract is implemented.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-07",
       "text": "Enforce cash availability, whole-share/lot sizing, exchange limits, options expiry, settlement and instrument eligibility on every step.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Canonical ledger, instrument rules, eligibility and option risk modules each enforce portions of cash/lot/settlement/contract rules; no every-step learner transition calls all constraints."
+      ],
+      "blocker": "Cross-asset constraint projection is not part of a unified environment.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-08",
       "text": "Support canonical order states `NEW/ACK/PARTIAL/FILLED/CANCELLED/REJECTED/UNKNOWN` with durable write-ahead transitions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "OrderJournal and durable runner persist paper order lifecycle evidence; the complete required state machine and learning-environment write-ahead transition semantics are not proven as one contract."
+      ],
+      "blocker": "Need one canonical RL order-state transition adapter and crash/restart tests.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-09",
       "text": "Implement reward event emission at actual valuation events rather than hindsight labeling at entry.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forward runner emits persisted decisions and session reports; no RL reward-event schema anchored only to actual mark/valuation transitions was found."
+      ],
+      "blocker": "Reward emission and valuation ledger are not linked.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-10",
       "text": "For overlapping SL and TP on the same OHLC candle, choose adverse-first or unresolved; require tick/depth to resolve ordering.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Exit replay treats ambiguous OHLC stop/target bars conservatively and counts ambiguity; no RL simulator integration enforcing this on every transition."
+      ],
+      "blocker": "Adverse-first/unresolved behavior is not mandatory in a common simulator.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-11",
       "text": "Model bid-ask spread, queue probability, depth depletion, adverse selection, partial fills, stale data and varying latency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Execution modules model depth walking, passive/marketable fills, spread, adverse selection and latency; queue probabilities, stale data and event-consistent depth depletion are not unified or calibrated."
+      ],
+      "blocker": "No calibrated common execution stochasticity model.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-12",
       "text": "Model session-open gap-through-stop and exchange halt as non-guaranteed stop execution; preserve open risk when impossible to close.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Exit replay models adverse gap-through-stop fills; session health and halt events exist. Halted/unexecutable open risk is not represented in a common learning environment."
+      ],
+      "blocker": "Gap/halt exposure management not integrated with learner state transitions.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-13",
       "text": "Parameterize exchange fee/tax/impact/participation rules point in time with actual instrument category.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Point-in-time cost schedules and exchange rules exist in execution/provider modules; no RL environment applies instrument-category, effective-dated taxes/fees/impact on every simulated transition."
+      ],
+      "blocker": "No unified environment cost adapter.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-14",
       "text": "Create historical replay simulator, synthetic stress simulator and prospectively observed paper simulator with different evidence labels.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical replay, fixture/research adapters and prospective paper runner exist with distinct evidence labels in adjacent code; there is no RL API sharing one environment across those three modes."
+      ],
+      "blocker": "Three evidence modes are not represented behind the same simulator contract.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-15",
       "text": "Allow replay snapshots/rewind of the simulator while preventing the learner from inspecting future scenario random seeds.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Durable runner checkpoints and immutable journals support operational recovery; no deterministic simulator snapshot/rewind API with hidden future random seeds exists."
+      ],
+      "blocker": "No simulator state snapshot API or seed secrecy contract.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-16",
       "text": "Implement deterministic no-trade baseline and fixed-rule policy baselines in exactly the same simulator.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Research/null baselines exist; no-trade and fixed-rule policies are not run through the same RL simulator because that simulator is absent."
+      ],
+      "blocker": "Shared simulator policy baseline harness absent.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-17",
       "text": "Model stochastic execution uncertainty as scenario distribution; do not equate simulated fills to brokerage executions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Execution scenario code supports quote/depth outcomes and explicit misses, but no stochastic execution scenario distribution or common evidence label in a learner environment."
+      ],
+      "blocker": "Execution uncertainty distribution remains unimplemented/calibrated.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-18",
       "text": "Build differential tests against canonical OMS and ledger at every portfolio transition.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Canonical ledger property tests, OMS lifecycle tests and runner integration tests exist separately; no differential tests compare each learner transition against OMS and canonical ledger."
+      ],
+      "blocker": "Transition-level differential test harness absent.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-19",
       "text": "Add impossibility assertions: negative cash without approved margin, fictitious contracts, zero-cost instant fills, fill before quote.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "OMS, admissibility, execution and accounting reject several invalid states; no simulator-level impossibility assertion suite covers all listed conditions as one invariant boundary."
+      ],
+      "blocker": "No unified environment invariant suite.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-04-20",
       "text": "Publish simulator fidelity manifest showing which assumptions are observed, calibrated, conservative or wholly synthetic.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Execution and event modules label bar proxy/replay evidence and known assumptions; no consolidated simulator fidelity manifest classifies assumptions observed/calibrated/conservative/synthetic."
+      ],
+      "blocker": "Fidelity manifest must be generated from an integrated simulator contract.",
+      "last_audited_at_utc": "2026-11-24T18:10:00Z",
+      "commit": "2b34a2f8",
+      "test_evidence": [
+        "Source audit of market event, forward runner, durable journal, execution scenario, exit replay, portfolio ledger and trade-admissibility modules; no new implementation claimed."
+      ]
     },
     {
       "id": "SL-05-01",
@@ -16635,15 +16736,35 @@
       "SL-00-16",
       "SL-00-17",
       "SL-00-18",
-      "SL-01-06"
+      "SL-01-06",
+      "SL-04-01",
+      "SL-04-02",
+      "SL-04-03",
+      "SL-04-04",
+      "SL-04-05",
+      "SL-04-06",
+      "SL-04-07",
+      "SL-04-08",
+      "SL-04-09",
+      "SL-04-10",
+      "SL-04-11",
+      "SL-04-12",
+      "SL-04-13",
+      "SL-04-14",
+      "SL-04-15",
+      "SL-04-16",
+      "SL-04-17",
+      "SL-04-18",
+      "SL-04-19",
+      "SL-04-20"
     ],
-    "audited_count": 336,
+    "audited_count": 356,
     "status_counts": {
       "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 4,
       "NOT_STARTED": 0,
-      "PARTIAL": 284,
-      "UNASSESSED": 1042
+      "PARTIAL": 304,
+      "UNASSESSED": 1022
     },
     "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16765,13 +16886,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found."
   },
   "counts_by_status": {
     "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 4,
     "NOT_STARTED": 0,
-    "PARTIAL": 284,
-    "UNASSESSED": 1042
+    "PARTIAL": 304,
+    "UNASSESSED": 1022
   }
 }
