@@ -143,6 +143,16 @@
       "boundary": "Normalized append-only quote-event archive; legacy raw DuckDB quote archive is a separate migration/source store."
     },
     {
+      "id": "index_forecast_market_contract",
+      "category": "forecasting",
+      "owner": "src/financial_brain/forecasting/index_market.py",
+      "owner_symbol": "build_15m_bars/forward_return",
+      "implementations": [
+        "src/financial_brain/forecasting/index_15m.py"
+      ],
+      "boundary": "Owns effective-dated index identity, point-in-time complete index bars and same-session labels; the research module owns leakage-safe features and evaluation utilities, not option routing or performance claims."
+    },
+    {
       "id": "broker_oms",
       "category": "oms",
       "owner": "src/financial_brain/execution/oms/engine.py",
@@ -1288,6 +1298,72 @@
       "path": "src/financial_brain/execution/ticket.py",
       "module_role": "execution_or_cost_model",
       "module_owner": "src/financial_brain/execution/ticket.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/bars.py",
+      "path": "src/financial_brain/forecasting/bars.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/bars.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/calibration.py",
+      "path": "src/financial_brain/forecasting/calibration.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/calibration.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/dataset.py",
+      "path": "src/financial_brain/forecasting/dataset.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/dataset.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/distribution.py",
+      "path": "src/financial_brain/forecasting/distribution.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/distribution.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/ensemble.py",
+      "path": "src/financial_brain/forecasting/ensemble.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/ensemble.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_15m.py",
+      "path": "src/financial_brain/forecasting/index_15m.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_15m.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_market.py",
+      "path": "src/financial_brain/forecasting/index_market.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_market.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/kronos.py",
+      "path": "src/financial_brain/forecasting/kronos.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/kronos.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/null.py",
+      "path": "src/financial_brain/forecasting/null.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/null.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/store.py",
+      "path": "src/financial_brain/forecasting/store.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/store.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/walkforward.py",
+      "path": "src/financial_brain/forecasting/walkforward.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/walkforward.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/abstention.py",

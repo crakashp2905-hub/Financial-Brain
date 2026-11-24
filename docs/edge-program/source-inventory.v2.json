@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 727,
+  "source_count": 728,
   "sources": [
     {
       "capability_ids": [],
@@ -3388,6 +3388,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forecasting/ensemble.py",
       "source_sha256": "8fb10af2c30ae6524405577d321a1cadaed3bf65af18c5dc9fe0c8569f3fc0b9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forecasting.index_market",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_15m.py",
+      "source_sha256": "afc787e72179b4c201bca6d663fdfc0a94b5654675173d7b63bca087ae2b4e4c",
       "test_paths": []
     },
     {
@@ -13022,6 +13041,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 697,
+  "unassessed_count": 698,
   "unassigned_role_count": 431
 }

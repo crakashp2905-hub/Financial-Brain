@@ -47,6 +47,10 @@ CAPABILITIES = [
     {"id": "quote_archive", "category": "feed", "owner": "src/financial_brain/forward_edge/quote_archive.py",
      "owner_symbol": "QuoteArchive", "implementations": ["src/financial_brain/forward_edge/market_data.py", "src/financial_brain/paper/intraday_runner.py"],
      "boundary": "Normalized append-only quote-event archive; legacy raw DuckDB quote archive is a separate migration/source store."},
+    {"id": "index_forecast_market_contract", "category": "forecasting",
+     "owner": "src/financial_brain/forecasting/index_market.py", "owner_symbol": "build_15m_bars/forward_return",
+     "implementations": ["src/financial_brain/forecasting/index_15m.py"],
+     "boundary": "Owns effective-dated index identity, point-in-time complete index bars and same-session labels; the research module owns leakage-safe features and evaluation utilities, not option routing or performance claims."},
     {"id": "broker_oms", "category": "oms", "owner": "src/financial_brain/execution/oms/engine.py",
      "owner_symbol": "OrderManagementSystem", "implementations": ["src/financial_brain/execution/oms/kite_broker.py", "src/financial_brain/execution/oms/journal.py", "src/financial_brain/execution/oms/reconcile.py"],
      "boundary": "Broker order lifecycle and reconciliation. Forward paper simulation and kernel simulated OMS have separate scopes."},
@@ -97,6 +101,7 @@ def module_inventory() -> list[dict[str, str]]:
     for path in (ROOT / "src/financial_brain/strategies").glob("*.py"):
         add(path, "strategy_source_or_contract")
     for folder, role in (("providers", "provider_adapter"), ("ingest", "feed_ingester"),
+                         ("forecasting", "index_forecast_or_evaluation"),
                          ("evaluation", "strategy_research_or_evaluation"),
                          ("research", "research_or_strategy_research"),
                          ("decisions", "decision_support_or_output"),

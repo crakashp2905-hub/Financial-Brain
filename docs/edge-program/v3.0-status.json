@@ -43,16 +43,22 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/capability-ownership.v1.json (23 capability contracts, 459 trader-core modules, 31 strategy candidates with source refs and hashes)",
-        "docs/edge-program/source-inventory.v2.json (678 repository Python files; generated snapshot is checked in CI)",
-        "scripts/capability_ownership.py and tests/test_capability_ownership.py (deterministic owner inventory and integrity checks)",
-        ".github/workflows/ci.yml (capability and source inventory freshness gates)",
-        "GitHub Actions run 44995510172 (Linux and Windows full suites and both reproducibility jobs passed on the MF purchase integration head)",
-        "Current artifacts continue to show split AlgorithmSpec/StrategySpec lifecycle and separate broker, kernel, forward-paper and legacy-paper persistence domains."
+        "docs/edge-program/capability-ownership.v1.json and scripts/capability_ownership.py: deterministic inventory currently covers 25 named trader-core capability contracts, 488 trader-core modules, and 31 strategy candidates with source refs/hashes.",
+        "The inventory now explicitly assigns index forecast market-data contracts to forecasting/index_market.py and the research/feature layer to forecasting/index_15m.py; tests/test_capability_ownership.py passes 3 tests.",
+        "docs/edge-program/source-inventory.v2.json and scripts/source_inventory.py track 728 repository Python files; generated inventory freshness check passes.",
+        "scripts/forward_engine_graph.py --check passes after integrating forecasting/index_15m.py.",
+        "Still partial: the named capability inventory does not cover every repository capability; AlgorithmSpec/StrategySpec lifecycle remains split; broker, kernel, forward-paper and legacy-paper persistence/execution domains remain separate."
       ],
-      "blocker": "Partial: the map covers trader-core modules rather than every repository capability; AlgorithmSpec and StrategySpec identity/promotion remain split; broker, kernel, forward-paper and legacy-paper persistence domains remain separate. Current hosted freshness and test gates pass.",
-      "last_audited_at_utc": "2026-11-22T07:41:12Z",
-      "commit": null
+      "blocker": "The repository-wide canonical ownership and cross-domain lifecycle consolidation requirements remain incomplete; the current map intentionally covers trader-core scope.",
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_capability_ownership.py -q: 3 passed in 1.99s.",
+        "python scripts/capability_ownership.py --check: 25 capability contracts and 488 modules verified.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: 728 source files, generated inventory current.",
+        "python scripts/forward_engine_graph.py --check, scripts/export_checklist_audit.py --check and scripts/build_checklist_evidence_bundle.py --check passed."
+      ],
+      "test_result": "Forecast module ownership was added to the generated trader-core map; ownership tests and generated inventory/graph/export checks pass. FB-0002 remains PARTIAL because full-repository ownership and several split runtime domains remain."
     },
     {
       "id": "FB-0003",
@@ -15188,17 +15194,22 @@
       "id": "SL-19-01",
       "text": "Reuse existing `forecasting/index_15m.py` in five-desk branch; do not rewrite before parity audit.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Repository file scan confirms `src/financial_brain/forecasting/index_15m.py` is absent; generic forecast bars/models exist, but the requested five-desk parity audit and reuse have not begun."
+        "Inspected the five-desk D2 branch at aff421aa01834b9f2a3533402e4747b8ce3aef79 and original index_15m.py blob 9a96b5b9f870de2d62ee88951eef3042ffe2bcb3; reviewed its tests/test_index_15m_s24.py acceptance suite before integration.",
+        "docs/edge-program/index-15m-parity-audit-2026-11-25.md records the API and semantic comparison. It preserves the target availability-aware OHLC bar builder and same-session label functions, documenting why the old unclocked tuple-price API is not reused.",
+        "src/financial_brain/forecasting/index_15m.py restores the D2 feature names and research helpers while delegating bar construction/labels to index_market; features require end and availability before decision, same-session contiguous bars, and leakage checks perturb all unknown bars.",
+        "Purged chronological splits, training-only noise threshold, class-frequency baseline, probability validation and multiclass Brier score are implemented with invalid-input refusal.",
+        "tests/test_forecasting_index_market.py and tests/test_forecasting_index_15m.py pass together: 14 passed."
       ],
-      "blocker": "Requested index-specific implementation and parity audit are absent.",
-      "last_audited_at_utc": "2026-11-24T18:09:21Z",
-      "commit": "ee2fbc20",
+      "blocker": "Full five-desk forecasting/options integration, provider-backed index data, model calibration and prospective session evidence remain absent. This parity-informed integration is not performance evidence.",
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
       "test_evidence": [
-        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+        "python -m pytest tests/test_forecasting_index_market.py tests/test_forecasting_index_15m.py -q: 14 passed in 1.01s.",
+        "Original D2 parity source and tests inspected from branch commit aff421aa01834b9f2a3533402e4747b8ce3aef79; no performance or prospective edge claim."
       ],
-      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
+      "test_result": "Parity audit completed and the D2 feature/leakage/fold/baseline contracts now delegate to target availability-aware index market functions. Focused target market plus forecasting utility tests: 14 passed. Remains PARTIAL pending full five-desk forecast-to-option paper integration and prospective evidence."
     },
     {
       "id": "SL-19-02",
@@ -19967,8 +19978,8 @@
     "status_counts": {
       "COMPLETE": 83,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 21,
-      "PARTIAL": 718,
+      "NOT_STARTED": 20,
+      "PARTIAL": 719,
       "UNASSESSED": 551
     },
     "verified_complete_count": 83,
@@ -20096,8 +20107,8 @@
   "counts_by_status": {
     "COMPLETE": 83,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 21,
-    "PARTIAL": 718,
+    "NOT_STARTED": 20,
+    "PARTIAL": 719,
     "UNASSESSED": 551
   }
 }

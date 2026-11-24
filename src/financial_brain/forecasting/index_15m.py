@@ -1,0 +1,161 @@
+"""Point-in-time 15-minute index research helpers.
+
+The five-desk D2 implementation supplied the feature, leakage-check, purged-fold and
+naive-baseline contracts. This module keeps those research utilities while delegating
+market-bar construction, availability clocks and same-session labels to ``index_market``.
+It does not fetch data or choose option contracts.
+"""
+from __future__ import annotations
+
+from collections import Counter
+from collections.abc import Callable
+from dataclasses import replace
+from datetime import datetime
+from math import isfinite
+
+from financial_brain.forecasting.index_market import (
+    BAR,
+    IndexBar15m,
+    IndexMarketError,
+    IndexMinute,
+    build_15m_bars,
+    direction_label,
+    forward_return,
+)
+
+SeriesError = IndexMarketError
+Bar = IndexBar15m
+
+
+def bars_15m(minutes: list[IndexMinute], *, as_of: datetime) -> list[IndexBar15m]:
+    """Compatibility name for the availability-aware complete-bar builder."""
+    return build_15m_bars(minutes, as_of=as_of)
+
+
+def completed_before(bars: list[IndexBar15m], decision_at: datetime) -> list[IndexBar15m]:
+    """Return bars complete and available by the decision clock, within its session."""
+    if decision_at.tzinfo is None or decision_at.utcoffset() is None:
+        raise SeriesError("decision time must be timezone-aware")
+    cutoff = decision_at
+    known = sorted((bar for bar in bars if bar.end <= cutoff and bar.available_at <= cutoff),
+                   key=lambda bar: (bar.end, bar.start))
+    if not known:
+        return []
+    latest_day = known[-1].end.date()
+    return [bar for bar in known if bar.end.date() == latest_day]
+
+
+def features_at(bars: list[IndexBar15m], decision_at: datetime,
+                session_open: datetime) -> dict[str, float]:
+    """Compute the five-desk feature set from available completed bars only.
+
+    Return volatility only uses adjacent 15-minute bars; gaps and day boundaries do not
+    become synthetic returns. The opening-range denominator uses a neutral 1.0 fallback
+    for a zero-range first bar, matching the original D2 feature contract.
+    """
+    if session_open.tzinfo is None or session_open.utcoffset() is None:
+        raise SeriesError("session open must be timezone-aware")
+    known = completed_before(bars, decision_at)
+    if len(known) < 2:
+        raise SeriesError("not enough completed bars")
+    last, previous = known[-1], known[-2]
+    if last.end - previous.end != BAR or last.start - previous.start != BAR:
+        raise SeriesError("latest completed bars are not contiguous")
+    returns = [right.close / left.close - 1.0 for left, right in zip(known, known[1:])
+               if right.end - left.end == BAR and right.start - left.start == BAR]
+    if not returns:
+        raise SeriesError("not enough contiguous returns")
+    mean = sum(returns) / len(returns)
+    volatility = (sum((value - mean) ** 2 for value in returns) / len(returns)) ** 0.5
+    first = known[0]
+    return {
+        "ret_15m": last.close / previous.close - 1.0,
+        "ret_session": last.close / first.open - 1.0,
+        "range_last": (last.high - last.low) / last.close,
+        "vol_session": volatility,
+        "minutes_since_open": (decision_at - session_open).total_seconds() / 60.0,
+        "opening_range_pos": (last.close - first.low) / ((first.high - first.low) or 1.0),
+    }
+
+
+def leak_check(bars: list[IndexBar15m], decision_at: datetime, session_open: datetime) -> bool:
+    """Verify changing every unknown bar leaves currently available features unchanged."""
+    baseline = features_at(bars, decision_at, session_open)
+    shocked = []
+    for bar in bars:
+        known = bar.end <= decision_at and bar.available_at <= decision_at
+        shocked.append(bar if known else replace(
+            bar, open=bar.open * 3, high=bar.high * 3, low=bar.low * 0.1, close=bar.close * 5))
+    return features_at(shocked, decision_at, session_open) == baseline
+
+
+def noise_threshold(train_returns: list[float], quantile: float = 0.33) -> float:
+    """Choose a FLAT-band threshold from training-period absolute returns only."""
+    if not train_returns or not isfinite(quantile) or not 0 <= quantile <= 1:
+        raise SeriesError("training returns and quantile in [0, 1] are required")
+    if any(not isfinite(value) for value in train_returns):
+        raise SeriesError("training returns must be finite")
+    ordered = sorted(abs(value) for value in train_returns)
+    threshold = ordered[min(len(ordered) - 1, int(quantile * len(ordered)))]
+    if threshold <= 0:
+        raise SeriesError("training noise threshold must be positive")
+    return threshold
+
+
+def label(realized_return: float | None, threshold: float) -> str | None:
+    """Compatibility label helper with a frozen positive threshold."""
+    if realized_return is None:
+        return None
+    return direction_label(realized_return, noise_threshold=threshold)
+
+
+def purged_splits(n: int, folds: int, label_steps: int, embargo: int = 1
+                  ) -> list[tuple[list[int], list[int]]]:
+    """Build expanding chronological folds purged by label horizon plus embargo."""
+    if (type(n) is not int or type(folds) is not int or type(label_steps) is not int
+            or type(embargo) is not int or n < folds or folds < 2
+            or label_steps < 1 or embargo < 0):
+        raise SeriesError("need valid sample count, folds, label horizon and embargo")
+    size = n // folds
+    result = []
+    for fold in range(1, folds):
+        test_start = fold * size
+        test_end = min(n, (fold + 1) * size)
+        test = list(range(test_start, test_end))
+        gap = label_steps + embargo
+        train = [index for index in range(test_start) if index + gap < test_start]
+        if test and train:
+            result.append((train, test))
+    return result
+
+
+def frequency_baseline(train_labels: list[str]) -> Callable[[], dict[str, float]]:
+    """Return a deterministic UP/DOWN/FLAT class-frequency baseline."""
+    counts = Counter(value for value in train_labels if value in {"UP", "DOWN", "FLAT"})
+    total = sum(counts.values())
+    if not total:
+        raise SeriesError("training labels contain no supported classes")
+    probabilities = {name: counts.get(name, 0) / total for name in ("UP", "DOWN", "FLAT")}
+    return lambda: dict(probabilities)
+
+
+def check_probabilities(probabilities: dict[str, float], tolerance: float = 1e-9) -> None:
+    if (set(probabilities) != {"UP", "DOWN", "FLAT"}
+            or any(not isfinite(value) or value < 0 or value > 1 for value in probabilities.values())
+            or not isfinite(tolerance) or tolerance < 0
+            or abs(sum(probabilities.values()) - 1.0) > tolerance):
+        raise SeriesError("probabilities must cover UP/DOWN/FLAT, stay in [0,1], and sum to one")
+
+
+def brier(probabilities: dict[str, float], actual: str) -> float:
+    check_probabilities(probabilities)
+    if actual not in {"UP", "DOWN", "FLAT"}:
+        raise SeriesError("actual label must be UP, DOWN or FLAT")
+    return sum((probabilities[name] - float(name == actual)) ** 2 for name in probabilities)
+
+
+__all__ = [
+    "Bar", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
+    "features_at", "forward_return", "frequency_baseline", "label", "leak_check",
+    "noise_threshold", "purged_splits",
+]
