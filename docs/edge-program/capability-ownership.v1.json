@@ -62,6 +62,18 @@
       "boundary": "Algorithm clock, cost, order, abstention and behavior specification; not promotion status or portfolio selection."
     },
     {
+      "id": "trade_admissibility_gate",
+      "category": "execution",
+      "owner": "src/financial_brain/kernel/trade_admissibility.py",
+      "owner_symbol": "evaluate_trade_admissibility",
+      "implementations": [
+        "src/financial_brain/kernel/net_ev.py",
+        "src/financial_brain/kernel/execution_feasibility.py",
+        "src/financial_brain/forward_edge/parameter_freeze.py"
+      ],
+      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, execution evidence and costed net EV into reason-coded TRADE/WATCH/REJECT/CASH candidates. It is not wired into the forward session runner and never authorizes broker orders."
+    },
+    {
       "id": "prospective_strategy_adapter",
       "category": "strategy",
       "owner": "src/financial_brain/forward_edge/strategy_adapter.py",
@@ -2311,6 +2323,12 @@
       "path": "src/financial_brain/kernel/strategy_state.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/kernel/strategy_state.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/trade_admissibility.py",
+      "path": "src/financial_brain/kernel/trade_admissibility.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/trade_admissibility.py"
     },
     {
       "capability_id": "module:src/financial_brain/opportunity/conditions.py",

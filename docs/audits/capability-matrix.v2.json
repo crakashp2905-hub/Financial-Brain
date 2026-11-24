@@ -167,6 +167,17 @@
       "source": ["src/financial_brain/paper/mf_decisions.py", "src/financial_brain/paper/terminal.py", "src/financial_brain/storage/schema.sql", "src/financial_brain/cli.py"],
       "tests": ["tests/test_mf_decisions.py"],
       "blockers": ["Actor identity is self-declared; no authenticated workflow", "Decision context hash is caller-supplied and not attested", "No MF order or external fund transaction is connected"]
+    },
+    {
+      "id": "frozen-costed-trade-admissibility",
+      "owner_role": "Paper",
+      "maturity": "partial",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Combines registered strategy freezes, after-cost net EV, quote feasibility, session/instrument/budget/approval/volatility and portfolio utility into reason-coded TRADE/WATCH/REJECT/CASH paper candidates. This gate is not yet connected to the forward session runner and never authorizes a broker order.",
+      "evidence": ["tests/test_kernel_trade_admissibility.py"],
+      "source": ["src/financial_brain/kernel/trade_admissibility.py", "src/financial_brain/kernel/net_ev.py", "src/financial_brain/kernel/execution_feasibility.py", "src/financial_brain/forward_edge/parameter_freeze.py"],
+      "tests": ["tests/test_kernel_trade_admissibility.py"],
+      "blockers": ["The caller must still bind session eligibility, approvals, accepted instruments, and portfolio utility to independently verified runtime records", "The decision gate is not wired into ForwardSessionRunner or a persistent paper book", "Prospective calibrated cohort evidence remains absent"]
     }
   ]
 }
