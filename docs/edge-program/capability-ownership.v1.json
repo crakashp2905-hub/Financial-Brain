@@ -3069,6 +3069,12 @@
       "module_owner": "src/financial_brain/providers/kite_login_server.py"
     },
     {
+      "capability_id": "module:src/financial_brain/providers/kite_stream.py",
+      "path": "src/financial_brain/providers/kite_stream.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/kite_stream.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/providers/mf_portfolio_disclosures.py",
       "path": "src/financial_brain/providers/mf_portfolio_disclosures.py",
       "module_role": "provider_adapter",

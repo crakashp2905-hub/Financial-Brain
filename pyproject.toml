@@ -25,6 +25,8 @@ api = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.6"]
 # Local, read-only MCP stdio server. Both the installed v1 maintenance SDK and v2
 # expose tool/resource decorators; imports are selected at runtime.
 mcp = ["mcp>=1.26,<3"]
+# Optional Kite WebSocket adapter for in-memory, permission-gated market events.
+kite-stream = ["kiteconnect>=5.0.1"]
 # Foundation-model forecasting. Optional for the same reason as `api`: the nulls, the scores and the
 # walk-forward harness in forecasting/ are pure Python and run on the core install, so a bootstrap
 # baseline can be established without torch. Kronos itself is a repository rather than a
