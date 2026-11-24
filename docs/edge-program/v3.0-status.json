@@ -5064,81 +5064,116 @@
     {
       "id": "FB-2201",
       "text": "Extend the existing champion/challenger and protected trial infrastructure to require preregistered hypothesis, entry/exit rules, risk budget, target comparison, data cutoff and sample size *before* new paper cohorts are promoted.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/charter.py::ExperimentCharter freezes strategy identity, code/config parameters, capital, start/end dates, universe, benchmark set and horizon; revisions are hash-linked and restart the prospective clock.",
+        "src/financial_brain/forward_edge/trials.py and decision_custody.py enforce a registered, hash-bound cohort schedule and protected trial approval before prospective use.",
+        "tests/test_forward_edge_f00.py (charter identity, revision and protected cohort checks); tests/test_forward_edge_champion_challenger.py and tests/test_forward_edge_evidence_bundle.py.",
+        "Prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: the charter does not require every checklist field as a single enforced preregistration contract, including explicit hypothesis and sample-size design, and cohort promotion is not an end-to-end runner workflow. No owner-authorized prospective cohort evidence is available.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2202",
       "text": "Maintain a strategy registry with immutable semantic code/config hashes, features, cost version, active/paused/shadow status, capital permissions and independent desk ownership.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/charter.py::EvaluationIdentity content-addresses strategy/model, data snapshot and rights, calendar, universe, execution-cost schedule and benchmarks.",
+        "src/financial_brain/forward_edge/parameter_freeze.py::StrategyFreezeRegistry immutably binds cohort/trial/strategy code, parameter and model hashes before its first eligible session.",
+        "tests/test_forward_edge_f00.py, tests/test_forward_edge_parameter_freeze.py, tests/test_forward_edge_champion_governance.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: no single canonical strategy registry exposes all requested features, lifecycle status, capital permissions and independently assigned desk ownership; identity and promotion remain split across charter, freeze and champion-governance stores.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2203",
       "text": "Compare each prospective strategy against cash, relevant instrument benchmark, cost-matched naive strategy and current champion; do not let momentum exposure masquerade as selection alpha.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/charter.py freezes benchmark identities into evaluation charter and optional data/model/cost identity.",
+        "src/financial_brain/forward_edge/paired_paper.py and src/financial_brain/forward_edge/champion_governance.py provide matched paper comparison and governed champion transition primitives.",
+        "tests/test_forward_edge_champion_challenger.py, tests/test_forward_edge_champion_governance.py and tests/test_forward_edge_f00.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: the full prospective comparison matrix (cash, relevant instrument benchmark, cost-matched naive strategy and current champion) is not automatically produced and reconciled for every strategy; no new authorized prospective cohort has established selection alpha.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2204",
       "text": "Add dependent-return statistical methods (session-clustered and block-bootstrap uncertainty), confidence sequences where appropriate, and explicit multiple-testing adjustment across many candidates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/evidence_stats.py implements Newey-West and session-clustered standard errors, stationary block-bootstrap confidence intervals, and Holm multiplicity-adjusted p-values.",
+        "src/financial_brain/forward_edge/evidence_stats.py::StoppingPolicy provides frozen evaluation checkpoints and harm stopping.",
+        "tests/test_forward_edge_champion_challenger.py and tests/test_forward_edge_evidence_bundle.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: methods are not integrated into one all-candidate promotion pipeline; confidence sequences and broader data-snooping controls such as SPA/Reality Check are absent (the module labels SPA/Reality Check not implemented).",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2205",
       "text": "Calibrate forecast probabilities and expected return by market regime, asset, liquidity and confidence strata *only on prior data*, with sample-coverage reports and no adaptive use of protected test results.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/probability_calibration.py and src/financial_brain/forward_edge/evidence_stats.py provide versioned out-of-time calibration metrics and reliability/sample-count reporting.",
+        "src/financial_brain/forward_edge/charter.py binds evaluation data snapshot and source identity; protected test evidence cannot be silently upgraded to prospective evidence.",
+        "tests/test_kernel_probability_calibration.py, tests/test_forward_edge_decision_outcome.py and tests/test_forward_edge_f00.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: no end-to-end prior-only calibrated mapping by market regime, asset, liquidity and confidence is connected to forecast production; real prospective sample coverage remains unavailable and protected data must not be repurposed for tuning.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2206",
       "text": "Audit change of data vendor, latency class, order size, transaction cost or signal TTL as a material experiment version change; live-paper validation must be repeated when comparability breaks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/charter.py::EvaluationIdentity hashes data snapshot/rights, market calendar, strategy/model, universe, execution-cost version and benchmarks; charter revisions are hash-linked.",
+        "src/financial_brain/forward_edge/parameter_freeze.py requires an immutable strategy/model/parameter freeze for each cohort.",
+        "tests/test_forward_edge_f00.py, tests/test_forward_edge_parameter_freeze.py and tests/test_forward_edge_champion_challenger.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: cost/data/model identities are hash-bound, but changes in latency class, order size and signal TTL are not universally classified as material changes that force fresh prospective validation across runner and trial registry.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2207",
       "text": "Enforce strategy retirement/degradation gates on forward drawdown, negative lower confidence bound, excessive shortfall, stale data and sample integrity; preserve full history of failed trials.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/champion_governance.py gates champion transitions on explicit approval, custody/evidence manifest and clean order state; transition journal is hash chained.",
+        "src/financial_brain/forward_edge/trials.py preserves protected-trial history and enforces frozen charter/cohort scope and exhausted trial budgets.",
+        "src/financial_brain/forward_edge/evidence_stats.py provides drawdown, dependence-aware inference and frozen harm checkpoints.",
+        "tests/test_forward_edge_champion_governance.py, tests/test_forward_edge_champion_challenger.py, tests/test_forward_edge_f00.py and tests/test_trial_preservation_audit.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: runner does not yet automatically enforce unified degradation/retirement thresholds for drawdown, negative lower confidence bound, shortfall, stale inputs and sample integrity; prospective operator cohorts are unavailable.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
       "id": "FB-2208",
       "text": "Produce evidence bundles with immutable signals, observed source timestamps, simulated execution receipts, strategy versions, portfolio NAV, trial registration, CI results and attestation state; never infer independent attestation from local hashes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/evidence_bundle.py and tests/test_forward_edge_evidence_bundle.py create and verify deterministic hash-pinned evidence archives.",
+        "Forward runner evidence records source/receipt/availability clocks, decisions and simulated execution receipts; charter and trial registry bind versions/cohorts; CI result references are recorded in v3.0-status.json.",
+        "src/financial_brain/forward_edge/evidence_stats.py derives evidence labels and does not infer independent attestation from a local hash.",
+        "tests/test_forward_edge_evidence_bundle.py, tests/test_forward_edge_champion_governance.py and tests/test_forward_edge_f00.py; prospective/champion focused tests: 89 passed; Ruff passed."
+      ],
+      "blocker": "Partial: deterministic bundle is not yet an automated end-of-session package reconciling every requested component (signals, NAV, cohort registration, CI and attestation); independent timestamp custody and authorized prospective-session evidence are not configured.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
       "commit": null
     },
     {
@@ -16063,7 +16098,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T05:15:50Z",
+    "as_of_utc": "2026-11-24T14:23:16Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16340,6 +16375,14 @@
       "FB-2106",
       "FB-2107",
       "FB-2108",
+      "FB-2201",
+      "FB-2202",
+      "FB-2203",
+      "FB-2204",
+      "FB-2205",
+      "FB-2206",
+      "FB-2207",
+      "FB-2208",
       "FB-2305",
       "FB-2306",
       "FB-2307",
@@ -16364,13 +16407,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 298,
+    "audited_count": 306,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 2,
-      "PARTIAL": 253,
-      "UNASSESSED": 1080
+      "PARTIAL": 261,
+      "UNASSESSED": 1072
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16498,7 +16541,7 @@
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 2,
-    "PARTIAL": 253,
-    "UNASSESSED": 1080
+    "PARTIAL": 261,
+    "UNASSESSED": 1072
   }
 }
