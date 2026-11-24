@@ -16741,202 +16741,321 @@
     {
       "id": "SL-26-01",
       "text": "Define deterministic planner -> hypothesis author -> implementation author -> unit-test author -> independent critic -> evidence evaluator -> registry workflow.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-02",
       "text": "Implement read-only research context exposing allowed dataset catalogs, recorded failed trials, existing code, economics and relevant research notes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-03",
       "text": "Construct typed tool permissions: generate DSL proposal, write sandbox code, run permitted backtest, request review, never place live orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-04",
       "text": "Allow generation of baseline strategies only as new `hypothesis_id` descendants with preserved search-family lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-05",
       "text": "Require candidate author to cite data availability, economic mechanism and how it differs from failed previous versions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-06",
       "text": "Implement structured self-critique for lookahead, costs, multiple testing, survivorship, expected capacity and research novelty.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-07",
       "text": "Use an independent evaluator with access to outcome metrics only after candidate/test contract is sealed.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-08",
       "text": "Create clean-room scratch worktrees and denied-access protected holdout datasets for unapproved agents.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-09",
       "text": "Generate first-party Python code or strategy DSL under pinned static imports with no external network or credential access.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-10",
       "text": "Execute in isolated child process with CPU, memory, disk, wall-clock, file and import allowlists; no access to real portfolio data outside scoped snapshots.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-11",
       "text": "Implement human review required for new data sources, high-risk derivatives, leverage, changed trial budgets or new capital levels.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-12",
       "text": "Add prompt-injection defenses for filings, websites, logs and adversarial market-news text; model outputs are untrusted data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-13",
       "text": "Keep trace of prompts, tool calls, code diffs, failed tests, corrected versions and reasons for rejection.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-14",
       "text": "Enforce independent baseline reproduction before accepting any agent-created new algorithm as scientifically novel.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-15",
       "text": "Build output verifier that compares submitted backtest metrics with recomputation from raw trade ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-16",
       "text": "Create automated negative tests where an agent can improve Sharpe only by leakage or fabricated fills; evaluator must catch it.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-17",
       "text": "Implement resource allocation to promising but under-tested hypotheses, not endless variants of successful in-sample patterns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source audit found no implementation of the required operating-system isolation/pinned code sandbox or the specified control; current fixture rehearsal does not satisfy this checklist item."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "SL-26-18",
       "text": "Archive `NO_EDGE_FOUND` and `REJECTED` research outcomes as useful discoveries, not failures to be erased.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-19",
       "text": "Expose a one-command campaign rehearsal that builds/validates candidates on fixtures without protected or live market access.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-26-20",
       "text": "Disallow autonomous rewriting of ADRs, audit baselines, external entitlement flags, approved orders or historical data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Source audit: existing repository provides partial adjacent capabilities only; see SL-26 package assessment in docs/edge-program/V3.0_PROGRESS.md.",
+        "src/financial_brain/agents/research_campaign.py: deterministic fixture-only candidate workflow, lineage, critique, sealed contract, denied actions and hash-chained trace."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_research_campaign.py: 6 tests cover fixture rehearsal, lineage, contract seal, denied privileged actions, critique gaps and trace tampering."
+      ],
+      "test_result": "Fixture-only research campaign suite: 12 tests passed including 6 new campaign tests; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-27-01",
@@ -19200,15 +19319,35 @@
       "SL-25-15",
       "SL-25-16",
       "SL-25-17",
-      "SL-25-18"
+      "SL-25-18",
+      "SL-26-01",
+      "SL-26-02",
+      "SL-26-03",
+      "SL-26-04",
+      "SL-26-05",
+      "SL-26-06",
+      "SL-26-07",
+      "SL-26-08",
+      "SL-26-09",
+      "SL-26-10",
+      "SL-26-11",
+      "SL-26-12",
+      "SL-26-13",
+      "SL-26-14",
+      "SL-26-15",
+      "SL-26-16",
+      "SL-26-17",
+      "SL-26-18",
+      "SL-26-19",
+      "SL-26-20"
     ],
-    "audited_count": 719,
+    "audited_count": 739,
     "status_counts": {
       "COMPLETE": 64,
-      "PARTIAL": 637,
+      "PARTIAL": 650,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 13,
-      "UNASSESSED": 659
+      "NOT_STARTED": 20,
+      "UNASSESSED": 639
     },
     "verified_complete_count": 64,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -19334,9 +19473,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 64,
-    "PARTIAL": 637,
+    "PARTIAL": 650,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 13,
-    "UNASSESSED": 659
+    "NOT_STARTED": 20,
+    "UNASSESSED": 639
   }
 }
