@@ -12,12 +12,18 @@ import hashlib
 import json
 import shutil
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
-from financial_brain.forward_edge.market_data import Calendar
+from typing import Protocol
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+
+class Calendar(Protocol):
+    """Minimal calendar contract retained for legacy session-supervisor callers."""
+
+    def is_tradable(self, day: date) -> bool: ...
 
 
 class SessionError(ValueError):

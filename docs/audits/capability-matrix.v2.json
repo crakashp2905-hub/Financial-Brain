@@ -1,0 +1,172 @@
+{
+  "schema": "fb.capability-matrix.v2",
+  "scope": "Curated software capabilities and execution-mode claims. A test proves only the stated fidelity; it does not establish profitability, live entitlement, or production readiness.",
+  "required_modes": ["REAL_FEED", "RESEARCH_REPLAY", "SHADOW", "LIVE_PAPER", "BROKER_DRYRUN", "LIVE_CASH"],
+  "capabilities": [
+    {
+      "id": "champion-ranking-diagnostic",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Historical diagnostic ranking; no forward-attested executable cohort or profit claim.",
+      "evidence": ["tests/test_phase5_champion.py"],
+      "source": ["src/financial_brain/evaluation/champion.py"],
+      "tests": ["tests/test_phase5_champion.py"],
+      "blockers": ["No independently verified executable next-session cohorts", "No frozen exchange-session schedule proof"]
+    },
+    {
+      "id": "paper-decision-manifest",
+      "owner_role": "Evidence",
+      "maturity": "local_tested",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Software-only immutable source-bound paper decision record; no independent custody receipt.",
+      "evidence": ["tests/test_decision_manifest.py", "tests/test_prospective_champion.py"],
+      "source": ["src/financial_brain/evidence/decision_manifest.py", "src/financial_brain/evaluation/prospective.py"],
+      "tests": ["tests/test_decision_manifest.py", "tests/test_prospective_champion.py"],
+      "blockers": ["No independent signer or pinned trust root", "No actual forward-attested cohort"]
+    },
+    {
+      "id": "immutable-fact-ledger",
+      "owner_role": "Evidence",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Append-only local ledger contract; external artifact custody and exchange timestamps are absent.",
+      "evidence": ["tests/test_phase1_evidence.py"],
+      "source": ["src/financial_brain/evidence/ledger.py"],
+      "tests": ["tests/test_phase1_evidence.py"],
+      "blockers": ["No independent artifact custody or external timestamp"]
+    },
+    {
+      "id": "paper-oms-reconciliation",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Deterministic paper OMS/accounting scenarios; no broker-order reconciliation or cost-complete live session.",
+      "evidence": ["tests/test_oms.py", "tests/test_oms_shortfall_contract.py"],
+      "source": ["src/financial_brain/execution/oms/reconcile.py", "src/financial_brain/execution/oms/engine.py"],
+      "tests": ["tests/test_oms.py", "tests/test_oms_shortfall_contract.py"],
+      "blockers": ["Market-hours broker failure drills and live-order authorization not complete"]
+    },
+    {
+      "id": "economic-net-alpha-model",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Modeled expected-net-alpha estimates; not empirically validated net trading profit.",
+      "evidence": ["tests/test_phase5_scanners.py", "tests/test_phase5_trader_core.py"],
+      "source": ["src/financial_brain/decisions/net_alpha.py"],
+      "tests": ["tests/test_phase5_scanners.py", "tests/test_phase5_trader_core.py"],
+      "blockers": ["Model estimate is not validated net trading profit"]
+    },
+    {
+      "id": "real-feed-kite-read-only",
+      "owner_role": "Integration",
+      "maturity": "partial",
+      "execution_mode": "REAL_FEED",
+      "fidelity": "Read-only Kite quote normalization and local archive contracts; no current authenticated end-to-end session or independent timestamp attestation.",
+      "evidence": ["tests/test_forward_edge_kite_market_data.py", "tests/test_forward_edge_session_runner.py"],
+      "source": ["src/financial_brain/providers/kite_data.py", "src/financial_brain/forward_edge/market_data.py", "src/financial_brain/forward_edge/quote_archive.py"],
+      "tests": ["tests/test_forward_edge_kite_market_data.py", "tests/test_forward_edge_session_runner.py"],
+      "blockers": ["Current API key and authenticated live-session evidence are absent", "Entitlement and retention terms are not recorded"]
+    },
+    {
+      "id": "historical-research-replay",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Historical and synthetic replay only; no prospective forward performance claim.",
+      "evidence": ["tests/test_forward_edge_cli.py", "tests/test_phase5_intraday_runner.py"],
+      "source": ["src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/intraday_runner.py"],
+      "tests": ["tests/test_forward_edge_cli.py", "tests/test_phase5_intraday_runner.py"],
+      "blockers": ["No integrated prospective forward-session operation"]
+    },
+    {
+      "id": "shadow-mode-policy",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "execution_mode": "SHADOW",
+      "fidelity": "Mode grant is tested and emits no fills; continuous scheduled shadow operation is not evidenced.",
+      "evidence": ["tests/test_forward_edge_f00.py"],
+      "source": ["src/financial_brain/forward_edge/modes.py"],
+      "tests": ["tests/test_forward_edge_f00.py"],
+      "blockers": ["No continuous scheduled shadow runner or matched control book"]
+    },
+    {
+      "id": "live-paper-mode",
+      "owner_role": "Paper",
+      "maturity": "partial",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Software mode can emit simulated paper fills; current complete live-market session, cost reconciliation, and prospective evidence are not established.",
+      "evidence": ["tests/test_forward_edge_f00.py", "tests/test_forward_edge_session_runner.py"],
+      "source": ["src/financial_brain/forward_edge/modes.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "tests": ["tests/test_forward_edge_f00.py", "tests/test_forward_edge_session_runner.py"],
+      "blockers": ["No completed cost-complete forward session"]
+    },
+    {
+      "id": "broker-dryrun-mode",
+      "owner_role": "Execution",
+      "maturity": "partial",
+      "execution_mode": "BROKER_DRYRUN",
+      "fidelity": "Policy refuses the mode without verified compliance; no connected broker rehearsal or order reconciliation is evidenced.",
+      "evidence": ["tests/test_forward_edge_f00.py"],
+      "source": ["src/financial_brain/forward_edge/modes.py", "src/financial_brain/execution/oms/kite_broker.py"],
+      "tests": ["tests/test_forward_edge_f00.py"],
+      "blockers": ["No verified broker compliance record or authorized broker rehearsal"]
+    },
+    {
+      "id": "live-cash-disabled",
+      "owner_role": "Execution",
+      "maturity": "local_tested",
+      "execution_mode": "LIVE_CASH",
+      "fidelity": "Safety gate tests that physical order emission is disabled; this is not a live trading capability.",
+      "evidence": ["tests/test_forward_edge_f00.py"],
+      "source": ["src/financial_brain/forward_edge/modes.py"],
+      "tests": ["tests/test_forward_edge_f00.py"],
+      "blockers": ["Physical orders are disabled by build policy and no human/compliance approval is recorded"]
+    },
+    {
+      "id": "etf-trend-mean-reversion-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 ETF trend, mean-reversion and volatility-target candidate calculator over exact caller-sourced closes; implementation contract only, not performance evidence or trade authorization.",
+      "evidence": ["tests/test_etf_trend_rules.py"],
+      "source": ["src/financial_brain/features/etf_trend_rules.py"],
+      "tests": ["tests/test_etf_trend_rules.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No benchmark, costs, capacity, tax, turnover, drawdown or prospective evidence evaluated"]
+    },
+    {
+      "id": "etf-cross-asset-rotation-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 equity/debt/gold/silver ETF rotation candidate with inverse-volatility, frozen buy-and-hold, ex-ante same-risk, and cash controls; no performance evaluation or order authority.",
+      "evidence": ["tests/test_etf_cross_asset_rotation.py"],
+      "source": ["src/financial_brain/features/etf_cross_asset_rotation.py"],
+      "tests": ["tests/test_etf_cross_asset_rotation.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No return, cost, tax, turnover, capacity, or prospective cohort evaluation"]
+    },
+    {
+      "id": "etf-intraday-opening-range-screen",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Opening-range ETF candidate is emitted only after point-in-time complete bars, observed quote/spread, two-sided depth, and estimated cost gates; full spread is counted round trip. No performance evidence or order authority.",
+      "evidence": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "source": ["src/financial_brain/features/etf_intraday_screen.py", "src/financial_brain/features/etf_bars.py", "src/financial_brain/features/etf_liquidity.py"],
+      "tests": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "Spread/Amihud/caller-cost estimate is not calibrated execution or profitability evidence"]
+    },
+    {
+      "id": "mf-action-decision-journal",
+      "owner_role": "Paper",
+      "maturity": "local_tested",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Human-selected SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD choices are durably recorded and rendered as decisions only; no MF order submission, authentication, or external acceptance is claimed.",
+      "evidence": ["tests/test_mf_decisions.py"],
+      "source": ["src/financial_brain/paper/mf_decisions.py", "src/financial_brain/paper/terminal.py", "src/financial_brain/storage/schema.sql", "src/financial_brain/cli.py"],
+      "tests": ["tests/test_mf_decisions.py"],
+      "blockers": ["Actor identity is self-declared; no authenticated workflow", "Decision context hash is caller-supplied and not attested", "No MF order or external fund transaction is connected"]
+    }
+  ]
+}

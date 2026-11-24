@@ -16,6 +16,9 @@ from financial_brain.execution.oms import reconcile as RC
 from financial_brain.execution.oms import risk_gate as RG
 from financial_brain.execution.oms import rollout as RO
 from financial_brain.execution.oms import slicer as SL
+from financial_brain.execution import order_policy as OP
+from financial_brain.execution.order_policy import PhysicalOrderDenied
+from financial_brain.forward_edge.modes import Mode, ModeError, resolve_mode
 
 IST = timezone(timedelta(hours=5, minutes=30))
 IN_SESSION = datetime(2026, 10, 13, 10, 0, tzinfo=IST)          # a Tuesday
@@ -232,29 +235,32 @@ def test_kite_broker_is_locked_by_default(tmp_path, monkeypatch):
     assert "FB_LIVE_ORDERS" in str(e.value) and "stage is OFF" in str(e.value) and sent == []
 
 
-def test_kite_broker_sends_a_tagged_limit_only_when_every_lock_is_open(tmp_path, monkeypatch):
+def test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open(tmp_path, monkeypatch):
     monkeypatch.setenv("FB_LIVE_ORDERS", "1")
     monkeypatch.setenv("KITE_API_KEY", "test-key")
     monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
+    monkeypatch.setattr(OP, "PHYSICAL_ORDERS_ENABLED", True)
     RO._write({"stage": RO.SMALL_AUTO, "history": []}, tmp_path / "s.json")
     sent = []
 
     def opener(req, timeout):
         sent.append(req)
-        return _Resp(json.dumps({"status": "success", "data": {"order_id": "2610130001"}}).encode())
+        return _Resp(json.dumps({"status": "success", "data": {"order_id": "should-not-exist"}}).encode())
 
     o = M.Order(M.client_id("s", "d", "ABC", M.BUY, 1), "s", "d", "ABC", "NSE", M.BUY, 1, 100.0)
     assert KB.locks("CANDIDATE", stage_path=tmp_path / "s.json", ks_path=tmp_path / "k.json")   # stage 2 needs CONFIRMED
     kb = KB.KiteBroker("CONFIRMED", opener=opener, stage_path=tmp_path / "s.json", ks_path=tmp_path / "k.json")
-    assert kb.place(o) == "2610130001"
-    body = dict(x.split("=") for x in sent[0].data.decode().split("&"))
-    assert sent[0].get_method() == "POST" and sent[0].full_url.endswith("/orders/regular")
-    assert body["order_type"] == "LIMIT" and body["tag"] == o.client_id and body["validity"] == "DAY"
-    KS.trip("test", path=tmp_path / "k.json")
-    with pytest.raises(KB.LiveLocked, match="kill switch"):
+    assert not KB.locks("CONFIRMED", stage_path=tmp_path / "s.json", ks_path=tmp_path / "k.json")
+    with pytest.raises(ModeError, match="permanently disabled"):
+        resolve_mode(Mode.LIVE_CASH, now=datetime.now(timezone.utc))
+    with pytest.raises(PhysicalOrderDenied, match="disabled by build policy"):
         kb.place(o)
-    with pytest.raises(B.BrokerError, match="refusing"):
-        kb._request("POST", "/user/margins")
+    with pytest.raises(PhysicalOrderDenied, match="disabled by build policy"):
+        kb.cancel("2610130001")
+    for method in ("POST", "PUT", "PATCH", "DELETE"):
+        with pytest.raises(PhysicalOrderDenied, match="disabled by build policy"):
+            kb._request(method, "/orders/regular", {"quantity": 1})
+    assert sent == []
 
 
 # ------------------------------------------------------------------ slicing
