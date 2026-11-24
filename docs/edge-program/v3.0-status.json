@@ -13759,7 +13759,7 @@
       ],
       "blocker": "No common hierarchical policy contract or end-to-end orchestration across all five levels.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forward_edge/risk_allocator.py, strategy_pipeline.py, decision_custody.py and execution modules."
       ],
@@ -13775,7 +13775,7 @@
       ],
       "blocker": "Top-level regime feature set is incomplete and not connected to hierarchy.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of regime/brain.py and regime/breadth.py."
       ],
@@ -13791,7 +13791,7 @@
       ],
       "blocker": "Probabilistic regime beliefs are not implemented for strategy selection.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of regime/brain.py and forecasting/ensemble.py."
       ],
@@ -13807,7 +13807,7 @@
       ],
       "blocker": "Hysteresis exists in rule regime labels only; hidden-state policy integration is missing.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of regime/brain.py and its hysteresis tests."
       ],
@@ -13823,7 +13823,7 @@
       ],
       "blocker": "Hierarchical option policy lifecycle and TTL are absent.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forward_edge/options_risk.py, options strategy modules and learning package."
       ],
@@ -13840,7 +13840,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T17:52:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "tests/test_learning_hierarchy.py::test_safe_actions_are_available_without_any_alpha_candidates",
         "tests/test_learning_hierarchy.py::test_global_safe_actions_remain_when_alpha_candidates_exist",
@@ -13859,7 +13859,7 @@
       ],
       "blocker": "A measured global trading-selector baseline and regime-conditioned policy comparison are absent.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forecasting/ensemble.py, evaluation and learning modules."
       ],
@@ -13875,7 +13875,7 @@
       ],
       "blocker": "Cross-family/index overlap policy constraints are missing.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of risk_allocator.py, forward_edge/portfolio_risk.py and options risk."
       ],
@@ -13891,7 +13891,7 @@
       ],
       "blocker": "Cross-desk capital, beta and downside aggregation is not integrated.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of risk_allocator.py, portfolio ledger and desk modules."
       ],
@@ -13907,7 +13907,7 @@
       ],
       "blocker": "Mixture policy ablation on identical data and costs is absent.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forward_edge/risk_allocator.py, forecasting/null.py and portfolio evaluation."
       ],
@@ -13923,7 +13923,7 @@
       ],
       "blocker": "Hierarchical proposal lineage across levels is not represented.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of strategy_pipeline.py and forward_edge/session_runner.py."
       ],
@@ -13939,7 +13939,7 @@
       ],
       "blocker": "Reward availability is not modeled across asynchronous strategy horizons.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of trajectory.py, outcome attribution and options episodes."
       ],
@@ -13955,7 +13955,7 @@
       ],
       "blocker": "No cohort-level joint router/version lock.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of kernel/registry.py, forward_edge/session_runner.py and forecasting/ensemble.py."
       ],
@@ -13971,7 +13971,7 @@
       ],
       "blocker": "Forecast routing fallback exists, but no policy-level uncertainty-minimum fallback.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forecasting/ensemble.py and tests/test_phase5_forecasting.py."
       ],
@@ -13987,7 +13987,7 @@
       ],
       "blocker": "Cross-domain hierarchy boundary stress suite is missing.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of regime, calendar, corpactions and options lifecycle tests."
       ],
@@ -14003,7 +14003,7 @@
       ],
       "blocker": "No frozen same-sample layer ablation report.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forward_edge evaluation and learning packages."
       ],
@@ -14019,7 +14019,7 @@
       ],
       "blocker": "Family diversification after market/sector beta control is not measured.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of forward_edge/risk_allocator.py, risk/decompose.py and factor attribution."
       ],
@@ -14035,7 +14035,7 @@
       ],
       "blocker": "No cross-family diversified-edge evidence gate or report status.",
       "last_audited_at_utc": "2026-11-24T17:48:00+00:00",
-      "commit": "PENDING",
+      "commit": "07c28a82",
       "test_evidence": [
         "Source audit of portfolio attribution, opportunity dashboard and risk allocator."
       ],
