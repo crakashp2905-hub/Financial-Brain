@@ -3979,14 +3979,17 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "tests/test_forward_edge_session_runner.py, tests/test_canonical_portfolio_ledger.py and domain-specific schema/identity suites exercise deterministic event, venue, identity, timezone and decimal constraints.",
-        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+        "tests/test_canonical_portfolio_ledger.py::test_1000_seeded_cross_asset_event_sequences_preserve_ledger_invariants uses a fixed seed to generate 1,000 independent paper-account event sequences (5,000 cash/fill/fee/mark events) over EQUITY, ETF, OPTION and MUTUAL_FUND identities; it asserts timezone normalization, INR decimal cash, position quantities, realized/unrealized P&L, opening-balance and projection gates, and idempotent replay.",
+        "Existing domain suites cover additional schema and identity failure cases: tests/test_canonical_portfolio_ledger.py, tests/test_forward_edge_session_runner.py, tests/test_mf_scheme_master.py, tests/test_etf_reference.py and tests/test_options_quotes.py.",
+        "Verification: canonical ledger suite 9 passed; randomized 1,000-sequence test passed; Ruff and mypy passed."
       ],
-      "blocker": "No property-based generator or 1,000+ randomized cross-domain event sequences are present; deterministic scenario tests do not satisfy the required randomized sequence count.",
-      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "blocker": "Partial: seeded ledger sequences do not yet randomize every repository schema, instrument/calendar transitions, exchange session calendars or economic lifecycle failure points; a broader cross-domain generator and market-hours rehearsal remain.",
+      "last_audited_at_utc": "2026-11-24T14:30:00Z",
       "commit": "d0d6fc04",
       "test_evidence": [
-        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+        "python -m pytest -q tests/test_canonical_portfolio_ledger.py --basetemp .pytest-randomized-sequences: 9 passed in 6.30s, including 1,000 seeded sequences and 5,000 events.",
+        "python -m ruff check tests/test_canonical_portfolio_ledger.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/canonical_ledger.py: passed."
       ]
     },
     {
@@ -16218,7 +16221,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T14:23:16Z",
+    "as_of_utc": "2026-11-24T14:30:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
