@@ -13468,7 +13468,7 @@
       ],
       "blocker": "Conditional multivariate transition model and calibrated observable dynamics are absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/null.py, forecasting/distribution.py, regime modules and learning package."
       ],
@@ -13484,7 +13484,7 @@
       ],
       "blocker": "Only part of the requested null family exists; AR/volatility/residual-bootstrap comparisons remain absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py (forecast null and scoring contracts)."
       ],
@@ -13500,7 +13500,7 @@
       ],
       "blocker": "Owned temporal encoder and evidence-controlled horizon uncertainty are not implemented.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/kronos.py, forecasting/distribution.py and learning modules."
       ],
@@ -13516,7 +13516,7 @@
       ],
       "blocker": "Agent impact and exogenous dynamics are not separated in a shared calibrated environment.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of execution scenario, cost, forecasting and forward-edge modules."
       ],
@@ -13532,7 +13532,7 @@
       ],
       "blocker": "Market-calendar, corporate-action and instrument-lifetime constraints are not integrated into generated paths.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/distribution.py, corpactions and options contract-lifecycle modules."
       ],
@@ -13548,7 +13548,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "tests/test_phase5_forecasting.py; tests/test_phase5_walkforward.py; current focused run: 68 passed."
       ],
@@ -13564,7 +13564,7 @@
       ],
       "blocker": "Learned-world exploitation search and independent replay comparison are absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of learning/world-model, evaluation/replay, and forward-session simulator modules."
       ],
@@ -13580,7 +13580,7 @@
       ],
       "blocker": "Pessimistic uncertainty-aware model rollout valuation is not implemented.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/distribution.py and learning package."
       ],
@@ -13596,7 +13596,7 @@
       ],
       "blocker": "Disagreement-based ensemble fallback is not integrated with policy execution.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/ensemble.py and regime router tests."
       ],
@@ -13612,7 +13612,7 @@
       ],
       "blocker": "World-model training/tuning data partitions and one-time holdout custody are not wired.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/walkforward.py, protected trial registry and model training paths."
       ],
@@ -13628,7 +13628,7 @@
       ],
       "blocker": "Independent liquidity/stress regime validation is not part of model evaluation.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/walkforward.py, forward_edge/cohort_blocks.py, and regime/stress modules."
       ],
@@ -13644,7 +13644,7 @@
       ],
       "blocker": "The required negative-control agent and paired falsification harness are absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of learning, evaluation/replay and forecast benchmark modules."
       ],
@@ -13660,7 +13660,7 @@
       ],
       "blocker": "No path-level world-model fidelity report across all listed financial processes.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/null.py, forecasting/calibration.py and liquidity/spread modules."
       ],
@@ -13676,7 +13676,7 @@
       ],
       "blocker": "Multi-step lookahead is not gated by conservative model-error-adjusted benefit.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forecasting/walkforward.py and learning package."
       ],
@@ -13692,7 +13692,7 @@
       ],
       "blocker": "Alternative world-model policy-ranking robustness study is absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of forward_edge/bootstrap.py, forecasting/null.py and learning package."
       ],
@@ -13708,7 +13708,7 @@
       ],
       "blocker": "The non-promotable label primitive is implemented, but rollout storage, consumers, and an integrated promotion rejection path are not wired.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "tests/test_learning_world_model.py::test_rollout_manifest_is_hash_pinned_world_model_only_and_never_promotion_eligible",
         "Focused world-model/learning tests passed; no generator or promotion pipeline integration."
@@ -13725,7 +13725,7 @@
       ],
       "blocker": "Counterfactual reconstruction is not integrated with model uncertainty and observable evidence boundaries.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "Source audit of opportunity learning/counterfactual and evaluation modules."
       ],
@@ -13741,7 +13741,7 @@
       ],
       "blocker": "Calibration decision helper exists, but monitoring, registry retirement and policy adapter enforcement remain absent.",
       "last_audited_at_utc": "2026-11-24T17:44:00+00:00",
-      "commit": "PENDING",
+      "commit": "0b489da3",
       "test_evidence": [
         "tests/test_learning_world_model.py::test_calibration_gate_retires_an_overconfident_forecast_independent_of_returns",
         "tests/test_learning_world_model.py::test_calibration_gate_only_grants_research_eligibility_after_all_checks",
