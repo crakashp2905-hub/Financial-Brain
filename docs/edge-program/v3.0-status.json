@@ -4300,7 +4300,7 @@
       ],
       "blocker": "Partial: historical frequencies are not independently calibrated forecasts, do not account for temporal dependence or analog-selection uncertainty, and are not yet joined to net_ev/costed decision receipts or the mandatory forward-session eligibility gate. Caller-supplied source evidence remains to be permission-validated.",
       "last_audited_at_utc": "2026-11-24T03:24:28Z",
-      "commit": "6d3b76c436b938a8caeb739bec6446911b516fca",
+      "commit": "150fccf0",
       "test_result": "python -m pytest tests/test_kernel_exit_scenarios.py tests/test_exit_policy.py tests/test_trade_economics.py tests/test_kernel_net_ev.py -q: 19 passed; Ruff and targeted mypy passed."
     },
     {
