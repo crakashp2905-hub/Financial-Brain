@@ -29,15 +29,31 @@ SPLIT = date(2022, 1, 1)
 # ------------------------------------------------------------------------------------------------- data
 
 def load(rcon, start: str = "2015-01-01", n: int = 500) -> dict:
-    """Daily panels for the names that were ever in the ``n`` most liquid: close (adjusted), adv20, the universe
-    mask (top ``n`` by adv20 each day) and the round-trip cost of each name each day."""
+    """Daily point-in-time ordinary-share panels, ranked within stocks by ADV20."""
     df = rcon.execute(f"""
-        WITH r AS (SELECT lineage, business_date, adv20,
+        WITH eligible AS (
+            SELECT DISTINCT f.lineage, f.business_date, f.adv20
+            FROM features f JOIN adjusted_prices a USING (lineage, business_date)
+            WHERE f.business_date >= ? AND f.adv20 > 0
+              AND EXISTS (
+                  SELECT 1 FROM universe_snapshots u
+                  WHERE u.business_date = a.business_date AND u.isin = a.isin
+                    AND u.exchange = 'NSE' AND u.series = 'EQ'
+                    AND u.instrument_type = 'STK' AND u.tradable
+              )
+        ), r AS (SELECT lineage, business_date, adv20,
                           ROW_NUMBER() OVER (PARTITION BY business_date ORDER BY adv20 DESC) AS rk
-                   FROM features WHERE business_date >= ? AND adv20 > 0)
+                   FROM eligible)
         SELECT a.business_date AS d, a.lineage, a.close_adj AS c, r.adv20, r.rk
         FROM adjusted_prices a JOIN r USING (lineage, business_date)
-        WHERE a.lineage IN (SELECT DISTINCT lineage FROM r WHERE rk <= {n}) AND a.close_adj > 0""", [start]).df()
+        WHERE a.close_adj > 0
+          AND EXISTS (
+              SELECT 1 FROM universe_snapshots u
+              WHERE u.business_date = a.business_date AND u.isin = a.isin
+                AND u.exchange = 'NSE' AND u.series = 'EQ'
+                AND u.instrument_type = 'STK' AND u.tradable
+          )
+          AND a.lineage IN (SELECT DISTINCT lineage FROM r WHERE rk <= {n})""", [start]).df()
     df["d"] = pd.to_datetime(df["d"])
     C = df.pivot(index="d", columns="lineage", values="c").sort_index()
     A = df.pivot(index="d", columns="lineage", values="adv20").reindex(C.index)

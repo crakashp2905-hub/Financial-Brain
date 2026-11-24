@@ -119,6 +119,7 @@ def laya_decide(model: str, instruction: str, state: str, choices: list[str], *,
                 notes: dict[str, str] | None = None,
                 repo: str = DEFAULT_REPO, subfolder: str | None = None) -> Decision:
     """One forward pass, one label, a probability per option - the router's shape."""
+    state = untrusted.require_safe(state, source="laya classifier input")
     if not 2 <= len(choices) <= 20:
         # Above about 20 labels the published accuracy collapses (0.425 on Banking77's
         # 77 labels at the default head budget). Nothing here needs more than a handful,
@@ -139,7 +140,9 @@ def laya_decide(model: str, instruction: str, state: str, choices: list[str], *,
         probs = {c: 1 / len(choices) for c in choices}
     else:
         probs = {c: v / total for c, v in probs.items()}
-    label = max(probs, key=probs.get)
+    label = max(probs, key=lambda choice: probs[choice])
+    untrusted.validate_choice_output(label=label, confidence=probs[label],
+                                     probabilities=probs, choices=choices)
     return Decision(label=label, probs=probs, confidence=probs[label], model=model,
                     latency_ms=int((time.perf_counter() - t0) * 1000),
                     extra={"backend": "laya", "repo": repo, "subfolder": subfolder,

@@ -84,6 +84,20 @@ def _f(**kw):
 
 
 class TestRegimeRules:
+    def test_missing_inputs_are_unknown_and_missing_state_is_immediate(self):
+        from financial_brain.regime.brain import REGIME_UNKNOWN, classify_history, indicate
+
+        healthy = _f()
+        missing = _f(above_200=None)
+        assert indicate(missing)[0] == REGIME_UNKNOWN
+        states = classify_history([healthy, healthy, missing, healthy])
+        assert [row["regime"] for row in states] == ["RISK_ON", "RISK_ON", REGIME_UNKNOWN, REGIME_UNKNOWN]
+
+    def test_non_finite_feature_is_unknown(self):
+        from financial_brain.regime.brain import REGIME_UNKNOWN, indicate
+
+        assert indicate(_f(vix=float("nan")))[0] == REGIME_UNKNOWN
+
     def test_covid_crash_is_crisis(self):
         """2020-03-23: VIX 72, realised vol 70%, -38% drawdown."""
         from financial_brain.regime.brain import indicate

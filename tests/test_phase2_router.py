@@ -73,6 +73,7 @@ def test_plan_orders_by_tier_then_latency_and_drops_uncalibrated(con, monkeypatc
 
 
 def test_router_escalates_and_marks_uncertain(con, monkeypatch):
+    monkeypatch.setattr(bench, "choices", lambda task: ["neutral", "negative"])
     answers = {"small": D("neutral", 0.6, "small"), "big": D("negative", 0.95, "big")}
     monkeypatch.setattr(bench, "decider", lambda task, m: (lambda row: answers[m]))
     steps = [{"model": "small", "threshold": 0.9, "tier": 1},
@@ -84,6 +85,14 @@ def test_router_escalates_and_marks_uncertain(con, monkeypatch):
     answers["big"] = D("negative", 0.5, "big")
     r = router.decide(con, "t", {"state": "x"}, steps=steps)
     assert not r.accepted, "an answer below every bar stays uncertain"
+
+
+def test_router_rejects_typed_model_output_outside_task_vocabulary(con, monkeypatch):
+    monkeypatch.setattr(bench, "choices", lambda task: ["neutral", "negative"])
+    monkeypatch.setattr(bench, "decider", lambda task, model: lambda row: D("buy", 1.0, model))
+    with pytest.raises(ValueError, match="typed choice contract"):
+        router.decide(con, "t", {"state": "plain external text"},
+                      steps=[{"model": "small", "threshold": 0.5, "tier": 1}])
 
 
 def test_cascade_is_replayed_from_stored_items(con, monkeypatch):

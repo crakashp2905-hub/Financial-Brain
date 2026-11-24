@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from financial_brain.paper import zoo_edges as ZE
+from financial_brain.evaluation.edges import load as load_edge_panel
 
 
 def _panel(n_names=40, n_days=300):
@@ -21,10 +22,16 @@ def _panel(n_names=40, n_days=300):
 def _rcon(cols):
     con = duckdb.connect()
     ind = ["IND_A"] * 10 + ["IND_B"] * 10 + ["IND_C"] * 10 + ["IND_D"] * 10
-    con.register("ap", pd.DataFrame({"lineage": cols, "isin": [f"IN{i}" for i in range(len(cols))]}))
+    con.register("ap", pd.DataFrame({"lineage": cols, "isin": [f"IN{i}" for i in range(len(cols))],
+                                      "business_date": pd.Timestamp("2025-01-01")}))
     con.execute("CREATE TABLE adjusted_prices AS SELECT * FROM ap")
-    con.register("im", pd.DataFrame({"isin": [f"IN{i}" for i in range(len(cols))], "industry": ind,
-                                     "index_name": "NIFTY 500"}))
+    memberships = []
+    for isin, industry in zip([f"IN{i}" for i in range(len(cols))], ind):
+        memberships.extend([
+            (isin, industry, "NIFTY 500", pd.Timestamp("2025-01-01"), pd.Timestamp("2025-01-02", tz="UTC")),
+            (isin, "FUTURE_INDUSTRY", "NIFTY 500", pd.Timestamp("2026-03-01"), pd.Timestamp("2026-03-02", tz="UTC")),
+        ])
+    con.register("im", pd.DataFrame(memberships, columns=["isin", "industry", "index_name", "as_of", "observed_at"]))
     con.execute("CREATE TABLE index_membership AS SELECT * FROM im")
     return con
 
@@ -45,3 +52,44 @@ def test_h005_skips_industries_with_fewer_than_eight_names():
     con.execute("UPDATE index_membership SET industry = 'TINY' WHERE isin IN ('IN39', 'IN38')")
     out = ZE.h_targets(con, P)
     assert not {"L38", "L39"} & set(out["edge_h005_industry_mom"])
+
+
+def test_h005_uses_only_industry_membership_known_at_rebalance():
+    P, cols = _panel()
+    con = _rcon(cols)
+    as_of = P["C"].index[-1].date()
+    industries = ZE._industries(con, cols, as_of)
+    assert industries["L0"] == "IND_A"
+    assert "FUTURE_INDUSTRY" not in set(industries)
+
+
+def test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units():
+    con = duckdb.connect()
+    day = pd.Timestamp("2026-11-24")
+    con.register("prices", pd.DataFrame({
+        "business_date": [day] * 3,
+        "lineage": ["STOCK", "ETF", "MF"],
+        "isin": ["INE000A01001", "INF000A01001", "INF000B01001"],
+        "close_adj": [100.0, 100.0, 100.0],
+    }))
+    con.execute("CREATE TABLE adjusted_prices AS SELECT * FROM prices")
+    con.register("features_input", pd.DataFrame({
+        "business_date": [day] * 3,
+        "lineage": ["STOCK", "ETF", "MF"],
+        "adv20": [100.0, 1_000_000.0, 500_000.0],
+    }))
+    con.execute("CREATE TABLE features AS SELECT * FROM features_input")
+    con.register("universe_input", pd.DataFrame({
+        "business_date": [day] * 3,
+        "isin": ["INE000A01001", "INF000A01001", "INF000B01001"],
+        "exchange": ["NSE"] * 3,
+        "series": ["EQ"] * 3,
+        "instrument_type": ["STK", "ETF", "MF"],
+        "tradable": [True] * 3,
+    }))
+    con.execute("CREATE TABLE universe_snapshots AS SELECT * FROM universe_input")
+
+    panel = load_edge_panel(con, start="2026-11-24", n=1)
+
+    assert list(panel["C"].columns) == ["STOCK"]
+    assert panel["U"].loc[day, "STOCK"]

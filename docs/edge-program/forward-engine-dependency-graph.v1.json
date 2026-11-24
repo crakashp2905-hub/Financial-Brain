@@ -5,6 +5,7 @@
       "financial_brain.evidence.decision_manifest",
       "financial_brain.forward_edge.clock",
       "financial_brain.forward_edge.cost_schedule",
+      "financial_brain.forward_edge.data_distribution",
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
@@ -35,6 +36,7 @@
       "financial_brain.decisions.net_alpha",
       "financial_brain.decisions.plan",
       "financial_brain.forward_edge.clock",
+      "financial_brain.forward_edge.data_distribution",
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.feed_health",
       "financial_brain.forward_edge.market_data",
@@ -120,6 +122,10 @@
     },
     {
       "source": "financial_brain.forward_edge.quote_archive",
+      "target": "financial_brain.forward_edge.data_distribution"
+    },
+    {
+      "source": "financial_brain.forward_edge.quote_archive",
       "target": "financial_brain.forward_edge.market_events"
     },
     {
@@ -137,6 +143,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.cost_schedule"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.data_distribution"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -372,12 +382,13 @@
   "shared_modules": [
     "financial_brain.costs.india",
     "financial_brain.forward_edge.clock",
+    "financial_brain.forward_edge.data_distribution",
     "financial_brain.forward_edge.data_permissions",
     "financial_brain.forward_edge.market_data",
     "financial_brain.forward_edge.market_events",
     "financial_brain.forward_edge.quote_archive",
     "financial_brain.kernel.units"
   ],
-  "source_count": 695,
-  "source_tree_sha256": "e9ae992a9b9d0cbfab68ef8e5873f78397b47bd42be17825805ea1213b7e282b"
+  "source_count": 729,
+  "source_tree_sha256": "466d5001011a75121c5f1fb0e82c2b6b03fc5793ac01dbc86343264eb5333b72"
 }
