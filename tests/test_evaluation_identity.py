@@ -32,6 +32,13 @@ def experiment(*, version=1, prior=None, start="2026-10-05", end="2026-10-30", e
         start_on=start, end_on=end, universe=("INFY", "TCS"), benchmarks=("NIFTY50_CASH",),
         horizon_sessions=3, parameters=(("lookback", "20"),), prior_sha256=prior,
         evaluation_identity=evaluation_identity or identity(),
+        preregistration=charter.Preregistration(
+            hypothesis="Prior 20-session momentum predicts positive net return after costs.",
+            entry_rule="Enter on the next eligible session when frozen momentum is positive and costed EV passes.",
+            exit_rule="Exit at the frozen three-session horizon or earlier at the registered risk stop.",
+            risk_budget_inr="25000", target_comparisons=("CASH", "NIFTY50_CASH"),
+            data_cutoff_on="2026-10-02", minimum_sample_sessions=60,
+        ),
     )
 
 
@@ -101,6 +108,50 @@ def test_protected_charter_requires_all_evaluation_identity_components():
         identity(market_calendar_sha256="not-a-hash")
     with pytest.raises(charter.CharterError, match="identifiers"):
         identity(data_rights_id=" ")
+
+
+def test_protected_charter_requires_complete_preregistration_before_registration(tmp_path):
+    legacy = replace(experiment(), preregistration=None)
+    with pytest.raises(charter.CharterError, match="preregistered hypothesis"):
+        legacy.require_preregistration()
+    registry = charter.CharterRegistry(tmp_path / "charters.jsonl")
+    with pytest.raises(charter.CharterError, match="preregistered hypothesis"):
+        registry.register(legacy, schedule(legacy))
+
+
+def test_preregistration_is_validated_serialized_and_hash_bound():
+    base = experiment()
+    assert charter.ExperimentCharter.from_dict(base.as_dict()) == base
+    changes = [
+        {"hypothesis": "A different registered hypothesis."},
+        {"entry_rule": "A different entry rule."},
+        {"exit_rule": "A different exit rule."},
+        {"risk_budget_inr": "25001"},
+        {"target_comparisons": ("CASH", "NIFTY50_CASH", "SECTOR" )},
+        {"data_cutoff_on": "2026-10-03"},
+        {"minimum_sample_sessions": 61},
+    ]
+    for change in changes:
+        updated = replace(base.preregistration, **change)
+        assert replace(base, preregistration=updated).sha256() != base.sha256()
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"hypothesis": " "}, "hypothesis is required"),
+        ({"risk_budget_inr": "0"}, "risk budget"),
+        ({"minimum_sample_sessions": 0}, "sample sessions"),
+        ({"data_cutoff_on": "2026-10-05"}, "cutoff must precede"),
+        ({"risk_budget_inr": "1000001"}, "cannot exceed charter capital"),
+        ({"target_comparisons": ("CASH",)}, "must include every frozen benchmark"),
+    ],
+)
+def test_invalid_preregistration_cannot_create_a_protected_charter(changes, message):
+    base = experiment()
+    with pytest.raises(charter.CharterError, match=message):
+        invalid = replace(base.preregistration, **changes)
+        replace(base, preregistration=invalid)
 
 
 @pytest.mark.parametrize(

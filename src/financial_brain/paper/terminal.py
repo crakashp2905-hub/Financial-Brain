@@ -42,6 +42,9 @@ summary{cursor:pointer;font-weight:600}summary:focus-visible,a:focus-visible{out
 .kv{display:grid;grid-template-columns:200px 1fr;gap:4px 12px;margin-top:8px}.kv div:nth-child(odd){color:var(--muted)}
 .decision-first{border:2px solid var(--accent);border-radius:8px;padding:14px;background:var(--card);margin-top:14px}
 .decision-first h2{margin:0 0 8px}.decision-first .tile{min-width:0}.decision-first .v{font-size:16px}
+.today-card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px;margin:8px 0}.today-card[hidden]{display:none}
+.today-muted{color:var(--muted);font-size:12px}.today-chip{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:1px 7px;margin:3px;font-size:11px}
+#today-screen label{display:inline-block;margin:10px 8px 4px 0}#today-screen input,#today-screen select{padding:6px}
 @media (max-width:600px){.kv{grid-template-columns:1fr}}
 """
 
@@ -987,6 +990,14 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
     except Exception:                                   # noqa: BLE001
         my = None
     parts.insert(3, decision_first(best, asof=asof, stale=stale, kill_level=ks.get("level", "OK"), my=my))
+    from .today_screen import render as render_today
+    today_items = [{"desk": "EQUITIES", "status": "WATCH", "symbol": str(row.ticker),
+                    "title": "Historical research candidate; not an order",
+                    "summary": f"Expected net estimate {row.expected_net:+.2%} over {row.horizon} sessions",
+                    "evidence": str(getattr(row, "evidence", "EXPLORATORY")), "asof": str(asof)}
+                   for row in best.head(50).itertuples()]
+    parts.append(render_today(today_items, asof=str(asof), stale_count=len(stale),
+                              risk_summary=f"kill switch {ks.get('level', 'UNKNOWN')}; {len(stale)} stale inputs"))
     parts.append(decision_summary(rcon, asof, cs, best, b.get("state"), ks.get("level", "OK"), my))
     parts.append(trader_section(rcon, ledger, cs, best, asof, capital=capital, analogue_pool=analogue_pool,
                                 breadth_state=b.get("state"), clears=clears, my=my))

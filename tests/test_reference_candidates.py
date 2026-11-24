@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import subprocess
 
 from scripts.validate_reference_candidates import MANIFEST, validate
 
@@ -12,6 +14,13 @@ def test_historical_reference_candidates_are_fingerprinted_without_edge_promotio
     assert all(row["prospective_status"] == "NOT_CONFIRMED" for row in manifest["candidates"])
     p3 = next(row for row in manifest["candidates"] if row["id"] == "P3")
     assert "failed historical verdict" in p3["historical_status_in_source"]
+
+
+def test_historical_source_pins_resolve_to_immutable_git_blobs() -> None:
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    for row in manifest["source_artifacts"]:
+        blob = subprocess.check_output(["git", "show", f"{row['commit']}:{row['path']}"])
+        assert hashlib.sha256(blob.replace(b"\r\n", b"\n")).hexdigest() == row["sha256_lf"]
 
 
 def test_validator_fails_if_source_pin_or_candidate_claim_is_changed(tmp_path, monkeypatch) -> None:

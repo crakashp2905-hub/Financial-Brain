@@ -1,5 +1,7 @@
 from decimal import Decimal
 import hashlib
+import random
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -169,6 +171,82 @@ def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path
     assert prior["positions"][0]["mark"] is None
     assert after["positions"][0]["mark"] == Decimal("105")
     assert after["positions"][0]["unrealized_pnl"] == Decimal("10")
+
+
+def test_1000_seeded_cross_asset_event_sequences_preserve_ledger_invariants(tmp_path):
+    """Exercise cash, identity, decimal, asset routing, time normalization and replay at scale."""
+    rng = random.Random(20261124)
+    ledger = CanonicalPortfolioLedger(tmp_path / "randomized-portfolio.sqlite")
+    assets = (
+        (AssetClass.EQUITY, "NSE:INFY", Decimal("1")),
+        (AssetClass.ETF, "NSE:NIFTYBEES", Decimal("1")),
+        (AssetClass.OPTION, "NFO:NIFTY-2026-12-31-26000-CE", Decimal("25")),
+        (AssetClass.MUTUAL_FUND, "INF000000001", Decimal("1")),
+    )
+    events = []
+    expected = []
+    base = datetime(2026, 11, 2, 3, 30, tzinfo=timezone.utc)
+
+    def at_utc_minute(minute: int, offset_minutes: int) -> str:
+        local = (base + timedelta(minutes=minute)).astimezone(
+            timezone(timedelta(minutes=offset_minutes)))
+        return local.isoformat()
+
+    for sequence in range(1000):
+        account = f"random-paper-{sequence:04d}"
+        asset_class, instrument_id, multiplier = assets[sequence % len(assets)]
+        sleeve = ("swing", "intraday", "options", "long_term")[sequence % len(assets)]
+        quantity_scale = 6 if asset_class is AssetClass.MUTUAL_FUND else 2
+        scale = Decimal(10) ** quantity_scale
+        buy_quantity = Decimal(rng.randint(100, 100_000)) / scale
+        sell_quantity = buy_quantity * Decimal(rng.randint(1, 100)) / Decimal(100)
+        buy_price = Decimal(rng.randint(100, 500_000)) / Decimal(100)
+        sell_price = Decimal(rng.randint(100, 500_000)) / Decimal(100)
+        mark_price = Decimal(rng.randint(100, 500_000)) / Decimal(100)
+        fee = Decimal(rng.randint(0, 500)) / Decimal(100)
+        offset = (0, 330, 345)[sequence % 3]
+        prefix = f"seq-{sequence:04d}"
+        events.extend((
+            event(f"{prefix}-opening", EventKind.CASH_FLOW, account_id=account, sleeve_id=sleeve,
+                  cash_delta="10000000", occurred_at=at_utc_minute(0, offset),
+                  metadata={"cash_flow_type": "OPENING_BALANCE"}),
+            event(f"{prefix}-buy", EventKind.FILL, account_id=account, sleeve_id=sleeve,
+                  asset_class=asset_class, instrument_id=instrument_id, side="BUY",
+                  quantity=str(buy_quantity), price=str(buy_price), multiplier=str(multiplier),
+                  occurred_at=at_utc_minute(5, offset)),
+            event(f"{prefix}-sell", EventKind.FILL, account_id=account, sleeve_id=sleeve,
+                  asset_class=asset_class, instrument_id=instrument_id, side="SELL",
+                  quantity=str(sell_quantity), price=str(sell_price), multiplier=str(multiplier),
+                  occurred_at=at_utc_minute(30, offset)),
+            event(f"{prefix}-fee", EventKind.FEE, account_id=account, sleeve_id=sleeve,
+                  cash_delta=str(-fee), occurred_at=at_utc_minute(31, offset)),
+            event(f"{prefix}-mark", EventKind.MARK, account_id=account, sleeve_id=sleeve,
+                  asset_class=asset_class, instrument_id=instrument_id, price=str(mark_price),
+                  occurred_at=at_utc_minute(360, offset)),
+        ))
+        expected.append((account, instrument_id, buy_quantity - sell_quantity, buy_quantity,
+                         sell_quantity, buy_price, sell_price, mark_price, multiplier, fee))
+
+    assert ledger.import_events(events) == {
+        "received": 5000, "added": 5000, "already_present": 0,
+    }
+    assert ledger.import_events(events) == {
+        "received": 5000, "added": 0, "already_present": 5000,
+    }
+    for (account, instrument_id, quantity, bought, sold, buy_price, sell_price,
+         mark, multiplier, fee) in expected:
+        snapshot = ledger.snapshot(account)
+        assert snapshot["opening_balance_supplied"] is True
+        assert snapshot["projection_complete"] is True
+        assert snapshot["cash"]["INR"] == (
+            Decimal("10000000") - bought * buy_price * multiplier
+            + sold * sell_price * multiplier - fee
+        )
+        position = snapshot["positions"][0]
+        assert position["instrument_id"] == instrument_id
+        assert Decimal(position["quantity"]) == quantity
+        assert Decimal(position["realized_pnl"]) == sold * (sell_price - buy_price) * multiplier
+        assert Decimal(position["unrealized_pnl"]) == (mark - buy_price) * quantity * multiplier
 
 
 def test_conflicting_replay_or_batch_is_rejected_atomically(tmp_path):
