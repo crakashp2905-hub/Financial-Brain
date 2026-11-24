@@ -11200,182 +11200,272 @@
     {
       "id": "SL-07-01",
       "text": "Define episode key `(dataset_version, instrument, session_id, strategy_id, behavior_policy_version, account_id)` with immutable clock.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing session/decision and strategy identity records offer partial fields; no immutable dataset-version/instrument/session/strategy/policy/account episode key with unified decision clock was found."
+      ],
+      "blocker": "Trajectory episode key/schema absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-02",
       "text": "Store full `(s_t, eligible_action_mask, chosen_action, action_probability, fill, reward, s_{t+1}, done, provenance)` rows.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Decision journals, runner manifests, orders/fills and outcomes store portions of transitions separately; no trajectory row joins state, eligible-action mask, chosen action, propensity, fill, reward, next state, done and provenance."
+      ],
+      "blocker": "No joined transition-table builder.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-03",
       "text": "When behavior propensities are unknown, label `PROPENSITY_UNAVAILABLE`; do not create fabricated numbers.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The simple IPS helper requires a positive propensity or errors, but no training-data schema records PROPENSITY_UNAVAILABLE for legacy/nonrandom decisions."
+      ],
+      "blocker": "No explicit missing-propensity type or trajectory adapter.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-04",
       "text": "Distinguish replayed hypothetical counterfactual rewards from observed actions and outcomes using separate schemas.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Replay and observed paper artifacts have distinct evidence tiers in several paths; no separate typed counterfactual-vs-observed transition schemas for offline RL."
+      ],
+      "blocker": "No offline-RL dataset type system.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-05",
       "text": "Capture rejected signal, no-trade and abstention opportunities, not only executed winners.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No-trade/rejected decisions are journaled in forward-edge paths, but there is no full-universe trajectory capture ensuring rejected opportunities are in training data."
+      ],
+      "blocker": "Decision-only capture is not an RL trajectory data set.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-06",
       "text": "Prevent reconstructing missing live actions as if a previous policy chose them prospectively.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Provenance and immutable trial evidence protect some sessions; no trajectory builder prevents missing historical actions being retrospectively reconstructed as choices."
+      ],
+      "blocker": "No action provenance gate in dataset pipeline.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-07",
       "text": "Encode action support set and coverage density by regime/instrument/size; mark unsupported actions as OOD.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "IPS helper has no target-policy support, effective sample size, action/regime/instrument/size coverage or OOD detection."
+      ],
+      "blocker": "Action support diagnostics absent; current IPS helper is not sufficient OPE.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-08",
       "text": "Discard data points where unresolved fills, insufficient quote history or legal data retention prevent valid reward.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Paper accounting and session reports can label unresolved orders and missing cost evidence; no RL dataset eligibility filter combines unresolved fills, quote coverage and retention rights."
+      ],
+      "blocker": "No complete transition-validity eligibility gate.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-09",
       "text": "Build contiguous training trajectories without session/expiry leakage; allow overnight positions only when strategy permits.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forward runner and policy tasks have session boundaries, but no contiguous offline learner trajectory builder handles session/expiry carry rules."
+      ],
+      "blocker": "RL trajectory segmentation absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-10",
       "text": "Use explicit `action_decision_ts` and `first_eligible_fill_ts`; refuse same-bar perfect entry at future close.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Execution helpers start after the signal/decision interval and market events carry availability clocks; no unified dataset field pair action_decision_ts/first_eligible_fill_ts or same-bar leakage validator."
+      ],
+      "blocker": "No trajectory-level timestamp contract.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-11",
       "text": "Create behavior-cloning baseline and action-frequency/entropy diagnostic for every historical strategy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical strategy rules and candidate signals exist, but no behavior-cloning learner/action-frequency/entropy diagnostic for every policy."
+      ],
+      "blocker": "No action-labeled training dataset.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-12",
       "text": "Partition trajectories by chrono fold, correlated index/session group and data source; embargo overlapping holdings.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Chronological walk-forward and protected trial splits exist; no trajectory fold assignment by correlated session/index/source with overlapping-holding embargo."
+      ],
+      "blocker": "No RL trajectory split/embargo utility.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-13",
       "text": "Store min/max observed position size, leverage, spread, holding time and action support per behavior policy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Order/portfolio evidence includes observed quantities and some execution attributes; no per-behavior-policy summary of supported position size, leverage, spread, holding period and action support."
+      ],
+      "blocker": "No behavior-policy support profile.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-14",
       "text": "Check bias from logging only placed trades; estimate policy support and refuse invalid off-policy comparisons.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Counterfactual tools exist but are descriptive and not based on a unified logged-action propensity/support dataset; selection bias from only placed trades is not generally corrected."
+      ],
+      "blocker": "OPE support assumptions are not validated.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-15",
       "text": "Implement deterministic trajectory builder with hash-for-hash reproducibility across OS and CPU architectures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing deterministic fixture and replay reports support reproducibility within designated paths; no deterministic RL trajectory builder with cross-OS/CPU hash equivalence exists."
+      ],
+      "blocker": "Trajectory builder and portable hash contract absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-16",
       "text": "Build test corruptions: swapped rewards, future fields, missing actions, clock drift, duplicate quotes, missing propensities.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Adversarial tests cover market/OMS failure cases but not a trajectory corruption suite for swapped rewards, future fields, missing actions, clock drift, duplicate quotes and missing propensity."
+      ],
+      "blocker": "RL dataset corruption suite absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-17",
       "text": "Provide parquet snapshots plus schema and audit manifest; no network use required to replay permitted recorded fixtures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Repo stores source snapshots and immutable manifests; no RL trajectory Parquet snapshot/schema/audit manifest builder exists."
+      ],
+      "blocker": "Trajectory export pipeline absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-07-18",
       "text": "Document precisely which behavioral datasets are adequate for bandits, supervised predictors, offline RL or none.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing data permissions and trial labels classify sources, but no behavioral-data adequacy rubric for bandits, supervised learning, offline RL or none was found."
+      ],
+      "blocker": "Dataset suitability decision framework absent.",
+      "last_audited_at_utc": "2026-11-24T19:02:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
+      ]
     },
     {
       "id": "SL-08-01",
@@ -11740,162 +11830,242 @@
     {
       "id": "SL-10-01",
       "text": "Implement constant CASH, broad-market invest-and-hold, matched momentum, volatility-scaled buy/hold and existing fixed-rule paper baselines.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forecasting nulls provide deterministic seeded random-walk, drift and stationary-bootstrap references; portfolio/research tools contain market baselines. No shared episode simulator runs cash, broad-market hold, matched momentum, volatility-scaled and existing rule strategies."
+      ],
+      "blocker": "Need same-simulator, same-capital baseline registry and finance-specific control coverage.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-02",
       "text": "Implement linear/ridge/logistic predictors with strictly chronological training and comparably normalized inputs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Chronological walk-forward forecasting and ensemble fitting exist; no common normalized linear/ridge/logistic multi-task baseline service for RL markets."
+      ],
+      "blocker": "No baseline predictor service evaluated through common splits.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-03",
       "text": "Implement tree-based supervised model where in-house or existing standard libraries permit reproducible controlled tuning.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing scikit-learn forecasting/evaluation modules permit reproducible tree models; no shared controlled tuning and chronological baseline comparison workflow is defined for the RL episodes."
+      ],
+      "blocker": "Model-family benchmark, tuning budget and common episode interface missing.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-04",
       "text": "Implement probability calibration with walk-forward isotonic/Platt/temperature transforms fitted only on prior validation windows.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Versioned probability calibration and out-of-time scoring exist in forecasting/calibration.py and kernel/probability_calibration.py. RL baseline pipeline integration and per-window fitted calibration across all asset classes are absent."
+      ],
+      "blocker": "No unified walk-forward baseline calibration artifact across RL tasks.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-05",
       "text": "Use distributional random-walk, drift and stationary block bootstrap nulls already represented in `forecasting/null.py`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "forecasting/null.py implements seeded RandomWalk, Drift and stationary-bootstrap Climatology references. They are forecast nulls, not same-simulator trading policies."
+      ],
+      "blocker": "Need trade-policy conversion through common execution/accounting environment.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-06",
       "text": "Compare baseline alpha by asset class, horizon, regime, transaction cost, exposure and signal availability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Ensemble walk-forward reports after-cost alpha and benchmark comparisons; no common baseline-alpha report stratified across asset/horizon/regime/cost/exposure/data availability for all candidate learning policies."
+      ],
+      "blocker": "No consolidated stratified baseline evaluation report.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-07",
       "text": "Expose confidence bands, forecast calibration and net P&L without conflating predictive skill with tradability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Forecast calibration/economic reports separate prediction scores from some trading metrics; no standard RL baseline report exposes confidence bands, calibrated forecasts and net P&L together."
+      ],
+      "blocker": "Metrics are distributed across modules and are not tied to one shared out-of-sample episode.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-08",
       "text": "Make a thresholded forecast-to-trade baseline with cash and all risk gates before RL can claim incremental value.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Trade admissibility, execution feasibility and costed economics gates support candidate-to-paper admission; not integrated with a thresholded forecast-to-trade baseline that applies every risk gate before RL evaluation."
+      ],
+      "blocker": "No end-to-end threshold baseline uses the complete risk stack.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-09",
       "text": "Implement deterministic buy/hold/sell threshold policy plus fixed stop/target/time-stop for exact apples-to-apples baseline.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Versioned exit rules and historical exit replay support stop/target/time behavior; no deterministic buy/hold/sell threshold policy benchmark is registered and run through a shared simulator."
+      ],
+      "blocker": "No exact apples-to-apples policy baseline harness.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-10",
       "text": "Implement fitted Q evaluation for finite discrete action and low-dimensional baseline to test sequential edge feasibility.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "No finite-discrete-action Fitted Q Evaluation implementation was found in repository search. Existing off-policy estimators are not evidenced for this criterion."
+      ],
+      "blocker": "FQE and trajectory data support are absent.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-11",
       "text": "Assess achievable advantage under a hypothetical zero-cost upper bound and real base cost; classify marginal patterns cost-dominated.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Research and forward-edge tools calculate costs, capacity, and net outcomes, but no same-candidate hypothetical zero-cost upper bound versus validated base-cost benchmark classifies cost-dominated learning patterns."
+      ],
+      "blocker": "No paired zero-cost/base-cost RL pattern report; actual cost inputs also require source validation.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-12",
       "text": "Test all baselines on the same episodes, same available information, same portfolio size and same policies for unresolved fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Chronological ensemble evaluation prevents future outcomes entering weights; no same-episode, same-capital, same-information, same-unresolved-fill comparison across baseline policies exists."
+      ],
+      "blocker": "A common simulator and episode manifest do not exist.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-13",
       "text": "Prohibit comparing one algorithm trained on 2016–2025 to an inferior baseline trained on older or less complete periods.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Charters, parameter freezes and trial preservation support comparable versions, but no baseline-specific data-period equality validator gates candidate comparisons."
+      ],
+      "blocker": "Shared split/data-coverage assertions not connected to all baseline reports.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-14",
       "text": "Log annualized turnover, cost drag, max drawdown, downside tail risk, factor exposures and fraction of time invested.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Portfolio/evaluation reports provide some drawdown, cost, turnover and risk measures; no single baseline scorecard includes annualized turnover, cost drag, maximum drawdown, tail risk, factor exposures and invested fraction."
+      ],
+      "blocker": "No unified comparable financial baseline scorecard.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-15",
       "text": "Create baseline registry and immutable champion label independent of any new RL training metrics.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Charter, parameter-freeze and champion governance modules provide pieces of immutable strategy identity/status; there is no baseline registry with an immutable champion label independent of RL training metrics."
+      ],
+      "blocker": "Canonical baseline and champion registry missing.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-10-16",
       "text": "Gate entry to deep RL research on demonstrated supervised or simple policy evidence plus realistic sample size.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Protected trials require preregistration, and promotion evidence requires prospective tiers; no gate requires demonstrated supervised/simple-policy evidence plus declared sample-size sufficiency before deep RL research begins."
+      ],
+      "blocker": "Explicit RL-entry governance gate absent; prospective sample evidence remains external/time dependent.",
+      "last_audited_at_utc": "2026-11-24T18:34:00Z",
+      "commit": "f86c6beb",
+      "test_evidence": [
+        "Source audit of forecasting nulls, walk-forward calibration, ensemble comparison, trade-admissibility and champion/trial governance; no baseline-wave integration test found."
+      ]
     },
     {
       "id": "SL-11-01",
@@ -16756,15 +16926,49 @@
       "SL-04-17",
       "SL-04-18",
       "SL-04-19",
-      "SL-04-20"
+      "SL-04-20",
+      "SL-07-01",
+      "SL-07-02",
+      "SL-07-03",
+      "SL-07-04",
+      "SL-07-05",
+      "SL-07-06",
+      "SL-07-07",
+      "SL-07-08",
+      "SL-07-09",
+      "SL-07-10",
+      "SL-07-11",
+      "SL-07-12",
+      "SL-07-13",
+      "SL-07-14",
+      "SL-07-15",
+      "SL-07-16",
+      "SL-07-17",
+      "SL-07-18",
+      "SL-10-01",
+      "SL-10-02",
+      "SL-10-03",
+      "SL-10-04",
+      "SL-10-05",
+      "SL-10-06",
+      "SL-10-07",
+      "SL-10-08",
+      "SL-10-09",
+      "SL-10-10",
+      "SL-10-11",
+      "SL-10-12",
+      "SL-10-13",
+      "SL-10-14",
+      "SL-10-15",
+      "SL-10-16"
     ],
-    "audited_count": 356,
+    "audited_count": 390,
     "status_counts": {
       "COMPLETE": 48,
       "EXTERNAL_BLOCKED": 4,
       "NOT_STARTED": 0,
-      "PARTIAL": 304,
-      "UNASSESSED": 1022
+      "PARTIAL": 338,
+      "UNASSESSED": 988
     },
     "verified_complete_count": 48,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16886,13 +17090,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy."
   },
   "counts_by_status": {
     "COMPLETE": 48,
     "EXTERNAL_BLOCKED": 4,
     "NOT_STARTED": 0,
-    "PARTIAL": 304,
-    "UNASSESSED": 1022
+    "PARTIAL": 338,
+    "UNASSESSED": 988
   }
 }
