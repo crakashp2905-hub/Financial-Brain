@@ -11499,13 +11499,15 @@
       "imports": [
         "__future__",
         "datetime",
-        "indices"
+        "indices",
+        "math",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/regime/brain.py",
-      "source_sha256": "ca9bd62672d1f63152d685715e3f54266bb77b762232cf1546a72851f3836ab8",
+      "source_sha256": "0323c9a281af84ff34ceba1c1db20e641dce260391dee7c6bfb8300ce0a30ef8",
       "test_paths": []
     },
     {

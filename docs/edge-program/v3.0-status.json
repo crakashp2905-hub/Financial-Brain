@@ -15845,182 +15845,290 @@
     {
       "id": "SL-23-01",
       "text": "Build taxonomy for bull, bear, high vol, low vol, liquidity dry-up, expiry shock, event shock and abnormal gap regimes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`regime/brain.py` classifies CRISIS/RISK_OFF/NARROW/RISK_ON/NEUTRAL and records reasons; the requested liquidity dry-up, expiry shock, event shock and abnormal-gap taxonomy is incomplete."
+      ],
+      "blocker": "Regime label set omits several execution/derivative/event regimes.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-02",
       "text": "Estimate regime only from currently available features with an unknown-regime fallback.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`regime/brain.py` uses dated index/VIX/breadth features and now emits immediate REGIME_UNKNOWN for missing/non-finite required inputs; `forward_edge/risk_throttle.py` maps unknown regimes to zero risk. Other requested regime inputs are not assembled."
+      ],
+      "blocker": "Causal availability is present for selected inputs, not a full current-feature regime estimator.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-03",
       "text": "Create training/validation splits with separate stress years, sector cycles, liquidity classes and structural break segments.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Evaluation uses chronological walk-forward splits, synthetic nulls and historical stress/regime conditioning; separate frozen stress years, sector cycles, liquidity classes and structural-break cohorts are not one shared split contract."
+      ],
+      "blocker": "No common split manifest spans every stress dimension.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-04",
       "text": "Use online drift monitoring for feature calibration, forecast confidence, fill realism and net P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk/degradation.py` monitors IC drift; `risk/health.py` adds net result, cost, drawdown and data quality; OMS quality covers execution. These monitors are not unified into one versioned feature/calibration/fill/net-P&L drift service."
+      ],
+      "blocker": "Drift checks are separate and incompletely wired to automatic portfolio action.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-05",
       "text": "Validate drift false positives and detection delay on block-correlated synthetic processes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk/degradation.py` tests CUSUM/rolling-t false alarms on synthetic sequences; no block-correlated process benchmark with declared false-positive rate and detection delay was found."
+      ],
+      "blocker": "Dependence-preserving detector calibration and acceptance thresholds are missing.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-06",
       "text": "Add monitoring for model overconfidence after regime change and loss of feature predictive power.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Health and forecast calibration gates can lower trust on weak evidence; no explicit model-overconfidence-after-regime-change and feature-predictive-power loss monitor is wired."
+      ],
+      "blocker": "Confidence and feature usefulness are not monitored together after a regime transition.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-07",
       "text": "Create adversarial price paths consistent with observed gaps/volatility; do not assert they are probable forecasts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk/stress.py`, `forward_edge/stress.py` and synthetic evaluation provide historical and deterministic stressed paths; no dedicated adversarial path generator constrained to observed gap/volatility envelopes is present."
+      ],
+      "blocker": "Adversarial paths and forecast-probability labeling are not implemented as a standalone evaluator.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-08",
       "text": "Perturb fees, tick size, quote latency, bid-ask spread, contract availability and market participation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Cost, impact, quote staleness, depth and participation stress helpers exist across execution/options tests; there is no frozen joint perturbation matrix covering fees, ticks, latency, spread, contract availability and participation."
+      ],
+      "blocker": "Stress dimensions are not combined in one versioned scenario set.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-09",
       "text": "Model market-wide crashes and crowded momentum unwind; check whether correlated desks all fail simultaneously.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical portfolio stress measures crash windows, empirical expected shortfall and regime-conditioned factors; the crowded-momentum unwind and simultaneous failure of overlapping desks are not explicitly evaluated together."
+      ],
+      "blocker": "No cross-desk crowded unwind scenario with shared holdings/exposures.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-10",
       "text": "Test policy under lost history, partially missing options chains, stale earnings filings and revision storms.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Fail-closed data guards exist for stale/missing quotes and availability, plus MF filing/NAV revision tests; no unified policy stress matrix jointly removes history, option chains and stale/revised filings."
+      ],
+      "blocker": "Multi-source data-loss and revision storm rehearsal is fragmented.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-11",
       "text": "Compare fixed champion, online bandit, meta learner and regime router over same stress matrix.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No common stress harness compares fixed champion, online bandit, meta learner and regime router on the same frozen stress matrix; the online bandit arm is absent."
+      ],
+      "blocker": "Required comparative policies and shared test cohort are not registered.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-12",
       "text": "Include structural regime decay review; automatically de-risk but do not self-certify a revised strategy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk/degradation.py`, `risk/health.py` and the frozen risk throttle can reduce/disable risk; there is no periodic governed regime-decay review plus automatic de-risk workflow tied to an independently approved revised strategy."
+      ],
+      "blocker": "Review and de-risk controls are not one auditable lifecycle.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-13",
       "text": "Implement portfolio harm-stop based on economic losses, operational anomalies and evidence-quality degradation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Portfolio killswitch, OMS reconciliation halt, data-quality and evidence promotion gates address economic/operational/evidence harms separately; one portfolio harm-stop joining all three is not verified."
+      ],
+      "blocker": "Cross-domain harm-stop is fragmented.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-14",
       "text": "Use portfolio worst-case and posterior uncertainty to limit size; never increase risk on insufficient sample.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Risk distributions, covariance/stress tools and `risk/allocator.py` shrink uncertain edge; no single size gate combines worst-case portfolio scenario and posterior uncertainty across all desks."
+      ],
+      "blocker": "Posterior and worst-case sizing are not unified with all active desk risk.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-15",
       "text": "Create adversarial evaluator separate from candidate authorship and training pipeline.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`tests/test_pattern_adversarial.py` and stress evaluators provide adversarial checks separate from strategy detector code; independent evaluator ownership and a repository-wide candidate/trainer separation are not established."
+      ],
+      "blocker": "The adversarial evaluator's independent governance boundary is incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-16",
       "text": "Keep `REGIME_UNKNOWN` a valid state that leads to fallback policy or abstention.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "Regime v3 returns `REGIME_UNKNOWN` immediately for missing/non-finite required features; `forward_edge/risk_throttle.py` assigns unknown labels the frozen unknown multiplier (default 0) and reports `UNKNOWN_REGIME_NO_RISK`. Tests verify immediate fallback, no hysteresis delay, and zero-risk throttle behavior."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-17",
       "text": "Distinguish changes in price regime from changes in the provider market-data distribution.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No separate provider-distribution drift monitor (schema, timestamp, quote coverage/source mix) versus price-regime monitor was found."
+      ],
+      "blocker": "Market-price regime and market-data-provider distribution shift are not separately measured.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-23-18",
       "text": "Publish stress survival table and exact candidate failure causes, not a single robustness score.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Historical and execution stress tools report scenario outcomes, missed fills and failure reasons; no governed publication joins exact candidate failure causes and a cross-desk survival table."
+      ],
+      "blocker": "A reproducible consolidated stress-survival report is missing.",
+      "last_audited_at_utc": "2026-11-24T18:58:57Z",
+      "commit": "56b0fe8f",
+      "test_evidence": [
+        "Regime/guard verification: 13 passed in tests/test_phase1_regime.py and tests/test_forward_edge_risk_throttle.py; after pinning the test to the explicit REGIME_UNKNOWN state, the targeted unknown-regime throttle test passed (1 passed). Ruff and mypy passed for regime/brain.py."
+      ],
+      "test_result": "Regime and unknown-risk fallback verified; 13 paired regime/guard tests passed and explicit REGIME_UNKNOWN guard test passed."
     },
     {
       "id": "SL-24-01",
@@ -18144,7 +18252,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T18:41:44Z",
+    "as_of_utc": "2026-11-24T18:58:57Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -18808,17 +18916,35 @@
       "SL-22-15",
       "SL-22-16",
       "SL-22-17",
-      "SL-22-18"
+      "SL-22-18",
+      "SL-23-01",
+      "SL-23-02",
+      "SL-23-03",
+      "SL-23-04",
+      "SL-23-05",
+      "SL-23-06",
+      "SL-23-07",
+      "SL-23-08",
+      "SL-23-09",
+      "SL-23-10",
+      "SL-23-11",
+      "SL-23-12",
+      "SL-23-13",
+      "SL-23-14",
+      "SL-23-15",
+      "SL-23-16",
+      "SL-23-17",
+      "SL-23-18"
     ],
-    "audited_count": 663,
+    "audited_count": 681,
     "status_counts": {
-      "COMPLETE": 56,
-      "PARTIAL": 593,
+      "COMPLETE": 57,
+      "PARTIAL": 608,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 9,
-      "UNASSESSED": 715
+      "NOT_STARTED": 11,
+      "UNASSESSED": 697
     },
-    "verified_complete_count": 56,
+    "verified_complete_count": 57,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -18938,13 +19064,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing."
   },
   "counts_by_status": {
-    "COMPLETE": 56,
-    "PARTIAL": 593,
+    "COMPLETE": 57,
+    "PARTIAL": 608,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 9,
-    "UNASSESSED": 715
+    "NOT_STARTED": 11,
+    "UNASSESSED": 697
   }
 }
