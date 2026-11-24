@@ -3976,202 +3976,322 @@
     {
       "id": "FB-1301",
       "text": "Test all schema types, asset routing, instrument identity, timezones, calendars and decimal precision across 1000+ randomized event sequences.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_session_runner.py, tests/test_canonical_portfolio_ledger.py and domain-specific schema/identity suites exercise deterministic event, venue, identity, timezone and decimal constraints.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "No property-based generator or 1,000+ randomized cross-domain event sequences are present; deterministic scenario tests do not satisfy the required randomized sequence count.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1302",
       "text": "Test daily equity swing 0–5 candidates; no forced trades when expected net does not cover costs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/trade_admissibility.py and tests/test_kernel_trade_admissibility.py cover cost-aware TRADE/WATCH/REJECT/CASH gating; equity candidates and expense-aware decision constraints are present.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "No frozen daily equity swing 0–5 candidate cohort or prospective performance report proves the complete daily candidate-count and no-forced-trade behavior across market sessions.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1303",
       "text": "Test 20-second intraday polling mode vs event streaming; stale/delayed quotes must not manufacture fill at a better price.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_session_runner.py covers stale feeds, missed quotes, delayed availability, observed depth, conservative fills and restart; tests/test_kite_stream.py covers streaming health degradation.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "A side-by-side 20-second polling versus streaming benchmark/replay is missing; the comparative execution-price acceptance is not fully validated.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1304",
       "text": "Test options zero/bad bids, nonfillable visible depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_options_quotes.py, tests/test_options_vertical.py, tests/test_option_surface.py, tests/test_paper_options_runner.py and tests/test_forward_edge_options_spread.py exercise quote quality, contracts, strategy risks and multi-leg paper controls.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "The complete checklist matrix for zero/bad bids, nonfillable displayed depth, expired tokens, wrong strike/lot, partial multi-leg fills and delayed exits is not demonstrated by one exhaustive adversarial suite or captured authorized market traces.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1305",
       "text": "Test ETF wide-spread and stale iNAV; no instant market-price=iNAV fill assumption.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_etf_valuation.py and tests/test_etf_pricing.py reject stale/future/asynchronous iNAV inputs and refuse non-executable or missing quotes instead of creating an instantaneous NAV fill.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "No end-to-end ETF fill/session scenario covers the full wide-spread plus stale-iNAV acceptance under portfolio accounting and stressed execution.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1306",
       "text": "Test ETF NIFTY/currency/commodity exposure lookthrough and double-counting with underlying stocks and derivative hedges.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF exposure taxonomy and categorized rotation candidates exist in src/financial_brain/features/etf_momentum.py and tests/test_etf_cross_asset_rotation.py; portfolio risk and exposure tests provide partial overlap controls.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "Source-backed ETF holdings lookthrough across currency/commodity/index exposures and systematic double-count prevention against direct stocks and derivative hedges are not implemented end-to-end.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1307",
       "text": "Test ETF split/distribution/delisting/halt and stop handling; portfolio remains economically balanced.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_etf_prices.py covers effective-dated split adjustment; ETF quote/valuation and portfolio disaster-stress suites cover related pricing and loss cases.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "ETF split/distribution/delisting/halt events are not reconciled through paper lots, position stops and portfolio accounting as one economically balanced lifecycle.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1308",
       "text": "Test MF direct vs regular same scheme as different share classes; scheme code/ISIN identity stable across versions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/providers/mf_scheme_master.py and tests/test_mf_scheme_master.py::test_plan_option_and_isin_are_all_part_of_the_canonical_identity prove plan/option/ISIN are distinct identity components for the same scheme code; effective-dated version tests preserve as-known identity.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1309",
       "text": "Test MF after-cutoff application, before-cutoff application with late funds, on-time funds, weekends, bank holidays, scheme suspension and special liquid/overnight rules.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_mf_purchase_eligibility.py and tests/test_mf_redemption_eligibility.py enforce sourced application/redemption cutoffs, fund availability and as-of calendar facts; MF scheme-term and lifecycle suites cover effective rules.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "The entire case matrix for bank holidays/weekends, suspension, late versus timely funds and special liquid/overnight rules is not covered together; permissions and full external operational calendars remain unresolved.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1310",
       "text": "Test MF published NAV arriving after decision; same-day NAV not known in advance and no instant application-to-fill.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_mf_lot_book.py, tests/test_mf_purchase_eligibility.py and tests/test_mf_redemption_eligibility.py bind NAV and publication/availability facts to decision time and reject future-published records.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "A full same-day purchase/redemption decision replay demonstrating that not-yet-published NAV never determines application/fill across all MF order paths remains incomplete.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1311",
       "text": "Test MF 100%-cash rejection on insufficient available funding, missing fund receipt confirmation and premature redemption cash use.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_mf_purchase_eligibility.py and tests/test_mf_purchase_payment.py validate payment milestones and funds-available timing; tests/test_mf_lot_book.py keeps pending redemption proceeds out of usable cash.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "End-to-end 100%-cash rejection under every flow, absent fund receipt confirmation and premature redemption cash-use cases are not all asserted through the integrated MF order book.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1312",
       "text": "Test MF partial redemption, lot-specific exit loads, fractional unit precision, minimum transaction amounts and lock-in failures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_mf_lot_book.py and tests/test_mf_redemption_constraints.py cover lot-specific restrictions, exit-load terms, units and lock-in constraints.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "The full fractional precision, partial redemption, minimum amounts, lot selection and available-cash reconciliation matrix is not proven across all scheme/order paths.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1313",
       "text": "Test IDCW payout/reinvestment, fund merger, scheme winding-up and delayed redemption price publication.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_mf_scheme_lifecycle.py, tests/test_mf_switch_book.py and tests/test_mf_lot_book.py cover lifecycle/version and delayed settlement primitives.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "IDCW payout/reinvestment, merger, winding-up and delayed redemption NAV publication lack a complete event-to-cash/units integration test matrix.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1314",
       "text": "Test MF expense accounting to ensure NAV-based returns are not reduced by TER a second time.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/paper/mf_return_accounting.py and tests/test_mf_return_accounting.py explicitly tag observed NAV-ratio returns as TER already reflected and apply TER separately only to forward projections; regression tests reject double TER deduction.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1315",
       "text": "Test `pay cash for ETF` and `subscribe into equivalent index MF` with identical factor exposure but different execution/timing: never claim same NAV or same fill.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF TRI/exposure metadata and MF purchase/NAV timing are modeled separately in ETF reference/return and MF eligibility/order modules; tests/test_etf_cross_asset_rotation.py and MF purchase/settlement suites verify as-of inputs.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "No matched-factor ETF cash-purchase versus equivalent index-MF subscription simulation reconciles the distinct execution, cutoff, NAV and settlement clocks.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1316",
       "text": "Test power loss at signal, approval, cash reserve, funds-receipt, NAV notice, allotment, redemption and payout; replay must be idempotent.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_session_runner.py covers restart rehydration, idempotent duplicate events, interrupted order acknowledgement, unknown-intent reconciliation and crash recovery around paper receipts; MF books also test replay-safe economic event IDs.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "Crash injection at every listed transition (signal, approval, cash reservation, payment, NAV notice, allotment, redemption and payout) with one cross-domain recovery harness is not present.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1317",
       "text": "Test duplicate network events and corrections; one economic event can only post once to the ledger.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_session_runner.py and canonical ledger/order journal suites verify duplicate events are idempotent and journal/order state recovers across restart.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "Correction/revision events across provider, MF, ETF and broker schemas are not universally given immutable supersession semantics and proved to post exactly one corrected economic effect.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1318",
       "text": "Test disabled real broker endpoints through every old and new OMS path, including malicious/accidental mode switches.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "src/financial_brain/execution/order_policy.py, forward mode denial, legacy Kite OMS denial, tests/test_oms.py::test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open and tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags prove the central physical-order lock blocks legacy and forward paths despite forged enablement inputs.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1319",
       "text": "Test stress cases: 25% stock/ETF gap, 50% option premium loss, MF gated redemption, stale NAV, illiquid quote, simultaneous correlated exposure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_disaster_stress.py, tests/test_forward_edge_stress.py, tests/test_stress_crash_coverage.py, options-risk suites and portfolio stress tests exercise gap, loss and failed-exit scenarios.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "The exact 25% equity/ETF gap, 50% option premium loss, gated MF redemption, stale NAV, illiquid quote and simultaneous correlated exposure set is not run as a unified balanced-portfolio stress acceptance.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1320",
       "text": "Run Linux + Windows full CI, minimum critical-module coverage, API contract tests, mutation/property tests and a timed market-hours failure rehearsal.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Hosted Ubuntu/Windows CI and reproducibility evidence is recorded for earlier commit 44901944665; the focused domain suite in this audit passed 168 tests.",
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ],
+      "blocker": "This requirement also demands randomized/property/mutation and API-contract coverage plus a timed market-hours failure rehearsal; current PR-head hosted CI could not be verified because GitHub API connectivity is failing, and no timed rehearsal evidence exists.",
+      "last_audited_at_utc": "2026-11-24T14:23:16Z",
+      "commit": "d0d6fc04",
+      "test_evidence": [
+        "Focused validation command across OMS, ForwardSessionRunner, disaster stress, options quote/surface/vertical, ETF valuation/pricing/returns, MF scheme/terms, payment, NAV eligibility, redemption and lot-book suites: **168 passed in 428.45s**."
+      ]
     },
     {
       "id": "FB-1401",
@@ -16327,6 +16447,26 @@
       "FB-1214",
       "FB-1215",
       "FB-1216",
+      "FB-1301",
+      "FB-1302",
+      "FB-1303",
+      "FB-1304",
+      "FB-1305",
+      "FB-1306",
+      "FB-1307",
+      "FB-1308",
+      "FB-1309",
+      "FB-1310",
+      "FB-1311",
+      "FB-1312",
+      "FB-1313",
+      "FB-1314",
+      "FB-1315",
+      "FB-1316",
+      "FB-1317",
+      "FB-1318",
+      "FB-1319",
+      "FB-1320",
       "FB-1601",
       "FB-1602",
       "FB-1603",
@@ -16407,15 +16547,15 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 306,
+    "audited_count": 326,
     "status_counts": {
-      "COMPLETE": 42,
+      "COMPLETE": 45,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 2,
-      "PARTIAL": 261,
-      "UNASSESSED": 1072
+      "PARTIAL": 278,
+      "UNASSESSED": 1052
     },
-    "verified_complete_count": 42,
+    "verified_complete_count": 45,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -16538,10 +16678,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 42,
+    "COMPLETE": 45,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 2,
-    "PARTIAL": 261,
-    "UNASSESSED": 1072
+    "PARTIAL": 278,
+    "UNASSESSED": 1052
   }
 }
