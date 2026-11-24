@@ -14,6 +14,7 @@ from financial_brain.kernel.fund_transactions import (
 from financial_brain.kernel.mf_order import (
     MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
 )
+from financial_brain.kernel.units import NavPerUnit
 from financial_brain.kernel.mf_purchase_payment import (
     MFPurchasePaymentMilestone, PaymentEvidenceBasis, PaymentMilestoneKind,
 )
@@ -154,7 +155,7 @@ def test_purchase_freezes_eligible_date_stays_nav_pending_then_allots_exact_nav(
                 available_at=nav_available, nav=7)
     decision = nav_available + timedelta(minutes=1)
     result = apply_allotment(
-        con, order_id=order.order_id, nav_observation_id="eligible-nav", nav_per_unit=7,
+            con, order_id=order.order_id, nav_observation_id="eligible-nav", nav_per_unit=NavPerUnit(7),
         terms=terms, permissions=permissions, decision_at=decision,
         allotted_at=decision + timedelta(minutes=1), now=decision + timedelta(minutes=2),
     )
@@ -166,7 +167,7 @@ def test_purchase_freezes_eligible_date_stays_nav_pending_then_allots_exact_nav(
     assert account_snapshot(con, account_id="paper-1")["cash_inr"] == Decimal("9000")
     assert ledger_snapshot(con, account_id="paper-1")["is_reconciled"] is True
     replay = apply_allotment(
-        con, order_id=order.order_id, nav_observation_id="eligible-nav", nav_per_unit=7,
+        con, order_id=order.order_id, nav_observation_id="eligible-nav", nav_per_unit=NavPerUnit(7),
         terms=terms, permissions=permissions, decision_at=decision,
         allotted_at=decision + timedelta(minutes=2), now=decision + timedelta(minutes=3),
     )

@@ -8,6 +8,7 @@ from financial_brain.kernel.mf_switch import (
     MFSwitchBasis, MFSwitchError, MFSwitchEvent, MFSwitchEventKind,
     MFSwitchLifecycle, MFSwitchRequest,
 )
+from financial_brain.kernel.units import INRNotional, MutualFundUnits, NavPerUnit
 
 
 START = datetime(2026, 11, 23, 5, tzinfo=timezone.utc)
@@ -57,6 +58,19 @@ def test_switch_pair_waits_for_available_proceeds_before_redeploying_capital():
     assert len(lifecycle.state_sha256) == 64
     with pytest.raises(FrozenInstanceError):
         lifecycle.events = ()
+
+
+def test_switch_accepts_nominal_mf_units_and_inr_nav_values():
+    request = _request(requested_units=MutualFundUnits(Decimal("12.5")))
+    event = _event(
+        MFSwitchEventKind.SWITCH_IN_ALLOTMENT_CONFIRMED, 10, "9000",
+        amount_inr=INRNotional(Decimal("9000")),
+        units=MutualFundUnits(Decimal("100")), nav_per_unit=NavPerUnit(Decimal("90")),
+    )
+    assert request.requested_units == Decimal("12.5")
+    assert event.amount_inr == Decimal("9000")
+    assert event.units == Decimal("100")
+    assert event.nav_per_unit == Decimal("90")
 
 
 def test_switch_in_cannot_reuse_proceeds_in_same_timestamp_or_before_availability():

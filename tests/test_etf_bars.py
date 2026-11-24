@@ -53,6 +53,8 @@ def test_aggregator_uses_sourced_session_buckets_and_as_of_availability() -> Non
     assert bars[1]["close"] == 99 and bars[1]["volume"] == 25
     assert bars[1]["available_at"] == "2026-11-13T03:51:01+00:00"
     assert bars[0]["bucket_start"] == "2026-11-13T03:45:00+00:00"
+    assert bars[0]["source_event_ids"] == ["one", "two"]
+    assert len(bars[0]["input_sha256"]) == 64
 
 
 def test_missing_sourced_exchange_session_fails_closed() -> None:
