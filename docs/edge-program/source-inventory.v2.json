@@ -9369,7 +9369,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/mf_periodic_review.py",
-      "source_sha256": "38c2a2c2b07b853cc685418c47c1ce91fb17482178cf2fd29d290bb9c019f7d9",
+      "source_sha256": "45789579ceacc0e05bfce0a10ed7bc293083d3661d2a9b047ddd6662c3ae7dfb",
       "test_paths": []
     },
     {

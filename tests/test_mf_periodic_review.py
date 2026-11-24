@@ -123,7 +123,8 @@ def test_mf_review_cli_reads_paper_book_and_writes_hashed_report(tmp_path, monke
             effective_from=NOW.date() - timedelta(days=10), effective_to=None,
             cash_reserve_fraction=Decimal("0.15"), max_equity_fraction=Decimal("0.5"),
             max_debt_fraction=Decimal("0.8"), max_etf_fraction=Decimal("0.2"),
-            rebalance_band_fraction=Decimal("0.05")), recorded_at=NOW)
+            rebalance_band_fraction=Decimal("0.05"), sip_amount_inr=Decimal("2500"),
+            sip_frequency="MONTHLY", sip_day=5), recorded_at=NOW)
     targets = tmp_path / "targets.json"
     targets.write_text(json.dumps({"target_weights": {"SCHEME-A": "0.85"}}),
                        encoding="utf-8")
@@ -138,5 +139,7 @@ def test_mf_review_cli_reads_paper_book_and_writes_hashed_report(tmp_path, monke
     assert result == 0
     assert report["rebalance_status"] == "READY_FOR_OWNER_REVIEW"
     assert report["rebalance_candidates"][0]["action"] == "ADD_REVIEW"
+    assert report["owner_sip_preferences"]["amount_inr"] == "2500"
+    assert report["owner_sip_preferences"]["frequency"] == "MONTHLY"
     assert report["report_sha256"]
     assert report["limitations"][0].endswith("no broker or fund order is created.")
