@@ -4312,11 +4312,12 @@
         "src/financial_brain/kernel/trade_admissibility.py",
         "Tests: python -m pytest tests/test_kernel_trade_admissibility.py tests/test_kernel_net_ev.py tests/test_execution_feasibility.py tests/test_forward_edge_parameter_freeze.py tests/test_capability_ownership.py -q: 36 passed.",
         "Ruff passed for gate, tests, and inventory script; targeted mypy passed for gate.",
-        "Capability matrix, source inventory, capability ownership inventory, and forward-engine graph freshness checks passed."
+        "Capability matrix, source inventory, capability ownership inventory, and forward-engine graph freshness checks passed.",
+        "The decision gate now requires a matching hash-pinned TradeEconomicsReceipt: signal, instrument, decision clock, quote source/hash, and cost-schedule digest must agree before TRADE. Missing receipt yields WATCH; mismatch blocks."
       ],
       "blocker": "Partial: the gate is implemented and contract-tested, but is not wired into ForwardSessionRunner or a durable paper book. Session eligibility, approvals, portfolio utility and accepted instruments are caller-supplied evidence rather than independently verified runtime records; no prospective calibrated cohort is established. The gate does not prove profitability or authorize broker orders.",
       "last_audited_at_utc": "2026-11-24T03:44:03Z",
-      "commit": "66a32fd4",
+      "commit": "c5807d27",
       "test_evidence": [
         "tests/test_kernel_trade_admissibility.py",
         "tests/test_kernel_net_ev.py",
@@ -4324,7 +4325,7 @@
         "tests/test_forward_edge_parameter_freeze.py",
         "tests/test_capability_ownership.py"
       ],
-      "artifact_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3"
+      "artifact_sha256": "71ab547cd9d8acbd1af068c4cc11d5e4d00537d8b11d84f55e71294b99132a50"
     },
     {
       "id": "FB-1604",
@@ -4335,11 +4336,12 @@
         "src/financial_brain/kernel/trade_admissibility.py",
         "Tests: python -m pytest tests/test_kernel_trade_admissibility.py tests/test_kernel_net_ev.py tests/test_execution_feasibility.py tests/test_forward_edge_parameter_freeze.py tests/test_capability_ownership.py -q: 36 passed.",
         "Ruff passed for gate, tests, and inventory script; targeted mypy passed for gate.",
-        "Capability matrix, source inventory, capability ownership inventory, and forward-engine graph freshness checks passed."
+        "Capability matrix, source inventory, capability ownership inventory, and forward-engine graph freshness checks passed.",
+        "TRADE output now includes the matching economics-receipt hash; no receipt or mismatched signal/quote/cost provenance cannot pass the reason-coded gate."
       ],
       "blocker": "Partial: the gate is implemented and contract-tested, but is not wired into ForwardSessionRunner or a durable paper book. Session eligibility, approvals, portfolio utility and accepted instruments are caller-supplied evidence rather than independently verified runtime records; no prospective calibrated cohort is established. The gate does not prove profitability or authorize broker orders.",
       "last_audited_at_utc": "2026-11-24T03:44:03Z",
-      "commit": "66a32fd4",
+      "commit": "c5807d27",
       "test_evidence": [
         "tests/test_kernel_trade_admissibility.py",
         "tests/test_kernel_net_ev.py",
@@ -4347,7 +4349,7 @@
         "tests/test_forward_edge_parameter_freeze.py",
         "tests/test_capability_ownership.py"
       ],
-      "artifact_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3"
+      "artifact_sha256": "71ab547cd9d8acbd1af068c4cc11d5e4d00537d8b11d84f55e71294b99132a50"
     },
     {
       "id": "FB-1605",
@@ -4417,17 +4419,19 @@
       "evidence": [
         "tests/test_kernel_trade_admissibility.py proves positive gross edge eroded by costs is rejected and a missing costed net-EV estimate cannot become TRADE.",
         "tests/test_kernel_net_ev.py proves missing cost models and invalid liquidity are rejected; tests/test_kernel_entry_constraints.py proves stale/incomplete quotes and expired signal TTLs cannot produce an eligible entry.",
-        "Combined focused deterministic regression set: 66 passed."
+        "Combined focused deterministic regression set: 66 passed.",
+        "tests/test_kernel_trade_admissibility.py also proves that a missing decision-time economic receipt cannot produce TRADE."
       ],
       "blocker": "Partial: deterministic failure-path tests exist, but the economic/entry receipts are not yet connected to the complete ForwardSessionRunner-to-durable-paper-fill path.",
-      "last_audited_at_utc": "2026-11-24T04:00:48Z",
-      "commit": "bd00dbc2",
+      "last_audited_at_utc": "2026-11-24T04:27:23Z",
+      "commit": "c5807d27",
       "test_evidence": [
-        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_net_ev.py",
-        "tests/test_kernel_entry_constraints.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ],
-      "artifact_sha256": "11ecec5d3f7c1997a8f31fb8a58e6f4a1d2747bf4fb017d9e89f32080cdc68f0"
+      "artifact_sha256": "71ab547cd9d8acbd1af068c4cc11d5e4d00537d8b11d84f55e71294b99132a50"
     },
     {
       "id": "FB-1701",
@@ -16151,7 +16155,7 @@
       "tests/test_oms.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block."
   },
   "counts_by_status": {
     "COMPLETE": 42,
