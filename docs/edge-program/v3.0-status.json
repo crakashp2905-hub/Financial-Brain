@@ -14661,202 +14661,322 @@
     {
       "id": "SL-19-01",
       "text": "Reuse existing `forecasting/index_15m.py` in five-desk branch; do not rewrite before parity audit.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Repository file scan confirms `src/financial_brain/forecasting/index_15m.py` is absent; generic forecast bars/models exist, but the requested five-desk parity audit and reuse have not begun."
+      ],
+      "blocker": "Requested index-specific implementation and parity audit are absent.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-02",
       "text": "Create index universe from effective-dated NSE derivative instruments; unsupported Nifty indices receive research signals only.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`src/financial_brain/ingest/kite_fno.py` reads current NFO contracts and selects listed expiries; effective-dated index derivative universe and unsupported-index research-only routing are not demonstrated."
+      ],
+      "blocker": "No versioned effective-dated universe or research-only routing for unsupported indices.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-03",
       "text": "Create completed 15-minute bars on exchange-local sessions and labels for UP/DOWN/FLAT with train-only noise band.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "15-minute bars are supported by ingest/evaluation infrastructure (`ingest/quote_archive.py`, `evaluation/intraday_family.py`); no completed-index-bar label set with a train-only UP/DOWN/FLAT noise threshold was found."
+      ],
+      "blocker": "Index-specific exchange-session labels and train-only noise-band generation are missing.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-04",
       "text": "Build causal cross-index, VIX, breadth, constituent, futures basis and permitted option quote features with availability stamps.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Option quote ingestion stores source and receipt timestamps in `ingest/options_quotes.py`; `forward_edge/option_surface.py` enforces observed/available-at clocks. A causal, unified index/VIX/breadth/constituent/futures/options feature set is not wired."
+      ],
+      "blocker": "Cross-domain decision-time feature assembly and availability audit are not integrated.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-05",
       "text": "Benchmark index direction against class-frequency, random-walk, drift and calibrated simple supervised forecasts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Generic forecasting baselines and calibration exist under `forecasting/null.py` and `forecasting/calibration.py`; no protected Nifty 15-minute direction benchmark across the requested baseline set was found."
+      ],
+      "blocker": "No index-specific frozen benchmark cohort or comparative report.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-06",
       "text": "Predict return distributions and volatility as separate targets; a direction label is not a trade return.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Generic distribution forecasts exist under `forecasting/distribution.py`; the repository audit found no paired Nifty 15-minute return-distribution and distinct volatility target pipeline."
+      ],
+      "blocker": "Targets, labels and model evaluation are not wired for Nifty 15-minute decisions.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-07",
       "text": "Implement instrument/expiry/strike lot-resolution from current contract master and reject stale/discontinued option symbols.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`ingest/kite_fno.py` resolves listed expiries and option contracts from the current NFO instrument list; a durable effective-dated contract resolver with stale/discontinued-symbol rejection was not verified."
+      ],
+      "blocker": "No shared versioned contract-master resolver or historical validity gate.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-08",
       "text": "Construct option bid/ask, IV/skew, theta, delta, vega, gamma and depth snapshot by contract at the decision time.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/option_surface.py` derives decision-time IV/Greeks from source-hashed two-sided quotes; `ingest/options_quotes.py` archives top depth. No single per-contract decision snapshot joining skew, theta, delta, vega, gamma and depth is integrated."
+      ],
+      "blocker": "Surface snapshot is not connected to a strategy decision and archived quote entitlement remains conditional.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-09",
       "text": "Use coherent option-pricing scenarios under underlying move, IV change, time decay and no-arbitrage consistency checks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/option_surface.py` checks quote quality, call bounds, strike monotonicity and butterfly convexity; option kernel pricing/Greeks are available. A coherent scenario engine across spot, IV and time decay is not integrated."
+      ],
+      "blocker": "No unified repricing/stress scenario and arbitrage gate at the decision boundary.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-10",
       "text": "Define option action `NO_TRADE`, long CE, long PE, close, reduce, and permitted defined-risk debit spread; disable naked short premium.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options_plan.py` admits long CE/PE plans and `paper/options_spread.py` admits defined-risk debit verticals; there is no common action policy covering NO_TRADE/close/reduce/spread, although no naked-short strategy engine was found."
+      ],
+      "blocker": "Allowed action taxonomy and explicit naked-short denial are not centralized across option paths.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-11",
       "text": "Build per-contract expected net P&L and downside distribution after executable spread, fees, exit liquidity and time-to-expiry.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options.py` and `forward_edge/options_spread.py` calculate executable bid/ask P&L, fees and defined-risk/expiry scenarios; no per-contract expected net-P&L/downside distribution with exit-liquidity and time-to-expiry uncertainty was found."
+      ],
+      "blocker": "Current outputs are realized/scenario calculations, not calibrated expected outcome distributions.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-12",
       "text": "Predeclare premium-based SL, TP, time-exit and risk-exit, not just underlying index points.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options_plan.py` requires premium-based stop and target; `paper/options_runner.py` replays planned exits using observed quotes. A continuous integrated stop/target/time/risk exit manager is not present."
+      ],
+      "blocker": "Premium levels are plan fields but not a live-frequency paper position-management loop.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-13",
       "text": "Build horizon-specific risk-aware contextual bandit for contract/no-trade choice before introducing full sequential RL.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Source inventory found no contextual-bandit implementation in the learning package for horizon-specific option contract/no-trade selection."
+      ],
+      "blocker": "No contextual policy, logged action support, risk constraints or OPE for options.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-14",
       "text": "Train offline option RL only on true bid/ask trajectories and observed action support; disallow fantasy fills from option midpoint.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options_runner.py` replays long-option intents only against archived observed bid/ask quotes and preserves no-quote outcomes; no offline option RL, supported-action dataset or learner exists."
+      ],
+      "blocker": "Observed-quote replay exists, but offline RL and support diagnostics are absent.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-15",
       "text": "Monitor open positions faster than the 15-minute forecast clock; hard exit guards remain outside RL.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options_runner.py` processes explicit planned exits, and stream infrastructure exists; there is no verified faster-than-15-minute option position monitor with independent hard-exit guards."
+      ],
+      "blocker": "Position monitoring and hard exit policy are not integrated with option paper positions.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-16",
       "text": "Aggregate correlated index bets through a single delta/vega/gamma and account risk budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The option surface computes per-contract Greeks and `forward_edge` exposure controls exist; the audit did not find one account-level correlated index-options Greek budget joined to those contracts."
+      ],
+      "blocker": "No aggregate delta/vega/gamma budget integrated with index-option decisions.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-17",
       "text": "Implement expiry-day and overnight gap stress, ITM settlement, OI loss, quote outage and limit order non-fill cases.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/options_spread.py` models expiry intrinsic and physical-assignment cash/share scenarios; quote outage, open-interest loss, overnight gaps and limit non-fill are not assembled into an option strategy stress suite."
+      ],
+      "blocker": "Stress cases are fragmented and not linked to a position-level scenario gate.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-18",
       "text": "Compare forecast-only, fixed-rule options trade, bandit and conservative RL on same protected prospective period.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No protected prospective-period comparison was found for forecast-only, fixed-rule options, bandit and conservative-RL cohorts."
+      ],
+      "blocker": "No prospective policy cohorts exist; bandit/RL options arms are also absent.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-19",
       "text": "Document exact paper sources and permissions; new forward quote use stays disabled if data-rights unresolved.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`ingest/options_quotes.py::licensed()` prevents archiving unless `FB_OPTIONS_ARCHIVE_LICENSE_APPROVED=1`; the precise rights evidence and end-to-end disablement of forward option quote use are not established."
+      ],
+      "blocker": "Owner rights confirmation and permission propagation to every forward quote path remain unresolved.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-19-20",
       "text": "Publish standalone option premium P&L per actual contract with fill provenance and fail all claims of profit from mere directional accuracy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/options.py` and `paper/options_runner.py` report actual-contract bid/ask P&L with contract identity; `forward_edge/options_spread.py` identifies caller-supplied quotes as unauthenticated. No standalone governed report with verified fill provenance across all option paper paths was found."
+      ],
+      "blocker": "Fill provenance authentication and a unified options performance report are missing.",
+      "last_audited_at_utc": "2026-11-24T18:09:21Z",
+      "commit": "ee2fbc20",
+      "test_evidence": [
+        "Focused options verification: 56 passed (tests/test_paper_options_plan.py, test_paper_options_runner.py, test_forward_edge_options_risk.py, test_forward_edge_options_spread.py, test_option_surface.py, test_options_vertical.py, test_phase3_kite.py)."
+      ],
+      "test_result": "Focused existing option tests: 56 passed; see test_evidence for exact files."
     },
     {
       "id": "SL-20-01",
@@ -17700,7 +17820,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T16:56:11Z",
+    "as_of_utc": "2026-11-24T18:09:21Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -18290,15 +18410,35 @@
       "SL-18-17",
       "SL-18-18",
       "SL-18-19",
-      "SL-18-20"
+      "SL-18-20",
+      "SL-19-01",
+      "SL-19-02",
+      "SL-19-03",
+      "SL-19-04",
+      "SL-19-05",
+      "SL-19-06",
+      "SL-19-07",
+      "SL-19-08",
+      "SL-19-09",
+      "SL-19-10",
+      "SL-19-11",
+      "SL-19-12",
+      "SL-19-13",
+      "SL-19-14",
+      "SL-19-15",
+      "SL-19-16",
+      "SL-19-17",
+      "SL-19-18",
+      "SL-19-19",
+      "SL-19-20"
     ],
-    "audited_count": 589,
+    "audited_count": 609,
     "status_counts": {
       "COMPLETE": 55,
-      "PARTIAL": 529,
+      "PARTIAL": 546,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 0,
-      "UNASSESSED": 789
+      "NOT_STARTED": 3,
+      "UNASSESSED": 769
     },
     "verified_complete_count": 55,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -18420,13 +18560,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made."
   },
   "counts_by_status": {
     "COMPLETE": 55,
-    "PARTIAL": 529,
+    "PARTIAL": 546,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 0,
-    "UNASSESSED": 789
+    "NOT_STARTED": 3,
+    "UNASSESSED": 769
   }
 }
