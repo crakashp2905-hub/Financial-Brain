@@ -2570,13 +2570,15 @@
       "id": "FB-0611",
       "text": "Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover; do not call mutual funds a scalping desk.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Repository contains same-category peer comparison primitives, but no evidence-backed result shows MF selection beating a passive same-category/direct-plan benchmark and static allocation after tax and turnover."
+        "src/financial_brain/research/mf_peer_comparison.py compares source-declared same-category MF periods with a common benchmark version, as-known timestamp, and equal-volatility scaling; cross-category, misaligned-window, and leverage-up comparisons are rejected.",
+        "src/financial_brain/research/mf_return_accounting.py keeps observed NAV ratios separate from forward-only TER projections, preventing TER from being deducted twice from observed NAV returns.",
+        "tests/test_mf_peer_comparison.py and tests/test_mf_return_accounting.py ran in an 8-pass focused suite with tests/test_product_charter.py; implementation commits f1726a30228c73ffada500192c0b6acb3ab1ae3d and e3e9c6f3796ba7567222719a380aef768bbd333e."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: the repo does not yet demonstrate outperformance against same-category direct-plan passive and static controls after actual tax and turnover, nor produce prospective evidence-backed results. Current peer scaling is descriptive, not an investable return forecast.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "f1726a30228c73ffada500192c0b6acb3ab1ae3d",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -2612,14 +2614,15 @@
       "id": "FB-0614",
       "text": "Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "General strategy preregistration, evidence tiers and MF NAV transaction primitives exist.",
-        "No versioned MF strategy charter/scorecard with cash/no-action control and actual prospective allotment cohort was found."
+        "src/financial_brain/research/preregistry.py and src/financial_brain/forward_edge/charter.py provide general immutable/pre-registered hypothesis and charter primitives; the MF paper lifecycle supplies sourced NAV eligibility and allotment primitives.",
+        "The cash/no-action control exists in the ETF rotation contract, and the cash management scenario module has an explicit zero-return cash control; these are not yet assembled into an MF-specific scorecard/cohort.",
+        "tests/test_phase5_preregistry.py: 7 passed with a short Windows basetemp; tests/test_product_charter.py passed in an 8-pass focused run; MF order/purchase/payment/eligibility suites: 20 passed. Relevant source commits: ac7a8fa2351cf716be10a97909c28c203b1ec358 and b6ca50682d52a97f9b535e9ca0b21fb1929bd106."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: no MF-specific versioned charter/scorecard consumes the cash/no-action control and joins actual prospective NAV allotments into a protected evaluation cohort. Generic preregistration and separate NAV transaction modules do not prove that integrated workflow.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "ac7a8fa2351cf716be10a97909c28c203b1ec358",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -3523,13 +3526,15 @@
       "id": "FB-1007",
       "text": "Before MF cutoffs: process previously approved MF subscriptions/redemptions according to scheme and payment rules; no retroactive NAV access.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/fund_transactions.py (scheme-specific cutoff/NAV assignment primitives); no approved subscription/redemption execution lifecycle or settlement/payment processing"
+        "src/financial_brain/paper/mf_order_book.py persists accepted/rejected MF order transitions; mf_purchase_book.py applies payment milestones and frozen scheme-cutoff NAV eligibility; mf_redemption_settlement.py holds redemption proceeds pending eligible NAV and payout settlement.",
+        "The lifecycle uses point-in-time source clocks and does not backfill a NAV before availability; order/purchase/eligibility/payment/redemption-eligibility focused suites: 20 passed.",
+        "Core workflow implementation commit: b6ca50682d52a97f9b535e9ca0b21fb1929bd106."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "blocker": "Partial: these paper lifecycle components are not orchestrated from previously approved owner decisions by an operational pre-cutoff scheduler, and end-to-end reconciliation across approved intent, cutoff, payment, allotment/redemption and final settlement is not evidenced.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "b6ca50682d52a97f9b535e9ca0b21fb1929bd106"
     },
     {
       "id": "FB-1008",
@@ -15718,7 +15723,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T01:20:00Z",
+    "as_of_utc": "2026-11-24T01:23:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15971,8 +15976,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 5,
-      "PARTIAL": 198,
+      "NOT_STARTED": 2,
+      "PARTIAL": 201,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16050,8 +16055,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 5,
-    "PARTIAL": 198,
+    "NOT_STARTED": 2,
+    "PARTIAL": 201,
     "UNASSESSED": 1132
   }
 }
