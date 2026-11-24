@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 696,
+  "source_count": 697,
   "sources": [
     {
       "capability_ids": [],
@@ -4935,7 +4935,8 @@
       "source_sha256": "e5ff3580e95dec2c27539433a84a09ec4fb8eb8b4555b36e2f9d66dd5cfc51e1",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
-        "tests/test_kernel_trade_admissibility.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ]
     },
     {
@@ -7403,7 +7404,8 @@
       "source_sha256": "11ecec5d3f7c1997a8f31fb8a58e6f4a1d2747bf4fb017d9e89f32080cdc68f0",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
-        "tests/test_kernel_trade_admissibility.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ]
     },
     {
@@ -7447,7 +7449,8 @@
       "source_sha256": "6f12c86e940c027f4a40c8ecad6d39da316902ed1e423ade7eb604995e27c9e3",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
-        "tests/test_kernel_trade_admissibility.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ]
     },
     {
@@ -8043,7 +8046,8 @@
       "source_sha256": "aff63ba597bcb14aa7eea4e17c1e8c3a706c3960d329de78c975df5378232cc2",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
-        "tests/test_kernel_trade_admissibility.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ]
     },
     {
@@ -8560,7 +8564,8 @@
       "source_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
-        "tests/test_kernel_trade_admissibility.py"
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
       ]
     },
     {
@@ -8578,6 +8583,36 @@
       "source": "src/financial_brain/kernel/trade_economics.py",
       "source_sha256": "e3dddbc6ed06640c434bbe2b9c46e9b03ea62049c7d65f77380538f75d81934e",
       "test_paths": []
+    },
+    {
+      "capability_ids": [
+        "frozen-costed-trade-admissibility"
+      ],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "entry_constraints",
+        "execution_feasibility",
+        "financial_brain.costs.india",
+        "financial_brain.forward_edge.cost_schedule",
+        "hashlib",
+        "json",
+        "trader_signal",
+        "zoneinfo"
+      ],
+      "maturity": "locally_mapped",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/trade_economics_receipt.py",
+      "source_sha256": "0601aaf94a4c0e4b8e5565dd463763fafb999c54e5c2c2562aec15645a2eb3a9",
+      "test_paths": [
+        "tests/test_kernel_entry_constraints.py",
+        "tests/test_kernel_trade_admissibility.py",
+        "tests/test_kernel_trade_economics_receipt.py"
+      ]
     },
     {
       "capability_ids": [],
@@ -12420,5 +12455,5 @@
     }
   ],
   "unassessed_count": 668,
-  "unassigned_role_count": 402
+  "unassigned_role_count": 403
 }
