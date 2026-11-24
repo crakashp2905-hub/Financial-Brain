@@ -3699,7 +3699,7 @@
       ],
       "blocker": "Partial: all five MF decision categories are modeled and shown, and local human choices persist, but there is no authenticated consumer UI or independently attested decision context. The journal does not submit a paper or external MF order.",
       "last_audited_at_utc": "2026-11-24T00:30:35+00:00",
-      "commit": null,
+      "commit": "f427cb7f",
       "test_result": "Nine focused MF decision tests pass, covering all five action schemas, validation, expiry, idempotency/conflicts, as-of visibility, CLI capture, terminal language and no-order behavior. The existing terminal-panel tests also pass in the targeted run.",
       "test_evidence": [
         "python -m pytest tests/test_mf_decisions.py -q: 9 passed.",
