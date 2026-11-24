@@ -114,6 +114,74 @@ def market_panel(rcon) -> str:
     return '<div class="grid">' + "".join(tiles) + "</div>"
 
 
+def etf_desk_panel(rows: list[dict] | None = None) -> str:
+    """Render sourced ETF quote, valuation, tracking, cost and liquidity evidence.
+
+    The caller supplies only observations already resolved as-of the decision time by
+    the ETF reference/market-data services. Missing inputs stay visibly unavailable.
+    """
+    out = ["<h2>ETF desk</h2>",
+           "<div class='sub'>Quoted premium/discount is an observation, not arbitrage. "
+           "A missing or stale source is shown as unavailable; this panel does not create fills.</div>"]
+    if not rows:
+        return "".join(out) + (
+            "<div class='note'>No point-in-time ETF observations were supplied. "
+            "Benchmark, executable bid/ask, fresh iNAV comparison, tracking disclosures, "
+            "cost and liquidity are unavailable until permissioned source data is connected.</div>"
+        )
+
+    def shown(value, suffix=""):
+        if value is None:
+            return "—"
+        if suffix == " INR":
+            try:
+                value = f"{float(value):,.0f}"
+            except (TypeError, ValueError):
+                pass
+        return f"{_e(value)}{suffix}"
+
+    rendered = []
+    for row in rows:
+        quote = row.get("quote") or {}
+        valuation = row.get("valuation") or {}
+        tracking = row.get("tracking") or {}
+        liquidity = row.get("liquidity") or {}
+        bid, ask = quote.get("bid"), quote.get("ask")
+        spread = None
+        try:
+            if bid is not None and ask is not None and float(bid) > 0 and float(ask) >= float(bid):
+                spread = (float(ask) - float(bid)) / ((float(ask) + float(bid)) / 2) * 10_000
+        except (TypeError, ValueError, ZeroDivisionError):
+            spread = None
+        premium = valuation.get("premium_discount_bps") if valuation.get("inav_age_seconds") is not None else None
+        inav_age = valuation.get("inav_age_seconds")
+        inav_state = "fresh comparison" if premium is not None else "unavailable / freshness gate failed"
+        tracking_state = "sourced disclosure" if tracking.get("tracking_difference_bps") is not None else "unavailable"
+        liquidity_state = liquidity.get("status", "unavailable")
+        rendered.append(
+            "<tr>"
+            f"<td>{_e(row.get('symbol', '—'))}</td>"
+            f"<td>{_e(row.get('underlying_index') or '—')}</td>"
+            f"<td class='r'>{shown(bid)}</td><td class='r'>{shown(ask)}</td>"
+            f"<td class='r'>{shown(spread, ' bp')}</td>"
+            f"<td class='r'>{shown(premium, ' bp')}<div class='sub'>{_e(inav_state)}"
+            f"{f' · iNAV age {float(inav_age):.0f}s' if inav_age is not None else ''}</div></td>"
+            f"<td class='r'>{shown(tracking.get('tracking_difference_bps'), ' bp')}"
+            f"<div class='sub'>{_e(tracking_state)}</div></td>"
+            f"<td class='r'>{shown(liquidity.get('estimated_all_in_round_trip_cost_bps'), ' bp')}"
+            f"<div class='sub'>{_e(liquidity_state)} · turnover {shown(liquidity.get('median_daily_turnover_inr'), ' INR')}</div></td>"
+            f"<td>{_e(quote.get('source') or valuation.get('inav_source') or 'source unavailable')}"
+            f"<div class='sub'>quote { _e(quote.get('event_time') or '—') }</div></td>"
+            "</tr>"
+        )
+    return "".join(out) + (
+        "<div class='wrap'><table><tr><th>ETF</th><th>Underlying benchmark</th><th class='r'>Bid</th>"
+        "<th class='r'>Ask</th><th class='r'>Spread</th><th class='r'>Midquote vs fresh iNAV</th>"
+        "<th class='r'>Tracking difference</th><th class='r'>Estimated cost / liquidity</th>"
+        "<th>Evidence source / time</th></tr>" + "".join(rendered) + "</table></div>"
+    )
+
+
 def _spark(df: pd.DataFrame) -> str:
     """Cumulative net rupees of the sold trades by exit day, against the universe on the same money."""
     d = df.sort_values("exit_day")
@@ -831,7 +899,8 @@ def mf_paper_panel(con, asof: date) -> str:
     return "".join(out)
 
 
-def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None) -> str:
+def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0, analogue_pool=None, book=None,
+          etf_rows: list[dict] | None = None) -> str:
     from ..evaluation import champion as C
     from ..opportunity import scanners as S
     from ..regime import breadth as BR
@@ -857,6 +926,7 @@ def build(rcon, ledger, *, day: date | None = None, capital: float = 1_000_000.0
         parts.append(mf_paper_panel(rcon, asof))
     except Exception as e:                          # noqa: BLE001 - MF books may not be initialized yet
         parts.append(f"<div class='sub'>MF paper book unavailable: {_e(str(e)[:100])}</div>")
+    parts.append(etf_desk_panel(etf_rows))
     # ---------------------------------------------------------------- opportunities
     cs = S.cross_section(rcon, asof)
     opps = S.scan(cs, asof, capital=capital)

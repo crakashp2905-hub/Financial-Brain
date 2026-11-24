@@ -3666,13 +3666,15 @@
       "id": "FB-1106",
       "text": "ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No ETF desk panel rendering benchmark, live spread, fresh iNAV premium/discount, tracking difference, cost and liquidity found"
+        "src/financial_brain/paper/terminal.py adds etf_desk_panel() and includes it in build(); the panel renders benchmark, executable bid/ask/spread, quote-vs-fresh-iNAV premium/discount, tracking difference, cost/liquidity, source and timestamp, while missing values stay unavailable.",
+        "tests/test_etf_terminal_panel.py plus tests/test_etf_valuation.py and tests/test_etf_liquidity.py: 14 passed; Ruff and git diff --check pass.",
+        "docs/edge-program/etf-terminal-panel-v1.md records the adapter contract and limits."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: the terminal build API accepts resolved ETF evidence rows, but no permission-cleared persisted ETF snapshot source currently assembles those rows; calibrated execution cost and prospective evidence are also absent.",
+      "last_audited_at_utc": "2026-11-24T00:38:38Z",
+      "commit": null
     },
     {
       "id": "FB-1107",
@@ -15708,7 +15710,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T00:30:35Z",
+    "as_of_utc": "2026-11-24T00:38:38Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15961,8 +15963,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 10,
-      "PARTIAL": 193,
+      "NOT_STARTED": 9,
+      "PARTIAL": 194,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -16040,8 +16042,8 @@
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 10,
-    "PARTIAL": 193,
+    "NOT_STARTED": 9,
+    "PARTIAL": 194,
     "UNASSESSED": 1132
   }
 }
