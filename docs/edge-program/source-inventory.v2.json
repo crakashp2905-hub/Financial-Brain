@@ -9654,6 +9654,7 @@
         "kernel.mf_paper_realism",
         "kernel.trading_clock",
         "mf_decisions",
+        "mf_exit_loads",
         "mf_lot_book",
         "mf_paper_realism_book",
         "numpy",
@@ -9668,7 +9669,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/terminal.py",
-      "source_sha256": "c186e5c7cbcbbbe1219f0da69aa9e40d4bd9969c073a00f4fc25770f9fe67bdd",
+      "source_sha256": "a306affd51ef9fdaa8ad97009d357b95725594a77a3b836fdcc856b73d7f4ebc",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
