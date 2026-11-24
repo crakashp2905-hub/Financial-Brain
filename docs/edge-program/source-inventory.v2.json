@@ -5647,7 +5647,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/trials.py",
-      "source_sha256": "94a97734e280d8ac88a476f560b8a3a7cf0ace4f2a833d03e55506a1c430fea3",
+      "source_sha256": "7e5fc28b36be449ff55a5842cd166987fce648551d299342def3ad112c3e8296",
       "test_paths": []
     },
     {
