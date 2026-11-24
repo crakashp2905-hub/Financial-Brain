@@ -4808,82 +4808,130 @@
     {
       "id": "FB-2001",
       "text": "Add options chain selection scoring on executable bid/ask, depth, open interest *with availability caveats*, IV, Greeks, theta decay, contract expiry, costs and premium-at-risk rather than underlying direction alone.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Executable multi-leg risk modules validate contract/token identity, bid/ask depth, quote age, expiry, premium debit, legging bound and scenario loss. No full chain-ranking score combining open-interest availability, IV/Greeks, theta, costs and premium risk is wired."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_option_surface.py; tests/test_forward_edge_options_risk.py; tests/test_forward_edge_options_spread.py; tests/test_kernel_options.py (58 combined tests)."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2002",
       "text": "Build a constrained implied-volatility surface with quote quality checks, no-arbitrage diagnostics and time-consistent snapshots; never infer edge from an invalid/stale options quote.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New forward_edge.option_surface builds source-hashed single-as-of BSM IV/Greek points from available two-sided quotes, rejects stale/future/wide/invalid evidence, converts puts by parity, and checks call bounds, strike monotonicity and butterfly convexity. Calendar-spread arbitrage is explicitly NOT_TESTED; live permitted time-consistent snapshots are absent."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_option_surface.py (5 passed); Ruff and targeted mypy passed."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2003",
       "text": "Implement option strategy-level scenario P&L under underlying price, implied vol, time decay and spread shock, including defined-risk verticals and unfilled-leg contingency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing options_risk and options_spread calculate executable multi-leg entry/exit, defined debit/max-loss and legging bounds, and expiry/physical-assignment scenarios. Continuous underlying/IV/time/spread-shock grids and explicit unfilled-leg recovery integration remain open."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_forward_edge_options_risk.py; tests/test_forward_edge_options_spread.py; tests/test_option_surface.py (58 combined tests)."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2004",
       "text": "Add ETF executable fair-value comparison with iNAV/NAV freshness, exchange spread, trading size and tracking difference; apparent discount is not automatically accessible arbitrage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF pricing/valuation modules compare executable quotes with synchronized fresh NAV/iNAV and report spread, depth, liquidity and tracking evidence; outputs abstain when evidence is stale/missing. Full-size realizable arbitrage execution and source coverage are absent."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_etf_pricing.py; tests/test_etf_valuation.py; tests/test_etf_liquidity.py (58 combined tests)."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2005",
       "text": "Build ETF-vs-underlying-vs-competing-ETF routing for the same desired exposure: select the best *implementable net total return* after spread, depth, fee and tracking costs; preserve tax/account differences.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF return, cross-asset rotation and liquidity modules provide sourced return/risk/cost comparisons and cash controls; no complete point-in-time router jointly chooses ETF vs underlying vs competing ETF after account/tax/tracking costs."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_etf_cross_asset_rotation.py; tests/test_etf_liquidity.py; tests/test_etf_pricing.py."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2006",
       "text": "Build MF-vs-ETF-vs-direct equity exposure comparisons for long-term allocation using comparable TRI/category risk, available fund holdings, direct/regular plans, TER and applicable exit load/tax modeling.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF peer/category comparison, scheme disclosures, ETF pricing and ETF return series provide partial long-horizon comparisons; available holdings lookthrough and unified direct/regular plan, tax, TER and exit-load decision comparison are incomplete."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_mf_peer_comparison.py; tests/test_mf_portfolio_disclosures.py; tests/test_mf_exit_loads.py."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2007",
       "text": "Add MF tax-lot-aware switch/hold/redeem decisions, SIP/STP/SWP schedule evaluation, expected settlement cash-flow calendars and a downside policy that produces NAV-based redemption requests (not fictitious instantaneous SL fills).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Paper MF lots, exit-load calculation, redemption eligibility, SIP/STP/SWP flows, settlement and periodic review exist as asset-specific components. A unified tax-lot-aware optimizer across switch/hold/redeem and NAV cash calendars is not complete; no fictitious instantaneous stop fills are used."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_mf_redemption_constraints.py; tests/test_mf_exit_loads.py; existing MF lifecycle suites."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2008",
       "text": "Test option expiry, spread widening, stale ETF iNAV, ETF illiquidity, MF portfolio overlap, late funds realization and lot-level exit loads with deterministic adversarial fixtures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Adversarial suites cover stale/wide option quotes, expiry/legging, stale ETF iNAV/liquidity, MF lot exit loads and redemption settlement constraints. MF holdings-overlap and prospective real-world slippage fixtures remain incomplete."
+      ],
+      "blocker": "Partial: see evidence gap. Production feed permissions/coverage, integrated portfolio routing and empirically calibrated outcomes are not established.",
+      "last_audited_at_utc": "2026-11-24T05:06:44Z",
+      "commit": "5d13e109",
+      "test_evidence": [
+        "tests/test_option_surface.py; options, ETF valuation/liquidity, MF redemption and exit-load suites (58 focused passed)."
+      ],
+      "artifact_sha256": "595659126c2d27f8bc7dc74b6c8d42546f96fcee0bd0fcd5097fe27b810a7c4e"
     },
     {
       "id": "FB-2101",
@@ -15943,7 +15991,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T04:57:27Z",
+    "as_of_utc": "2026-11-24T05:06:44Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -16204,6 +16252,14 @@
       "FB-1906",
       "FB-1907",
       "FB-1908",
+      "FB-2001",
+      "FB-2002",
+      "FB-2003",
+      "FB-2004",
+      "FB-2005",
+      "FB-2006",
+      "FB-2007",
+      "FB-2008",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -16224,13 +16280,13 @@
       "SL-00-18",
       "SL-01-06"
     ],
-    "audited_count": 278,
+    "audited_count": 286,
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
       "NOT_STARTED": 2,
-      "PARTIAL": 233,
-      "UNASSESSED": 1100
+      "PARTIAL": 241,
+      "UNASSESSED": 1092
     },
     "verified_complete_count": 42,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -16273,8 +16329,14 @@
       "src/financial_brain/execution/oms/kite_broker.py",
       "src/financial_brain/execution/oms/rollout.py",
       "src/financial_brain/execution/order_policy.py",
+      "src/financial_brain/features/etf_liquidity.py",
+      "src/financial_brain/features/etf_pricing.py",
+      "src/financial_brain/features/etf_valuation.py",
       "src/financial_brain/forward_edge/fixture_adapter.py",
       "src/financial_brain/forward_edge/modes.py",
+      "src/financial_brain/forward_edge/option_surface.py",
+      "src/financial_brain/forward_edge/options_risk.py",
+      "src/financial_brain/forward_edge/options_spread.py",
       "src/financial_brain/forward_edge/session_runner.py",
       "src/financial_brain/forward_edge/tracker.py",
       "src/financial_brain/ingest/mf_scheme_master.py",
@@ -16282,11 +16344,13 @@
       "src/financial_brain/kernel/exit_policy.py",
       "src/financial_brain/kernel/exit_protection_ledger.py",
       "src/financial_brain/kernel/exit_scenarios.py",
+      "src/financial_brain/kernel/options.py",
       "src/financial_brain/kernel/position_signals.py",
       "src/financial_brain/kernel/probability_calibration.py",
       "src/financial_brain/kernel/trade_admissibility.py",
       "src/financial_brain/kernel/trade_economics_receipt.py",
       "src/financial_brain/learning_audit.py",
+      "src/financial_brain/paper/mf_exit_loads.py",
       "src/financial_brain/paper/mf_flow_book.py",
       "src/financial_brain/paper/mf_folio_book.py",
       "src/financial_brain/paper/mf_lot_book.py",
@@ -16297,6 +16361,7 @@
       "src/financial_brain/portfolio/legacy_migration.py",
       "src/financial_brain/providers/kite_stream.py",
       "src/financial_brain/providers/mf_scheme_master.py",
+      "src/financial_brain/research/mf_peer_comparison.py",
       "src/financial_brain/storage/schema.sql",
       "tests/test_canonical_portfolio_ledger.py",
       "tests/test_capability_ownership.py",
@@ -16320,16 +16385,17 @@
       "tests/test_mf_folio_book.py",
       "tests/test_mf_scheme_master.py",
       "tests/test_oms.py",
+      "tests/test_option_surface.py",
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
     "NOT_STARTED": 2,
-    "PARTIAL": 233,
-    "UNASSESSED": 1100
+    "PARTIAL": 241,
+    "UNASSESSED": 1092
   }
 }

@@ -1680,6 +1680,12 @@
       "module_owner": "src/financial_brain/forward_edge/operator_decisions.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/option_surface.py",
+      "path": "src/financial_brain/forward_edge/option_surface.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/option_surface.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/options_risk.py",
       "path": "src/financial_brain/forward_edge/options_risk.py",
       "module_role": "forward_trading_contract_or_support",
