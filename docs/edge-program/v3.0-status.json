@@ -13150,7 +13150,7 @@
       ],
       "blocker": "Distributional targets are mathematical primitives; realistic net portfolio episodes and catastrophic path definitions are not integrated.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "tests/test_learning_risk_distribution.py",
         "No historical market portfolio path or catastrophic-episode target integration."
@@ -13167,7 +13167,7 @@
       ],
       "blocker": "A quantile loss primitive exists, but no trainable critic, optimizer, or calibrated learned return distribution.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "tests/test_learning_risk_distribution.py::test_quantile_bellman_targets_preserve_distribution_and_clip_bounds",
         "No trainable quantile critic or categorical distribution learner exists."
@@ -13185,7 +13185,7 @@
       ],
       "blocker": "The estimator is not connected to actual paper portfolio episode data and its iid episode-bootstrap interval does not model serial/regime dependence.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "tests/test_learning_risk_distribution.py::test_episode_cvar_reports_deterministic_uncertainty_interval",
         "Estimator requires caller-supplied completed net portfolio episodes; no canonical episode feed or dependence-robust interval."
@@ -13204,7 +13204,7 @@
       ],
       "blocker": "No Lagrangian constrained-MDP objective or shared integration; existing risk gates are separate components.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: separate risk checks and tabular Bellman research math; no constrained-MDP training loop."
       ],
@@ -13222,7 +13222,7 @@
       ],
       "blocker": "No canonical temporal state builder supplies drawdown, loss streak, and remaining risk budget to learner policies.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: portfolio risk metrics and transition schema are not assembled into a time-varying RL observation."
       ],
@@ -13239,7 +13239,7 @@
       ],
       "blocker": "No integrated environment records forced liquidation and ruin as terminal outcomes without truncation.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: runner/order closure and terminal Bellman target exist separately; no ruin/forced-liquidation episode semantics."
       ],
@@ -13257,7 +13257,7 @@
       ],
       "blocker": "No policy-level uncertainty abstention or fractional-size study based on bootstrap and stress intervals.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: uncertainty primitives and risk sizing are disconnected; no bootstrap/stress interval abstention experiment."
       ],
@@ -13275,7 +13275,7 @@
       ],
       "blocker": "No matched replay comparison across mean, mean-variance, CVaR, and downside utility policies.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: separate risk metric and allocator implementations; no same-sample policy comparison harness."
       ],
@@ -13292,7 +13292,7 @@
       ],
       "blocker": "Governed champion changes require approval, but no training contract freezes and verifies risk limits during training.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "tests/test_forward_edge_champion_governance.py::test_champion_change_fails_without_external_custody_or_exact_human_approval",
         "No training-time frozen risk-limit artifact or immutability check."
@@ -13310,7 +13310,7 @@
       ],
       "blocker": "No complete versioned scenario family with historical-block provenance and transparent synthetic perturbation manifests.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: existing stress primitives do not form the required crash/reversal/volatility/margin-spike scenario set from historical blocks plus transparent perturbations."
       ],
@@ -13328,7 +13328,7 @@
       ],
       "blocker": "No integrated size-scaling model spanning fat-tail execution costs, impact, and correlated drawdowns.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: bounded allocation and stress components are not calibrated for fat-tail costs and correlated book-drawdown sizing."
       ],
@@ -13345,7 +13345,7 @@
       ],
       "blocker": "Required baseline policies are not registered and evaluated on the common trading simulator.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: allocation and forecasting null references exist; no matched risk-budgeted cash/momentum, vol-targeted, and robust mean-variance trading baselines."
       ],
@@ -13364,7 +13364,7 @@
       ],
       "blocker": "No unified adversarial risk-model error test suite proving fail-closed budget behavior across the paper runner.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: component health, covariance, throttle and OMS gates exist but are not verified together against missing inputs and correlation shocks."
       ],
@@ -13382,7 +13382,7 @@
       ],
       "blocker": "The canonical approved decision manifest does not require expected tail loss and uncertainty fields.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: manifests/custody and tail estimator exist separately; approved policy schema does not require tail loss with uncertainty."
       ],
@@ -13399,7 +13399,7 @@
       ],
       "blocker": "No explicit monotonic allocation test across higher risk estimates at fixed expected value.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: risk allocation/sizing tests exist, but no invariant property test varies risk while holding expected value fixed."
       ],
@@ -13417,7 +13417,7 @@
       ],
       "blocker": "No integrated long-horizon portfolio risk report with the full required metric set.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: individual drawdown/risk metrics exist; no long-horizon report combines rolling drawdown, time underwater, CVaR, cash drag and ruin probability."
       ],
@@ -13434,7 +13434,7 @@
       ],
       "blocker": "No agent approval gate ties tail-loss uncertainty and catastrophic budget exceedance to rejection.",
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "Source audit: tail estimates and champion governance exist separately; no policy acceptance gate rejects catastrophic tail loss over budget."
       ],
@@ -13451,7 +13451,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T17:34:31+00:00",
-      "commit": "PENDING",
+      "commit": "73a7d8f4",
       "test_evidence": [
         "tests/test_forward_edge_champion_governance.py::test_automatic_rollback_enters_safe_hold_and_blocks_new_orders (DRIFT, OUTAGE, ACCOUNTING_MISMATCH, MANUAL_PAUSE; persistence verified after restart)"
       ],
