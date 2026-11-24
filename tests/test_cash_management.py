@@ -8,10 +8,15 @@ from financial_brain.features.cash_management import (
     CashManagementError,
     compare_cash_alternatives,
 )
+from financial_brain.forward_edge.data_permissions import DataPermission, DataUse, PermissionStatus
 
 
 NOW = datetime(2026, 11, 24, 10, tzinfo=timezone.utc)
 HASH = "a" * 64
+PERMISSIONS = tuple(DataPermission(
+    source_id="AUTHORIZED_AMC", use=use, status=PermissionStatus.USE_ALLOWED,
+    effective_from=NOW.date(), effective_through=None, evidence_ref=f"evidence-{use.value}", reviewer="owner",
+) for use in (DataUse.RESEARCH, DataUse.PAPER_SIMULATION))
 
 
 def alternative(**overrides):
@@ -41,6 +46,7 @@ def test_cash_alternative_is_allocated_only_after_cost_tax_lag_and_risk_haircuts
     result = compare_cash_alternatives(
         [alternative()], decision_time=NOW, principal_inr=10000,
         holding_period_business_days=10, max_evidence_age=timedelta(minutes=5),
+        permissions=PERMISSIONS,
     )
 
     product = next(row for row in result["scenarios"] if row["instrument_id"] == "LIQUID-1")
@@ -65,6 +71,7 @@ def test_ineligible_or_unavailable_cash_product_is_not_allocated(overrides, reas
     result = compare_cash_alternatives(
         [alternative(**overrides)], decision_time=NOW, principal_inr=10000,
         holding_period_business_days=2, max_evidence_age=timedelta(hours=1),
+            permissions=PERMISSIONS,
     )
 
     product = next(row for row in result["scenarios"] if row["instrument_id"] == "LIQUID-1")
@@ -79,6 +86,7 @@ def test_high_cost_and_stress_can_make_return_worse_than_cash():
                      redemption_cost_bps=Decimal(10), stress_loss_bps=Decimal(50))],
         decision_time=NOW, principal_inr=10000, holding_period_business_days=5,
         max_evidence_age=timedelta(minutes=5),
+        permissions=PERMISSIONS,
     )
 
     product = next(row for row in result["scenarios"] if row["instrument_id"] == "LIQUID-1")
@@ -91,6 +99,7 @@ def test_missing_tax_assumption_never_becomes_a_zero_tax_allocation():
     result = compare_cash_alternatives(
         [alternative(tax_rate_bps=None)], decision_time=NOW, principal_inr=10000,
         holding_period_business_days=10, max_evidence_age=timedelta(minutes=5),
+        permissions=PERMISSIONS,
     )
     product = next(row for row in result["scenarios"] if row["instrument_id"] == "LIQUID-1")
     assert product["tax_bps"] == 0
@@ -101,7 +110,7 @@ def test_missing_tax_assumption_never_becomes_a_zero_tax_allocation():
 def test_cash_control_remains_when_no_alternatives_are_supplied():
     result = compare_cash_alternatives(
         [], decision_time=NOW, principal_inr=1000, holding_period_business_days=1,
-        max_evidence_age=timedelta(minutes=1),
+        max_evidence_age=timedelta(minutes=1), permissions=PERMISSIONS,
     )
     assert len(result["scenarios"]) == 1
     assert result["scenarios"][0]["instrument_id"] == "CASH"
@@ -115,4 +124,18 @@ def test_invalid_source_hash_or_duplicate_instrument_fails_closed():
         compare_cash_alternatives(
             [alternative(), alternative()], decision_time=NOW, principal_inr=1000,
             holding_period_business_days=1, max_evidence_age=timedelta(minutes=5),
+            permissions=PERMISSIONS,
         )
+
+
+def test_missing_or_wrong_source_rights_blocks_candidate_allocation():
+    result = compare_cash_alternatives(
+        [alternative()], decision_time=NOW, principal_inr=10000,
+        holding_period_business_days=10, max_evidence_age=timedelta(minutes=5),
+        permissions=(PERMISSIONS[0],),
+    )
+
+    product = next(row for row in result["scenarios"] if row["instrument_id"] == "LIQUID-1")
+    assert product["eligible"] is False
+    assert product["allocation_inr"] == 0
+    assert "data_rights_missing:PAPER_SIMULATION" in product["reasons"]

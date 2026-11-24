@@ -11,6 +11,9 @@ from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 from typing import Iterable
+from zoneinfo import ZoneInfo
+
+from ..forward_edge.data_permissions import DataPermission, DataUse
 
 
 class CashManagementError(ValueError):
@@ -115,6 +118,7 @@ def compare_cash_alternatives(
     principal_inr: Decimal | str | int,
     holding_period_business_days: int,
     max_evidence_age: timedelta,
+    permissions: tuple[DataPermission, ...] = (),
     reserve_fraction: Decimal | str | int = Decimal("0.10"),
     max_product_fraction: Decimal | str | int = Decimal("0.50"),
     max_stress_loss_fraction: Decimal | str | int = Decimal("0.005"),
@@ -132,6 +136,7 @@ def compare_cash_alternatives(
     if holding_period_business_days < 1 or max_evidence_age < timedelta(0):
         raise CashManagementError("holding period must be positive and evidence age non-negative")
     decision = decision_time.astimezone(timezone.utc)
+    permission_date = decision.astimezone(ZoneInfo("Asia/Kolkata")).date()
     inputs = tuple(alternatives)
     principal = _decimal(principal_inr, "principal_inr")
     if principal <= 0:
@@ -166,6 +171,16 @@ def compare_cash_alternatives(
             reasons.append("payout_lag_exceeds_holding_period")
         if candidate.tax_rate_bps is None:
             reasons.append("tax_assumption_missing")
+        required_uses = (DataUse.RESEARCH, DataUse.PAPER_SIMULATION)
+        effective_grants = [
+            grant for grant in permissions
+            if grant.source_id == candidate.source_id and grant.use in required_uses
+            and grant.allows(source_id=candidate.source_id, use=grant.use, on=permission_date)
+        ]
+        granted_uses = {grant.use for grant in effective_grants}
+        missing_uses = [use.value for use in required_uses if use not in granted_uses]
+        if missing_uses:
+            reasons.append("data_rights_missing:" + ",".join(missing_uses))
 
         gross = _decimal(candidate.annualized_yield_bps, "annualized_yield_bps", nonnegative=False)
         gross *= Decimal(holding_period_business_days) / Decimal(252)
@@ -182,6 +197,13 @@ def compare_cash_alternatives(
             "source_id": candidate.source_id, "source_ref": candidate.source_ref,
             "source_sha256": candidate.source_sha256,
             "scenario_sha256": candidate.content_sha256(),
+            "permission_evidence": [
+                {"source_id": grant.source_id, "use": grant.use.value,
+                 "effective_from": grant.effective_from.isoformat() if grant.effective_from else None,
+                 "effective_through": grant.effective_through.isoformat() if grant.effective_through else None,
+                 "evidence_ref": grant.evidence_ref, "reviewer": grant.reviewer}
+                for grant in sorted(effective_grants, key=lambda grant: grant.use.value)
+            ],
             "eligible": not reasons and net > 0, "reasons": reasons + ([] if net > 0 else ["does_not_beat_cash_after_cost_and_risk"]),
         })
 

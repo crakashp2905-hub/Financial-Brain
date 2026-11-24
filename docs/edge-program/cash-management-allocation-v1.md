@@ -3,8 +3,8 @@
 `features.cash_management.compare_cash_alternatives()` compares a zero-return cash
 control with caller-supplied liquid-fund, overnight-fund, debt-fund and ETF scenarios.
 Each alternative requires source identity, source hash, publication/observation/
-availability clocks, business-day payout lag, and an explicit tax assumption before it
-can be allocated.
+availability clocks, effective `RESEARCH` and `PAPER_SIMULATION` permissions,
+business-day payout lag, and an explicit tax assumption before it can be allocated.
 
 The score is an input-driven scenario calculation:
 
@@ -27,5 +27,6 @@ stress, or demonstrate prospective after-cost value. Input assumptions and stres
 haircuts are not forecasts, VaR, or probabilities. No real allocation recommendation is
 made without those external facts and validation.
 
-Focused tests cover the cash control, after-cost ranking, stale/future data, settlement
-lag, missing tax, risk-budget sizing, and duplicate identities.
+Focused tests cover the cash control, after-cost ranking, missing permissions,
+stale/future data, settlement lag, missing tax, risk-budget sizing, and duplicate
+identities.
