@@ -2306,7 +2306,7 @@
       ],
       "blocker": "Partial: only the research candidate and cost/liquidity screen are implemented. Cost model is not execution-calibrated; no authorized performance study, capacity/tax/benchmark controls, or prospective evidence exists. Q4-2026 is exhausted and Q1-2027 is not authorized.",
       "last_audited_at_utc": "2026-11-24T12:00:00+00:00",
-      "commit": null,
+      "commit": "939d3dc7",
       "test_result": "Ten focused tests pass for bar event lineage, complete contiguous point-in-time bars, breakout candidates, stale/wide quote and depth rejection, estimated cost gating, and full quoted spread round-trip cost arithmetic. Tests prove software behavior only.",
       "test_evidence": [
         "python -m pytest tests/test_etf_intraday_screen.py tests/test_etf_bars.py tests/test_etf_liquidity.py -q: 10 passed.",
