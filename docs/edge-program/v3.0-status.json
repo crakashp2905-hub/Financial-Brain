@@ -6821,15 +6821,17 @@
       "status": "PARTIAL",
       "evidence": [
         "tests/test_four_node_stream.py covers late-confirmed-node refusal, event-ID payload conflict, duplicate replay, same-bar opposing breakout abstention, expiry and session rollover; tests/test_four_node_s25.py and tests/test_four_node_backtest.py cover stale/crossed quotes, outward stops, adverse same-bar ordering and price-gap stop fills.",
-        "No durable crash/reconnect recovery, holiday-calendar replay, missed-candle sequence test or complete end-to-end zero-broker-order adversarial matrix exists for Four-Node. The state machine remains broker-independent."
+        "src/financial_brain/strategies/four_node/durable_stream.py reuses the fsync-backed hash-chained DurableJournal, validates on a copied machine before persistence, replays committed events on restart, returns stored results for identical old retries and rejects conflicting event-ID payloads.",
+        "tests/test_four_node_durable_stream.py verifies restart restoration, idempotent retry after later events, conflicting payload rejection and torn-tail recovery; focused durable/stream tests: 8 passed; Ruff clean."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-24T20:47:15Z",
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
       "commit": null,
       "test_evidence": [
-        "tests/test_four_node_stream.py covers late-confirmed-node refusal, event-ID payload conflict, duplicate replay, same-bar opposing breakout abstention, expiry and session rollover; tests/test_four_node_s25.py and tests/test_four_node_backtest.py cover stale/crossed quotes, outward stops, adverse same-bar ordering and price-gap stop fills.",
-        "No durable crash/reconnect recovery, holiday-calendar replay, missed-candle sequence test or complete end-to-end zero-broker-order adversarial matrix exists for Four-Node. The state machine remains broker-independent."
-      ]
+        "python -m pytest tests/test_four_node_durable_stream.py tests/test_four_node_stream.py -q: 8 passed.",
+        "python -m ruff check src/financial_brain/strategies/four_node/durable_stream.py tests/test_four_node_durable_stream.py: all checks passed."
+      ],
+      "test_result": "Durable stream recovery, event retry idempotency, conflicting ID refusal and torn-tail recovery pass in focused tests. Still partial: no full missed-candle policy, exchange holiday-calendar replay, all adversarial market execution cases or end-to-end broker-order audit is implemented; this signal module has no broker/order interface."
     },
     {
       "id": "FB-2544",
