@@ -16,12 +16,124 @@ Tier 1: AMFI is the industry body that publishes these NAVs, not a scraper of th
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+import time
+from collections import Counter
+from collections.abc import Callable
+from datetime import date, datetime, timedelta
+from math import isfinite
+from typing import Any, Protocol, TypedDict
 
+from ..forward_edge.data_permissions import DataPermission, DataUse
 from .base import FetchError, FetchResult, Provider
 
 NAV_ALL = "https://portal.amfiindia.com/spages/NAVAll.txt"
 HEADER = "Scheme Code"
+MAX_HISTORY_WINDOW_DAYS = 90
+
+
+class AmfiQualityReport(TypedDict):
+    rows: list[dict[str, Any]]
+    latest_nav_date: str | None
+    repeated_scheme_codes: list[str]
+    stale_scheme_codes: list[str]
+    unavailable: list[dict[str, str]]
+    stale_after_days: int
+
+
+class HistoryWindowAdapter(Protocol):
+    """Adapter whose declared source identity is checked against data rights."""
+
+    source_id: str
+
+    def fetch_window(self, start_date: date, end_date: date) -> FetchResult: ...
+
+
+def bounded_history_windows(
+    start_date: date,
+    end_date: date,
+    *,
+    max_days: int = MAX_HISTORY_WINDOW_DAYS,
+) -> list[tuple[date, date]]:
+    """Partition an inclusive history range into windows no longer than 90 days.
+
+    This pure helper only constructs request bounds. It does not fetch data or grant
+    permission to use an AMFI endpoint; callers must separately verify the provider's
+    current terms and approved access method.
+    """
+    if start_date > end_date:
+        raise ValueError("start_date must be on or before end_date")
+    if not 1 <= max_days <= MAX_HISTORY_WINDOW_DAYS:
+        raise ValueError(f"max_days must be between 1 and {MAX_HISTORY_WINDOW_DAYS}")
+
+    windows: list[tuple[date, date]] = []
+    window_start = start_date
+    while window_start <= end_date:
+        window_end = min(end_date, window_start + timedelta(days=max_days - 1))
+        windows.append((window_start, window_end))
+        window_start = window_end + timedelta(days=1)
+    return windows
+
+
+def fetch_authorized_history_windows(
+    start_date: date,
+    end_date: date,
+    *,
+    adapter: HistoryWindowAdapter,
+    source_id: str,
+    permission_checked_on: date,
+    permissions: tuple[DataPermission, ...],
+    max_attempts: int = 3,
+    min_interval_seconds: float = 2.0,
+    retry_backoff_seconds: float = 1.0,
+    sleep: Callable[[float], None] = time.sleep,
+    monotonic: Callable[[], float] = time.monotonic,
+) -> list[tuple[date, date, FetchResult]]:
+    """Fetch through a permission-gated adapter using windows no longer than 90 days.
+
+    This function does not choose an endpoint or grant source rights. The injected
+    adapter must implement the separately approved access method. Effective RESEARCH
+    and RETENTION permissions are checked before calling it; only retryable source
+    failures are retried, and every request is separated by the configured interval.
+    """
+    if not source_id.strip():
+        raise ValueError("source_id is required")
+    if adapter.source_id != source_id:
+        raise ValueError("history adapter source_id does not match permission source_id")
+    if (isinstance(max_attempts, bool) or not isinstance(max_attempts, int)
+            or max_attempts < 1):
+        raise ValueError("max_attempts must be a positive integer")
+    if (not isfinite(min_interval_seconds) or not isfinite(retry_backoff_seconds)
+            or min_interval_seconds < 0 or retry_backoff_seconds < 0):
+        raise ValueError("rate interval and retry backoff cannot be negative")
+    for use in (DataUse.RESEARCH, DataUse.RETENTION):
+        if not any(permission.allows(
+            source_id=source_id, use=use, on=permission_checked_on
+        ) for permission in permissions):
+            raise PermissionError(
+                f"source {source_id} lacks effective {use.value} permission"
+            )
+
+    windows = bounded_history_windows(start_date, end_date)
+    fetched: list[tuple[date, date, FetchResult]] = []
+    last_request_at: float | None = None
+    for window_start, window_end in windows:
+        for attempt in range(max_attempts):
+            if last_request_at is not None:
+                wait_seconds = min_interval_seconds - (monotonic() - last_request_at)
+                if wait_seconds > 0:
+                    sleep(wait_seconds)
+            last_request_at = monotonic()
+            try:
+                result = adapter.fetch_window(window_start, window_end)
+                if not isinstance(result, FetchResult):
+                    raise TypeError("history adapter must return FetchResult")
+                fetched.append((window_start, window_end, result))
+                break
+            except FetchError as exc:
+                if not exc.retryable or attempt + 1 == max_attempts:
+                    raise
+                sleep(retry_backoff_seconds * (2 ** attempt))
+    return fetched
 
 
 class AmfiNav(Provider):
@@ -88,3 +200,55 @@ def parse(payload: bytes) -> list[dict]:
                     "scheme_type": scheme_type, "plan": plan or None,
                     "option": option or None, "nav": value, "nav_date": on})
     return out
+
+
+def parse_quality_report(
+    payload: bytes,
+    *,
+    stale_after_days: int,
+    known_scheme_codes: tuple[str, ...] = (),
+) -> AmfiQualityReport:
+    """Report mixed-date, repeated, stale, and unavailable rows without inventing NAVs.
+
+    Staleness is relative to the latest valid date in this file and uses an explicit
+    caller-supplied calendar-day threshold. Missing schemes are identified only when
+    a known, point-in-time scheme-code universe is supplied.
+    """
+    if stale_after_days < 0:
+        raise ValueError("stale_after_days cannot be negative")
+    decoded = _decode(payload)
+    rows = parse(payload)
+    dated: list[tuple[str, date]] = [(row["scheme_code"], row["nav_date"]) for row in rows]
+    reported: list[tuple[str, date]] = list(dated)
+    unavailable: list[dict[str, str]] = []
+    for raw in decoded.splitlines():
+        line = raw.strip()
+        if not line or ";" not in line or line.startswith(HEADER):
+            continue
+        parts = [part.strip() for part in line.split(";")]
+        if len(parts) < 8 or parts[6].upper() not in {"N.A.", "NA", ""}:
+            continue
+        try:
+            nav_date = datetime.strptime(parts[7], "%d-%b-%Y").date()
+        except ValueError:
+            continue
+        unavailable.append({"scheme_code": parts[0], "scheme_name": parts[3],
+                            "nav_date": nav_date.isoformat(), "reason": "NAV_UNAVAILABLE"})
+        reported.append((parts[0], nav_date))
+
+    latest = max((on for _, on in dated), default=None)
+    counts = Counter(code for code, _ in reported)
+    stale = sorted({code for code, on in dated
+                    if latest is not None and (latest - on).days > stale_after_days})
+    present = {code for code, _ in reported}
+    unavailable.extend({"scheme_code": code, "scheme_name": "", "nav_date": "",
+                        "reason": "MISSING_FROM_SNAPSHOT"}
+                       for code in sorted(set(known_scheme_codes) - present))
+    return {
+        "rows": rows,
+        "latest_nav_date": latest.isoformat() if latest is not None else None,
+        "repeated_scheme_codes": sorted(code for code, count in counts.items() if count > 1),
+        "stale_scheme_codes": stale,
+        "unavailable": unavailable,
+        "stale_after_days": stale_after_days,
+    }

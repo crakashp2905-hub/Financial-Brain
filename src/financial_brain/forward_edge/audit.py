@@ -77,10 +77,27 @@ def _live_cash(now: datetime) -> Check:
 
 
 def _baseline(root: Path) -> Check:
+    current = root / "docs" / "edge-program" / "current-baseline.json"
+    if current.is_file():
+        try:
+            record = json.loads(current.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return Check("baseline", "RED", f"current baseline is unreadable: {exc}")
+        if (record.get("schema") != "fb.financial_brain.current_baseline.v1"
+                or not record.get("git", {}).get("observed_main_ref", {}).get("sha")
+                or not record.get("git", {}).get("head", {}).get("sha")
+                or not record.get("market_data", {}).get("quote_archive", {}).get("latest_quote_local_time")):
+            return Check("baseline", "RED", "current baseline is missing required git or market-data evidence")
+        github_status = (record.get("git", {}).get("open_pull_requests", {}).get("status"),
+                         record.get("git", {}).get("branch_protection", {}).get("status"))
+        if any(status != "VERIFIED" for status in github_status):
+            return Check("baseline", "YELLOW",
+                         "current baseline is captured; GitHub PR graph or branch protection remains unverified")
+        return Check("baseline", "GREEN", "current repository and source-capability baseline is present")
     found = sorted((root / "docs" / "forward-edge").glob("baseline-*.json")) if (root / "docs" / "forward-edge").is_dir() else []
     if not found:
-        return Check("baseline", "YELLOW", "no baseline capture committed; run forward_edge.baseline")
-    return Check("baseline", "GREEN", f"baseline present: {found[-1].name}")
+        return Check("baseline", "YELLOW", "no current baseline capture committed; run forward_edge.baseline")
+    return Check("baseline", "YELLOW", f"legacy baseline present ({found[-1].name}); current PE baseline is missing")
 
 
 def run_audit(root: Path, *, now: datetime | None = None) -> dict:

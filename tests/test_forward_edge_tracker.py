@@ -12,7 +12,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 def _test_names() -> set[str]:
     names: set[str] = set()
-    for path in (REPO / "tests").glob("test_forward_edge_*.py"):
+    for path in (REPO / "tests").glob("test_*.py"):
         names |= set(re.findall(r"^def (test_\w+)", path.read_text(encoding="utf-8"), re.M))
     return names
 
@@ -54,3 +54,14 @@ def test_external_providers_are_never_marked_done() -> None:
 def test_committed_tracker_matches_the_generator() -> None:
     assert (REPO / "docs/forward-edge/TRACKER.md").read_text(encoding="utf-8") == tracker.render()
     assert (REPO / "docs/forward-edge/BLOCKERS.md").read_text(encoding="utf-8") == tracker.render_blockers()
+
+
+def test_forward_edge_capability_matrix_is_current_and_never_claims_independent_evidence() -> None:
+    expected = tracker.render_capability_matrix()
+    actual = (REPO / "docs/forward-edge/capability-matrix.json").read_text(encoding="utf-8")
+    assert actual == expected
+    matrix = json.loads(actual)
+    listed = matrix["implemented"] + matrix["partial"] + matrix["blocked"] + matrix["not_started"]
+    assert len(listed) == len(set(listed)) == 152
+    assert matrix["independently_evidenced"] == []
+    assert {item["id"] for item in matrix["capabilities"]} == set(listed)

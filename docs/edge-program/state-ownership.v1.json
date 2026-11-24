@@ -1,0 +1,47 @@
+{
+  "schema": "fb.edge-state-ownership.v1",
+  "scope": "Named state within the forward paper session, broker OMS, and swing paper book only. Different scopes are separate books and are not duplicate ownership.",
+  "authorities": [
+    {
+      "scope_id": "forward_session",
+      "domain": "simulated_order_events",
+      "owner": "src/financial_brain/forward_edge/session_runner.py",
+      "state_artifacts": ["paper_intents", "paper_execution_receipts", "runner_audit_log"],
+      "authority_kind": "durable_event_source",
+      "note": "Intents and simulated execution receipts are the durable source events; accounting status is rebuilt from them."
+    },
+    {
+      "scope_id": "broker_oms",
+      "domain": "broker_order_journal",
+      "owner": "src/financial_brain/execution/oms/journal.py",
+      "state_artifacts": ["oms_events", "oms_orders"],
+      "authority_kind": "hash_chained_local_journal",
+      "note": "This is the local OMS journal; broker reconciliation remains a separate external observation."
+    },
+    {
+      "scope_id": "swing_paper_book",
+      "domain": "swing_paper_positions",
+      "owner": "src/financial_brain/paper/book.py",
+      "state_artifacts": ["positions"],
+      "authority_kind": "paper_book_store",
+      "note": "This is a separate horizon-aware research/paper book, not the forward intraday OMS position store."
+    }
+  ],
+  "unresolved_domains": [
+    {
+      "scope_id": "forward_session",
+      "domain": "canonical_net_ledger",
+      "status": "not_established",
+      "current_artifact": "src/financial_brain/forward_edge/paper_accounting.py",
+      "reason": "Current accounting is a deterministic gross replay projection; it is not transactionally committed with the execution receipt/outbox and excludes statutory charges and financing."
+    },
+    {
+      "scope_id": "forward_session",
+      "domain": "durable_position_snapshot",
+      "status": "not_established",
+      "current_artifact": "src/financial_brain/forward_edge/paper_accounting.py",
+      "reason": "Positions are rebuilt from intents and receipts rather than persisted as an atomic canonical position ledger."
+    }
+  ],
+  "duplicate_rule": "At most one authoritative owner may exist for each (scope_id, domain). Separate books may each own similarly named state within their own scope."
+}

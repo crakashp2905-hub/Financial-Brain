@@ -634,7 +634,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -660,7 +660,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -686,7 +686,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -839,7 +839,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -891,7 +891,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -949,7 +949,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -3080,7 +3080,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }
@@ -7517,7 +7517,7 @@
    ],
    "test": [
     {
-     "path": "tests/test_etf_reference.py",
+     "path": "tests/test_instruments_etf_reference.py",
      "ref": "d2",
      "object": "89ed483bdf06"
     }

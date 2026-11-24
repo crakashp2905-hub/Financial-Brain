@@ -9,15 +9,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from financial_brain.forward_edge import decision_custody as DC
+from financial_brain.forward_edge.data_gate import evaluate_market_data
+from financial_brain.forward_edge.data_permissions import DataPermission
 from financial_brain.forward_edge import execution as X
+from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
 from financial_brain.forward_edge import session_ops as S
 from financial_brain.forward_edge.modes import Mode, SessionMode, resolve_mode
 from financial_brain.kernel.ledger import CREDIT, DEBIT, DoubleEntryLedger, Entry, Transaction
-from financial_brain.kernel.units import Money
+from financial_brain.kernel.units import Money, Price, UnitError, WholeUnits
 
 CCY = "INR"
 CENT = Decimal("0.01")
@@ -36,11 +39,123 @@ def _canon(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str, allow_nan=False)
 
 
+def _validate_fixture_financial_units(fx: dict) -> None:
+    """Reject malformed fixture order quantities and INR prices before integer/float coercion."""
+    try:
+        quantity = WholeUnits(Decimal(str(fx["quantity"]))).units
+        if quantity <= 0:
+            raise UnitError("fixture order quantity must be positive")
+        Price(Decimal(str(fx["tick"])), "INR")
+        Price(Decimal(str(fx["close_price"])), "INR")
+        if fx.get("limit") is not None:
+            Price(Decimal(str(fx["limit"])), "INR")
+        band = fx.get("price_band")
+        if band is not None:
+            if not isinstance(band, (list, tuple)) or len(band) != 2:
+                raise UnitError("fixture price band must contain two INR prices")
+            Price(Decimal(str(band[0])), "INR")
+            Price(Decimal(str(band[1])), "INR")
+        for quote in fx["quotes"]:
+            Price(Decimal(str(quote["bid"])), "INR")
+            Price(Decimal(str(quote["ask"])), "INR")
+            for field in ("bid_qty", "ask_qty"):
+                depth = WholeUnits(Decimal(str(quote[field]))).units
+                if depth < 0:
+                    raise UnitError("fixture quote depth cannot be negative")
+        for trade in fx.get("trades", ()):
+            Price(Decimal(str(trade["price"])), "INR")
+            trade_quantity = WholeUnits(Decimal(str(trade["qty"]))).units
+            if trade_quantity < 0:
+                raise UnitError("fixture trade quantity cannot be negative")
+    except (KeyError, TypeError, ValueError, ArithmeticError, UnitError) as exc:
+        raise ValueError("fixture financial units are invalid") from exc
+
+
+def _integrity_gate_codes(fx: dict, decision: datetime) -> list[str]:
+    """Apply explicit fixture-supplied instrument and quote-quality gates before execution.
+
+    The pipeline is an offline fixture runner. Missing gate objects remain backward
+    compatible for its historical golden fixtures; when an object is supplied, malformed
+    or failing inputs reject the opportunity with stable reason codes. Live sessions use
+    the durable runner and separately require versioned instrument rules.
+    """
+    codes: list[str] = []
+    rule_data = fx.get("instrument_rules")
+    if rule_data is not None:
+        try:
+            if not isinstance(rule_data, dict):
+                raise InstrumentRuleError("instrument rule catalogue must be an object")
+            rules = InstrumentRuleBook(rule_data)
+            quote_rows = fx.get("quotes")
+            if not isinstance(quote_rows, list) or not quote_rows:
+                raise InstrumentRuleError("a quote is required to validate the order price")
+            quote = quote_rows[0]
+            side = str(fx.get("side", "")).upper()
+            price = Decimal(str(fx.get("limit") or quote["ask" if side == "BUY" else "bid"]))
+            rules.validate_order(
+                instrument=str(fx["instrument"]),
+                day=date.fromisoformat(str(fx.get("instrument_rules_date", decision.date().isoformat()))),
+                session_phase=str(fx["instrument_session_phase"]),
+                quantity=int(fx["quantity"]), limit_price=price,
+                tick_size=Decimal(str(fx["tick"])),
+            )
+        except (InstrumentRuleError, KeyError, TypeError, ValueError, ArithmeticError) as exc:
+            # Do not expose exception text as a code: it may contain provider data and
+            # would make the reject taxonomy unstable across library versions.
+            message = str(exc).lower()
+            if "expired" in message:
+                code = "INSTRUMENT_EXPIRED"
+            elif "status" in message or "delisted" in message or "suspended" in message:
+                code = "INSTRUMENT_NOT_TRADABLE_STATUS"
+            elif "lot size" in message:
+                code = "INSTRUMENT_BAD_LOT"
+            elif "freeze" in message:
+                code = "INSTRUMENT_FREEZE_LIMIT"
+            elif "tick" in message or "price" in message:
+                code = "INSTRUMENT_TICK_OR_PRICE_INVALID"
+            elif "session" in message:
+                code = "INSTRUMENT_SESSION_PHASE_INVALID"
+            else:
+                code = "INSTRUMENT_RULES_INVALID"
+            codes.append(code)
+
+    market = fx.get("market_observation")
+    if market is not None:
+        try:
+            if not isinstance(market, dict):
+                raise ValueError("market observation must be an object")
+            quote_time_raw = market.get("quote_time")
+            quote_time = datetime.fromisoformat(str(quote_time_raw)) if quote_time_raw else None
+            result = evaluate_market_data(
+                decision_time=decision,
+                quote_time=quote_time,
+                bid=Decimal(str(market["bid"])) if market.get("bid") is not None else None,
+                ask=Decimal(str(market["ask"])) if market.get("ask") is not None else None,
+                max_age_ms=int(market["max_age_ms"]),
+                max_spread_bps=Decimal(str(market["max_spread_bps"])),
+                volume=market.get("volume"),
+                is_circuit_limited=bool(market.get("circuit_limited", False)),
+                quantity=int(fx["quantity"]),
+                freeze_limit=int(market["freeze_limit"]) if market.get("freeze_limit") is not None else None,
+                session_phase=str(market.get("session_phase", "UNKNOWN")),
+                auction_required=bool(market.get("auction_required", False)),
+                auction_data_present=bool(market.get("auction_data_present", False)),
+                source_id=str(market["source_id"]) if market.get("source_id") else None,
+                entitlement=(DataPermission.from_dict(market["entitlement"])
+                             if isinstance(market.get("entitlement"), dict) else None),
+            )
+            codes.extend("DATA_" + reason.value for reason in result.reasons)
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            codes.append("DATA_GATE_INPUT_INVALID")
+    return sorted(set(codes))
+
+
 def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE") -> dict:
     """Run one fixture session in paper mode. Refuses any mode that could reach a broker or cash."""
     session = resolve_mode(mode, now=_utc(fx["decision_utc"]))
     if not isinstance(session, SessionMode) or mode in (Mode.LIVE_CASH, Mode.BROKER_DRYRUN) or broker != "NONE":
         raise PermissionError("the pipeline runs paper only with no broker")
+    _validate_fixture_financial_units(fx)
     trace: list[dict] = []
     ledger = DoubleEntryLedger()
     sid = fx["session_id"]
@@ -73,7 +188,11 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
         first = X.earliest_quote(quotes, decision, latency)
         late = first is not None and (first.available_utc - decision) > timedelta(milliseconds=int(fx.get("max_wait_ms", 5000)))
 
-        if fx.get("ack_lost"):
+        gate_codes = _integrity_gate_codes(fx, decision)
+        if gate_codes:
+            outcome, reason = "NO_TRADE", "GATE:" + "+".join(gate_codes)
+            trace.append({"stage": "gate", "decision": "NO_TRADE", "codes": gate_codes})
+        elif fx.get("ack_lost"):
             outcome, reason = "UNKNOWN_ORDER", "ACK_LOST_NO_RESEND"
             trace.append({"stage": "order", "state": "UNKNOWN", "resend_allowed": False})
             segments.add("orders")
@@ -99,6 +218,8 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
                           "fidelity": res.fidelity})
             if res.status in ("FILLED", "PARTIAL"):
                 qty, px = res.filled_qty, res.avg_price
+                if px is None:
+                    raise RuntimeError("filled execution result must include an average price")
                 notional = _paise(px * qty)
                 fee_rate = Decimal(fx.get("fee_bps", "3")) / Decimal(10_000)
                 entry_fee = _paise(notional * fee_rate)
@@ -145,7 +266,16 @@ def run_session(fx: dict, *, mode: Mode = Mode.LIVE_PAPER, broker: str = "NONE")
               "ledger_balanced": ledger.trial_balance_ok(),
               "cash_equals_net": ledger.balance("cash", CCY) == net if outcome in ("WIN", "LOSS", "FLAT") else True,
               "segments": sorted(segments), "trace": trace}
+    gate_trace = next((item for item in trace if item.get("stage") == "gate"), None)
+    if gate_trace is not None:
+        result["reject_codes"] = gate_trace["codes"]
     result["signature"] = hashlib.sha256(_canon({k: v for k, v in result.items()}).encode("utf-8")).hexdigest()
+    # Keep the historic economic result signature stable while the canonical journal is wired in.
+    # The runner's report remains INCOMPLETE for trade outcomes until its execution receipts and
+    # accounting projection, rather than the legacy helper above, own those outcomes.
+    from financial_brain.forward_edge.fixture_adapter import record_fixture_decision
+
+    result["forward_runner"] = record_fixture_decision(fx, result)
     return result
 
 

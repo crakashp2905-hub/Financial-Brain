@@ -1,0 +1,133 @@
+{
+  "schema": "fb.edge_program.deviations.v1",
+  "audit_coverage": "PARTIAL_KNOWN_DEVIATIONS",
+  "coverage_note": "These ten records capture current deviations and acceptance gaps evidenced in the PE progress tracker. They are not an exhaustive audit of the full repository history or every checklist item; PE-0012 remains open until that reconciliation is complete.",
+  "protocol": {
+    "path": "docs/edge-program/MASTER_CHECKLIST_2026-11-12.md",
+    "edition": "2026-11-12",
+    "source_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10",
+    "sha256": "b82f4b5943b94db334cd6d4f8a1d05618b138e332c463d671bb8d0e86033d367"
+  },
+  "records": [
+    {
+      "deviation_id": "DEV-PE-0010-LOCKED-ENV",
+      "protocol_task": "PE-0010",
+      "record_type": "evidence_gap",
+      "summary": "Exact locked dependency installation has not been verified locally or in both hosted CI operating systems.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "docs/edge-program/reproducibility-contract.v1.json"],
+      "effect_on_evidence_status": "NO_UPGRADE; PE-0010 remains PARTIAL until a clean locked install passes on Ubuntu and Windows.",
+      "rollback": "Keep research and release gates YELLOW; revert only the reproducibility workflow change if it makes the existing clean-install CI less reliable."
+    },
+    {
+      "deviation_id": "DEV-PE-0018-MISSING-PIPELINE-API",
+      "protocol_task": "PE-0018",
+      "record_type": "integration_gap",
+      "summary": "The checklist names forward_edge.pipeline.run_session, but that module and function are absent; historical replay remains in paper.intraday_runner.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/cli.py", "src/financial_brain/paper/intraday_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; fixture parity and the requested delegation contract are not proven.",
+      "rollback": "Keep existing replay explicitly RESEARCH_REPLAY and refuse any promotion claim until the canonical runner has a golden trace-equivalence test."
+    },
+    {
+      "deviation_id": "DEV-PE-0021-DURABLE-API-LOCATION",
+      "protocol_task": "PE-0021",
+      "record_type": "integration_variant",
+      "summary": "Durable journaling behavior was implemented inside session_runner.py because the checklist-named forward_edge.durable.py module is absent.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_edge_session_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; fault injection at all lifecycle boundaries and one atomic journal/outbox/accounting transaction remain unproven.",
+      "rollback": "If replay determinism or recovery fails, stop new paper intents and rebuild views from the append-only runner audit stream; do not silently switch journal implementations."
+    },
+    {
+      "deviation_id": "DEV-PE-0022-NONATOMIC-ACCOUNTING",
+      "protocol_task": "PE-0022",
+      "record_type": "accounting_gap",
+      "summary": "Paper OMS and gross accounting are rebuilt as projections from durable receipts instead of being transactionally committed with the execution outbox.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/paper_accounting.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; current output is gross replay accounting and is not net-P&L or promotion evidence.",
+      "rollback": "On projection mismatch, fail closed, preserve immutable intents and receipts, stop new executions, and rebuild the projection before resuming."
+    },
+    {
+      "deviation_id": "DEV-PE-0025-SUPERVISOR-CLOCK",
+      "protocol_task": "PE-0025",
+      "record_type": "integration_gap",
+      "summary": "Clock injection exists in adapters and the runner, but the production supervisor does not pass one provider across the complete lifecycle.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/clock.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; end-to-end receipt, decision, and execution clock provenance remains incomplete.",
+      "rollback": "Reject sessions with missing or inconsistent clocks; retain the last known event hashes and do not synthesize timestamps."
+    },
+    {
+      "deviation_id": "DEV-PE-0028-RISK-RECOVERY",
+      "protocol_task": "PE-0028",
+      "record_type": "recovery_gap",
+      "summary": "Session recovery rebuilds OMS and accounting state, but does not restore risk verdict state as one atomic projection.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_edge_session_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; identical risk, position, and cash reconstruction after restart is not established.",
+      "rollback": "Keep UNKNOWN outbox items unresolved and block new orders until durable risk and accounting state can be reconciled."
+    },
+    {
+      "deviation_id": "DEV-PE-0029-NONATOMIC-CHECKPOINT",
+      "protocol_task": "PE-0029",
+      "record_type": "checkpoint_gap",
+      "summary": "Checkpoint ledger hashes cover a deterministic projection but are not atomically committed with runner and outbox records.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/session_runner.py", "tests/test_forward_edge_checkpoints.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; checkpoint verification is not evidence of atomic ledger binding or daily replay verification.",
+      "rollback": "Mark an unbound or mismatched checkpoint INCOMPLETE, preserve the audit log, and refuse a verified close."
+    },
+    {
+      "deviation_id": "DEV-PE-0030-DEPTH-NOT-GATED",
+      "protocol_task": "PE-0030",
+      "record_type": "execution-gate-gap",
+      "summary": "Normalized quotes retain available depth fields, but the legacy forward event path does not yet use those fields as a universal execution gate.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/market_data.py", "tests/test_forward_edge_kite_market_data.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; quote normalization does not establish executable liquidity coverage.",
+      "rollback": "Classify LTP-only and incomplete-depth observations as non-executable and reject fills that lack two-sided displayed liquidity."
+    },
+    {
+      "deviation_id": "DEV-PE-0031-ADAPTER-COVERAGE",
+      "protocol_task": "PE-0031",
+      "record_type": "coverage_gap",
+      "summary": "The executable_quote predicate is tested, but not every strategy and promotion entry point calls it before execution.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/market_data.py", "tests/test_forward_edge_kite_market_data.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; helper correctness does not prove universal execution-path enforcement.",
+      "rollback": "Disable the affected adapter and refuse execution until it passes the shared executable-quote gate."
+    },
+    {
+      "deviation_id": "DEV-PE-0032-LEGACY-TRADE-LINEAGE",
+      "protocol_task": "PE-0032",
+      "record_type": "evidence-integration-gap",
+      "summary": "New forward fills carry source event hashes, while legacy intraday trades are not yet represented in the same forward session evidence package.",
+      "author": {"id": "codex:root", "type": "implementation_agent"},
+      "recorded_at_utc": "2026-11-16T05:33:44Z",
+      "implementation_version": {"git_commit": "4c62138c3b3ea6dd389c6c3595f45e1757e4af10", "package_version": "0.1.0"},
+      "evidence": ["docs/edge-program/PROGRESS.md", "src/financial_brain/forward_edge/quote_archive.py", "src/financial_brain/forward_edge/session_runner.py"],
+      "effect_on_evidence_status": "NO_UPGRADE; cross-engine source-to-fill lineage is not system-wide.",
+      "rollback": "Keep legacy trades outside the forward-confirmatory cohort and quarantine records with missing raw source hashes."
+    }
+  ]
+}

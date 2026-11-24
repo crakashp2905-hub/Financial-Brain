@@ -94,16 +94,18 @@ def ledger(path: Path = LEDGER):
     return con
 
 
-def daily_up(before: date) -> bool | None:
+def daily_up(before: date, *, research_path: Path | None = None) -> bool | None:
     """Nifty 500 above its 20-session average at the last close before ``before`` - context only."""
     try:
-        con = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+        con = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     except Exception:                                   # noqa: BLE001 - a locked research DB leaves it unknown
         return None
     try:
         rows = con.execute("""SELECT close_level FROM index_levels_canonical
                               WHERE index_name = 'Nifty 500' AND variant = 'PRICE' AND business_date < ?
                               ORDER BY business_date DESC LIMIT 20""", [before]).fetchall()
+    except duckdb.Error:
+        return None
     finally:
         con.close()
     if len(rows) < 20:
@@ -129,20 +131,25 @@ def record_run(con, day: str, mode: str, **kw) -> None:
                  kw.get("symbols", 0), kw.get("polls", 0), kw.get("note")])
 
 
-def daily_view(before: date | None = None):
+def daily_view(before: date | None = None, *, research_path: Path | None = None):
     """Every scanner's opportunities at the latest feature date (strictly before ``before`` when given, so a
     replayed day's board sees only what was known that morning), reduced to each name's best, from the research
     database read briefly. Returns (board frame, as_of, research connection); Nones if it cannot be read - the
     board is then skipped, not faked."""
     from ..opportunity import scanners as S
     try:
-        rcon = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+        rcon = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     except Exception as e:                              # noqa: BLE001 - a locked research DB skips the board
         log.warning("daily view unavailable: %s", str(e)[:120])
         return None, None, None
     try:
-        asof = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()[0]
-                if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone()[0])
+        row = (rcon.execute("SELECT MAX(business_date) FROM features WHERE business_date < ?", [before]).fetchone()
+               if before else rcon.execute("SELECT MAX(business_date) FROM features").fetchone())
+        asof = row[0] if row else None
+        if asof is None:
+            log.info("daily view skipped: no eligible feature date")
+            rcon.close()
+            return None, None, None
         cs = S.cross_section(rcon, asof)
         events = {r[0] for r in rcon.execute("""
             SELECT DISTINCT l.lineage FROM announcements a JOIN security_lineage l ON l.isin = a.isin
@@ -181,10 +188,10 @@ def post_board(con, day: str, mode: str, quotes: dict, daily, asof) -> str | Non
     return text
 
 
-def universe(n: int = UNIVERSE_SIZE) -> list[dict]:
+def universe(n: int = UNIVERSE_SIZE, *, research_path: Path | None = None) -> list[dict]:
     """The n most liquid NSE names by recent turnover, from the research database, read-only and briefly."""
     from ..ingest import kite_minute as KM
-    con = duckdb.connect("data/financial_brain.duckdb", read_only=True)
+    con = duckdb.connect(str(research_path or Path("data/financial_brain.duckdb")), read_only=True)
     try:
         return KM.liquid_universe(con, n)
     finally:
@@ -214,18 +221,47 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
              sleep_fn=_time.sleep, path: Path = LEDGER, max_failures: int = 90, candles_fn=None,
              token_fn=None, daily_fn=None, strategies=I.STRATEGIES,
              rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
-             event_sink=None, preflight_fn=None, preflight_sink=None, rejection_sink=None) -> dict:
+             clock=None, data_permission=None) -> dict:
     from ..providers import kite_data as kd
+    from ..forward_edge.clock import ClockProvider, SystemClock
+    from ..forward_edge.data_permissions import DataPermission, DataUse
+
+    if clock is not None and now_fn is not None:
+        raise ValueError("pass either clock or legacy now_fn, not both")
+    clock_provider: ClockProvider = clock or SystemClock()
     quote_fn = quote_fn or kd.quote
-    now_fn = now_fn or (lambda: datetime.now(IST))
+    now_fn = now_fn or (lambda: clock_provider.now().astimezone(IST))
     now = now_fn()
     day = now.date().isoformat()
     if now.time() > CLOSE or now.weekday() >= 5:
         return {"day": day, "status": "not_a_session", "why": "after the close or a weekend: nothing recorded"}
+    try:
+        permission = (DataPermission.from_dict(data_permission) if isinstance(data_permission, dict)
+                      else data_permission)
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"day": day, "status": "rights_blocked", "reason": f"invalid data permission: {exc}",
+                "quote_requests": 0, "broker_orders": False}
+    if (not isinstance(permission, DataPermission)
+            or not permission.allows(source_id="KITE_CONNECT_READ_ONLY",
+                                     use=DataUse.PAPER_SIMULATION, on=now.date())):
+        return {"day": day, "status": "rights_blocked",
+                "reason": "a current KITE_CONNECT_READ_ONLY PAPER_SIMULATION permission is required",
+                "quote_requests": 0, "broker_orders": False}
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
     uni = universe(n)
     syms = [u["tradingsymbol"] for u in uni]
+    from ..forward_edge.feed_health import FeedHealthMonitor
+
+    feed_health = FeedHealthMonitor(tuple(f"NSE:{symbol}" for symbol in syms),
+                                    poll_interval_seconds=float(poll),
+                                    stale_after_seconds=max(90.0, float(poll) * 2))
+
+    def feed_health_note(**extra) -> str:
+        body = {"feed_health": feed_health.snapshot(now=now_fn())}
+        body.update(extra)
+        return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
     eng = I.DayEngine(day, strategies=strategies, rules=rules)
     eng.daily_up = daily_up(date.fromisoformat(day))
@@ -241,15 +277,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if daily is not None and daily.attrs.get("opportunities"):
         from ..opportunity import scanners as S
         S.save(con, daily.attrs["opportunities"], day)
-    record_run(con, day, "live", started=started, status="running", symbols=len(syms), version=fingerprint)
+    record_run(con, day, "live", started=started, status="running", symbols=len(syms), version=fingerprint,
+               note=feed_health_note())
     try:
         from ..ingest import quote_archive as QA
         qcon = QA.connect()
     except Exception as e:                              # noqa: BLE001 - the archive must never stop a trading day
         log.warning("quote archive unavailable: %s", str(e)[:120])
         qcon = None
-    polls = failures = capture_failures = 0
-    capture_issue = None
+    polls = failures = 0
+    health_persist_every = max(1, 300 // max(1, poll))
+    forward_quote_archive_stats = {"received": 0, "archived": 0, "rejected": 0}
     session_issue = None
     seen_today = False
     last: dict[str, float] = {}
@@ -257,21 +295,6 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     from .live_view import publish
     quote_at = None
     publish(path, eng, now=now, status="Starting paper session", polls=polls)
-    if event_sink is not None:
-        if preflight_sink is None or rejection_sink is None:
-            capture_failures += 1
-            capture_issue = "forward evidence requires preflight and rejection sinks"
-        if preflight_sink is not None:
-            try:
-                preflight = (preflight_fn() if preflight_fn is not None else
-                             {"approved": False, "status": "MISSING", "reason": "PREFLIGHT_NOT_CONFIGURED"})
-                if not isinstance(preflight, dict) or type(preflight.get("approved")) is not bool:
-                    preflight = {"approved": False, "status": "INVALID", "reason": "PREFLIGHT_INVALID"}
-                preflight_sink(preflight)
-            except Exception as e:                       # noqa: BLE001 - missing evidence downgrades the paper record
-                capture_failures += 1
-                capture_issue = f"preflight capture failed: {str(e)[:120]}"
-                log.warning("forward preflight capture failed: %s", capture_issue)
     while True:
         now = now_fn()
         clock = now.time()
@@ -280,54 +303,78 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         if clock < OPEN:
             sleep_fn(min(60, (datetime.combine(now.date(), OPEN, IST) - now).total_seconds()))
             continue
+        feed_health.record_attempt(now)
         try:
             q = {}
             for i in range(0, len(syms), 450):
                 q.update(quote_fn([f"NSE:{s}" for s in syms[i:i + 450]], "full"))   # full: includes the order book
-            poll_received_at = now_fn()
-            if event_sink is not None:
-                from ..ingest.kite_live import forward_events
-                try:
-                    rejections = []
-                    events = forward_events(syms, quote_fn=lambda *_args, snapshot=q: snapshot,
-                                            received_at=poll_received_at, rejections_out=rejections)
-                    event_sink(events)
-                    if rejections:
-                        if rejection_sink is None:
-                            raise RuntimeError("data rejections were observed without a durable rejection sink")
-                        rejection_sink(rejections)
-                    if capture_failures == 0:
-                        capture_issue = None
-                except Exception as e:                   # noqa: BLE001 - capture gaps downgrade evidence, not quote provenance
-                    capture_failures += 1
-                    capture_issue = str(e)[:160]
-                    log.warning("forward-event capture failed (%s): %s", capture_failures, capture_issue)
             failures = 0
             if session_issue is not None:
                 log.info("Kite session recovered; paper polling resumed")
                 session_issue = None
         except (kd.KiteNotConfigured, kd.KiteAuthError) as e:
+            feed_health.record_failure(now, e)
             issue = type(e).__name__
             if issue != session_issue:
                 log.warning("Kite session unavailable: %s. Complete scripts\\kite_login.cmd or check API access; paper polling will retry.", issue)
             session_issue = issue
             publish(path, eng, now=now, status="Kite session unavailable — waiting for login",
                     polls=polls, prices=last, quote_at=quote_at)
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
             sleep_fn(max(poll, 60))
             continue
         except Exception as e:                          # noqa: BLE001 - a bad poll is not the end of the day
             failures += 1
+            feed_health.record_failure(now, e)
             log.warning("quote failed (%s/%s): %s", failures, max_failures, str(e)[:120])
-            publish(path, eng, now=now, status="Quote polling aborted" if failures >= max_failures else "Quote unavailable — retrying",
+            publish(path, eng, now=now, status=("Quote feed down — holding open positions, retrying"
+                                       if failures >= max_failures and any(t.is_open for t in eng.trades)
+                                       else "Quote polling aborted" if failures >= max_failures
+                                       else "Quote unavailable — retrying"),
                     polls=polls, prices=last, quote_at=quote_at)
+            if failures >= max_failures and any(t.is_open for t in eng.trades) and not eng.closed_for_day:
+                # Open positions must not be abandoned (2026-11-03: 51 trades left without an exit).
+                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns; at the
+                # flatten time with no feed, close at the last good quote, labelled as stale.
+                if clock < I.TIME_EXIT:
+                    record_run(con, day, "live", started=started, status="degraded", symbols=len(syms),
+                               polls=polls, note=f"quotes failing, holding open positions: {str(e)[:100]}",
+                               version=fingerprint)
+                    sleep_fn(max(poll, 60))
+                    continue
+                for t in eng.end_of_day(now.replace(tzinfo=None), last):
+                    t.exit_reason = "time_stale_quote"
+                    save(con, t, "live")
+                log.warning("feed down at the flatten time: open positions closed at the last good quote")
             if failures >= max_failures:
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
-                           symbols=len(syms), polls=polls, note=f"quotes failing: {str(e)[:120]}", version=fingerprint)
-                return {"day": day, "status": "aborted", "why": str(e)[:200]}
+                           symbols=len(syms), polls=polls,
+                           note=feed_health_note(failure_class=type(e).__name__), version=fingerprint)
+                return {"day": day, "status": "aborted", "why": str(e)[:200],
+                        "feed_health": feed_health.snapshot(now=now_fn())}
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
             sleep_fn(poll)
             continue
         polls += 1
-        quote_at = now
+        quote_at = now_fn()
+        recovered = feed_health.consecutive_failures > 0
+        feed_health.record_success(quote_at, q)
+        if recovered or polls % health_persist_every == 0:
+            record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
+                       note=feed_health_note(), version=fingerprint)
+        try:
+            from ..forward_edge.market_data import archive_kite_quote_batch_to_path
+
+            event_path = path.with_name(f"{path.stem}-forward-events.sqlite")
+            observed = archive_kite_quote_batch_to_path(event_path, q, received_at=quote_at,
+                                                        clock=clock_provider)
+            for key, value in observed.items():
+                forward_quote_archive_stats[key] += value
+        except Exception as e:                          # noqa: BLE001 - archive failure must be visible, not fatal
+            log.warning("forward market-event archive failed: %s", str(e)[:120])
+            forward_quote_archive_stats["rejected"] += len(q)
         if qcon is not None:
             try:
                 QA.store(qcon, now.replace(tzinfo=None), q)
@@ -348,9 +395,10 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
             publish(path, eng, now=now, status="No market session detected", polls=polls,
                     prices=last, quote_at=quote_at)
             record_run(con, day, "live", started=started, finished=now.isoformat(), status="closed",
-                       symbols=len(syms), polls=polls, note="no trade printed today: holiday or no session",
+                       symbols=len(syms), polls=polls,
+                       note=feed_health_note(reason="NO_TRADE_NO_MARKET_SESSION"),
                        version=fingerprint)
-            return {"day": day, "status": "closed"}
+            return {"day": day, "status": "closed", "feed_health": feed_health.snapshot(now=now_fn())}
         if not opened and clock >= I.OR_END:
             if clock > LATE_START:
                 # Started late (the Kite login came after 09:30): take the range from the exact candles.
@@ -412,18 +460,17 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
     if session_issue is None and not eng.closed_for_day:
         for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
             save(con, t, "live")
-    status = ("session_unavailable" if session_issue is not None else
-              "capture_incomplete" if capture_failures else "complete")
+    status = "session_unavailable" if session_issue is not None else "complete"
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=json.dumps({"skipped": len(eng.skipped),
-                                                               "forward_capture_failures": capture_failures,
-                                                               "forward_capture_last_error": capture_issue}),
+               symbols=len(syms), polls=polls, note=feed_health_note(skipped=len(eng.skipped)),
                version=fingerprint)
     if qcon is not None:
         qcon.close()
     if session_issue is None and _has_board(con):
         BD.resolve_close(con, day, "live", last)
-    out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls}
+    out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls,
+           "forward_quote_archive": forward_quote_archive_stats,
+           "feed_health": feed_health.snapshot(now=now_fn())}
     publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
             polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)
@@ -437,17 +484,18 @@ def path_of_bar(o, h, l, c):
 
 
 def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=None, path: Path = LEDGER,
-               daily_fn=None, strategies=I.STRATEGIES,
-               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None) -> dict:
+               daily_fn=None, research_path: Path | None = None, strategies=I.STRATEGIES,
+               rules: dict[str, I.StrategyRule] | None = None, cohort: str | None = None,
+               run_note: str | None = None) -> dict:
     from ..providers import kite_data as kd
     candles_fn = candles_fn or kd.candles
     inst = kd.instruments("NSE") if token_fn is None else None
     token_fn = token_fn or (lambda s: kd.token_for(s, inst))
     path, fingerprint = cohort_path(path, cohort, strategies, rules)
     con = ledger(path)
-    uni = universe(n)
+    uni = universe(n) if research_path is None else universe(n, research_path=research_path)
     eng = I.DayEngine(day.isoformat(), strategies=strategies, rules=rules)
-    eng.daily_up = daily_up(day)
+    eng.daily_up = daily_up(day) if research_path is None else daily_up(day, research_path=research_path)
     stream = []
     vwap_at: dict = {}
     used = 0
@@ -481,7 +529,11 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
             for k, px in enumerate(path_of_bar(b["open"], b["high"], b["low"], b["close"])):
                 stream.append((t0 + timedelta(seconds=15 * k), sym, float(px)))
     stream.sort(key=lambda x: (x[0], x[1]))
-    daily, asof, rcon = daily_view(before=day) if daily_fn is None else daily_fn()
+    if daily_fn is None:
+        daily, asof, rcon = (daily_view(before=day) if research_path is None else
+                             daily_view(before=day, research_path=research_path))
+    else:
+        daily, asof, rcon = daily_fn()
     if rcon is not None:
         rcon.close()
     bq = {sym: {"price": None, "open": s_.open, "high": s_.or_hi, "low": s_.or_lo, "prev_close": s_.prev_close}
@@ -507,9 +559,149 @@ def run_replay(day: date, *, n: int = UNIVERSE_SIZE, candles_fn=None, token_fn=N
         BD.resolve_close(con, day.isoformat(), "replay", last)
     record_run(con, day.isoformat(), "replay", started=datetime.now(IST).isoformat(),
                finished=datetime.now(IST).isoformat(), status="complete", symbols=used, polls=len(stream),
-               version=fingerprint)
+               version=fingerprint, note=run_note)
     write_report(con, day.isoformat(), "replay", eng, cohort=cohort)
+    con.close()
     return {"day": day.isoformat(), "status": "complete", "symbols": used, "summary": eng.summary()}
+
+
+def run_archive_replay(day: date, *, n: int = UNIVERSE_SIZE, quote_archive_path: Path,
+                       research_path: Path, ledger_path: Path = LEDGER, cohort: str | None = None,
+                       min_bars: int = 100) -> dict:
+    """Run the existing intraday paper engine from local Kite quote snapshots only.
+
+    No provider or HTTP client is called. Missing archive coverage is rejected before the
+    replay ledger is opened, so an empty archive cannot be recorded as a successful run.
+    """
+    from ..ingest import quote_archive as QA
+
+    if not quote_archive_path.is_file() or not research_path.is_file():
+        raise FileNotFoundError("local quote archive and research database are required")
+    if type(n) is not int or n < 1 or type(min_bars) is not int or min_bars < 1:
+        raise ValueError("universe size and minimum archive bar count must be positive integers")
+    uni = universe(n, research_path=research_path)
+    if not uni:
+        raise ValueError("research database produced no eligible local replay universe")
+    quote_con = QA.connect(quote_archive_path, read_only=True)
+    research_con = duckdb.connect(str(research_path), read_only=True)
+    try:
+        eligible: set[str] = set()
+        for row in uni:
+            symbol = str(row["tradingsymbol"])
+            coverage = quote_con.execute(
+                "SELECT COUNT(DISTINCT time_bucket(INTERVAL '1 minute', ts)), "
+                "COUNT(DISTINCT time_bucket(INTERVAL '1 minute', ts)) "
+                "FILTER (WHERE CAST(ts AS TIME) < TIME '09:30:00') "
+                "FROM quotes WHERE symbol=? AND CAST(ts AS DATE)=? AND ltp IS NOT NULL",
+                [symbol, day]).fetchone()
+            count, opening_count = coverage if coverage else (0, 0)
+            previous_row = research_con.execute(
+                "SELECT COUNT(*) FROM adjusted_prices WHERE ticker=? AND business_date<? "
+                "AND close_adj>0", [symbol, day]).fetchone()
+            previous = previous_row[0] if previous_row else 0
+            if count >= min_bars and opening_count >= 10 and previous:
+                eligible.add(symbol)
+        if not eligible:
+            raise ValueError(f"local archive lacks {min_bars} minute bars, 10 opening-range bars, "
+                             "or a prior close for every candidate")
+
+        source_sha256 = _archive_replay_sha256(
+            quote_con, research_con, day=day, universe_rows=uni, cohort=cohort)
+        target_ledger, _ = cohort_path(ledger_path, cohort, I.STRATEGIES, None)
+        if target_ledger.is_file():
+            with duckdb.connect(str(target_ledger), read_only=True) as existing:
+                tables = {row[0] for row in existing.execute(
+                    "SELECT table_name FROM information_schema.tables").fetchall()}
+                if "runs" in tables:
+                    recorded = existing.execute(
+                        "SELECT status, symbols, note FROM runs WHERE day=? AND mode='replay'",
+                        [day.isoformat()]).fetchone()
+                else:
+                    recorded = None
+            if recorded:
+                expected_note = f"ARCHIVE_REPLAY_SHA256:{source_sha256}"
+                if recorded[0] == "complete" and recorded[2] == expected_note:
+                    return {"day": day.isoformat(), "status": "verified_existing",
+                            "symbols": int(recorded[1]), "data_source": "LOCAL_KITE_QUOTE_ARCHIVE",
+                            "network_access": False, "broker_orders": False,
+                            "verification_only": True, "source_manifest_sha256": source_sha256}
+                raise ValueError("this cohort/date already has different or unattested replay evidence; "
+                                 "use a new cohort identifier to create a new version")
+
+        def local_candles(token, start, end, *, interval):
+            symbol = str(token)
+            if interval == "day":
+                rows = research_con.execute(
+                    "SELECT business_date, close_adj FROM adjusted_prices WHERE ticker=? "
+                    "AND business_date>=? AND business_date<=? AND close_adj>0 ORDER BY business_date",
+                    [symbol, start, end]).fetchall()
+                return [{"ts": f"{business_day.isoformat()}T00:00:00", "close": float(close)}
+                        for business_day, close in rows]
+            if interval != "minute":
+                raise ValueError(f"unsupported local replay interval: {interval}")
+            bars = QA.bars(quote_con, symbol, day.isoformat(), minutes=1)
+            return [{"ts": pd.Timestamp(timestamp).strftime("%Y-%m-%dT%H:%M:%S"),
+                     "open": float(bar.open), "high": float(bar.high), "low": float(bar.low),
+                     "close": float(bar.close), "volume": float(bar.volume)}
+                    for timestamp, bar in bars.iterrows()]
+
+        result = run_replay(
+            day, n=n, candles_fn=local_candles, token_fn=lambda symbol: symbol,
+            path=ledger_path, research_path=research_path, cohort=cohort,
+            run_note=f"ARCHIVE_REPLAY_SHA256:{source_sha256}")
+        return {**result, "data_source": "LOCAL_KITE_QUOTE_ARCHIVE", "network_access": False,
+                "broker_orders": False, "verification_only": False,
+                "source_manifest_sha256": source_sha256,
+                "eligible_archive_symbols": len(eligible)}
+    finally:
+        quote_con.close()
+        research_con.close()
+
+
+def _archive_replay_sha256(quote_con, research_con, *, day: date,
+                           universe_rows: list[dict], cohort: str | None) -> str:
+    """Hash all market inputs that drive archived replay decisions and fills."""
+    symbols = sorted({str(row["tradingsymbol"]) for row in universe_rows})
+    placeholders = ",".join("?" for _ in symbols)
+    quote_rows = quote_con.execute(
+        "SELECT ts, symbol, ltp, vwap, volume, oi, open, high, low, prev_close, bid, ask, "
+        "bid_qty, ask_qty, depth_bid_qty, depth_ask_qty FROM quotes "
+        f"WHERE CAST(ts AS DATE)=? AND symbol IN ({placeholders}) ORDER BY ts, symbol",
+        [day, *symbols]).fetchall()
+    daily_rows = research_con.execute(
+        "SELECT ticker, business_date, close_adj FROM adjusted_prices "
+        f"WHERE ticker IN ({placeholders}) AND business_date>=? AND business_date<=? "
+        "ORDER BY ticker, business_date", [*symbols, day - timedelta(days=10), day]).fetchall()
+    try:
+        index_rows = research_con.execute(
+            "SELECT business_date, close_level FROM index_levels_canonical "
+            "WHERE index_name='Nifty 500' AND variant='PRICE' AND business_date<? "
+            "ORDER BY business_date DESC LIMIT 20", [day]).fetchall()
+    except duckdb.Error:
+        index_rows = []
+
+    def digest_rows(rows) -> str:
+        digest = hashlib.sha256()
+        for row in rows:
+            normalized = [value.isoformat() if hasattr(value, "isoformat") else value for value in row]
+            encoded = json.dumps(normalized, separators=(",", ":"), allow_nan=False).encode("utf-8")
+            digest.update(encoded)
+            digest.update(b"\n")
+        return digest.hexdigest()
+
+    from ..costs.india import CostModel
+
+    engine_source_sha = hashlib.sha256(Path(I.__file__).read_bytes()).hexdigest()
+    runner_source_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    body = {"schema": "fb.local-paper-replay-source.v1", "day": day.isoformat(), "cohort": cohort,
+            "engine": I.VERSION, "strategies": list(I.STRATEGIES),
+            "engine_source_sha256": engine_source_sha, "runner_source_sha256": runner_source_sha,
+            "cost_model": CostModel().as_dict(),
+            "universe": sorted(universe_rows, key=lambda row: str(row["tradingsymbol"])),
+            "quote_rows_sha256": digest_rows(quote_rows), "daily_close_rows_sha256": digest_rows(daily_rows),
+            "index_context_rows_sha256": digest_rows(index_rows)}
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 # --------------------------------------------------------------------------- evidence
@@ -568,7 +760,6 @@ def evidence(con, mode: str | None = None) -> list[dict]:
 
 def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | None = None) -> Path:
     from .capabilities import require
-    from financial_brain.forward_edge.evidence_labels import classify
 
     REPORTS.mkdir(parents=True, exist_ok=True)
     p = REPORTS / f"{day}-{mode}{'-' + cohort if cohort else ''}.md"
@@ -576,12 +767,7 @@ def write_report(con, day: str, mode: str, eng: I.DayEngine, *, cohort: str | No
     if any(strategy not in I.STRATEGIES for strategy in eng.strategies):
         capability_names.append("intraday_custom_rules")
     capabilities = ", ".join(require(name).name for name in dict.fromkeys(capability_names))
-    evidence_class = classify(mode)
-    evidence_note = ("Observed-market local paper; simulated fills; no independent attestation."
-                     if evidence_class.value == "LOCAL_PAPER"
-                     else "Historical replay; not prospective or independently attested evidence.")
     lines = [f"# Paper trading {day} ({mode}, {I.VERSION}, cohort {cohort or 'default'})", "",
-             f"Evidence class: `{evidence_class.value}`. {evidence_note}", "",
              f"Paper capabilities: {capabilities} (paper-only; required market inputs are enforced by the runner.)", "",
              "Paper only: no order was placed. Costs are the intraday schedule; quoted/assumed spread is in the fills. Intraday profit is "
              "taxed as business income at your slab rate, not modelled per trade here.", ""]
