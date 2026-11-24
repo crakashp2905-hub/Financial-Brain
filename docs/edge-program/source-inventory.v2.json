@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 744,
+  "source_count": 745,
   "sources": [
     {
       "capability_ids": [],
@@ -8346,6 +8346,28 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.costs.india",
+        "financial_brain.forward_edge.cost_schedule",
+        "math",
+        "re",
+        "trader_signal",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/net_ev.py",
+      "source_sha256": "aff63ba597bcb14aa7eea4e17c1e8c3a706c3960d329de78c975df5378232cc2",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "enum"
       ],
@@ -13181,6 +13203,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 721,
-  "unassigned_role_count": 425
+  "unassessed_count": 722,
+  "unassigned_role_count": 426
 }
