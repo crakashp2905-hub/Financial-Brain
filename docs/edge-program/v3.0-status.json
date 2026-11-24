@@ -5498,402 +5498,613 @@
     {
       "id": "FB-2401",
       "text": "Build `index_master` for *all available Nifty indexes* keyed by canonical index identifier, effective-dated name/symbol, index family, provider token, exchange, publication clock and historical coverage. Retain discontinued and renamed series.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing Kite index token discovery plus new effective-dated catalogue contract; no complete sourced Nifty index catalogue or refresh job.",
+        "src/financial_brain/forecasting/index_market.py: point-in-time `IndexCatalogue`, separate effective-dated optionability records, complete availability-gated 15-minute OHLC builder without equity volume/depth, same-session 15/30/60-minute realized-return labels, and frozen-threshold UP/DOWN/FLAT categorizer."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2402",
       "text": "Maintain separate `optionable_index_master` from NSE's current listed derivative underlyings and effective-dated contract files: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTYNXT50, NIFTYFPI at the initial snapshot; never assume all indices have options.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New separate source-hash-bound optionability contract; no current NSE derivative-file parser/refresh evidence.",
+        "src/financial_brain/forecasting/index_market.py: point-in-time `IndexCatalogue`, separate effective-dated optionability records, complete availability-gated 15-minute OHLC builder without equity volume/depth, same-session 15/30/60-minute realized-return labels, and frozen-threshold UP/DOWN/FLAT categorizer."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2403",
       "text": "Ingest permitted 1-minute historical index prices and live index ticks; build as-of 15-minute OHLC bars; **do not require equity volume or five-level market depth on index packets**, which have a different Kite WebSocket schema.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New complete 15-minute index OHLC primitive; Kite provider still implements daily historical candles, and live index quote ingestion is not wired.",
+        "src/financial_brain/forecasting/index_market.py: point-in-time `IndexCatalogue`, separate effective-dated optionability records, complete availability-gated 15-minute OHLC builder without equity volume/depth, same-session 15/30/60-minute realized-return labels, and frozen-threshold UP/DOWN/FLAT categorizer."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2404",
       "text": "Subscribe to current option contract ticks, bid/ask, visible quantities, OI, implied-vol inputs, expiry/strike/lot-size metadata, timestamps and source-quality flags; use the *actual tradable option's* depth for fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing append-only actual option quote archive records contract, quote, bid/ask, depth, OI, expiry and source times; full listed-contract coverage/entitlement and forecast linkage remain incomplete.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2405",
       "text": "Maintain exchange-date-specific sessions, scheduled bar boundaries, holidays, auctions, expiry cutoffs, provider disconnects and availability calendars; never produce a fictional full bar during a halted/partial session. Confirm provider entitlements and retention limits (**EXTERNAL**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing exchange calendar and expiry utilities provide partial date/expiry handling; no unified effective exchange-session/auction/feed-availability calendar for this pipeline.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2406",
       "text": "For index i and a *completed* bar ending at time t, define `r(i,t,15m)=S(i,t+15m)/S(i,t)-1` (and explicit forward 30m/60m/EOD targets). Store actual model-decision and first-executable timestamps; no future-bar joins.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New exact contiguous same-session close-to-close target helper; training feature pipeline and all horizons still need integration.",
+        "src/financial_brain/forecasting/index_market.py: point-in-time `IndexCatalogue`, separate effective-dated optionability records, complete availability-gated 15-minute OHLC builder without equity volume/depth, same-session 15/30/60-minute realized-return labels, and frozen-threshold UP/DOWN/FLAT categorizer."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2407",
       "text": "Define 3-class labels UP/DOWN/FLAT using training-period, index-specific price-noise thresholds; version thresholds; compute genuine option cost gates separately. Do not force a trade for a directional lean.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New UP/DOWN/FLAT classifier requires an explicitly frozen positive noise threshold; training-only threshold estimator/version registry not integrated.",
+        "src/financial_brain/forecasting/index_market.py: point-in-time `IndexCatalogue`, separate effective-dated optionability records, complete availability-gated 15-minute OHLC builder without equity volume/depth, same-session 15/30/60-minute realized-return labels, and frozen-threshold UP/DOWN/FLAT categorizer."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2408",
       "text": "Build point-in-time features from prior 1m/5m/15m/60m returns, volatility, VWAP where meaningful, opening range, realized range, trend slope, overnight gap, time-of-day, session-to-expiry and market regime.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing generic intraday feature modules provide partial return/volatility/time features; index-specific as-of feature builder absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2409",
       "text": "Add cross-index features: Nifty 50 vs Bank/Financial divergence, sector-relative strength, breadth/constituent changes where permissioned, contemporaneous option/futures OI, futures basis, IV skew, realized-versus-implied volatility and flow signals; ensure index constituent survivorship correctness.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing cross-market/breadth research features offer adjacent primitives; no point-in-time six-index/derivatives feature integration.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2410",
       "text": "Write leak tests: mutate every event after forecast cutoff and assert no features/probabilities change; exclude unreleased revised observations, future index membership, future close/settlement prices or option quotes received after the decision.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing temporal/leakage controls and new availability cutoff tests; comprehensive post-cutoff mutation tests for the index probability pipeline absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2411",
       "text": "Train naive frequency, no-change, price-persistence and volatility/time-of-day baseline classifiers for each index/horizon; benchmark before deep learning.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Generic forecasting baselines exist; no separately scored index/horizon 15-minute baseline campaign.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2412",
       "text": "Train versioned, low-variance tree/logistic models on completed bars; test a shared multi-index model versus six index-specific models and hierarchical sector indexes without leaking information across time.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing forecast learners support daily series; no index-specific shared versus separate model comparison.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2413",
       "text": "Generate `P_UP`, `P_DOWN`, `P_FLAT`, expected return in index points/bps, and prediction interval; ensure probabilities sum to 1 and model uncertainty is exposed, not just a confidence score.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing forecast distribution APIs; no 15-minute index output contract/probabilities integrated.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2414",
       "text": "Fit probabilities with held-out chronological calibration (e.g. isotonic or temperature calibrator) by market regime and time-of-day only when sufficient samples exist; report Brier/log loss, reliability bins and forecasting coverage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing calibration primitives; no index/regime/time-of-day held-out calibration or coverage report.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2415",
       "text": "Use `forecasting/ensemble.py`, `forecasting/calibration.py` and `decisions/forecast_ev.py` where appropriate; compare richer models with simple baselines. Refit only on a declared rolling schedule with frozen versioning and rollback; no hindsight retraining in a purported forward run.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Several listed forecast and option modules exist; their end-to-end index options pipeline is absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2416",
       "text": "Map each index forecast to CE, PE, defined-risk debit-spread or `NO_TRADE` candidates from *presently listed instruments*; require fresh bid/ask, lot size, displayed depth, expiry and contract eligibility. No synthetic option-chain contracts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing option contract/quote and vertical-spread eligibility primitives; no forecast-to-current-contract candidate mapper.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2417",
       "text": "Convert full projected underlying-return/IV/time paths into option-premium outcome distributions with delta, gamma, theta, vega, spreads and realistic execution costs. A `P_UP > 0.60` forecast alone must **not** generate BUY CE.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing option scenarios and Greeks provide partial repricing; no integrated 15-minute path/IV/theta premium distribution.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2418",
       "text": "Rank option candidates by **expected executable net P&L**, downside tails, risk-adjusted expected value and portfolio marginal impact; compare to index/ETF alternatives and `NO_TRADE`.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing economic net-alpha and portfolio utilities; index option candidates are not jointly ranked against alternatives and no-trade.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2419",
       "text": "Publish fully linked **BUY CE / BUY PE / BUY SPREAD** and **SELL/EXIT** intentions including exchange token, expiry, strike, lots, limit-entry band, option-premium SL/TP, underlying invalidation, time stop, trailing/partial exit behavior, quote TTL and maximum planned loss; a trigger does not guarantee fill.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing trader terminal and option paper artifacts; no complete index-linked intention with contract/limits/invalidation lifecycle.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2420",
       "text": "Model expiry-specific restrictions, fast gamma/theta changes, sharp IV collapse, spread widening, large gaps, settlement and multi-leg fill risk; fail closed when margin/settlement/leg synchronization cannot be modeled accurately.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing defined-risk option and expiry scenario checks; full index options session/gap/settlement/leg synchronization model absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2421",
       "text": "At each valid forecast decision, append an immutable event with `forecast_id`, `index_id`, bar cutoff, data/source timestamps, strategy/config hash, model prediction, option quote snapshot, expected cost and paper eligibility.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing append-only forward session and option records provide partial immutable provenance; no unified forecast event schema for this strategy.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2422",
       "text": "Auto-route eligible signals through the **canonical paper OMS**. Capture simulated request, latency, accepted/partial/missed/rejected status, displayed quote/depth, fill quantity/price, fees, and linked position; replay must not masquerade as live forward evidence.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing paper options runner and canonical paper OMS are reusable; no index forecast adapter is routed end-to-end.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2423",
       "text": "Monitor open paper options **between** 15-minute forecast updates using live market/option ticks for SL, TP, time exit, expiry and invalidation; signals update on a 15m clock, risk management does **not** wait 15m.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing options forward runner monitors quote-driven paper positions; not connected to a 15-minute index forecaster.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2424",
       "text": "Aggregate exposure across NIFTY, BANKNIFTY, FINNIFTY, stocks and index ETFs; enforce underlying/beta/sector correlated risk limits, position caps and daily loss/drawdown kill switches. Prevent duplicated signal orders across refreshes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing portfolio risk, sector exposure and kill-switch controls; correlated aggregate index/options/stock/ETF cap is not integrated.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2425",
       "text": "Reconcile each index signal to `RESEARCH_ONLY`, `NO_TRADE`, `WATCH`, `PAPER_ELIGIBLE`, `UNFILLED`, `OPEN`, `PARTIALLY_EXITED`, `CLOSED` or `UNPRICED`; no ghost paper profits on missing option quotes or spreads.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing decision and OMS state machines provide partial lifecycle vocabulary; no single index signal state reconciler.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2426",
       "text": "Construct global date-wise and session-wise time splits with purging/embargo over overlapping 15m, 30m, 60m labels and cross-index features; use fixed out-of-sample windows and strictly as-of quote availability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing chronological walk-forward, embargo and protected trial controls; index overlapping multi-horizon split not wired.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2427",
       "text": "Backtest index direction and option profitability separately. Direction: balanced accuracy, Brier/log loss, calibration by index/regime/clock. Trading: net INR, NAV, expectancy, drawdown, turnover, fill coverage, regret, missed trades and options-specific tail exposure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing probability/economic evaluation metrics; no coupled index direction and executable-option profitability report.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2428",
       "text": "Test against no-trade, class-frequency, always-up, momentum, simple volatility and cost-matched CE/PE null strategies; never use 50% directional hit rate as a universal baseline.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing nulls and no-trade decision controls; no complete index-specific cost-matched CE/PE/null cohort.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2429",
       "text": "Evaluate dependent observations with session-level clustering or block bootstrap, index-correlation adjustment, multiple-testing correction, and separate expiry vs non-expiry days, high-vol vs low-vol, plus each underlying index.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing block bootstrap, clustered and family-wise inference modules; no index/options cohort-specific inference.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2430",
       "text": "Register this as a **new** strategy/version in existing trial governance; past registered Nifty index VWAP/timing family was `FAIL` (0/9) and minute-bar intraday family was `FAIL`. Do not rewrite these verdicts or claim forward alpha from historical replay. The 2026Q4 protected trial budget is spent; new protected tests require the owner's preregistered governance amendment or 2027Q1 eligibility (**EXTERNAL owner decision/elapsed time**).",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing protected trial and strategy registries; no newly registered index-15m options experiment/version.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2431",
       "text": "Schedule one event at completion of every eligible 15m interval (e.g. bar ending 09:30 → predict 09:30–09:45 IST), using exchange-aware calendars and checks for fully observed bars; keep 30m, 60m, EOD as separately labeled horizons.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing scheduled paper sessions and bar utilities; no exact scheduler for every completed index 15-minute interval.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2432",
       "text": "Implement WebSocket reconnect, backfill-on-gap, clock skew checks, inference timeouts, circuit breakers, stale-data sentinel, and idempotent resume; emit `UNAVAILABLE` not an invented forecast when critical inputs are absent.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing Kite reconnect, gap and session recovery controls offer partial infrastructure; index-specific backfill/skew/inference gates absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2433",
       "text": "Create an index heatmap/cockpit with per-index UP/DOWN/FLAT, directional probability, expected points, uncertainty, regime, model version, timestamp and last realized score, separating tradable options from research-only indices.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing terminal and charts are not a calibrated per-index 15-minute probability/uncertainty heatmap.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2434",
       "text": "Generate actionable option cards displaying current contract, strike/expiry, CE/PE, price band, SL/TP, modeled risk-reward and **net** expected value, available quantity, confidence evidence and next-update expiry; show real-time paper P&L for approved/autonomous variants.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing option cards have partial contract/risk details; no linked index-forecast card with current executable band, TTL and risk.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2435",
       "text": "Publish end-of-day audit: forecast count by index and direction, missing sessions, prediction scores, trades considered, rejected, missed and filled, options premium gains/losses, costs, NAV change, worst trades, forecast-drift alerts and unresolved positions.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing end-of-day reports cover paper outcomes; index forecast counts, missing periods and considered alternatives absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2436",
       "text": "Unit-test 15-minute bar closing, feature as-of boundaries, label computation, market open/close, partial bars, no-data, exchange holidays and index instrument-schema differences.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New tests cover aligned/partial/delayed bars and target horizons; full exchange calendar, missing-session and lifecycle matrix absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [
+        "tests/test_forecasting_index_market.py: 6 new tests for effective periods, distinct option universe, complete/partial/open/delayed bars, label horizons and fail-closed inputs; combined index/ETF bar suites passed 14 tests; Ruff and targeted mypy passed."
+      ],
+      "test_result": "Index-market contract tests: 14 passed with existing index/ETF bar suites; Ruff and targeted mypy passed."
     },
     {
       "id": "FB-2437",
       "text": "Property-test calibrated probabilities sum to 1, all candidate contracts exist in the effective-dated instrument master, and no paper order can refer to an unlisted/expired/zero-depth option.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "New tests verify catalogue and basic label contracts; property tests proving all generated candidate contracts exist are absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2438",
       "text": "Simulate a 15m bullish index forecast with options inflated by IV/theta/spread: expected after-cost option P&L negative => `NO_TRADE`; prevent direction-accuracy optimization from promoting a money-losing option strategy.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing options tests cover costs/IV and risk scenarios; specified index forecast with IV/theta/spread and after-cost abstention fixture absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2439",
       "text": "Exercise two simultaneous index forecasts with shared exposure, partial entry/exit fills, duplicate tick batches, reconnect, feed lag, exchange halt, expired quotes and overnight gap: no double trade, no early success, correct bounded capital and reconciled P&L.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing durable session runner has restart/idempotency testing; dual-index correlated exposure and index signal fault sequence absent.",
+        "Related repository implementations exist, but the index-specific checklist acceptance path is not integrated; see the source audit in docs/edge-program/V3.0_PROGRESS.md."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2440",
       "text": "Complete a real-session *paper-only* rehearsal with six derivative indices plus any research-only index subset, timestamped 15m signals, monitored exits, observed quote-backed paper fills and auditable separate forecast/portfolio scorecards. Require sufficient future independent evidence before calling this an edge; never auto-enable physical orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No completed prospective real-session paper rehearsal integrating the 15-minute index forecast, six optionable indices, forecast-only indices, immutable decisions, paper fills, costs and reconciliation is recorded. It requires the preceding integrated system and future eligible market sessions."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T00:00:00Z",
+      "commit": null,
+      "test_evidence": [],
+      "test_result": null
     },
     {
       "id": "FB-2501",
@@ -18937,6 +19148,46 @@
       "FB-2306",
       "FB-2307",
       "FB-2308",
+      "FB-2401",
+      "FB-2402",
+      "FB-2403",
+      "FB-2404",
+      "FB-2405",
+      "FB-2406",
+      "FB-2407",
+      "FB-2408",
+      "FB-2409",
+      "FB-2410",
+      "FB-2411",
+      "FB-2412",
+      "FB-2413",
+      "FB-2414",
+      "FB-2415",
+      "FB-2416",
+      "FB-2417",
+      "FB-2418",
+      "FB-2419",
+      "FB-2420",
+      "FB-2421",
+      "FB-2422",
+      "FB-2423",
+      "FB-2424",
+      "FB-2425",
+      "FB-2426",
+      "FB-2427",
+      "FB-2428",
+      "FB-2429",
+      "FB-2430",
+      "FB-2431",
+      "FB-2432",
+      "FB-2433",
+      "FB-2434",
+      "FB-2435",
+      "FB-2436",
+      "FB-2437",
+      "FB-2438",
+      "FB-2439",
+      "FB-2440",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -19360,13 +19611,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 743,
+    "audited_count": 783,
     "status_counts": {
       "COMPLETE": 64,
-      "PARTIAL": 654,
+      "PARTIAL": 693,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 20,
-      "UNASSESSED": 635
+      "NOT_STARTED": 21,
+      "UNASSESSED": 595
     },
     "verified_complete_count": 64,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -19492,9 +19743,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 64,
-    "PARTIAL": 654,
+    "PARTIAL": 693,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 20,
-    "UNASSESSED": 635
+    "NOT_STARTED": 21,
+    "UNASSESSED": 595
   }
 }
