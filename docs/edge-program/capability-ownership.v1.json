@@ -2868,6 +2868,12 @@
       "module_owner": "src/financial_brain/portfolio/capital_allocator.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/constraints.py",
+      "path": "src/financial_brain/portfolio/constraints.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/constraints.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/gate.py",
       "path": "src/financial_brain/portfolio/gate.py",
       "module_role": "portfolio_allocation_or_accounting",
