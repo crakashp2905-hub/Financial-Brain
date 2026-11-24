@@ -10,6 +10,7 @@ import pytest
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.clock import FixedClock
 from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiveError
+from financial_brain.forward_edge.data_distribution import PriceWindow, DistributionThresholds, compare_windows
 
 T0 = datetime(2026, 11, 15, 4, 0, tzinfo=timezone.utc)
 
@@ -121,6 +122,136 @@ def test_decision_snapshot_excludes_late_data_and_is_reproducible(tmp_path) -> N
         with pytest.raises(QuoteArchiveError, match="no archived events"):
             archive.snapshot(decision_id="too-early", venue="NSE", instrument_id="NSE:INFY",
                              decision_time=T0 - timedelta(seconds=1))
+    finally:
+        archive.close()
+
+
+def test_provider_windows_from_archive_separate_feed_shift_from_price_window(tmp_path):
+    archive = QuoteArchive(tmp_path / "distribution.sqlite3", clock=FixedClock(T0 + timedelta(days=2)))
+    reference_start = T0
+    reference_end = T0 + timedelta(minutes=3)
+    current_start = T0 + timedelta(days=1)
+    current_end = current_start + timedelta(minutes=3)
+
+    def append_window(start, *, current=False):
+        rows = []
+        for index in range(3):
+            event_offset = (1, 0, 2)[index] if current else index
+            source = ("EXCHANGE" if index in (1, 2) else "KITE") if current else "KITE"
+            event_at = start + timedelta(minutes=event_offset)
+            received = (start + timedelta(seconds=(61, 62, 121)[index]) if current
+                        else event_at + timedelta(seconds=1))
+            event = MarketEvent(
+                f"{start.date()}:{index}", EventKind.QUOTE, "NSE", "NSE:INFY",
+                event_at, received, received,
+                {"bid": 100.0 + index, "ask": 100.1 + index,
+                 "bid_quantity": 10, "ask_quantity": 10},
+                source, sequence=index + 1,
+            )
+            archive.append(event)
+            rows.append(event)
+        return rows
+
+    try:
+        append_window(reference_start)
+        append_window(current_start, current=True)
+        reference = archive.provider_window(
+            start=reference_start, end=reference_end, as_of=reference_end + timedelta(hours=1),
+            expected_quote_observations=3, max_transport_lag=timedelta(seconds=5),
+        )
+        current = archive.provider_window(
+            start=current_start, end=current_end, as_of=current_end + timedelta(hours=1),
+            expected_quote_observations=3, max_transport_lag=timedelta(seconds=5),
+        )
+        result = compare_windows(
+            PriceWindow(reference_start, reference_end, 30, 0.01, 0.0),
+            PriceWindow(current_start, current_end, 30, 0.01, 0.0),
+            reference, current, thresholds=DistributionThresholds(minimum_observations=2),
+        )
+        assert reference.quote_coverage == current.quote_coverage == 1.0
+        assert reference.stale_fraction == 0.0
+        assert current.stale_fraction == pytest.approx(1 / 3)
+        assert current.out_of_order_fraction == pytest.approx(0.5)
+        assert dict(current.source_mix)["EXCHANGE"] == pytest.approx(2 / 3)
+        assert dict(current.source_mix)["KITE"] == pytest.approx(1 / 3)
+        assert result.status == "PROVIDER_DISTRIBUTION_SHIFT"
+        assert not result.price_regime_shift and result.provider_distribution_shift
+
+        outage_start = T0 + timedelta(days=2)
+        outage_end = outage_start + timedelta(minutes=3)
+        empty = archive.provider_window(
+            start=outage_start, end=outage_end, as_of=outage_end + timedelta(hours=1),
+            expected_quote_observations=3, max_transport_lag=timedelta(seconds=5),
+        )
+        assert empty.observations == 0 and empty.quote_coverage == 0
+        outage = compare_windows(
+            PriceWindow(reference_start, reference_end, 30, 0.01, 0.0),
+            PriceWindow(outage_start, outage_end, 30, 0.01, 0.0),
+            reference, empty, thresholds=DistributionThresholds(minimum_observations=2),
+        )
+        assert outage.status == "PROVIDER_DISTRIBUTION_SHIFT"
+        assert outage.provider_reasons == ("PROVIDER_WINDOW_EMPTY",)
+    finally:
+        archive.close()
+
+
+def test_archive_price_window_and_runner_report_pair_price_and_feed_diagnostics(tmp_path):
+    from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+    from financial_brain.forward_edge.session_state import ForwardSessionStore
+
+    archive = QuoteArchive(tmp_path / "paired-windows.sqlite3", clock=FixedClock(T0 + timedelta(days=2)))
+    runner = ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite3"),
+                                  tmp_path / "runner.sqlite3")
+    reference_start, current_start = T0, T0 + timedelta(days=1)
+    duration = timedelta(minutes=3)
+    as_of = current_start + duration + timedelta(hours=1)
+    try:
+        for start, mids in ((reference_start, (100.0, 100.1, 100.2)),
+                            (current_start, (100.0, 102.0, 104.0))):
+            for index, mid in enumerate(mids):
+                event_at = start + timedelta(minutes=index)
+                event = MarketEvent(
+                    f"paired:{start.date()}:{index}", EventKind.QUOTE, "NSE", "NSE:INFY",
+                    event_at, event_at + timedelta(seconds=1), event_at + timedelta(seconds=1),
+                    {"bid": mid - 0.05, "ask": mid + 0.05}, "KITE", sequence=index + 1,
+                )
+                archive.append(event)
+        reference_price = archive.price_window(
+            start=reference_start, end=reference_start + duration, as_of=as_of,
+            venue="NSE", instrument_id="NSE:INFY")
+        assert reference_price.observations == 3
+        assert reference_price.net_return == pytest.approx(0.002)
+        assert reference_price.realized_volatility > 0
+
+        report = runner.compare_archive_windows(
+            archive, venue="NSE", instrument_id="NSE:INFY",
+            reference_start=reference_start, reference_end=reference_start + duration,
+            current_start=current_start, current_end=current_start + duration, as_of=as_of,
+            expected_reference_quotes=3, expected_current_quotes=3,
+            max_transport_lag=timedelta(seconds=5),
+            thresholds=DistributionThresholds(minimum_observations=2),
+        )
+        assert report["comparison"]["price_regime_shift"] is True
+        assert report["comparison"]["provider_distribution_shift"] is False
+        assert report["trading_action"] == "NONE_DIAGNOSTIC_ONLY"
+    finally:
+        runner.close()
+        archive.close()
+
+
+def test_archive_price_window_rejects_future_cutoff_and_insufficient_quotes(tmp_path):
+    archive = QuoteArchive(tmp_path / "price-cutoff.sqlite3")
+    try:
+        event = _quote(1)
+        archive.append(event)
+        with pytest.raises(QuoteArchiveError, match="cutoff"):
+            archive.price_window(start=T0, end=T0 + timedelta(minutes=1),
+                                as_of=T0 + timedelta(seconds=30), venue="NSE",
+                                instrument_id="NSE:INFY")
+        with pytest.raises(QuoteArchiveError, match="at least two"):
+            archive.price_window(start=T0, end=T0 + timedelta(minutes=1),
+                                as_of=T0 + timedelta(hours=1), venue="NSE",
+                                instrument_id="NSE:INFY")
     finally:
         archive.close()
 
