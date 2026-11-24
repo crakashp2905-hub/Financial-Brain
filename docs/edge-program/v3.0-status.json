@@ -15269,182 +15269,290 @@
     {
       "id": "SL-21-01",
       "text": "Build ETF state/actions: executable quote premium to iNAV, spread, tracking, benchmark, cash and buy/sell/hold.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`features/etf_valuation.py` derives timely ETF premium/discount references and `features/etf_pricing.py` requires a fresh executable quote; no unified ETF state/action policy joins premium, tracking, benchmark, cash and buy/sell/hold."
+      ],
+      "blocker": "Decision state and actions are not wired to a desk learner.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-02",
       "text": "Use ETF NAV/iNAV only as timely reference features; actual exchange fill uses bid/ask and depth.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`compare_quote_to_inav` requires synchronized fresh quote/iNAV and `resolve_etf_paper_price` uses only observed bid/ask/depth; the ETF paper book/strategy does not consume this contract end to end."
+      ],
+      "blocker": "Correct pricing primitives exist but system-wide ETF execution integration is unverified.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-03",
       "text": "Implement equity swing long/short eligibility separately, with borrow/margin rules and multi-day gap risk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Equity intraday and swing evaluators, stock borrow-interest and margin/stress helpers exist; a separate swing long/short eligibility contract covering locate/borrow, margin and multi-day gap risk was not found."
+      ],
+      "blocker": "Short-sale eligibility, borrow inventory and overnight gap controls are not integrated.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-04",
       "text": "Build conventional MF decision actions `ADD/HOLD/REDUCE/REDEEM/SWITCH` at NAV cutoff, not instant market orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper/mf_decisions.py` supports NAV-based SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD decisions, while MF books use NAV eligibility and delayed settlement; ADD/REDUCE and a single learning action contract are absent."
+      ],
+      "blocker": "Decision labels, action timing and learning adapter do not share one contract.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-05",
       "text": "Create MF reward from actual applicable NAV allotment/redemption timing, exit load, eligible units and cash settlement.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF lot, purchase/redemption eligibility, exit-load and settlement books account for applicable NAV, units and cash timing; no MF learning reward is integrated with those settled ledger events."
+      ],
+      "blocker": "Settlement-aware outcomes are not joined to the learning/reward pipeline.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-06",
       "text": "Add SIP/STP/SWP optimizer as recommendation assistant with fixed cash-flow constraints; no invented intraday stop-loss.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF SIP/STP/SWP systematic flow books and owner allocation preferences exist; recommendation-only optimization with fully fixed cash-flow constraints and explicit prohibition on intraday-style stops is not unified."
+      ],
+      "blocker": "Recommendation policy and all cash-flow/holiday constraints are not validated as one workflow.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-07",
       "text": "Support multi-day equity opportunity costs, tax-lot effects and cash drag in portfolio reward.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Tax/exit-load-aware MF lots, borrow interest, and ETF cash controls exist; equity tax-lot realization, holding opportunity cost and cash drag are not jointly represented in a cross-asset reward."
+      ],
+      "blocker": "No common portfolio reward for multi-day opportunity costs, tax lots and cash drag.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-08",
       "text": "For futures, model contract rollover, daily mark-to-market, margin sufficiency and expiry with effective dated specifications.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge/futures_roll.py` models dated basis, lot-size change, mark-to-market, margin and financing; kernel futures analytics cover margin/stress. Effective-dated spec history and a daily futures ledger with expiry settlement are not integrated."
+      ],
+      "blocker": "Caller-supplied marks are unauthenticated and no full MTM/expiry paper lifecycle is shown.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-09",
       "text": "Introduce shared portfolio exposure mapping across stock, option delta, ETF underlying, MF holdings and futures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF reference exposures, option-delta exit controls, MF holdings and futures exposure helpers exist separately; no common mapped exposure ledger across stock, option delta, ETF underlying, MF holdings and futures was found."
+      ],
+      "blocker": "Cross-desk look-through exposure aggregation and duplicate-risk reconciliation are missing.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-10",
       "text": "Construct desk-specific benchmark, risk constraints and return sampling frequency in policy evaluation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF cross-asset rotation defines cash/equal-volatility/buy-and-hold/same-risk controls; other desks have their own measures. There is no unified policy evaluator with desk-specific sampling frequencies, benchmarks and risk constraints."
+      ],
+      "blocker": "Desk comparison framework and common evaluation report are incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-11",
       "text": "Use cross-desk RL only when reward normalization and common cash ledger are validated.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "Learning modules contain generic hierarchy and risk distribution contracts, but no cross-desk RL learner with validated common reward normalization and reconciled cash ledger was found."
+      ],
+      "blocker": "Cross-desk RL training and promotion are absent.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-12",
       "text": "Keep MF/ETF drift signals from causing forced unnecessary trades when fees or settlement favor holding.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ETF cash/no-action controls and MF HOLD/decision-only actions exist; no common cost/settlement-aware drift gate proves that ETF/MF rebalances are suppressed when holding is preferable."
+      ],
+      "blocker": "No prospective no-trade versus rebalance acceptance across ETF and MF desks.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-13",
       "text": "Disable strategies without operationally permitted data and instrument capabilities.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Option archive is license-gated, source-specific providers and strategy eligibility checks exist; a universal permission/capability gate for every ETF/MF/equity/futures strategy input is not verified."
+      ],
+      "blocker": "Data-rights and operational capability checks are not consistently propagated to all desks.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-14",
       "text": "Test NAV publication delays and fund holiday calendar differences with market trading dates.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF NAV eligibility and event-date/payout logic are covered by NAV/holiday and settlement modules; no single acceptance matrix joins NAV publication delays, fund holidays and market trading calendars across all desks."
+      ],
+      "blocker": "Cross-calendar market/NAV delay stress remains incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-15",
       "text": "Compare advanced desk RL against simple risk-aware allocation, cost-aware rebalance and passive reference.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "ETF cross-asset rotation has simple risk-aware and passive controls, but no advanced ETF/MF/swing/futures RL policy or matched cross-desk comparison was found."
+      ],
+      "blocker": "Advanced desk RL and the same-period comparative study do not exist.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-16",
       "text": "Store trade and recommendation reasoning with relevant human approval and no automatic redemption of real investments.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF decisions persist actor, reason, source snapshot and paper-only scope; the panel discloses decision-only language. A verified human approval workflow across all desk recommendations is not integrated."
+      ],
+      "blocker": "Human approval identity and reasoning are not shared across desks.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-17",
       "text": "Build per-desk standalone audit: paper cash, NAV, settled units, exposures, pending instructions and net returns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "MF account snapshots expose NAV, holdings/units, pending purchases/redemptions and cash; ETF/futures/stock/options reporting remains separate and no complete per-desk audit report covers every requested field."
+      ],
+      "blocker": "Per-desk audit outputs are fragmented and net-return comparability is incomplete.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-21-18",
       "text": "Publish combined capital allocation report excluding incomparable hypothetical returns and duplicated exposure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "NOT_STARTED",
+      "evidence": [
+        "No combined capital-allocation report was found that deduplicates underlying exposures and suppresses incomparable hypothetical desk returns."
+      ],
+      "blocker": "The required governed cross-desk capital report has not been implemented.",
+      "last_audited_at_utc": "2026-11-24T18:37:08Z",
+      "commit": "101b1bdd",
+      "test_evidence": [
+        "Desk-focused verification: 34 passed in 181.74s across tests/test_etf_valuation.py, test_etf_pricing.py, test_etf_cross_asset_rotation.py, test_mf_decisions.py, test_forward_edge_futures_roll.py and test_kernel_accounting_extra.py. The MF decision panel test was made date-relative after it failed against a hard-coded 2026-11-24 as-of date on 2026-11-25 Asia/Kolkata; isolated rerun passed, then all six modules passed."
+      ],
+      "test_result": "Representative ETF/MF/futures suite: 34 passed after correcting the date-relative MF decision panel test."
     },
     {
       "id": "SL-22-01",
@@ -17928,7 +18036,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T18:14:54Z",
+    "as_of_utc": "2026-11-24T18:37:08Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -18556,15 +18664,33 @@
       "SL-20-15",
       "SL-20-16",
       "SL-20-17",
-      "SL-20-18"
+      "SL-20-18",
+      "SL-21-01",
+      "SL-21-02",
+      "SL-21-03",
+      "SL-21-04",
+      "SL-21-05",
+      "SL-21-06",
+      "SL-21-07",
+      "SL-21-08",
+      "SL-21-09",
+      "SL-21-10",
+      "SL-21-11",
+      "SL-21-12",
+      "SL-21-13",
+      "SL-21-14",
+      "SL-21-15",
+      "SL-21-16",
+      "SL-21-17",
+      "SL-21-18"
     ],
-    "audited_count": 627,
+    "audited_count": 645,
     "status_counts": {
       "COMPLETE": 55,
-      "PARTIAL": 563,
+      "PARTIAL": 578,
       "EXTERNAL_BLOCKED": 5,
-      "NOT_STARTED": 4,
-      "UNASSESSED": 751
+      "NOT_STARTED": 7,
+      "UNASSESSED": 733
     },
     "verified_complete_count": 55,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -18686,13 +18812,13 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test."
   },
   "counts_by_status": {
     "COMPLETE": 55,
-    "PARTIAL": 563,
+    "PARTIAL": 578,
     "EXTERNAL_BLOCKED": 5,
-    "NOT_STARTED": 4,
-    "UNASSESSED": 751
+    "NOT_STARTED": 7,
+    "UNASSESSED": 733
   }
 }
