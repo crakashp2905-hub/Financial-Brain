@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 701,
+  "source_count": 703,
   "sources": [
     {
       "capability_ids": [],
@@ -8796,6 +8796,40 @@
     {
       "capability_ids": [],
       "human_owner": null,
+      "imports": [],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/__init__.py",
+      "source_sha256": "52e7cef7762013dec75ec352bdb05de0bc6bf0db21853b26f6552c044204d7b3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/learning/trajectory.py",
+      "source_sha256": "e4cee9ef780edf33e66f77a369e1a7017cea419ef76a01c2baa1602834339d1c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
       "imports": [
         "__future__",
         "dataclasses",
@@ -12546,6 +12580,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 671,
-  "unassigned_role_count": 407
+  "unassessed_count": 673,
+  "unassigned_role_count": 409
 }

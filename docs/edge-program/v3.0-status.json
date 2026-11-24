@@ -11203,11 +11203,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing session/decision and strategy identity records offer partial fields; no immutable dataset-version/instrument/session/strategy/policy/account episode key with unified decision clock was found."
+        "src/financial_brain/learning/trajectory.py defines immutable EpisodeKey(dataset version, instrument, session, strategy, behavior-policy version, account and episode identity).",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "Trajectory episode key/schema absent.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11218,11 +11219,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Decision journals, runner manifests, orders/fills and outcomes store portions of transitions separately; no trajectory row joins state, eligible-action mask, chosen action, propensity, fill, reward, next state, done and provenance."
+        "Transition stores state, eligible action set, chosen action, propensity, fill, reward, next state, terminal flag and provenance hashes in one validated row.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "No joined transition-table builder.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11233,11 +11235,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "The simple IPS helper requires a positive propensity or errors, but no training-data schema records PROPENSITY_UNAVAILABLE for legacy/nonrandom decisions."
+        "PropensityStatus explicitly represents KNOWN or PROPENSITY_UNAVAILABLE; unavailable rows cannot carry a numeric probability, and known probabilities must be in (0,1].",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "No explicit missing-propensity type or trajectory adapter.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11248,11 +11251,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Replay and observed paper artifacts have distinct evidence tiers in several paths; no separate typed counterfactual-vs-observed transition schemas for offline RL."
+        "TransitionEvidence uses distinct typed replay, fixture, local-paper, prospectively observed and independently attested classes; replay/fixture records cannot claim an observed fill.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "No offline-RL dataset type system.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11263,11 +11267,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "No-trade/rejected decisions are journaled in forward-edge paths, but there is no full-universe trajectory capture ensuring rejected opportunities are in training data."
+        "Transition schema can retain NO_TRADE/rejected opportunities with eligible-action support and reason codes; no complete opportunity logger is wired.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "Decision-only capture is not an RL trajectory data set.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11278,11 +11283,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Provenance and immutable trial evidence protect some sessions; no trajectory builder prevents missing historical actions being retrospectively reconstructed as choices."
+        "Transition requires explicit decision and earliest-eligible-fill clocks and refuses fill-before-decision; it does not synthesize missing decisions.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "No action provenance gate in dataset pipeline.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11293,11 +11299,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "IPS helper has no target-policy support, effective sample size, action/regime/instrument/size coverage or OOD detection."
+        "Chosen action is checked against the logged eligible-action set; statistical coverage/OOD density diagnostics are not implemented.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "Action support diagnostics absent; current IPS helper is not sufficient OPE.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11338,11 +11345,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Execution helpers start after the signal/decision interval and market events carry availability clocks; no unified dataset field pair action_decision_ts/first_eligible_fill_ts or same-bar leakage validator."
+        "action_decision_ts and first_eligible_fill_ts are normalized to UTC and ordered.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "No trajectory-level timestamp contract.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11413,11 +11421,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing deterministic fixture and replay reports support reproducibility within designated paths; no deterministic RL trajectory builder with cross-OS/CPU hash equivalence exists."
+        "Row hashes are deterministic canonical SHA-256 over immutable normalized content; cross-OS/CPU assurance remains unverified.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "Trajectory builder and portable hash contract absent.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -11428,11 +11437,12 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Adversarial tests cover market/OMS failure cases but not a trajectory corruption suite for swapped rewards, future fields, missing actions, clock drift, duplicate quotes and missing propensity."
+        "Seven focused tests cover mutated/nested immutable state, hash mismatch, missing propensity, action support, timing, no-trade and replay-vs-observed corruption.",
+        "Focused verification: tests/test_learning_trajectory.py (7 passed); Ruff and targeted mypy passed."
       ],
-      "blocker": "RL dataset corruption suite absent.",
-      "last_audited_at_utc": "2026-11-24T19:02:00Z",
-      "commit": "f86c6beb",
+      "blocker": "Partial: typed row contract exists, but no persisted trajectory builder, OPE eligibility/support estimation, fold assignment, Parquet export, full corruption suite or verified cross-platform build is wired.",
+      "last_audited_at_utc": "2026-11-24T19:40:00Z",
+      "commit": "PENDING",
       "test_evidence": [
         "Source audit of decision journals, session runner, outcome/abstention, execution timing, IPS helper, data permissions and trial-split utilities; no unified RL trajectory pipeline found."
       ]
@@ -17090,7 +17100,7 @@
       "tests/test_position_signals.py",
       "tests/test_product_charter.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL."
   },
   "counts_by_status": {
     "COMPLETE": 48,
