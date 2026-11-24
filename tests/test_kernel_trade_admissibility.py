@@ -6,8 +6,10 @@ import pytest
 from financial_brain.costs.india import CostModel, Segment
 from financial_brain.forward_edge.cost_schedule import CostSchedule
 from financial_brain.forward_edge.parameter_freeze import StrategyFreeze, StrategyFreezeRegistry
+from financial_brain.kernel.entry_constraints import EntryConstraintPolicy, evaluate_entry_constraints
 from financial_brain.kernel.execution_feasibility import ExecutionEvidence
 from financial_brain.kernel.net_ev import FillScenario, NetEVCalibration, NetEVOutcome, net_ev
+from financial_brain.kernel.trade_economics_receipt import CashBenchmark, TradeReceiptError, build_trade_economics_receipt
 from financial_brain.kernel.trade_admissibility import (
     DecisionReason,
     DecisionState,
@@ -15,13 +17,24 @@ from financial_brain.kernel.trade_admissibility import (
     TradeHurdle,
     evaluate_trade_admissibility,
 )
-from financial_brain.kernel.trader_signal import DeskId, EvidenceTier, SignalSide, TraderSignal
+from financial_brain.kernel.trader_signal import (
+    DeskId, EntryCondition, EvidenceTier, ExitTrigger, PriceBasis, SignalSide, TradePlan,
+    TraderSignal,
+)
 
 
 DECISION = datetime(2026, 11, 23, 18, 30, tzinfo=timezone.utc)
 HASH = "a" * 64
 PARAMS = "b" * 64
 MODEL = "c" * 64
+
+
+def _schedule():
+    return CostSchedule(
+        schedule_id="paper-costs", version="v1", effective_from=date(2026, 11, 24),
+        effective_to=None, segment=Segment.DELIVERY, model=CostModel(),
+        source_ref="tests/paper-cost-fixture", source_sha256=HASH,
+    )
 
 
 def _signal(side=SignalSide.BUY):
@@ -60,12 +73,7 @@ def _estimate(*, positive=True, calibrated=True):
         max_quote_age_ms=500, quote_source_id="KITE_READ_ONLY", quote_source_sha256=HASH,
         calibration=NetEVCalibration("holdout-v1", HASH, True) if calibrated else None,
     )
-    costs = CostSchedule(
-        schedule_id="paper-costs", version="v1", effective_from=date(2026, 11, 24),
-        effective_to=None, segment=Segment.DELIVERY, model=CostModel(),
-        source_ref="tests/paper-cost-fixture", source_sha256=HASH,
-    )
-    return net_ev(_signal(), scenario, costs)
+    return net_ev(_signal(), scenario, _schedule())
 
 
 def _execution(**changes):
@@ -101,11 +109,42 @@ def _frozen():
     )
 
 
+def _economic_receipt(signal_value, execution_value):
+    plan = TradePlan(
+        instrument_id=signal_value.instrument_id, side=signal_value.side.value,
+        price_basis=PriceBasis.UNDERLYING, entry_condition=EntryCondition.LIMIT_ZONE,
+        entry_low=Decimal("100"), entry_high=Decimal("101"), stop_price=Decimal("95"),
+        target_price=Decimal("110"), invalidation="close below support", max_holding_sessions=3,
+        tick_size=Decimal("0.05"), lot_size=Decimal("1"), unit_precision=0,
+        quantity=Decimal("10"), entry_expires_at=signal_value.expires_at,
+        exit_triggers=(ExitTrigger.HARD_STOP, ExitTrigger.TAKE_PROFIT), paper_execution_eligible=True,
+    )
+    entry = evaluate_entry_constraints(
+        signal=signal_value, plan=plan,
+        policy=EntryConstraintPolicy("swing", "v1", 300, Decimal("20"), Decimal("50"), Decimal("10")),
+        execution=execution_value, decision_reference_price=Decimal("100"),
+        evaluated_at=signal_value.decision_at,
+    )
+    return build_trade_economics_receipt(
+        signal=signal_value, plan=plan, execution=execution_value, entry_decision=entry,
+        cost_schedule=_schedule(),
+        cash_benchmark=CashBenchmark("cash-v1", "v1", Decimal("0.05"), date(2026, 1, 1),
+                                     None, "tests/cash-fixture", HASH),
+        liquidity_bucket="large", holding_calendar_days=5,
+    )
+
+
 def _evaluate(registry, frozen, *, signal=None, estimate=None, execution=None, context=None,
-              no_estimate=False):
+              no_estimate=False, no_receipt=False):
+    signal_value = signal or _signal()
+    execution_value = execution or _execution()
+    try:
+        receipt = None if no_receipt else _economic_receipt(signal_value, execution_value)
+    except (TradeReceiptError, ValueError):
+        receipt = None
     return evaluate_trade_admissibility(
-        signal=signal or _signal(), estimate=None if no_estimate else (estimate or _estimate()),
-        execution=execution or _execution(),
+        signal=signal_value, estimate=None if no_estimate else (estimate or _estimate()),
+        economic_receipt=receipt, execution=execution_value,
         hurdle=TradeHurdle("momentum", "v1", "hurdle-v1", Decimal("1"), Decimal("2")),
         context=context or _context(frozen), freeze_registry=registry,
     )
@@ -177,6 +216,18 @@ def test_missing_net_ev_costed_quote_estimate_cannot_become_trade(tmp_path):
 
     assert decision.state is DecisionState.WATCH
     assert DecisionReason.ESTIMATE_UNAVAILABLE in decision.reasons
+    registry.close()
+
+
+def test_missing_decision_time_economics_receipt_cannot_become_trade(tmp_path):
+    registry = StrategyFreezeRegistry(tmp_path / "freeze.sqlite3")
+    frozen = _frozen()
+    registry.freeze(frozen)
+
+    decision = _evaluate(registry, frozen, no_receipt=True)
+
+    assert decision.state is DecisionState.WATCH
+    assert DecisionReason.ECONOMIC_RECEIPT_UNAVAILABLE in decision.reasons
     registry.close()
 
 

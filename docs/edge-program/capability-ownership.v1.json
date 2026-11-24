@@ -74,7 +74,7 @@
         "src/financial_brain/kernel/probability_calibration.py",
         "src/financial_brain/forward_edge/parameter_freeze.py"
       ],
-      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence, costed net EV, itemized target/stop/cash economics, and versioned OOT probability scoring into research/paper decision evidence. It is not wired into the forward session runner, has no OOT forecast cohort yet, and never authorizes broker orders."
+      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence, costed net EV, a matching itemized target/stop/cash economics receipt, and versioned OOT probability scoring into research/paper decision evidence. Missing or mismatched receipts cannot pass. It is not wired into the forward session runner, has no OOT forecast cohort yet, and never authorizes broker orders."
     },
     {
       "id": "prospective_strategy_adapter",

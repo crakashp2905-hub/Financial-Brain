@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timezone
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from zoneinfo import ZoneInfo
@@ -23,6 +23,7 @@ from .execution_feasibility import (
     assess_execution_feasibility,
 )
 from .net_ev import NetEVEstimate
+from .trade_economics_receipt import TradeEconomicsReceipt
 from .trader_signal import SignalSide, TraderSignal
 
 
@@ -55,6 +56,8 @@ class DecisionReason(StrEnum):
     BUDGET_INSUFFICIENT = "BUDGET_INSUFFICIENT"
     COHORT_IDENTITY_INVALID = "COHORT_IDENTITY_INVALID"
     ESTIMATE_UNAVAILABLE = "ESTIMATE_UNAVAILABLE"
+    ECONOMIC_RECEIPT_UNAVAILABLE = "ECONOMIC_RECEIPT_UNAVAILABLE"
+    ECONOMIC_RECEIPT_MISMATCH = "ECONOMIC_RECEIPT_MISMATCH"
     QUOTE_PROVENANCE_MISMATCH = "QUOTE_PROVENANCE_MISMATCH"
 
 
@@ -143,20 +146,24 @@ class TradeDecision:
     cohort_sha256: str | None
     expected_net_pnl_inr: Decimal | None
     uncertainty_buffer_inr: Decimal
+    economic_receipt_sha256: str | None
     is_broker_authorization: bool = False
 
 
 def _decision(state: DecisionState, reasons: set[DecisionReason], context: FrozenDecisionContext,
-              estimate: NetEVEstimate | None, hurdle: TradeHurdle) -> TradeDecision:
+              estimate: NetEVEstimate | None, hurdle: TradeHurdle,
+              economic_receipt: TradeEconomicsReceipt | None) -> TradeDecision:
     return TradeDecision(state, tuple(sorted(reasons, key=lambda x: x.value)), context.cohort_sha256,
                          estimate.expected_net_pnl_inr if estimate else None,
-                         hurdle.uncertainty_buffer_inr)
+                         hurdle.uncertainty_buffer_inr,
+                         economic_receipt.receipt_sha256 if economic_receipt else None)
 
 
 def evaluate_trade_admissibility(
     *,
     signal: TraderSignal,
     estimate: NetEVEstimate | None,
+    economic_receipt: TradeEconomicsReceipt | None,
     execution: ExecutionEvidence,
     hurdle: TradeHurdle,
     context: FrozenDecisionContext,
@@ -169,7 +176,8 @@ def evaluate_trade_admissibility(
     portfolio utility, executable quote, costed net edge and calibrated lower bound pass.
     """
     if signal.side in {SignalSide.WATCH, SignalSide.NO_TRADE}:
-        return _decision(DecisionState.CASH, {DecisionReason.NO_EDGE}, context, estimate, hurdle)
+        return _decision(DecisionState.CASH, {DecisionReason.NO_EDGE}, context, estimate, hurdle,
+                         economic_receipt)
     if (signal.strategy_id, signal.strategy_version) != (hurdle.strategy_id, hurdle.strategy_version):
         raise AdmissibilityError("hurdle does not match signal strategy identity/version")
 
@@ -237,23 +245,38 @@ def evaluate_trade_admissibility(
         elif interval[0] <= hurdle.uncertainty_buffer_inr:
             reasons.add(DecisionReason.CONFIDENCE_TOO_LOW)
 
+    if economic_receipt is None:
+        reasons.add(DecisionReason.ECONOMIC_RECEIPT_UNAVAILABLE)
+    else:
+        receipt_matches = (
+            economic_receipt.signal_id == signal.signal_id and
+            economic_receipt.instrument_id == signal.instrument_id and
+            economic_receipt.decision_at_utc == signal.decision_at.astimezone(timezone.utc).isoformat() and
+            economic_receipt.quote_source_id == execution.quote_source_id and
+            economic_receipt.quote_source_sha256 == execution.quote_source_hash and
+            (estimate is None or
+             economic_receipt.cost_schedule_sha256 == estimate.cost_schedule_sha256)
+        )
+        if not receipt_matches:
+            reasons.add(DecisionReason.ECONOMIC_RECEIPT_MISMATCH)
+
     hard = {
         DecisionReason.NO_EDGE, DecisionReason.COSTS_EXCEED_GROSS_EDGE,
         DecisionReason.NET_EDGE_BELOW_HURDLE, DecisionReason.VOLATILITY_LIMIT,
         DecisionReason.APPROVAL_MISSING, DecisionReason.INSTRUMENT_NOT_ACCEPTED,
         DecisionReason.SESSION_INELIGIBLE, DecisionReason.BUDGET_INSUFFICIENT,
         DecisionReason.COHORT_IDENTITY_INVALID, DecisionReason.MARGINAL_PORTFOLIO_HARM,
-        DecisionReason.INSTRUMENT_HALTED,
+        DecisionReason.INSTRUMENT_HALTED, DecisionReason.ECONOMIC_RECEIPT_MISMATCH,
     }
     if feasibility.state is FeasibilityState.NO_TRADE:
-        return _decision(DecisionState.REJECT, reasons, context, estimate, hurdle)
+        return _decision(DecisionState.REJECT, reasons, context, estimate, hurdle, economic_receipt)
     if reasons & hard:
         # A utility-dominated opportunity explicitly leaves the capital unallocated.
         state = DecisionState.CASH if DecisionReason.MARGINAL_PORTFOLIO_HARM in reasons else DecisionState.REJECT
-        return _decision(state, reasons, context, estimate, hurdle)
+        return _decision(state, reasons, context, estimate, hurdle, economic_receipt)
     if reasons:
-        return _decision(DecisionState.WATCH, reasons, context, estimate, hurdle)
-    return _decision(DecisionState.TRADE, set(), context, estimate, hurdle)
+        return _decision(DecisionState.WATCH, reasons, context, estimate, hurdle, economic_receipt)
+    return _decision(DecisionState.TRADE, set(), context, estimate, hurdle, economic_receipt)
 
 
 __all__ = [

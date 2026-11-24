@@ -8586,6 +8586,7 @@
         "financial_brain.forward_edge.parameter_freeze",
         "net_ev",
         "re",
+        "trade_economics_receipt",
         "trader_signal",
         "zoneinfo"
       ],
@@ -8593,7 +8594,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/trade_admissibility.py",
-      "source_sha256": "ff0b266e6ae2f4a7b5beae639f8bb0c8dc707af631283e2902988d3d10bdaaf3",
+      "source_sha256": "b12ba5f339160ce9aec3205c53a6a739e418f721d58fa7e1fadb6e145268b2e4",
       "test_paths": [
         "tests/test_kernel_entry_constraints.py",
         "tests/test_kernel_probability_calibration.py",
