@@ -70,9 +70,10 @@
         "src/financial_brain/kernel/net_ev.py",
         "src/financial_brain/kernel/execution_feasibility.py",
         "src/financial_brain/kernel/entry_constraints.py",
+        "src/financial_brain/kernel/trade_economics_receipt.py",
         "src/financial_brain/forward_edge/parameter_freeze.py"
       ],
-      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence and costed net EV into reason-coded research/paper decisions. It is not wired into the forward session runner and never authorizes broker orders."
+      "boundary": "Combines registered strategy freezes, paper budget/session/instrument/approval checks, entry-zone/TTL checks, execution evidence, costed net EV and an itemized target/stop/cash economics receipt into reason-coded research/paper decisions. It is not wired into the forward session runner and never authorizes broker orders."
     },
     {
       "id": "prospective_strategy_adapter",
@@ -2336,6 +2337,12 @@
       "path": "src/financial_brain/kernel/trade_admissibility.py",
       "module_role": "canonical_contract_or_signal_output",
       "module_owner": "src/financial_brain/kernel/trade_admissibility.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/kernel/trade_economics_receipt.py",
+      "path": "src/financial_brain/kernel/trade_economics_receipt.py",
+      "module_role": "canonical_contract_or_signal_output",
+      "module_owner": "src/financial_brain/kernel/trade_economics_receipt.py"
     },
     {
       "capability_id": "module:src/financial_brain/opportunity/conditions.py",
