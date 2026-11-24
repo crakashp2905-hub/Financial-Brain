@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
+from math import isfinite
 
 from financial_brain.strategies.four_node.indicators import Cluster20
 from financial_brain.strategies.four_node.nodes import Node
@@ -35,7 +36,8 @@ def _direction(n1: Node, n2: Node, n3: Node) -> str | None:
 
 def evaluate(v: Variant, nodes: tuple[Node, Node, Node], c20: Cluster20, bar: int, close: float,
              barriers: list[float], unit: float, spread: float, *,
-             d1_inclusive: bool = True, d2_inclusive: bool = False) -> Setup:
+             d1_inclusive: bool = True, d2_inclusive: bool = False,
+             tick: float | None = None) -> Setup:
     """Evaluate a completed bar ``bar`` closing at ``close`` against N1..N3 (all observable)."""
     if not v.executable() and v.executable_intent:
         return Setup("BLOCKED", None, (), tuple(f"unresolved:{u}" for u in v.unresolved()))
@@ -45,6 +47,10 @@ def evaluate(v: Variant, nodes: tuple[Node, Node, Node], c20: Cluster20, bar: in
     side = _direction(n1, n2, n3)
     if side is None:
         return Setup("REJECTED", None, (), ("not_zigzag",))
+    if not isfinite(unit) or unit <= 0:
+        return Setup("BLOCKED", side, (), ("invalid_distance_unit",))
+    if not isfinite(spread) or spread < 0:
+        return Setup("BLOCKED", side, (), ("invalid_spread",))
     p = v.params
     ok: list[str] = []
     bad: list[str] = []
@@ -71,6 +77,11 @@ def evaluate(v: Variant, nodes: tuple[Node, Node, Node], c20: Cluster20, bar: in
     check("d1_max", d1 <= d1_limit if d1_inclusive else d1 < d1_limit)
     check("d2_max", d2 <= d2_limit if d2_inclusive else d2 < d2_limit)
     stop = n3.price + spread if sell else n3.price - spread
+    if tick is not None:
+        if not isfinite(tick) or tick <= 0:
+            return Setup("BLOCKED", side, tuple(ok), tuple(bad + ["invalid_tick_size"]))
+        stop = round_stop(stop, tick, side)
+    check("stop_side_valid", stop > close if sell else stop < close)
     risk = abs(close - stop) / unit
     check("max_sl", risk <= p[f"max_sl{k}"])
     ahead, _behind = barriers_split(close, side, barriers)
@@ -112,6 +123,10 @@ class Trail:
 def round_stop(stop: float, tick: float, side: str) -> float:
     """Round a stop to tick *away* from entry so rounding never tightens risk (FB-2520)."""
     import math
+    if side not in {"BUY", "SELL"}:
+        raise ValueError("side must be BUY or SELL")
+    if not (isfinite(stop) and isfinite(tick)) or tick <= 0:
+        raise ValueError("stop must be finite and tick must be positive")
     n = stop / tick
     return (math.ceil(n - 1e-9) if side == "SELL" else math.floor(n + 1e-9)) * tick
 

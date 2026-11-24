@@ -221,6 +221,23 @@ def test_barrier_too_close_rejects():
     assert "barrier_clearance" in behind.passed
 
 
+def test_initial_stops_are_tick_rounded_away_from_entry_and_side_checked():
+    sell = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8),
+                    10, 2007.8, [], 0.2, 0.3, tick=0.25)
+    assert sell.stop == pytest.approx(2009.5)
+    assert "stop_side_valid" in sell.passed
+
+    buy_nodes = (Node(-1, 1990.0, 1, 3), Node(1, 1992.0, 4, 6), Node(-1, 1991.0, 7, 9))
+    buy = evaluate(xau_exec(), buy_nodes, Cluster20(1990.0, 1991.0, 1992.0),
+                   10, 1992.1, [], 0.2, 0.3, tick=0.25)
+    assert buy.stop == pytest.approx(1990.5)
+    assert "stop_side_valid" in buy.passed
+
+    invalid = evaluate(xau_exec(), sell_nodes(), Cluster20(2008.5, 2009.2, 2009.8),
+                       10, 2010.0, [], 0.2, 0.3)
+    assert "stop_side_valid" in invalid.failed
+
+
 def test_trailing_ratchets_and_never_loosens():
     t = Trail("BUY", 100.0, 98.5, 0.1, 10, 5)
     assert t.on_price(100.9) == 98.5 and t.tp_active

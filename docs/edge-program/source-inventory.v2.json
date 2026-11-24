@@ -12682,7 +12682,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/strategies/four_node/rules.py",
-      "source_sha256": "caa8cf9c9b78f6ac507ef671f3e7ebd11eecf6afb4f0262f21d36ffe7e593e4c",
+      "source_sha256": "f4cbc684f7927e8b2906aa1c9f12482b45308ec2d6bbbb710db2bf9731da0e1a",
       "test_paths": []
     },
     {
