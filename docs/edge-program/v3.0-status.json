@@ -3674,7 +3674,7 @@
       ],
       "blocker": "Partial: the terminal build API accepts resolved ETF evidence rows, but no permission-cleared persisted ETF snapshot source currently assembles those rows; calibrated execution cost and prospective evidence are also absent.",
       "last_audited_at_utc": "2026-11-24T00:38:38Z",
-      "commit": null
+      "commit": "fa7f367b45dd80cca4bbf062249b6b657a51fa1d"
     },
     {
       "id": "FB-1107",
