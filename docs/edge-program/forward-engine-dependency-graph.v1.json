@@ -43,6 +43,7 @@
       "financial_brain.ingest",
       "financial_brain.ingest.kite_minute",
       "financial_brain.ingest.quote_archive",
+      "financial_brain.kernel.units",
       "financial_brain.opportunity",
       "financial_brain.opportunity.engine",
       "financial_brain.opportunity.memory",
@@ -96,6 +97,10 @@
     {
       "source": "financial_brain.forward_edge.market_data",
       "target": "financial_brain.forward_edge.quote_archive"
+    },
+    {
+      "source": "financial_brain.forward_edge.market_data",
+      "target": "financial_brain.kernel.units"
     },
     {
       "source": "financial_brain.forward_edge.paper_accounting",
@@ -192,6 +197,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.kernel.events"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.kernel.units"
     },
     {
       "source": "financial_brain.ingest.kite_minute",
@@ -366,8 +375,9 @@
     "financial_brain.forward_edge.data_permissions",
     "financial_brain.forward_edge.market_data",
     "financial_brain.forward_edge.market_events",
-    "financial_brain.forward_edge.quote_archive"
+    "financial_brain.forward_edge.quote_archive",
+    "financial_brain.kernel.units"
   ],
-  "source_count": 682,
-  "source_tree_sha256": "1f148232ccf78569de605028401931114fcef1c11dbb660edd27cbba149be3b2"
+  "source_count": 691,
+  "source_tree_sha256": "b6fef64a198eca3f080f87aabf7c5ba42de5f6d6d0414e4ac3cd068c25e0cb08"
 }

@@ -123,6 +123,50 @@
       "source": ["src/financial_brain/forward_edge/modes.py"],
       "tests": ["tests/test_forward_edge_f00.py"],
       "blockers": ["Physical orders are disabled by build policy and no human/compliance approval is recorded"]
+    },
+    {
+      "id": "etf-trend-mean-reversion-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 ETF trend, mean-reversion and volatility-target candidate calculator over exact caller-sourced closes; implementation contract only, not performance evidence or trade authorization.",
+      "evidence": ["tests/test_etf_trend_rules.py"],
+      "source": ["src/financial_brain/features/etf_trend_rules.py"],
+      "tests": ["tests/test_etf_trend_rules.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No benchmark, costs, capacity, tax, turnover, drawdown or prospective evidence evaluated"]
+    },
+    {
+      "id": "etf-cross-asset-rotation-candidate",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Frozen v1.0.0 equity/debt/gold/silver ETF rotation candidate with inverse-volatility, frozen buy-and-hold, ex-ante same-risk, and cash controls; no performance evaluation or order authority.",
+      "evidence": ["tests/test_etf_cross_asset_rotation.py"],
+      "source": ["src/financial_brain/features/etf_cross_asset_rotation.py"],
+      "tests": ["tests/test_etf_cross_asset_rotation.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "No return, cost, tax, turnover, capacity, or prospective cohort evaluation"]
+    },
+    {
+      "id": "etf-intraday-opening-range-screen",
+      "owner_role": "Research",
+      "maturity": "local_tested",
+      "execution_mode": "RESEARCH_REPLAY",
+      "fidelity": "Opening-range ETF candidate is emitted only after point-in-time complete bars, observed quote/spread, two-sided depth, and estimated cost gates; full spread is counted round trip. No performance evidence or order authority.",
+      "evidence": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "source": ["src/financial_brain/features/etf_intraday_screen.py", "src/financial_brain/features/etf_bars.py", "src/financial_brain/features/etf_liquidity.py"],
+      "tests": ["tests/test_etf_intraday_screen.py", "tests/test_etf_bars.py", "tests/test_etf_liquidity.py"],
+      "blockers": ["No research/trial authorization; Q4-2026 protected budget exhausted and Q1-2027 not authorized", "Spread/Amihud/caller-cost estimate is not calibrated execution or profitability evidence"]
+    },
+    {
+      "id": "mf-action-decision-journal",
+      "owner_role": "Paper",
+      "maturity": "local_tested",
+      "execution_mode": "LIVE_PAPER",
+      "fidelity": "Human-selected SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD choices are durably recorded and rendered as decisions only; no MF order submission, authentication, or external acceptance is claimed.",
+      "evidence": ["tests/test_mf_decisions.py"],
+      "source": ["src/financial_brain/paper/mf_decisions.py", "src/financial_brain/paper/terminal.py", "src/financial_brain/storage/schema.sql", "src/financial_brain/cli.py"],
+      "tests": ["tests/test_mf_decisions.py"],
+      "blockers": ["Actor identity is self-declared; no authenticated workflow", "Decision context hash is caller-supplied and not attested", "No MF order or external fund transaction is connected"]
     }
   ]
 }

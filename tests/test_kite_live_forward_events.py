@@ -44,6 +44,13 @@ def test_forward_events_preserves_executable_depth_ohlc_status_and_source_hash()
     assert event.payload["exchange_status"] == "OPEN"
     assert event.evidence_id and len(event.evidence_id) == 64
     assert event.source == "KITE_CONNECT_READ_ONLY"
+    assert event.source_at == event.exchange_at == event.event_time
+    assert event.received_at == RECEIVED
+    assert event.available_at == RECEIVED
+    assert event.published_at is None
+    restored = type(event).from_dict(event.as_dict())
+    assert restored.source_at == event.source_at
+    assert restored.exchange_at == event.exchange_at
 
 
 def test_mock_and_default_kite_provider_use_the_same_sanitized_event_contract(monkeypatch, capsys):

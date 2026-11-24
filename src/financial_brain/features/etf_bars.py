@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+import hashlib
+import json
 import math
 from typing import Any
 
@@ -37,7 +39,7 @@ def aggregate_session_bars(
     session_open, session_close = calendar.session_bounds_utc(venue, session_date)
     cutoff = min(as_of.astimezone(timezone.utc), session_close)
     span = interval_minutes * 60
-    grouped: dict[int, list[tuple[datetime, int, str, float, datetime]]] = defaultdict(list)
+    grouped: dict[int, list[tuple[datetime, int, str, float, datetime, str, str]]] = defaultdict(list)
     prior_volume: int | None = None
     ordered = sorted(events, key=lambda event: (event.event_time, event.sequence or -1, event.event_id))
     for event in ordered:
@@ -62,7 +64,8 @@ def aggregate_session_bars(
         delta = 0 if prior_volume is None or volume < prior_volume else volume - prior_volume
         prior_volume = volume
         bucket = int((event_time - session_open).total_seconds() // span)
-        grouped[bucket].append((event_time, delta, event.source, price, available_at))
+        grouped[bucket].append((event_time, delta, event.source, price, available_at,
+                                event.event_id, event.sha256()))
 
     bars: list[dict[str, Any]] = []
     for bucket, rows in sorted(grouped.items()):
@@ -81,6 +84,10 @@ def aggregate_session_bars(
             "observations": len(rows),
             "sources": sorted({row[2] for row in rows}),
             "available_at": max(row[4] for row in rows).isoformat(),
+            "source_event_ids": [row[5] for row in rows],
+            "input_sha256": hashlib.sha256(json.dumps(
+                [(row[5], row[6]) for row in rows], separators=(",", ":"), allow_nan=False
+            ).encode("utf-8")).hexdigest(),
         })
     return bars
 

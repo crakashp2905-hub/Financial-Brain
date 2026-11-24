@@ -879,6 +879,30 @@ CREATE TABLE IF NOT EXISTS mf_paper_sip_plans (
     created_at TIMESTAMPTZ NOT NULL
 );
 
+-- Owner-local MF/SIP preferences are versioned policy, never a broker instruction.
+CREATE TABLE IF NOT EXISTS mf_owner_allocation_policies (
+    policy_id VARCHAR NOT NULL,
+    owner_label VARCHAR NOT NULL,
+    version INTEGER NOT NULL CHECK (version > 0),
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    cash_reserve_fraction DECIMAL(12,10) NOT NULL CHECK (cash_reserve_fraction BETWEEN 0 AND 1),
+    max_equity_fraction DECIMAL(12,10) NOT NULL CHECK (max_equity_fraction BETWEEN 0 AND 1),
+    max_debt_fraction DECIMAL(12,10) NOT NULL CHECK (max_debt_fraction BETWEEN 0 AND 1),
+    max_etf_fraction DECIMAL(12,10) NOT NULL CHECK (max_etf_fraction BETWEEN 0 AND 1),
+    rebalance_band_fraction DECIMAL(12,10) NOT NULL CHECK (rebalance_band_fraction BETWEEN 0 AND 1),
+    sip_amount_inr DECIMAL(38,18) CHECK (sip_amount_inr IS NULL OR sip_amount_inr > 0),
+    sip_frequency VARCHAR CHECK (sip_frequency IS NULL OR sip_frequency IN ('WEEKLY','FORTNIGHTLY','MONTHLY')),
+    sip_day INTEGER CHECK (sip_day IS NULL OR sip_day BETWEEN 1 AND 31),
+    payload_sha256 VARCHAR NOT NULL,
+    payload_json VARCHAR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (policy_id, version),
+    CHECK (effective_to IS NULL OR effective_to >= effective_from),
+    CHECK ((sip_amount_inr IS NULL AND sip_frequency IS NULL AND sip_day IS NULL)
+        OR (sip_amount_inr IS NOT NULL AND sip_frequency IS NOT NULL AND sip_day IS NOT NULL))
+);
+
 CREATE TABLE IF NOT EXISTS mf_paper_sip_installments (
     installment_id VARCHAR PRIMARY KEY,
     plan_id VARCHAR NOT NULL,
@@ -1721,4 +1745,36 @@ CREATE TABLE IF NOT EXISTS monthly_updates (
     kind            VARCHAR,
     headline        VARCHAR,
     attachment      VARCHAR
+);
+
+-- Human-selected MF action decisions are a separate append-only journal, never orders.
+CREATE TABLE IF NOT EXISTS mf_action_decisions (
+    decision_id                 VARCHAR PRIMARY KEY,
+    account_id                  VARCHAR NOT NULL,
+    actor_id                    VARCHAR NOT NULL,
+    action                      VARCHAR NOT NULL CHECK (action IN ('SUBSCRIBE','REDEEM','SWITCH','SIP','HOLD')),
+    reason                      VARCHAR NOT NULL,
+    source_snapshot_sha256      VARCHAR NOT NULL CHECK (regexp_full_match(source_snapshot_sha256, '[0-9a-f]{64}')),
+    decided_at                  TIMESTAMPTZ NOT NULL,
+    expires_at                  TIMESTAMPTZ NOT NULL,
+    scheme_code                 VARCHAR,
+    plan                        VARCHAR,
+    option                      VARCHAR,
+    folio_id                    VARCHAR,
+    amount_inr                  DECIMAL(38,18),
+    units                       DECIMAL(38,18),
+    target_scheme_code          VARCHAR,
+    target_plan                 VARCHAR,
+    target_option               VARCHAR,
+    sip_frequency               VARCHAR,
+    sip_start                   DATE,
+    sip_end                     DATE,
+    execution_scope             VARCHAR NOT NULL CHECK (execution_scope='PAPER_DECISION_ONLY'),
+    physical_orders_authorized  BOOLEAN NOT NULL CHECK (physical_orders_authorized=FALSE),
+    decision_sha256             VARCHAR NOT NULL CHECK (regexp_full_match(decision_sha256, '[0-9a-f]{64}')),
+    body_json                   VARCHAR NOT NULL,
+    recorded_at                 TIMESTAMPTZ NOT NULL,
+    CHECK (expires_at > decided_at),
+    CHECK (amount_inr IS NULL OR amount_inr > 0),
+    CHECK (units IS NULL OR units > 0)
 );

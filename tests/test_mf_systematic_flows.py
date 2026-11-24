@@ -8,6 +8,7 @@ from financial_brain.kernel.mf_systematic_flows import (
     MFSystematicFlowEventKind, MFSystematicFlowInstruction,
     MFSystematicFlowKind, MFSystematicFlowLifecycle,
 )
+from financial_brain.kernel.units import INRNotional, MutualFundUnits, NavPerUnit
 
 
 START = datetime(2026, 11, 23, 5, tzinfo=timezone.utc)
@@ -58,6 +59,23 @@ def test_swp_books_redemption_load_and_delays_cash_until_payout():
     with pytest.raises(MFSystematicFlowError, match="ordering"):
         lifecycle.append(_event(MFSystematicFlowEventKind.PURCHASE_FUNDS_APPLIED, 40,
                                 amount_inr=Decimal("1")))
+
+
+def test_systematic_flows_accept_nominal_inr_nav_and_fractional_unit_values():
+    instruction = _instruction(
+        MFSystematicFlowKind.SWP, amount_inr=None,
+        units=MutualFundUnits(Decimal("12.5")),
+    )
+    assert instruction.units == Decimal("12.5")
+    event = _event(
+        MFSystematicFlowEventKind.ALLOTMENT_CONFIRMED, 10,
+        amount_inr=INRNotional(Decimal("9000")),
+        nav_per_unit=NavPerUnit(Decimal("90")),
+        units=MutualFundUnits(Decimal("100")),
+    )
+    assert event.amount_inr == Decimal("9000")
+    assert event.nav_per_unit == Decimal("90")
+    assert event.units == Decimal("100")
 
 
 def test_stp_purchase_waits_for_settled_proceeds_and_cannot_overspend():

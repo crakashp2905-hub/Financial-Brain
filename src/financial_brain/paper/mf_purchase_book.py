@@ -21,6 +21,7 @@ from ..kernel.mf_purchase_payment import (
     PaymentEvidenceBasis,
 )
 from ..kernel.trading_clock import IST
+from ..kernel.units import NavPerUnit, UnitError
 from ..providers.mf_scheme_terms import SchemeCommercialTerms
 
 
@@ -250,7 +251,7 @@ def apply_allotment(
     *,
     order_id: str,
     nav_observation_id: str,
-    nav_per_unit: Decimal | str | int,
+    nav_per_unit: Decimal | str | int | NavPerUnit,
     terms: SchemeCommercialTerms,
     permissions: tuple[DataPermission, ...],
     decision_at: datetime,
@@ -262,9 +263,12 @@ def apply_allotment(
     decision = _aware(decision_at, "decision_at")
     allotted = _aware(allotted_at, "allotted_at")
     recorded = _aware(now, "now")
-    nav = Decimal(str(nav_per_unit))
-    if not nav.is_finite() or nav <= 0:
-        raise MFPaperPurchaseError("NAV must be positive and finite")
+    try:
+        nav_unit = (nav_per_unit if isinstance(nav_per_unit, NavPerUnit)
+                    else NavPerUnit(Decimal(str(nav_per_unit))))
+    except UnitError as exc:
+        raise MFPaperPurchaseError(f"NAV must be positive INR per unit: {exc}") from exc
+    nav = nav_unit.amount
     if not nav_observation_id.strip():
         raise MFPaperPurchaseError("NAV observation ID is required")
     if decision > allotted or allotted > recorded:
@@ -321,7 +325,7 @@ def apply_allotment(
             lot_id=f"mf-purchase-lot:{order_id}", scheme_code=order.scheme_code,
             plan=order.plan, option=order.option, isin=terms.isin,
             allotted_on=eligibility[1], lock_in_until=lock_in_until,
-            investment_inr=order.amount_inr, nav_per_unit=nav,
+            investment_inr=order.amount_inr, nav_per_unit=nav_unit,
             exit_loads=terms.exit_loads,
             exit_loads_sha256=terms.source_sha256 if terms.exit_loads is not None else None,
             terms=terms, permissions=permissions, decision_at=decision, now=allotted,

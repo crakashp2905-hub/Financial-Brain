@@ -9,6 +9,7 @@ import argparse
 import json
 import sys
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 
 from .config import load
 from .corpactions import actions as ca
@@ -873,6 +874,153 @@ def cmd_paper(args) -> int:
             print(f"{r[0]}  {r[1]:<6} {r[2]}  {r[3]} -> {r[4]}  {r[5]:<6} "
                   f"{'' if r[6] is None else f'excess {r[6]:+.2f}%'}")
         print(paper.scoreboard(con))
+    return 0
+
+
+def cmd_manual_paper_decision(args) -> int:
+    """Record a candidate-bound human choice; this command never submits an order."""
+    from pathlib import Path
+
+    from .forward_edge.manual_paper_decisions import (
+        ManualPaperAction, ManualPaperDecision, ManualPaperDecisionJournal,
+    )
+
+    try:
+        decision = ManualPaperDecision(
+            decision_id=args.decision_id, session_id=args.session_id,
+            candidate_id=args.candidate_id, candidate_sha256=args.candidate_sha256,
+            actor_id=args.actor_id, actor_type=args.actor_type,
+            action=ManualPaperAction(args.action), reason=args.reason,
+            decided_at=datetime.fromisoformat(args.decided_at),
+            expires_at=datetime.fromisoformat(args.expires_at),
+            candidate_expires_at=datetime.fromisoformat(args.candidate_expires_at),
+        )
+        journal = ManualPaperDecisionJournal(Path(args.journal))
+        try:
+            inserted = journal.append(decision)
+        finally:
+            journal.close()
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "physical_orders": False}))
+        return 2
+    print(json.dumps({"ok": True, "inserted": inserted, "decision": decision.body(),
+                      "decision_sha256": decision.digest(), "physical_orders": False}, sort_keys=True))
+    return 0
+
+
+def cmd_mf_decision(args) -> int:
+    """Record a human-selected mutual-fund decision; this does not create an order."""
+    from .paper.mf_decisions import MFAction, MFActionDecision, record_decision
+
+    try:
+        decision = MFActionDecision(
+            decision_id=args.decision_id, account_id=args.account_id, actor_id=args.actor_id,
+            action=MFAction(args.action), reason=args.reason,
+            source_snapshot_sha256=args.snapshot_sha256,
+            decided_at=datetime.fromisoformat(args.decided_at),
+            expires_at=datetime.fromisoformat(args.expires_at),
+            scheme_code=args.scheme_code, plan=args.plan, option=args.option, folio_id=args.folio_id,
+            amount_inr=args.amount_inr, units=args.units,
+            target_scheme_code=args.target_scheme_code, target_plan=args.target_plan,
+            target_option=args.target_option, sip_frequency=args.sip_frequency,
+            sip_start=date.fromisoformat(args.sip_start) if args.sip_start else None,
+            sip_end=date.fromisoformat(args.sip_end) if args.sip_end else None,
+        )
+        database = Database(load())
+        database.migrate()
+        with database.connect() as con:
+            inserted = record_decision(con, decision, recorded_at=datetime.now().astimezone())
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "physical_orders_authorized": False}))
+        return 2
+    print(json.dumps({"ok": True, "inserted": inserted, "decision": decision.body(),
+                      "decision_sha256": decision.digest(), "physical_orders_authorized": False}, sort_keys=True))
+    return 0
+
+
+def cmd_mf_policy(args) -> int:
+    """Persist owner-local MF/SIP settings; never touches a live folio or order API."""
+    from .paper.mf_allocation_policy import MFOwnerAllocationPolicy, record_policy
+
+    try:
+        policy = MFOwnerAllocationPolicy(
+            policy_id=args.policy_id, owner_label=args.owner_label, version=args.version,
+            effective_from=date.fromisoformat(args.effective_from),
+            effective_to=date.fromisoformat(args.effective_to) if args.effective_to else None,
+            cash_reserve_fraction=args.cash_reserve_fraction,
+            max_equity_fraction=args.max_equity_fraction,
+            max_debt_fraction=args.max_debt_fraction,
+            max_etf_fraction=args.max_etf_fraction,
+            rebalance_band_fraction=args.rebalance_band_fraction,
+            sip_amount_inr=args.sip_amount_inr, sip_frequency=args.sip_frequency,
+            sip_day=args.sip_day,
+        )
+        database = Database(load())
+        database.migrate()
+        with database.connect() as con:
+            result = record_policy(con, policy, recorded_at=datetime.now().astimezone())
+    except (ValueError, OSError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "external_fund_transactions": False}))
+        return 2
+    print(json.dumps({"ok": True, **result, "policy": policy.body()}, sort_keys=True))
+    return 0
+
+
+def cmd_mf_review(args) -> int:
+    """Generate a dated, read-only MF book/SIP/rebalance review for owner review."""
+    from pathlib import Path
+
+    import duckdb
+
+    from .paper.mf_allocation_policy import policy_as_of
+    from .paper.mf_lot_book import account_snapshot
+    from .paper.mf_periodic_review import build_weekly_review
+
+    try:
+        generated_at = (datetime.fromisoformat(args.as_of) if args.as_of
+                        else datetime.now().astimezone())
+        if generated_at.tzinfo is None or generated_at.utcoffset() is None:
+            raise ValueError("--as-of must include a timezone offset")
+        target_doc = json.loads(Path(args.targets).read_text(encoding="utf-8"))
+        targets = target_doc.get("target_weights") if isinstance(target_doc, dict) else None
+        if not isinstance(targets, dict):
+            raise ValueError("targets JSON must contain an object named target_weights")
+        database = Database(load(), read_only=True)
+        with database.connect() as con:
+            policy = policy_as_of(con, args.policy_id, as_of=generated_at.date(),
+                                  known_at=generated_at)
+            if policy is None:
+                raise ValueError("no owner MF policy is effective and known at --as-of")
+            account = account_snapshot(con, args.account_id, known_at=generated_at)
+            end_date = generated_at.date() + timedelta(days=args.sip_horizon_days)
+            installments = [dict(zip(
+                ("installment_id", "plan_id", "scheme_code", "scheduled_for", "amount_inr",
+                 "current_state"), row, strict=True))
+                for row in con.execute("""SELECT installment_id, plan_id, scheme_code,
+                    scheduled_for, amount_inr, current_state FROM mf_paper_sip_installments
+                    WHERE account_id=? AND scheduled_for BETWEEN ? AND ?
+                      AND current_state NOT IN ('ALLOTTED','MISSED')
+                    ORDER BY scheduled_for, installment_id""",
+                    [args.account_id, generated_at.date(), end_date]).fetchall()]
+        report = build_weekly_review(account=account, policy=policy,
+                                     target_weights=targets, installments=installments,
+                                     generated_at=generated_at,
+                                     sip_horizon_days=args.sip_horizon_days)
+        output_path = Path(args.output) if args.output else (
+            load().data_root / "reports" / f"mf-weekly-review-{generated_at.date().isoformat()}.json")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report, indent=2, sort_keys=True, default=str) + "\n",
+                               encoding="utf-8")
+    except (ValueError, OSError, json.JSONDecodeError, duckdb.Error) as exc:
+        print(json.dumps({"ok": False, "error": str(exc), "orders_created": False}))
+        return 2
+    print(json.dumps({"ok": True, "report": str(output_path),
+                      "report_sha256": report["report_sha256"],
+                      "rebalance_status": report["rebalance_status"],
+                      "rebalance_candidates": len(report["rebalance_candidates"]),
+                      "upcoming_sips": len(report["upcoming_sips"]),
+                      "liquidity_status": report["liquidity_candidate"]["status"],
+                      "orders_created": False}, sort_keys=True))
     return 0
 
 
@@ -2724,6 +2872,70 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("action", choices=["open", "mark", "list"])
     g.add_argument("decision_id", nargs="?")
     g.set_defaults(fn=cmd_paper)
+
+    g = sub.add_parser("paper-decision", help="record a human choice for a frozen paper candidate; no orders")
+    g.add_argument("--action", required=True, choices=["APPROVE", "REJECT", "WATCH", "NO_TRADE"])
+    g.add_argument("--decision-id", required=True)
+    g.add_argument("--session-id", required=True)
+    g.add_argument("--candidate-id", required=True)
+    g.add_argument("--candidate-sha256", required=True)
+    g.add_argument("--actor-id", required=True, help="named human operator (self-declared by this local CLI)")
+    g.add_argument("--actor-type", choices=["human", "agent"], default="human")
+    g.add_argument("--reason", required=True)
+    g.add_argument("--decided-at", required=True, help="ISO-8601 timestamp with timezone")
+    g.add_argument("--expires-at", required=True, help="decision expiry, no later than candidate expiry")
+    g.add_argument("--candidate-expires-at", required=True, help="candidate signal TTL boundary")
+    g.add_argument("--journal", default="data/forward-edge/manual-paper-decisions.sqlite3")
+    g.set_defaults(fn=cmd_manual_paper_decision)
+
+    g = sub.add_parser("mf-decision", help="record SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD as a decision; no order")
+    g.add_argument("--action", required=True, choices=["SUBSCRIBE", "REDEEM", "SWITCH", "SIP", "HOLD"])
+    g.add_argument("--decision-id", required=True)
+    g.add_argument("--account-id", required=True)
+    g.add_argument("--actor-id", required=True, help="named human decision maker")
+    g.add_argument("--reason", required=True)
+    g.add_argument("--snapshot-sha256", required=True, help="hash of the decision-time consumer context")
+    g.add_argument("--decided-at", required=True, help="ISO-8601 timestamp with timezone")
+    g.add_argument("--expires-at", required=True, help="ISO-8601 decision expiry, at most 90 days")
+    g.add_argument("--scheme-code")
+    g.add_argument("--plan")
+    g.add_argument("--option")
+    g.add_argument("--folio-id")
+    g.add_argument("--amount-inr")
+    g.add_argument("--units")
+    g.add_argument("--target-scheme-code")
+    g.add_argument("--target-plan")
+    g.add_argument("--target-option")
+    g.add_argument("--sip-frequency", choices=["WEEKLY", "FORTNIGHTLY", "MONTHLY"])
+    g.add_argument("--sip-start", help="YYYY-MM-DD")
+    g.add_argument("--sip-end", help="YYYY-MM-DD")
+    g.set_defaults(fn=cmd_mf_decision)
+
+    g = sub.add_parser("mf-policy", help="record versioned owner MF/SIP preferences; no folio or order API")
+    g.add_argument("--policy-id", required=True)
+    g.add_argument("--owner-label", required=True, help="self-declared local owner label")
+    g.add_argument("--version", type=int, required=True)
+    g.add_argument("--effective-from", required=True, help="YYYY-MM-DD")
+    g.add_argument("--effective-to", help="optional YYYY-MM-DD")
+    g.add_argument("--cash-reserve-fraction", required=True, type=Decimal)
+    g.add_argument("--max-equity-fraction", required=True, type=Decimal)
+    g.add_argument("--max-debt-fraction", required=True, type=Decimal)
+    g.add_argument("--max-etf-fraction", required=True, type=Decimal)
+    g.add_argument("--rebalance-band-fraction", required=True, type=Decimal)
+    g.add_argument("--sip-amount-inr", type=Decimal)
+    g.add_argument("--sip-frequency", choices=["WEEKLY", "FORTNIGHTLY", "MONTHLY"])
+    g.add_argument("--sip-day", type=int, help="calendar day; no installment is created by this command")
+    g.set_defaults(fn=cmd_mf_policy)
+
+    g = sub.add_parser("mf-review", help="generate a dated read-only MF/SIP/rebalance review")
+    g.add_argument("--account-id", required=True)
+    g.add_argument("--policy-id", required=True)
+    g.add_argument("--targets", required=True,
+                   help="JSON file with explicit owner target_weights keyed by scheme code")
+    g.add_argument("--as-of", help="ISO-8601 review timestamp with timezone; defaults to now")
+    g.add_argument("--sip-horizon-days", type=int, default=90)
+    g.add_argument("--output", help="output JSON path; defaults to data/reports by review date")
+    g.set_defaults(fn=cmd_mf_review)
 
     g = sub.add_parser("models", help="tiered models: list, bench, plan (ADR-0002)")
     g.add_argument("action", choices=["list", "bench", "rescore", "route", "plan"])

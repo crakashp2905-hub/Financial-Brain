@@ -17,6 +17,7 @@ from financial_brain.kernel.fund_transactions import (
 from financial_brain.kernel.mf_order import (
     MFOrder, MFOrderAcknowledgement, MFOrderEvidenceBasis, MFOrderKind, MFOrderState,
 )
+from financial_brain.kernel.units import INRNotional, MutualFundUnits, NavPerUnit
 from financial_brain.kernel.trading_clock import BusinessCalendar, CalendarDomain
 from financial_brain.paper.mf_lot_book import (
     MfPaperBookError,
@@ -120,6 +121,7 @@ def _subscribe(
     lock_in_until=None,
     account_id="paper-1",
     folio_id="synthetic-1",
+    nav=100,
 ):
     event_day = 2 if digest == HASH_B else 1
     event_date = date(2026, 1, event_day)
@@ -146,7 +148,7 @@ def _subscribe(
         allotted_on=event_date,
         lock_in_until=lock_in_until,
         investment_inr=amount,
-        nav_per_unit=100,
+        nav_per_unit=nav,
         exit_loads=schedule,
         exit_loads_sha256=digest,
         terms=terms,
@@ -245,9 +247,9 @@ def test_effective_dated_transaction_charges_reduce_units_and_redemption_proceed
     create_account(con, "paper-charges", 1000, now=NOW)
     purchase_rules = (MFChargeRule("STAMP_DUTY", "SUBSCRIBE", "1"),)
     subscribed, _ = _subscribe(
-        con, event_id="sub-charged", lot_id="lot-charged", amount=1000,
+        con, event_id="sub-charged", lot_id="lot-charged", amount=INRNotional(1000),
         schedule=(), digest=HASH_A, account_id="paper-charges",
-        charge_schedule=purchase_rules,
+        charge_schedule=purchase_rules, nav=NavPerUnit(100),
     )
     assert subscribed["units"] == Decimal("9.9")
     event = con.execute("""SELECT gross_inr, other_charges_inr, net_inr
@@ -260,7 +262,8 @@ def test_effective_dated_transaction_charges_reduce_units_and_redemption_proceed
     ), published_at=datetime(2026, 1, 9, 8, tzinfo=timezone.utc),
        observed_at=datetime(2026, 1, 9, 9, tzinfo=timezone.utc))
     redeemed = _redeem(
-        con, event_id="red-charged", units=Decimal("9.9"),
+        con, event_id="red-charged", units=MutualFundUnits(Decimal("9.9")),
+        nav_per_unit=NavPerUnit(100),
         terms=redemption_terms, account_id="paper-charges",
     )
     assert redeemed["other_charges_inr"] == Decimal("4.95")
@@ -871,6 +874,10 @@ def test_mf_terminal_panel_displays_last_known_nav_with_stale_flag(connection):
     assert "Operational evidence completeness only" in page
     assert "Last known NAV" in page and "125.0000" in page
     assert "STALE" in page and "NAV date" in page
+    assert "NAV available at" in page
+    assert "Exit load estimate" in page
+    assert "Tax estimate" in page
+    assert "India MF tax rules not configured" in page
 
 
 def test_mf_terminal_panel_distinguishes_simulated_and_observed_payouts(connection):

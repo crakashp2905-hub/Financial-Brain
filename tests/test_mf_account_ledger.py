@@ -12,6 +12,7 @@ from financial_brain.paper.mf_account_ledger import (
     record_external_cash_flow,
 )
 from financial_brain.paper.mf_lot_book import create_account
+from financial_brain.kernel.units import INRNotional, MutualFundUnitDelta
 from financial_brain.storage.db import Database
 
 NOW = datetime(2026, 11, 1, 12, tzinfo=timezone.utc)
@@ -134,3 +135,18 @@ def test_unit_journal_reconciles_folio_instrument_to_open_lots(connection):
     unassigned = ledger_snapshot(connection, account_id="unit-account")
     assert unassigned["unit_is_reconciled"] is False
     assert unassigned["unassigned_open_lot_count"] == 1
+
+
+def test_journal_accepts_typed_inr_and_signed_mutual_fund_unit_deltas(connection):
+    create_account(connection, "typed-ledger", 0, now=NOW)
+    instrument = mf_instrument_id("scheme", "DIRECT", "GROWTH", "isin")
+    result = post_journal(
+        connection, account_id="typed-ledger", transaction_id="typed-units",
+        effective_at=NOW, recorded_at=NOW,
+        entries=(("MF_INVESTMENTS", INRNotional(Decimal("25")), 0),
+                 ("CASH", 0, INRNotional(Decimal("25")))),
+        unit_deltas=(("folio-1", instrument, MutualFundUnitDelta(Decimal("2.5"))),),
+    )
+    assert result["status"] == "posted"
+    assert result["debits_inr"] == result["credits_inr"] == Decimal("25")
+    assert result["unit_deltas"][f"folio-1:{instrument}"] == "2.5"

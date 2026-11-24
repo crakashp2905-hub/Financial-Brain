@@ -313,17 +313,101 @@
       "evidence": [
         "src/financial_brain/kernel/units.py retains generic Decimal Money/Price/Quantity with currency validation and explicit units.",
         "src/financial_brain/kernel/units.py adds nominal CurrencyCode, INRNotional, WholeUnits, OptionLots, MutualFundUnits, NavPerUnit, OptionPremiumPerUnit and BasisPoints with domain-specific validation.",
-        "tests/test_kernel_units_clock.py checks whole-vs-fractional units, INR-only amount/price units, positive option lots, and explicit bps conversion."
+        "tests/test_kernel_units_clock.py checks whole-vs-fractional units, INR-only amount/price units, positive option lots, and explicit bps conversion.",
+        "src/financial_brain/kernel/paper_account.py now normalizes cash-equity compatibility calls through WholeUnits, Price and Money, and exposes typed submit_typed_intent/record_typed_fill boundaries that enforce positive whole units and account-currency consistency.",
+        "tests/test_paper_account.py::test_typed_cash_order_and_fill_units_are_enforced covers typed order/fill execution, currency mismatch refusal, and fractional quantity refusal.",
+        "src/financial_brain/paper/options.py::option_lot_count enforces OptionLots or strict positive integer inputs at option fill/cost boundaries; the option plan and replay use the same validation before quantity calculation and durable scalar serialization.",
+        "docs/edge-program/financial-units-options-paper-audit-2026-11-24.md records option path coverage and remaining MF/shared OMS/risk gaps.",
+        "src/financial_brain/paper/mf_lot_book.py normalizes subscriptions through INRNotional and NavPerUnit, computes holdings as MutualFundUnits, and accepts typed MutualFundUnits/NavPerUnit at redemptions; mf_purchase_book.apply_allotment carries NavPerUnit into the allotment path.",
+        "docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md records the MF paper-book unit boundary and remaining systematic-flow/ledger/forward-pipeline integration.",
+        "src/financial_brain/kernel/mf_sip.py normalizes INRNotional, NavPerUnit and MutualFundUnits at the MFSIPInstallment model boundary before decimal persistence/reconciliation.",
+        "tests/test_mf_sip.py::test_sip_accepts_nominal_inr_nav_and_fractional_units_at_model_boundary covers typed inputs and canonical decimal normalization.",
+        "docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md documents validated lot, purchase and SIP lifecycle boundaries and remaining gaps.",
+        "src/financial_brain/kernel/mf_systematic_flows.py accepts and normalizes INRNotional, NavPerUnit and MutualFundUnits for SWP/STP instructions/events before reconciliation and persistence.",
+        "src/financial_brain/kernel/mf_switch.py accepts and normalizes typed INR notional, NAV and fractional MF units for switch requests/events.",
+        "tests/test_mf_systematic_flows.py and tests/test_mf_switch.py cover nominal typed values and decimal normalization; docs/edge-program/financial-units-mf-paper-books-audit-2026-11-24.md records the remaining gaps.",
+        "src/financial_brain/kernel/risk_sizing.py::size_trade_plan accepts INRNotional limits, WholeUnits depth, and BasisPoints participation; conversion to decimal rate is explicit.",
+        "tests/test_risk_sizing.py::test_sizing_accepts_nominal_inr_depth_and_basis_point_limits verifies typed input equivalence with established sizing result.",
+        "src/financial_brain/kernel/units.py adds signed MutualFundUnitDelta for ledger postings; src/financial_brain/paper/mf_account_ledger.py::post_journal accepts INRNotional entries and MutualFundUnitDelta while canonicalizing to the existing Decimal schema.",
+        "tests/test_mf_account_ledger.py::test_journal_accepts_typed_inr_and_signed_mutual_fund_unit_deltas verifies typed journal inputs, balanced rupee totals, and normalized unit deltas.",
+        "src/financial_brain/kernel/risk_sizing.py::size_trade_plan accepts typed INRNotional limits, WholeUnits depth and BasisPoints participation before sizing.",
+        "src/financial_brain/ingest/mfnav.py validates each AMFI row through NavPerUnit before appending observations and updating the legacy projection; row hashes serialize the validated Decimal as text.",
+        "tests/test_mfnav_revisions.py::test_nav_ingest_rejects_nonpositive_nav_before_persisting_observation confirms invalid NAV does not enter the observation table.",
+        "src/financial_brain/paper/options.py::Quote accepts OptionPremiumPerUnit for bid and ask, normalizing the nominal INR premium before quote validation and existing float-based cost calculations.",
+        "tests/test_paper_options.py::test_option_quote_accepts_nominal_inr_premium_per_unit covers typed premium quote construction and paper round-trip valuation.",
+        "src/financial_brain/forward_edge/paper_book_adapter.py::PaperBookSignal accepts WholeUnits shares, INR Price stop/reference values and BasisPoints expected-net/cost rates, then canonicalizes to its existing bridge schema.",
+        "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records the forward adapter boundary and uncompleted runner/OMS accounting paths.",
+        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.execute_paper_intent accepts WholeUnits, INR Price limit/tick/band and BasisPoints slippage, rejects non-INR typed prices and normalizes before existing OMS logic.",
+        "tests/test_forward_edge_session_runner.py::test_paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor exercises typed OMS inputs through fill and paper-book reconciliation.",
+        "docs/edge-program/financial-units-forward-paper-book-audit-2026-11-24.md records typed adapter and forward OMS input contracts with persistence/recovery gaps.",
+        "src/financial_brain/forward_edge/market_data.py validates Kite last/bid/ask/OHLC/circuit prices as INR Price and quote volume/depth quantities as WholeUnits before event scalar encoding.",
+        "src/financial_brain/forward_edge/market_data.py::executable_quote rejects malformed or fractional deeper displayed quantities instead of truncating them.",
+        "docs/edge-program/financial-units-kite-market-data-audit-2026-11-24.md records the quote-ingress boundary and open repository-wide scope.",
+        "src/financial_brain/kernel/risk_sizing.py exposes typed RiskSizingResult views: Quantity, INR Price, planned INR risk and position INR notional while preserving legacy Decimal fields.",
+        "docs/edge-program/financial-units-risk-sizing-output-audit-2026-11-24.md documents the typed RiskSizingResult views and remaining integration work.",
+        "docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json regenerated and verified after the kernel change.",
+        "docs/edge-program/financial-units-fixture-pipeline-audit-2026-11-24.md documents fail-closed typed validation in the legacy fixture pipeline.",
+        "src/financial_brain/forward_edge/pipeline.py::_validate_fixture_financial_units rejects fractional order/depth units and invalid INR execution prices before coercion."
       ],
-      "blocker": "Partial: typed primitives are implemented and tested but core OMS, forward paper order/accounting, risk sizing, MF allotment and persistence still exchange generic integers/Decimals/floats. End-to-end enforcement across those state transitions and serialized schemas is not yet proven.",
-      "last_audited_at_utc": "2026-11-21T13:15:00+00:00",
-      "commit": "df854e22",
+      "blocker": "Partial: fixture pipeline now validates whole-unit quantities and INR prices before coercion. Other provider adapters, full OMS/accounting serialized state, typed event outputs and remaining repository quantity/price interfaces still require a boundary audit.",
+      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
+      "commit": "5e5dd8ab",
       "test_evidence": [
         "python -m pytest tests/test_kernel_units_clock.py -q: 19 passed",
         "ruff check src/financial_brain/kernel/units.py tests/test_kernel_units_clock.py: passed",
-        "python -m mypy src/financial_brain/kernel/units.py --follow-imports=silent: passed"
+        "python -m mypy src/financial_brain/kernel/units.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_paper_account.py -q --basetemp=.pytest-checklist-units: 8 passed",
+        "python -m ruff check src/financial_brain/kernel/paper_account.py tests/test_paper_account.py: passed",
+        "python -m mypy src/financial_brain/kernel/paper_account.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q --basetemp=.pytest-checklist-options: 19 passed",
+        "python -m ruff check src/financial_brain/paper/options.py src/financial_brain/paper/options_plan.py src/financial_brain/paper/options_runner.py tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py: passed",
+        "python -m mypy src/financial_brain/paper/options.py src/financial_brain/paper/options_plan.py src/financial_brain/paper/options_runner.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_mf_lot_book.py tests/test_mf_purchase_book.py -q --basetemp=.pytest-checklist-mf-units-rerun: 21 passed",
+        "python -m pytest tests/test_mf_flow_book.py tests/test_mf_sip_book.py tests/test_mf_systematic_flow_book.py -q --basetemp=.pytest-checklist-mf-callers: 23 passed",
+        "python -m ruff check src/financial_brain/paper/mf_lot_book.py src/financial_brain/paper/mf_purchase_book.py tests/test_mf_lot_book.py tests/test_mf_purchase_book.py: passed",
+        "python -m mypy src/financial_brain/paper/mf_lot_book.py src/financial_brain/paper/mf_purchase_book.py --follow-imports=silent: passed",
+        "python -m pytest tests/test_mf_sip.py tests/test_mf_sip_book.py -q --basetemp=.pytest-checklist-mf-sip-units: 16 passed.",
+        "python -m ruff check src/financial_brain/kernel/mf_sip.py tests/test_mf_sip.py: passed.",
+        "python -m mypy src/financial_brain/kernel/mf_sip.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_mf_systematic_flows.py tests/test_mf_systematic_flow_book.py -q --basetemp=.pytest-checklist-mf-systematic-units: 16 passed.",
+        "python -m pytest tests/test_mf_switch.py tests/test_mf_switch_book.py -q --basetemp=.pytest-checklist-mf-switch-units: 8 passed.",
+        "python -m ruff check src/financial_brain/kernel/mf_systematic_flows.py src/financial_brain/kernel/mf_switch.py tests/test_mf_systematic_flows.py tests/test_mf_switch.py: passed.",
+        "python -m mypy src/financial_brain/kernel/mf_systematic_flows.py src/financial_brain/kernel/mf_switch.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_risk_sizing.py -q --basetemp=.pytest-checklist-risk-units: 5 passed.",
+        "python -m ruff check src/financial_brain/kernel/risk_sizing.py tests/test_risk_sizing.py: passed.",
+        "python -m mypy src/financial_brain/kernel/risk_sizing.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_mf_account_ledger.py -q --basetemp=.pytest-checklist-mf-ledger-units-rerun: 6 passed.",
+        "python -m ruff check src/financial_brain/kernel/units.py src/financial_brain/paper/mf_account_ledger.py tests/test_mf_account_ledger.py: passed.",
+        "python -m mypy src/financial_brain/kernel/units.py src/financial_brain/paper/mf_account_ledger.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_mfnav_revisions.py -q --basetemp=.pytest-checklist-nav-units-rerun: 7 passed.",
+        "python -m ruff check src/financial_brain/ingest/mfnav.py tests/test_mfnav_revisions.py: passed.",
+        "python -m mypy src/financial_brain/ingest/mfnav.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_paper_options.py tests/test_paper_options_plan.py tests/test_paper_options_runner.py tests/test_paper_options_forward.py -q --basetemp=.pytest-checklist-option-premium-rerun: 20 passed.",
+        "python -m ruff check src/financial_brain/paper/options.py tests/test_paper_options.py: passed.",
+        "python -m mypy src/financial_brain/paper/options.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"forward_paper_book_signal_accepts_typed or paper_book_adapter_records_qualified_horizon\" -q --basetemp=.pytest-checklist-forward-units-rerun: 2 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/paper_book_adapter.py tests/test_forward_edge_session_runner.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/paper_book_adapter.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"paper_book_adapter_records_qualified_horizon_and_abstains_on_uncalibrated_factor\" -q --basetemp=.pytest-checklist-forward-oms-units: 1 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/session_runner.py --follow-imports=silent: passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-checklist-forward-runner-full: 61 passed, including typed OMS execution and existing runner lifecycle/recovery cases.",
+        "python -m pytest tests/test_forward_edge_kite_market_data.py -q --basetemp=.pytest-checklist-kite-units-final: 16 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/market_data.py tests/test_forward_edge_kite_market_data.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/market_data.py --follow-imports=silent: passed.",
+        "tests/test_risk_sizing.py::test_sizing_result_exposes_dimensionally_typed_quantity_price_and_inr_values",
+        "tests/test_risk_sizing.py::test_ineligible_sizing_result_keeps_zero_financial_outputs_typed",
+        "python -m pytest tests/test_risk_sizing.py -q --basetemp=.pytest-checklist-risk-typed-output: 7 passed",
+        "Ruff and scoped mypy passed for risk_sizing.py and tests/test_risk_sizing.py.",
+        "python scripts/source_inventory.py --output docs/edge-program/source-inventory.v2.json --check: passed (682 Python files).",
+        "python scripts/forward_engine_graph.py --output docs/edge-program/forward-engine-dependency-graph.v1.json --check: passed.",
+        "Checklist audit export and deterministic evidence bundle freshness checks passed.",
+        "tests/test_forward_edge_pipeline_compat.py::test_fixture_pipeline_rejects_invalid_order_units_before_execution and ::test_fixture_pipeline_rejects_fractional_quote_depth_before_execution.",
+        "python -m pytest tests/test_forward_edge_pipeline_compat.py tests/test_forward_edge_integrity_gates.py -q --basetemp=.pytest-checklist-forward-units-rerun: 19 passed; legacy fixture golden signatures unchanged.",
+        "Ruff and scoped mypy passed for forward_edge/pipeline.py and tests/test_forward_edge_pipeline_compat.py.",
+        "Commit 5e5dd8ab adds typed risk-sizing results and fails closed on invalid/fractional fixture OMS inputs."
       ],
-      "test_result": "Domain nominal types reject fractional equity/ETF units, non-INR prices/notionals, invalid option-lot counts and invalid currency codes. Shared pipeline integration remains outstanding, so this is partial."
+      "test_result": "Focused fixture-pipeline and integrity-gate suites pass (19 passed), including fail-closed tests for fractional order/depth units and invalid prices. Historical valid fixture signatures remain unchanged. Broader provider, OMS and accounting unit-contract coverage remains outstanding."
     },
     {
       "id": "FB-0104",
@@ -357,17 +441,23 @@
         "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote records the observed Kite source and exchange timestamps independently from local receipt/availability.",
         "src/financial_brain/forward_edge/session_runner.py persists ingested_at and ingest_clock_source in runner_events and the append-only audit; records() exports the stored ingest timestamp.",
         "tests/test_forward_edge_market_events.py and tests/test_forward_edge_kite_market_data.py cover clock-field round trip, publication ordering and explicit Kite source/exchange clocks.",
-        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed."
+        "tests/test_forward_edge_session_runner.py verifies session ingestion/recovery behavior; three focused suites passed.",
+        "src/financial_brain/ingest/kite_live.py::forward_events now carries normalized source_at, exchange_at and supplied published_at through its event reconstruction instead of dropping them.",
+        "docs/edge-program/kite-live-clock-preservation-audit-2026-11-24.md records the adapter fix and remaining timestamp lineage scope."
       ],
-      "blocker": "Partial: event, Kite quote and paper-runner timestamps are represented and persisted, but there is no repository-wide data-contract audit proving source/exchange/published/ingested clocks survive every provider, filing, NAV, replay and export path. Older records with no such timestamps cannot be backfilled.",
-      "last_audited_at_utc": "2026-11-21T13:27:00+00:00",
-      "commit": "cfdd5ad1",
+      "blocker": "Partial: the Kite adapter now preserves source, exchange, receipt, availability and explicitly provided publication clocks. Kite provides no independent publication timestamp in this quote path; other provider, filing, NAV, replay and export paths still need repository-wide lineage audit. Missing historical clocks cannot be reconstructed.",
+      "last_audited_at_utc": "2026-11-23T23:27:43+00:00",
+      "commit": "9a6dfd95",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_market_events.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_session_runner.py -q: 86 passed",
         "ruff check on changed market-event and Kite-normalization modules/tests: passed",
-        "targeted mypy for market_events.py and market_data.py: passed"
+        "targeted mypy for market_events.py and market_data.py: passed",
+        "tests/test_kite_live_forward_events.py::test_forward_events_preserves_executable_depth_ohlc_status_and_source_hash now verifies all available clock fields and round-trip preservation.",
+        "python -m pytest tests/test_kite_live_forward_events.py tests/test_forward_edge_kite_market_data.py -q --basetemp=.pytest-checklist-kite-clocks: 22 passed.",
+        "Ruff and scoped mypy passed for ingest/kite_live.py and tests/test_kite_live_forward_events.py.",
+        "Commit 9a6dfd95 preserves source/exchange clocks through the read-only Kite ingestion adapter."
       ],
-      "test_result": "The live quote and forward paper event path preserves source/exchange, receipt, availability and ingestion times, and event envelopes can preserve publication time when supplied. System-wide coverage remains incomplete."
+      "test_result": "Focused Kite adapter and quote-normalization suites pass (22 passed); tests verify source/exchange/receipt/availability clock retention and round-trip serialization. Publication is left unset when the source does not provide it; full repository coverage remains incomplete."
     },
     {
       "id": "FB-0106",
@@ -2143,53 +2233,85 @@
       "id": "FB-0501",
       "text": "Cross-sectional momentum/relative-strength ranking **among comparable ETFs** with fixed horizons and exposure controls.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Candidate publication ranks ETF-desk signals supplied by upstream callers, but no comparable-ETF cross-sectional momentum/relative-strength calculator with fixed horizons and exposure controls was found."
+        "Candidate publication ranks ETF-desk signals supplied by upstream callers, but no comparable-ETF cross-sectional momentum/relative-strength calculator with fixed horizons and exposure controls was found.",
+        "docs/edge-program/etf-momentum-cross-sectional-v1.md freezes the rule before any performance evaluation and explicitly requires research authorization.",
+        "src/financial_brain/features/etf_momentum.py::rank_etf_momentum implements 21/63/126/252-session equal-weight cross-sectional percentile ranks with source-backed underlying/exposure/exchange grouping, point-in-time reference checks and missing-endpoint refusal.",
+        "The ranker emits research candidates only; no order path or profitability claim is included.",
+        "src/financial_brain/features/etf_momentum.py tags candidates with ETF_CS_MOMENTUM v1.1.0 and a deterministic frozen-spec SHA-256.",
+        "The ranker requires source hashes at each selected return endpoint and emits a deterministic per-candidate input digest.",
+        "Version 1.1.0 requires ordered unique sourced sessions, timezone-aware price availability no later than as_of, and SHA-256 source hashes for every selected return endpoint."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "blocker": "Partial: the v1.1.0 pre-registered ranker is implemented and contract-tested with point-in-time sourced inputs, but no decisive backtest or prospective paper cohort has been run. Transaction costs, liquidity/capacity, turnover, drawdown and passive controls remain unevaluated; FB-0004 research authorization is required before performance evaluation or strategy promotion.",
+      "last_audited_at_utc": "2026-11-23T23:32:39+00:00",
+      "commit": "7911102f",
+      "test_result": "Five focused contract tests pass for fixed horizons, deterministic ordering, exposure/index grouping, point-in-time reference and close availability, source hashes, duplicate-session rejection, missing-data refusal and invalid prices. Tests establish implementation behavior only and provide no evidence of profitable alpha.",
+      "test_evidence": [
+        "tests/test_etf_momentum.py covers fixed horizons, tie-stable ranking, point-in-time reference and close availability, exposure grouping, endpoint source hashes, missing data, invalid prices, duplicate/future sessions and deterministic hashes.",
+        "python -m pytest tests/test_etf_momentum.py -q --basetemp=.pytest-checklist-etf-momentum-v1_1-final: 5 passed.",
+        "Ruff and scoped mypy passed for etf_momentum.py and tests/test_etf_momentum.py.",
+        "Repeatability test verifies v1.1.0 fixed strategy-spec and endpoint-input hashes on the same sourced inputs.",
+        "Commit 7911102f pins the v1.1.0 point-in-time availability and endpoint-source-hash safeguards."
+      ]
     },
     {
       "id": "FB-0502",
       "text": "Trend continuation, moving-average rules, medium-horizon mean-reversion and volatility-adjusted position sizing, each pre-registered before decisive tests.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Generic equity indicators and ranking infrastructure exist, but no ETF-specific, pre-registered trend, moving-average, mean-reversion and volatility-sizing strategy family was found."
+        "Frozen v1.0.0 candidate contract in docs/edge-program/etf-trend-mean-reversion-v1.md defines trend continuation, moving-average continuation, medium-horizon mean reversion and volatility-target sizing before any performance evaluation.",
+        "src/financial_brain/features/etf_trend_rules.py implements 50/200 and 20/50 trend flags, a fixed 20-session z-score threshold, 20-session volatility sizing target, exact sourced closes with timezone-aware availability no later than as_of, frozen strategy/input hashes, and candidate-only/no-order output.",
+        "Research governance remains closed: Q4-2026 is exhausted and Q1-2027 is not authorized. No decisive test, backtest, prospective cohort, parameter search, or profitability claim was made."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "blocker": "Partial: candidate family is frozen and contract-tested, but no authorized performance evaluation, realistic cost/capacity/tax/benchmark controls, or prospective paper evidence exists. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T10:00:00+00:00",
+      "commit": "c43eb337",
+      "test_result": "Five focused contract tests pass for deterministic rules and hashes, exact sourced history/no-fill policy, point-in-time availability, calendar and SHA validation, volatility sizing bounds, and the no-order candidate boundary. These are software tests only; profitability is untested.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_trend_rules.py -q: 5 passed.",
+        "Ruff passed for the new module and tests; scoped mypy passed for the new module."
+      ]
     },
     {
       "id": "FB-0503",
       "text": "Cross-asset rotation across equity, debt, gold/silver ETF sleeves using equal-vol, buy-and-hold, same-risk and cash controls.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "ETF reference metadata distinguishes broad equity, debt, gold, silver and international exposures, but no ETF sleeve-rotation study with equal-volatility, buy-and-hold, same-risk and cash controls was found."
+        "Frozen v1.0.0 candidate contract in docs/edge-program/etf-cross-asset-rotation-v1.md defines one 126-session momentum winner per eligible equity/debt/gold/silver sleeve, with cash fallback when the top return is non-positive.",
+        "src/financial_brain/features/etf_cross_asset_rotation.py emits sourced, point-in-time allocation snapshots with inverse-volatility, buy-and-hold, same-risk and cash controls; it does not evaluate returns, costs, or profitability.",
+        "Research governance remains closed: Q4-2026 is exhausted and Q1-2027 is not authorized. No decisive evaluation, backtest, or prospective cohort was run."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "blocker": "Partial: a frozen rotation candidate and requested controls are contract-tested, but the authorized economic study, costs/tax/capacity/turnover controls, and prospective evidence are absent. The protected Q4-2026 budget is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T11:00:00+00:00",
+      "commit": "55d3f35f",
+      "test_result": "Five focused contract tests pass for sleeve grouping and selection, control weight sums, negative-momentum cash behavior, deterministic hashes, missing/late data, calendar/hash/timestamp validation, and no-order output. These tests do not evaluate strategy performance.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_cross_asset_rotation.py -q: 5 passed.",
+        "Capability matrix validation passed; Ruff and scoped mypy passed for the new implementation."
+      ]
     },
     {
       "id": "FB-0504",
       "text": "ETF short-horizon signal studies only for instruments whose spread/depth make cost-adjusted intraday trading plausible.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "ETF bars and quote/liquidity diagnostics exist, but no short-horizon ETF signal study connects spread/depth admissibility to cost-adjusted intraday outcomes."
+        "Frozen v1.0.0 candidate and screen rules are documented in docs/edge-program/etf-intraday-opening-range-v1.md: six complete five-minute opening-range bars, point-in-time availability, a close breakout, source event lineage, and explicit no-order output.",
+        "src/financial_brain/features/etf_intraday_screen.py gates a candidate on observed quotes, estimated round-trip cost limits, two-sided top-book depth, and observed breakout extension at least 2x its cost proxy. The extension is not treated as expected alpha.",
+        "src/financial_brain/features/etf_bars.py now emits source event IDs and an input digest per bar. src/financial_brain/features/etf_liquidity.py now uses the full quoted spread for round-trip spread cost (buy ask, sell bid), plus Amihud proxy and caller costs.",
+        "Q4-2026 protected trial budget is exhausted and Q1-2027 is not authorized. No backtest, parameter selection, forward cohort, calibrated fill, or profitability claim was made."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
-      "test_result": "python -m pytest --basetemp .pytest-fb-0501-12 tests/test_etf_pricing.py tests/test_etf_liquidity.py tests/test_etf_bars.py tests/test_etf_valuation.py tests/test_etf_prices.py tests/test_etf_return_series.py tests/test_etf_reference.py tests/test_candidate_publication.py -q: 25 passed; additional ETF reference and return-series tests: 23 passed"
+      "blocker": "Partial: only the research candidate and cost/liquidity screen are implemented. Cost model is not execution-calibrated; no authorized performance study, capacity/tax/benchmark controls, or prospective evidence exists. Q4-2026 is exhausted and Q1-2027 is not authorized.",
+      "last_audited_at_utc": "2026-11-24T12:00:00+00:00",
+      "commit": "939d3dc7",
+      "test_result": "Ten focused tests pass for bar event lineage, complete contiguous point-in-time bars, breakout candidates, stale/wide quote and depth rejection, estimated cost gating, and full quoted spread round-trip cost arithmetic. Tests prove software behavior only.",
+      "test_evidence": [
+        "python -m pytest tests/test_etf_intraday_screen.py tests/test_etf_bars.py tests/test_etf_liquidity.py -q: 10 passed.",
+        "Capability matrix validation passed; Ruff and scoped mypy passed for the changed modules."
+      ]
     },
     {
       "id": "FB-0505",
@@ -2377,13 +2499,15 @@
       "id": "FB-0606",
       "text": "Add investor cash-management allocation: liquid/overnight/debt funds and ETFs compared against cash, accounting for payout lag and risks.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Debt, cash, ETF and MF descriptive analytics exist separately, but no investor cash-management allocator compares liquid/overnight/debt products with cash after payout-lag and liquidity-risk constraints."
+        "src/financial_brain/features/cash_management.py implements an input-driven cash-control comparison for liquid funds, overnight funds, debt funds, and ETFs with effective-dated RESEARCH/PAPER_SIMULATION permission checks, evidence clocks/hashes, payout lag, costs, source-pinned scenario hash, explicit tax input, stress/liquidity haircuts, cash reserve, product capacity, and risk-budgeted paper allocation.",
+        "Candidates with missing rights, stale/future data, payout lag beyond the holding window, missing tax input, non-positive after-cost/risk net, or no usable stress budget receive no allocation; the module never performs a transaction.",
+        "tests/test_cash_management.py: 10 passed; Ruff and focused mypy pass. docs/edge-program/cash-management-allocation-v1.md records formula and limitations."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: no permission-cleared point-in-time product universe, calibrated yield/tax/risk assumptions, source-to-scenario resolver, prospective allocation book or observed payout-lag evidence is connected. Inputs are scenario assumptions, not forecasts.",
+      "last_audited_at_utc": "2026-11-24T01:02:00Z",
+      "commit": "c32eea5cf72e4791a32382a6e1ef698136965291",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -2446,13 +2570,15 @@
       "id": "FB-0611",
       "text": "Demonstrate value beyond same-category passive funds, direct-plan benchmark and static allocations after tax and turnover; do not call mutual funds a scalping desk.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "Repository contains same-category peer comparison primitives, but no evidence-backed result shows MF selection beating a passive same-category/direct-plan benchmark and static allocation after tax and turnover."
+        "src/financial_brain/research/mf_peer_comparison.py compares source-declared same-category MF periods with a common benchmark version, as-known timestamp, and equal-volatility scaling; cross-category, misaligned-window, and leverage-up comparisons are rejected.",
+        "src/financial_brain/research/mf_return_accounting.py keeps observed NAV ratios separate from forward-only TER projections, preventing TER from being deducted twice from observed NAV returns.",
+        "tests/test_mf_peer_comparison.py and tests/test_mf_return_accounting.py ran in an 8-pass focused suite with tests/test_product_charter.py; implementation commits f1726a30228c73ffada500192c0b6acb3ab1ae3d and e3e9c6f3796ba7567222719a380aef768bbd333e."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: the repo does not yet demonstrate outperformance against same-category direct-plan passive and static controls after actual tax and turnover, nor produce prospective evidence-backed results. Current peer scaling is descriptive, not an investable return forecast.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "f1726a30228c73ffada500192c0b6acb3ab1ae3d",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -2473,28 +2599,30 @@
       "id": "FB-0613",
       "text": "Include owner-controlled SIP and allocation parameters without assuming access to a live folio or external fund transaction API.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "MF recommendations accept explicit scheme, amount, horizon and cutoff inputs without using a broker or folio API.",
-        "No owner-managed SIP schedule, configurable allocation policy or persistent owner-control interface was found."
+        "src/financial_brain/paper/mf_allocation_policy.py adds an immutable versioned profile for owner-specified cash reserve, equity/debt/ETF caps, rebalance band, and optional SIP amount/frequency/day; profile has effective dates and content hash and does not require account/folio identity.",
+        "src/financial_brain/storage/schema.sql persists owner-local policies; src/financial_brain/cli.py exposes fb mf-policy and labels output PAPER_DECISION_ONLY with external_fund_transactions=false. No order/SIP installment is created.",
+        "tests/test_mf_allocation_policy.py: 8 passed; tests/test_migrations.py plus tests/test_mf_allocation_policy.py: 13 passed; Ruff, targeted mypy and generated inventory checks pass. docs/edge-program/mf-owner-allocation-policy-v1.md records scope and limits."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: owner label is self-declared and unauthenticated; existing recommendation, rebalance and SIP engines do not yet consume the saved policy as a shared binding constraint.",
+      "last_audited_at_utc": "2026-11-24T01:11:00Z",
+      "commit": "733e0f8861dc68eb926444671b8f175c966466c9",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
       "id": "FB-0614",
       "text": "Maintain versioned strategy charters and scorecard with a cash/no-action control and actual prospective NAV allotment.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "General strategy preregistration, evidence tiers and MF NAV transaction primitives exist.",
-        "No versioned MF strategy charter/scorecard with cash/no-action control and actual prospective allotment cohort was found."
+        "src/financial_brain/research/preregistry.py and src/financial_brain/forward_edge/charter.py provide general immutable/pre-registered hypothesis and charter primitives; the MF paper lifecycle supplies sourced NAV eligibility and allotment primitives.",
+        "The cash/no-action control exists in the ETF rotation contract, and the cash management scenario module has an explicit zero-return cash control; these are not yet assembled into an MF-specific scorecard/cohort.",
+        "tests/test_phase5_preregistry.py: 7 passed with a short Windows basetemp; tests/test_product_charter.py passed in an 8-pass focused run; MF order/purchase/payment/eligibility suites: 20 passed. Relevant source commits: ac7a8fa2351cf716be10a97909c28c203b1ec358 and b6ca50682d52a97f9b535e9ca0b21fb1929bd106."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-22T00:00:00Z",
-      "commit": null,
+      "blocker": "Partial: no MF-specific versioned charter/scorecard consumes the cash/no-action control and joins actual prospective NAV allotments into a protected evaluation cohort. Generic preregistration and separate NAV transaction modules do not prove that integrated workflow.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "ac7a8fa2351cf716be10a97909c28c203b1ec358",
       "test_result": "Focused MF research, scheme, transaction and lot lifecycle suite: 53 passed."
     },
     {
@@ -3350,13 +3478,15 @@
       "id": "FB-1003",
       "text": "During open: stream underlying/options observations; signal only from actually available and sufficiently fresh contract data.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/cli.py:cmd_fno_snapshot (end-of-day read-only F&O snapshot only; no continuous option observation stream tied to signal freshness)"
+        "src/financial_brain/signals/watch.py:once polls selected current underlying and near-expiry option contracts during market hours; build_alerts rejects missing/stale quotes beyond 120 seconds and requires two-sided option depth before recording scenarios.",
+        "tests/test_signal_watch.py and tests/test_options_quotes.py cover stale-quote abstention, current two-sided contract observation, scenario-only messaging, and gated archive behavior. This is a 60-second REST poll for selected opportunities, not a continuous underlying/options stream or stream-driven paper-signal path."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "blocker": "Partial: no continuous KiteTicker/event stream, broad instrument subscription, canonical underlying/options event ingestion, synchronized contract freshness gate within the forward session runner, or stream-to-paper-intent integration. Market-data permissions for paper use and retention remain externally unresolved.",
+      "last_audited_at_utc": "2026-11-24T01:54:41Z",
+      "commit": "f08ddd6ab1012363507b6fa3e518b01243fafe11",
+      "test_result": "Existing tests/test_signal_watch.py and tests/test_options_quotes.py cover current quote freshness, stale rejection, two-sided depth and archive gating; no new test was run in this status audit."
     },
     {
       "id": "FB-1004",
@@ -3398,13 +3528,15 @@
       "id": "FB-1007",
       "text": "Before MF cutoffs: process previously approved MF subscriptions/redemptions according to scheme and payment rules; no retroactive NAV access.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/fund_transactions.py (scheme-specific cutoff/NAV assignment primitives); no approved subscription/redemption execution lifecycle or settlement/payment processing"
+        "src/financial_brain/paper/mf_order_book.py persists accepted/rejected MF order transitions; mf_purchase_book.py applies payment milestones and frozen scheme-cutoff NAV eligibility; mf_redemption_settlement.py holds redemption proceeds pending eligible NAV and payout settlement.",
+        "The lifecycle uses point-in-time source clocks and does not backfill a NAV before availability; order/purchase/eligibility/payment/redemption-eligibility focused suites: 20 passed.",
+        "Core workflow implementation commit: b6ca50682d52a97f9b535e9ca0b21fb1929bd106."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "blocker": "Partial: these paper lifecycle components are not orchestrated from previously approved owner decisions by an operational pre-cutoff scheduler, and end-to-end reconciliation across approved intent, cutoff, payment, allotment/redemption and final settlement is not evidenced.",
+      "last_audited_at_utc": "2026-11-24T01:23:00Z",
+      "commit": "b6ca50682d52a97f9b535e9ca0b21fb1929bd106"
     },
     {
       "id": "FB-1008",
@@ -3422,13 +3554,16 @@
       "id": "FB-1009",
       "text": "Periodic: generate weekly MF reviews, portfolio rebalance suggestions, SIP plans and liquidity-reallocation candidates.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No weekly MF review/SIP/liquidity-reallocation scheduler found; allocation primitives and recommendations are not operational workflows"
+        "src/financial_brain/cli.py:cmd_mf_review and src/financial_brain/paper/mf_periodic_review.py implement fb mf-review: read-only as-of paper-book/NAV snapshot, effective owner policy, upcoming SIP installments and explicit scheme targets produce a dated, SHA-256-attested report with review-only rebalance and liquidity candidates.",
+        "The report suppresses rebalance suggestions when any NAV is stale/unavailable or a held scheme lacks an owner target, reserves near-term scheduled/payment-initiated SIPs before describing excess cash, and records configured owner SIP amount/frequency/day. It does not create orders.",
+        "tests/test_mf_periodic_review.py: 8 passed including CLI-to-paper-book report generation; combined MF review/policy/recommendation/SIP suite: 29 passed; Ruff, source inventory, capability ownership, dependency graph and checklist-export checks pass. Implementation commits af413265 and 6b0ee462."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:30:47.492933Z",
-      "commit": "408d0d6a6db5f0ed0613bf32dccffe74784c7b80"
+      "blocker": "Partial: no automated weekly scheduler or persistent review history exists; target weights are supplied separately by the owner rather than versioned in the MF policy; tax, exit-load, cutoff and liquidity settlement impacts are not scored; no prospective evidence validates any suggested allocation.",
+      "last_audited_at_utc": "2026-11-24T01:54:41Z",
+      "commit": "6b0ee4622ea71aff0dedb375ac4029f31f290ec9",
+      "test_result": "tests/test_mf_periodic_review.py: 8 passed; combined focused MF review/policy/recommendation/SIP suite: 29 passed."
     },
     {
       "id": "FB-1010",
@@ -3509,61 +3644,88 @@
       "id": "FB-1104",
       "text": "Provide `APPROVE`, `REJECT`, `WATCH`, `NO_TRADE` for manual-approval paper sleeves; no UI action directly authorizes physical cash orders.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "tests/test_decision_first.py and src/financial_brain/paper/terminal.py (read-only display only; no APPROVE/REJECT/WATCH/NO_TRADE workflow for paper sleeves)"
+        "tests/test_decision_first.py and src/financial_brain/paper/terminal.py (read-only display only; no APPROVE/REJECT/WATCH/NO_TRADE workflow for paper sleeves)",
+        "docs/edge-program/manual-paper-sleeve-decisions-audit-2026-11-24.md records the backend decision contract and integration gaps.",
+        "src/financial_brain/forward_edge/manual_paper_decisions.py provides four human actions bound to a frozen candidate hash and TTL; the journal serializes PAPER_ONLY and physical_orders_authorized=false.",
+        "Approval is a journal decision only; no order submission or physical broker capability is exposed.",
+        "src/financial_brain/cli.py::cmd_manual_paper_decision and the fb paper-decision command provide a local record path for all four choices; output remains PAPER_ONLY with physical_orders=false."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: durable paper-only decisions and a CLI capture path exist, but no cockpit capture flow, identity provider, separate human-approved paper book, or ForwardSessionRunner consumption exists.",
+      "last_audited_at_utc": "2026-11-24T08:30:00+00:00",
+      "commit": "c77d2519",
+      "test_evidence": [
+        "tests/test_forward_edge_manual_paper_decisions.py covers APPROVE/REJECT/WATCH/NO_TRADE, frozen candidate hash, human-only actor, expiry/staleness, eligibility, idempotent restart-safe journal, immutable rows and CLI persistence.",
+        "python -m pytest tests/test_forward_edge_manual_paper_decisions.py -q --basetemp=.pytest-checklist-manual-approval-cli: 9 passed.",
+        "Ruff passed for manual_paper_decisions.py, cli.py and the test; scoped mypy passed for manual_paper_decisions.py.",
+        "Whole-file mypy for cli.py reports 12 errors in other existing functions (lines 636, 641, 646, 1023, 1273, 1279, 1567, 1769, 1804, 1866, 1914, 2252); no diagnostic points to cmd_manual_paper_decision."
+      ],
+      "test_result": "Nine focused tests pass for the manual paper-decision contract, immutable journal and CLI path. Approval resolves only to APPROVED_PAPER_ONLY and records physical_orders_authorized=false. Scoped mypy passes for the new module; the legacy CLI file has unrelated whole-file typing errors. Cockpit, identity and runner/book integration remain incomplete."
     },
     {
       "id": "FB-1105",
       "text": "Independent automatic paper and human-approved paper performance, with same quote feed, risk parameters and market conditions.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No paired automatic vs human-approved paper sleeves with matched eligibility, quote feed and risk parameters found"
+        "src/financial_brain/forward_edge/paired_paper.py compares automatic and human paper outcomes over the same frozen eligible signal IDs, per-signal cash outcomes, capital weights, quote-stream hash, risk-policy hash, and cost-model hash.",
+        "The comparator retains no-trade/rejected/watch outcomes in the same denominator, requires full matching outcome rows and decision-before-outcome clocks, reconciles gross less costs to net, preserves unknowns, hashes the report, and never grants promotion eligibility.",
+        "tests/test_forward_edge_paired_paper.py: 11 passed. Implementation/test evidence commit: 32884ab33d48230747f633fd3d5dde966d0caa7a."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: the comparison contract exists, but automatic and human-approved outcomes are not yet assembled from independently operated, persistent sleeves or connected to a common quote/risk/cost runner. Human identity and independent market timestamp attestation are not authenticated.",
+      "last_audited_at_utc": "2026-11-24T01:20:00Z",
+      "commit": "32884ab33d48230747f633fd3d5dde966d0caa7a"
     },
     {
       "id": "FB-1106",
       "text": "ETFs display underlying benchmark, bid/ask, quoted premium/discount to fresh iNAV, estimated tracking difference, cost and liquidity.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No ETF desk panel rendering benchmark, live spread, fresh iNAV premium/discount, tracking difference, cost and liquidity found"
+        "src/financial_brain/paper/terminal.py adds etf_desk_panel() and includes it in build(); the panel renders benchmark, executable bid/ask/spread, quote-vs-fresh-iNAV premium/discount, tracking difference, cost/liquidity, source and timestamp, while missing values stay unavailable.",
+        "tests/test_etf_terminal_panel.py plus tests/test_etf_valuation.py and tests/test_etf_liquidity.py: 14 passed; Ruff and git diff --check pass.",
+        "docs/edge-program/etf-terminal-panel-v1.md records the adapter contract and limits."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: the terminal build API accepts resolved ETF evidence rows, but no permission-cleared persisted ETF snapshot source currently assembles those rows; calibrated execution cost and prospective evidence are also absent.",
+      "last_audited_at_utc": "2026-11-24T00:38:38Z",
+      "commit": "fa7f367b45dd80cca4bbf062249b6b657a51fa1d"
     },
     {
       "id": "FB-1107",
       "text": "MFs display scheme/plan/option, current/published NAV, available NAV date, cutoff, pending allotment, units, cost basis, exit load, settlement and tax estimate.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF holding panel rendering scheme class, NAV/cutoff, pending units, cost basis, exit load, settlement and tax estimate found"
+        "src/financial_brain/paper/terminal.py displays scheme code, plan, option, units, NAV/date, NAV availability timestamp, market value, cost basis and valuation status; it now adds a source-pinned full-position exit-load estimate when a current NAV and known lot schedules are available.",
+        "The MF terminal shows pending purchase/allotment state and eligible NAV date, plus existing pending redemption and payout states. Unknown/stale data is not filled.",
+        "India MF tax estimate and sourced scheme cutoff are explicitly shown as unavailable because no current tax schedule or connected cutoff feed exists; docs/edge-program/mf-terminal-holdings-v1.md records remaining work.",
+        "tests/test_mf_lot_book.py and tests/test_mf_decisions.py: 28 passed; the new targeted terminal display assertion passes; Ruff and git diff --check pass."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: cutoff/terms feed, reviewed India MF tax rules and full allotment receipt evidence are not connected; tax is explicitly unavailable.",
+      "last_audited_at_utc": "2026-11-24T00:47:00Z",
+      "commit": "0a60a7952855ed746f2d79040a0574f7b7fc40ce"
     },
     {
       "id": "FB-1108",
       "text": "Show MF `SUBSCRIBE`, `REDEEM`, `SWITCH`, `SIP`, `HOLD` as decisions, not misleading buy-at-current-price buttons.",
       "source_checked": true,
-      "status": "NOT_STARTED",
+      "status": "PARTIAL",
       "evidence": [
-        "No MF decision workflow for SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD found; recommendations remain research primitives"
+        "docs/edge-program/mf-action-decisions-v1.md defines the decision semantics for SUBSCRIBE, REDEEM, SWITCH, SIP, and HOLD; the terminal explains NAV/cutoff, payout, scheme, and recurring-installment implications instead of showing current-price transaction buttons.",
+        "src/financial_brain/paper/mf_decisions.py validates action-specific fields and records an idempotent, content-hashed, as-of/expiry-bound choice in mf_action_decisions.",
+        "src/financial_brain/cli.py exposes fb mf-decision; src/financial_brain/paper/terminal.py displays the decision choices and journal records. Every path fixes PAPER_DECISION_ONLY and physical_orders_authorized=false and never invokes an MF order API.",
+        "The CLI actor label and context SHA-256 are self-declared/caller-supplied; authenticated decision identity, attested context, UI forms, and any separate paper-order confirmation remain incomplete."
       ],
-      "blocker": null,
-      "last_audited_at_utc": "2026-11-21T19:32:51.561100Z",
-      "commit": "1724d854b975f6513faceb2bfef513ad97c6ec54"
+      "blocker": "Partial: all five MF decision categories are modeled and shown, and local human choices persist, but there is no authenticated consumer UI or independently attested decision context. The journal does not submit a paper or external MF order.",
+      "last_audited_at_utc": "2026-11-24T00:30:35+00:00",
+      "commit": "f427cb7f",
+      "test_result": "Nine focused MF decision tests pass, covering all five action schemas, validation, expiry, idempotency/conflicts, as-of visibility, CLI capture, terminal language and no-order behavior. The existing terminal-panel tests also pass in the targeted run.",
+      "test_evidence": [
+        "python -m pytest tests/test_mf_decisions.py -q: 9 passed.",
+        "python -m pytest tests/test_mf_decisions.py tests/test_mf_lot_book.py -k \"mf_decisions or terminal_panel\" -q: 11 passed, 17 deselected.",
+        "Capability matrix validation and Ruff passed; scoped mypy passed for mf_decisions.py."
+      ]
     },
     {
       "id": "FB-1109",
@@ -15566,7 +15728,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-22T12:07:03Z",
+      "as_of_utc": "2026-11-24T01:54:41Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -15819,8 +15981,8 @@
     "status_counts": {
       "COMPLETE": 42,
       "EXTERNAL_BLOCKED": 1,
-      "NOT_STARTED": 16,
-      "PARTIAL": 187,
+      "NOT_STARTED": 0,
+      "PARTIAL": 203,
       "UNASSESSED": 1132
     },
     "verified_complete_count": 42,
@@ -15893,13 +16055,13 @@
       "src/financial_brain/paper/mf_flow_book.py",
       "tests/test_mf_folio_book.py"
     ],
-    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing."
+    "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent."
   },
   "counts_by_status": {
     "COMPLETE": 42,
     "EXTERNAL_BLOCKED": 1,
-    "NOT_STARTED": 16,
-    "PARTIAL": 187,
+    "NOT_STARTED": 0,
+    "PARTIAL": 203,
     "UNASSESSED": 1132
   }
 }

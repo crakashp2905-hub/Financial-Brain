@@ -1629,6 +1629,12 @@
       "module_owner": "src/financial_brain/forward_edge/lookahead.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "path": "src/financial_brain/forward_edge/manual_paper_decisions.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/manual_paper_decisions.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forward_edge/market_data.py",
       "path": "src/financial_brain/forward_edge/market_data.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -2457,6 +2463,18 @@
       "module_owner": "src/financial_brain/paper/mf_account_ledger.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/mf_allocation_policy.py",
+      "path": "src/financial_brain/paper/mf_allocation_policy.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_allocation_policy.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_decisions.py",
+      "path": "src/financial_brain/paper/mf_decisions.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_decisions.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/mf_exit_loads.py",
       "path": "src/financial_brain/paper/mf_exit_loads.py",
       "module_role": "paper_engine_or_output",
@@ -2491,6 +2509,12 @@
       "path": "src/financial_brain/paper/mf_paper_realism_book.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/mf_paper_realism_book.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/mf_periodic_review.py",
+      "path": "src/financial_brain/paper/mf_periodic_review.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/mf_periodic_review.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/mf_purchase_book.py",

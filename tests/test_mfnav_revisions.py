@@ -103,6 +103,20 @@ def test_nav_ingest_refuses_naive_availability_timestamps(tmp_path):
         )
 
 
+def test_nav_ingest_rejects_nonpositive_nav_before_persisting_observation(tmp_path):
+    cfg = Config(data_root=tmp_path).ensure()
+    db = Database(cfg)
+    db.migrate()
+    retrieved = datetime(2026, 11, 20, 10, 0, tzinfo=timezone.utc)
+    with db.connect() as con, pytest.raises(ValueError, match="per-unit price must be positive"):
+        mfnav.ingest(
+            con, cfg, date(2026, 11, 20),
+            provider=_Provider(_payload("0"), retrieved),
+        )
+    with db.connect() as con:
+        assert con.execute("SELECT count(*) FROM mf_nav_observations").fetchone()[0] == 0
+
+
 def test_source_published_timestamp_is_validated_and_preserved(tmp_path):
     cfg = Config(data_root=tmp_path).ensure()
     db = Database(cfg)

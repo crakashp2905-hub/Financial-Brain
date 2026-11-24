@@ -188,6 +188,16 @@ class MutualFundUnits:
 
 
 @dataclass(frozen=True)
+class MutualFundUnitDelta:
+    """Signed fractional-unit change for append-only fund-account journals."""
+
+    units: Decimal
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "units", to_decimal(self.units))
+
+
+@dataclass(frozen=True)
 class INRPerUnit:
     """Positive INR-denominated price per one unit/share/contract premium."""
 
