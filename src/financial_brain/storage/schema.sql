@@ -1778,3 +1778,84 @@ CREATE TABLE IF NOT EXISTS mf_action_decisions (
     CHECK (amount_inr IS NULL OR amount_inr > 0),
     CHECK (units IS NULL OR units > 0)
 );
+
+-- ------------------------------------------- five-desk instrument master (D1)
+-- instruments/master.py. Effective-dated identity, terms and state for equities, ETFs,
+-- options and mutual-fund schemes. published_at is when the fact became public: lookups
+-- filter on it, so a replay cannot see a later listing, lot size or suspension.
+-- Decimals are stored as text so that no value passes through binary floating point.
+CREATE TABLE IF NOT EXISTS instrument_identity (
+    uid             VARCHAR NOT NULL,   -- never reused
+    asset_class     VARCHAR NOT NULL,   -- EQUITY | ETF | OPTION | MUTUAL_FUND | FUTURE | INDEX
+    market          VARCHAR NOT NULL,
+    exchange        VARCHAR NOT NULL,   -- NSE | BSE | AMFI
+    symbol          VARCHAR NOT NULL,   -- ticker, or the AMFI scheme code
+    isin            VARCHAR,
+    provider_token  VARCHAR,
+    effective_from  DATE NOT NULL,
+    effective_to    DATE,               -- inclusive; NULL = still open
+    underlying      VARCHAR,            -- uid
+    source          VARCHAR NOT NULL,
+    source_hash     VARCHAR,
+    published_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (uid, exchange, effective_from)
+);
+
+CREATE TABLE IF NOT EXISTS instrument_terms (
+    uid             VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    tick            VARCHAR,
+    lot             INTEGER,
+    multiplier      VARCHAR,
+    expiry          DATE,
+    strike          VARCHAR,
+    option_type     VARCHAR,            -- CE | PE
+    benchmark       VARCHAR,
+    mf_plan         VARCHAR,            -- DIRECT | REGULAR
+    mf_option       VARCHAR,            -- GROWTH | IDCW_PAYOUT | IDCW_REINVEST
+    unit_places     INTEGER,
+    source          VARCHAR NOT NULL,
+    source_hash     VARCHAR,
+    published_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS instrument_state (
+    uid             VARCHAR NOT NULL,
+    effective_from  DATE NOT NULL,
+    state           VARCHAR NOT NULL,
+    source          VARCHAR NOT NULL,
+    source_hash     VARCHAR,
+    published_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS instrument_succession (
+    old_uid         VARCHAR NOT NULL,
+    new_uid         VARCHAR NOT NULL,
+    effective_date  DATE NOT NULL,
+    kind            VARCHAR NOT NULL,   -- ISIN_CHANGE | SCHEME_MERGER | RENAME
+    ratio           VARCHAR NOT NULL,   -- new units per old unit
+    source          VARCHAR NOT NULL,
+    source_hash     VARCHAR,
+    published_at    TIMESTAMPTZ NOT NULL,
+    ingested_at     TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (old_uid)
+);
+
+-- instruments/clocks.py. A calendar answers only inside its coverage.
+CREATE TABLE IF NOT EXISTS trading_calendar (
+    name            VARCHAR PRIMARY KEY,
+    kind            VARCHAR NOT NULL,   -- EXCHANGE | SCHEME | BANK
+    covers_from     DATE NOT NULL,
+    covers_through  DATE NOT NULL,
+    source          VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS trading_calendar_day (
+    name            VARCHAR NOT NULL,
+    day             DATE NOT NULL,
+    kind            VARCHAR NOT NULL,   -- HOLIDAY | SPECIAL_SESSION
+    PRIMARY KEY (name, day)
+);

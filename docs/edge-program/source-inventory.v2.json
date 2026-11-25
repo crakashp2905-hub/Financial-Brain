@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 731,
+  "source_count": 738,
   "sources": [
     {
       "capability_ids": [],
@@ -6697,6 +6697,123 @@
       "human_owner": null,
       "imports": [],
       "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/__init__.py",
+      "source_sha256": "1406cf884dc2c0ec9978fbd17542303e9e3dcecc9cc7d505545e703006f7d667",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "financial_brain.instruments.clocks",
+        "financial_brain.instruments.master",
+        "fractions"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/adapters.py",
+      "source_sha256": "134e6d96914fe8cc9e102e6a1bc174b405657c3341fcdb255889f80213210763",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.kernel.clock"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/clocks.py",
+      "source_sha256": "0ddda1ef05300a1460e63c6c2aa87124c55e0f320e51407e8890b10a9282a7d7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.instruments.master",
+        "financial_brain.instruments.units",
+        "financial_brain.kernel.units"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/corporate_actions.py",
+      "source_sha256": "1ac955b2f18d304ce5e2cd452c7d0659b82c9173dec020eb69f3e8b5c4003f5f",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "financial_brain.kernel.clock",
+        "financial_brain.kernel.units",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/master.py",
+      "source_sha256": "4ebdf9269456387daf21fcf145dbf0a777dda343c961c29e7c7d09c2b9e0e027",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "financial_brain.instruments.clocks",
+        "financial_brain.instruments.master"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/store.py",
+      "source_sha256": "c45aefc8c76c82c9b3995181540f18bb0a46d9632e8c5cd7123b512bfe8a96f2",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "decimal",
+        "financial_brain.kernel.units"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/instruments/units.py",
+      "source_sha256": "4aee186abf5f0c3d0d9a98ce7a02c416730d06ee55499a59a48d37a358d6bb5b",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [],
+      "maturity": "unassessed",
       "owner_role_hint": "UI",
       "parse_status": "ok",
       "source": "src/financial_brain/interfaces/__init__.py",
@@ -13095,6 +13212,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 701,
-  "unassigned_role_count": 434
+  "unassessed_count": 708,
+  "unassigned_role_count": 441
 }
