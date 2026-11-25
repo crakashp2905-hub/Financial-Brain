@@ -372,8 +372,8 @@ def decision_summary(rcon, asof, cs, best, breadth_state, ks_level, my) -> str:
             px = rcon.execute("""SELECT ticker, business_date, close_adj FROM adjusted_prices WHERE business_date <= ?
                                  AND business_date > ?::DATE - INTERVAL 400 DAY AND ticker IN (SELECT UNNEST(?))""", [asof, asof, names]).df()
             cov = px.pivot_table(index="business_date", columns="ticker", values="close_adj").pct_change(fill_method=None).tail(250).cov() * 252
-            t = NC.compare(cand, cov, my["book_inr"])
-            improve = t[(t["alpha_per_risk"] > 0) & (t["corr_to_book"] < 0.5)]
+            t = NC.compare(cand, cov, my["book_inr"], cash_return=0.0)
+            improve = t[t["clears_cash_hurdle"] & (t["alpha_per_risk"] > 0) & (t["corr_to_book"] < 0.5)]
         except Exception:                                # noqa: BLE001
             pass
     steps = [(f"{tradable:,}", "names traded today"), (f"{len(flagged):,}", "flagged by a scanner"),
@@ -608,22 +608,25 @@ def trader_section(rcon, ledger, cs, best, asof, *, capital, analogue_pool, brea
                                  AND business_date > ?::DATE - INTERVAL 400 DAY AND ticker IN (SELECT UNNEST(?))""", [asof, asof, names]).df()
             cov = px.pivot_table(index="business_date", columns="ticker", values="close_adj").pct_change(fill_method=None).tail(250).cov() * 252
             cand = shown[["ticker", "expected_net", "cost"]].rename(columns={"expected_net": "net"})
-            cmp_ = NC.compare(cand, cov, my["book_inr"])
-            alloc = NC.allocate(cand, cov, my["book_inr"], budget=100_000)
+            cmp_ = NC.compare(cand, cov, my["book_inr"], cash_return=0.0)
+            alloc = NC.allocate(cand, cov, my["book_inr"], budget=100_000, cash_return=0.0)
             top3 = cmp_.head(3)
             out.append("<h3 style='margin-top:14px'>Before you buy: the alternatives, given what you hold</h3><div class='wrap'><table>"
                        "<tr><th></th>" + "".join(f"<th class='r'>{_e(t)}</th>" for t in top3["ticker"]) + "</tr>"
                        + "".join(f"<tr><td>{lab}</td>" + "".join(f"<td class='r'>{fn(v)}</td>" for v in top3[col]) + "</tr>"
-                                 for lab, col, fn in (("Expected net alpha", "net", lambda v: f"{v * 100:+.2f}%"),
+                                 for lab, col, fn in (("Expected net return", "net", lambda v: f"{v * 100:+.2f}%"),
+                                                      ("Zero-return cash hurdle (60 sessions)", "cash_return", lambda v: f"{v * 100:+.2f}%"),
+                                                      ("Net return above cash", "net_over_cash", lambda v: f"{v * 100:+.2f}%"),
                                                       ("Volatility (a year)", "vol", lambda v: f"{v:.0%}"),
                                                       ("Cost", "cost", lambda v: f"{v * 100:.2f}%"),
                                                       ("Correlation with your book", "corr_to_book", lambda v: f"{v:+.2f}"),
                                                       ("Alpha per unit of added risk", "alpha_per_risk", lambda v: f"{v:.3f}")))
                        + f"</table></div><div class='sub'>{_e(NC.reason(cmp_))}.</div>")
-            out.append("<div class='sub' style='margin-top:6px'><b>Where the next Rs 1 lakh goes</b> (alpha minus the variance it adds to your book, "
+            out.append("<div class='sub' style='margin-top:6px'><b>Where the next Rs 1 lakh goes</b> (net return above an explicit zero-return cash control, less marginal variance penalty, "
                        "Rs 10,000 at a time, at most 10% of the book in a name): "
                        + ", ".join(f"{_e(t)} Rs {v:,.0f}" for t, v in alloc["allocation"].items())
-                       + f"{', ' if alloc['allocation'] else ''}cash Rs {alloc['cash']:,.0f}.</div>")
+                       + f"{', ' if alloc['allocation'] else ''}cash Rs {alloc['cash']:,.0f}. "
+                       "Zero-return cash is the current control assumption; a sourced cash-yield feed is not yet connected.</div>")
         except Exception as e:                          # noqa: BLE001
             out.append(f"<div class='sub'>comparison unavailable: {_e(str(e)[:80])}</div>")
     out += cards
