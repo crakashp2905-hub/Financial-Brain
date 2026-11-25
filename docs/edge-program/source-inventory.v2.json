@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 737,
+  "source_count": 738,
   "sources": [
     {
       "capability_ids": [],
@@ -11107,7 +11107,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/cross_desk_risk.py",
-      "source_sha256": "567364b08286a78a88ba62945e9a7c6916c770a2a78888154ee5f4fbc382a11c",
+      "source_sha256": "9e36abf54952a7f5404690abe696ff7ab9abcf94f080deaa069861980675b8a5",
       "test_paths": []
     },
     {
@@ -11232,6 +11232,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/optimizer.py",
       "source_sha256": "b37145f74754eaf9db88ab8d317fbfb8f88212ae02bfe07f20666c77af8a7847",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/rebalance.py",
+      "source_sha256": "3233e7333a0dad42845ec0d392b2db05ed032201c3a8b06d8977a73e2dab3cb2",
       "test_paths": []
     },
     {
@@ -13195,6 +13212,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 707,
-  "unassigned_role_count": 440
+  "unassessed_count": 708,
+  "unassigned_role_count": 441
 }
