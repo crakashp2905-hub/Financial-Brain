@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T03:16:00Z",
+  "as_of_utc": "2026-11-25T03:25:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "67e0f11c902805ce0c4a96d3ad9011aae3dfbf0906dbecb85afebae182fa2acb",
-  "audit_export_sha256": "728bf6ec48615ce19b889221e77eb9a638699c69ee358bdebb5148fac94625e2",
+  "status_ledger_sha256": "d4baecd586335205322271c51808c8bd76ff360f4f7ec6ad63526ab0b1be6071",
+  "audit_export_sha256": "2eda753abfa3643e95a9ea236625191dbb9b883910ca74ae614470465644494b",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 725,
-    "UNASSESSED": 547
+    "PARTIAL": 726,
+    "UNASSESSED": 546
   },
-  "assessed_count": 831,
-  "unassessed_count": 547,
+  "assessed_count": 832,
+  "unassessed_count": 546,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 20,
-        "UNASSESSED": 14
+        "PARTIAL": 21,
+        "UNASSESSED": 13
       },
       "evidence": [
         {
@@ -895,16 +895,24 @@
         },
         {
           "item_id": "PA-04-04",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 986,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add atomic reservations for cash, margin, risk capital, options buying power, instrument quantity, pending settlement and sellable inventory."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "a895745a",
+          "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions, and source current margin/settlement/inventory limits before the acceptance criteria can be complete.",
+          "evidence": [
+            "`portfolio.durable_reservations.DurableReservationLedger` persists one frozen per-account policy and append-only reserve/release receipts in SQLite; `BEGIN IMMEDIATE` makes multi-resource checks and insertion atomic across concurrent connections.",
+            "A single reservation can cover cash, margin, risk capital, options buying power, settlement cash, instrument quantity and sellable inventory. Any overage rejects the whole request; stable request IDs are idempotent and conflicting replays fail.",
+            "Release requires a source-hashed terminal order event (FILLED/CANCELLED/REJECTED/EXPIRED); released capacity is auditable and event payload integrity is checked.",
+            "The module is not yet wired into all desk order paths or OMS fills; filled exposure is not transferred atomically from reservations into canonical positions, and sourced margin/settlement/sellable limits remain caller provided."
+          ],
+          "tests": [
+            "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 5 passed, including concurrent two-desk account-cap race, all-or-none multi-resource denial, idempotent replay, conflicting terminal receipts, policy freeze and release.",
+            "Ruff and targeted mypy passed for the reservation module and tests."
+          ]
         },
         {
           "item_id": "PA-04-05",
@@ -2392,5 +2400,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "948ace75f3cbb6e660d37fddddf30fb2fb2e5555b7a6ca406926ee838b71fd53"
+  "report_sha256": "2bfcb84c0c6dabfdae63e423f871d5601b319aab7afd096722907ecc74478e83"
 }

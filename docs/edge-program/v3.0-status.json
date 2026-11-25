@@ -7503,12 +7503,22 @@
     {
       "id": "PA-04-04",
       "text": "Add atomic reservations for cash, margin, risk capital, options buying power, instrument quantity, pending settlement and sellable inventory.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.durable_reservations.DurableReservationLedger` persists one frozen per-account policy and append-only reserve/release receipts in SQLite; `BEGIN IMMEDIATE` makes multi-resource checks and insertion atomic across concurrent connections.",
+        "A single reservation can cover cash, margin, risk capital, options buying power, settlement cash, instrument quantity and sellable inventory. Any overage rejects the whole request; stable request IDs are idempotent and conflicting replays fail.",
+        "Release requires a source-hashed terminal order event (FILLED/CANCELLED/REJECTED/EXPIRED); released capacity is auditable and event payload integrity is checked.",
+        "The module is not yet wired into all desk order paths or OMS fills; filled exposure is not transferred atomically from reservations into canonical positions, and sourced margin/settlement/sellable limits remain caller provided."
+      ],
+      "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions, and source current margin/settlement/inventory limits before the acceptance criteria can be complete.",
+      "last_audited_at_utc": "2026-11-25T03:25:00Z",
+      "commit": "a895745a",
+      "test_evidence": [
+        "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 5 passed, including concurrent two-desk account-cap race, all-or-none multi-resource denial, idempotent replay, conflicting terminal receipts, policy freeze and release.",
+        "Ruff and targeted mypy passed for the reservation module and tests."
+      ],
+      "test_result": "Durable atomic multi-resource reservations: 5 focused tests passed; Ruff and targeted mypy passed."
     },
     {
       "id": "PA-04-05",
@@ -19255,7 +19265,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T03:16:00Z",
+    "as_of_utc": "2026-11-25T03:25:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19663,6 +19673,7 @@
       "FB-2543",
       "FB-2544",
       "PA-00-12",
+      "PA-04-04",
       "PA-04-15",
       "PA-04-16",
       "PA-04-17",
@@ -20089,13 +20100,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 831,
+    "audited_count": 832,
     "status_counts": {
       "COMPLETE": 84,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 725,
-      "UNASSESSED": 547
+      "PARTIAL": 726,
+      "UNASSESSED": 546
     },
     "verified_complete_count": 84,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -20226,7 +20237,7 @@
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 725,
-    "UNASSESSED": 547
+    "PARTIAL": 726,
+    "UNASSESSED": 546
   }
 }
