@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 742,
+  "source_count": 743,
   "sources": [
     {
       "capability_ids": [],
@@ -11243,6 +11243,25 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "canonical_ledger",
+        "dataclasses",
+        "enum",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/legacy_exit_adjudication.py",
+      "source_sha256": "70c63e57675402b87dab440405e68f04f9f11ad005a652de82c51b2e53e4df79",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "datetime",
         "decimal",
         "duckdb",
@@ -13330,6 +13349,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 712,
-  "unassigned_role_count": 445
+  "unassessed_count": 713,
+  "unassigned_role_count": 446
 }
