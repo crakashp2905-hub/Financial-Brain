@@ -45,10 +45,10 @@
   },
   "d2": {
    "ref": "feature/five-desk-d2-data-parity",
-   "commit": "c1f4e1d449",
-   "ahead_of_main": 53,
+   "commit": "3b858d1ce5",
+   "ahead_of_main": 54,
    "behind_main": 0,
-   "test_files": 364
+   "test_files": 365
   }
  },
  "status_meaning": {
@@ -58,15 +58,15 @@
   "NOT_STARTED": "nothing in the repository addresses it"
  },
  "by_status": {
-  "PARTIAL": 118,
-  "DONE": 274,
-  "NOT_STARTED": 11,
+  "PARTIAL": 119,
+  "DONE": 275,
+  "NOT_STARTED": 9,
   "FOOTHOLD": 2
  },
  "by_dependency": {
-  "IN_HOUSE": 383,
-  "EXTERNAL": 10,
+  "IN_HOUSE": 385,
   "OWNER": 6,
+  "EXTERNAL": 8,
   "TIME": 6
  },
  "tasks": [
@@ -247,19 +247,21 @@
    "id": "FB-0008",
    "section": "0. Baseline and integrity freeze \u2014 P0",
    "title": "Audit exchange and AMFI data retention/licensing, permitted redistribution, quote archival, contract metadata and platform terms (**EXTERNAL review**)",
-   "status": "NOT_STARTED",
-   "dependency": "EXTERNAL",
-   "blocker": "licence/retention review of NSE, BSE, AMFI and Kite terms",
-   "note": "",
+   "status": "PARTIAL",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "desk review of Kite, NSE, AMFI terms; written provider answers still needed",
    "source": [
     {
-     "path": "docs/sources",
-     "ref": "main",
-     "object": "0827f61b0767"
+     "path": "docs/five-desk/DATA_LICENSING_REVIEW.md",
+     "ref": "worktree",
+     "object": "4e64f4db776f"
     }
    ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "worktree"
+   ]
   },
   {
    "id": "FB-0009",
@@ -1099,19 +1101,19 @@
    "source": [
     {
      "path": "src/financial_brain/providers/amfi_history.py",
-     "ref": "worktree",
-     "object": "34732ffe53bf"
+     "ref": "d2",
+     "object": "2e37d7631ba6"
     }
    ],
    "test": [
     {
      "path": "tests/test_amfi_history.py",
-     "ref": "worktree",
-     "object": "9d728a36f3c4"
+     "ref": "d2",
+     "object": "a77f89527296"
     }
    ],
    "unmerged": [
-    "worktree"
+    "d2"
    ]
   },
   {
@@ -1125,19 +1127,19 @@
    "source": [
     {
      "path": "src/financial_brain/providers/amfi_history.py",
-     "ref": "worktree",
-     "object": "34732ffe53bf"
+     "ref": "d2",
+     "object": "2e37d7631ba6"
     }
    ],
    "test": [
     {
      "path": "tests/test_amfi_history.py",
-     "ref": "worktree",
-     "object": "9d728a36f3c4"
+     "ref": "d2",
+     "object": "a77f89527296"
     }
    ],
    "unmerged": [
-    "worktree"
+    "d2"
    ]
   },
   {
@@ -6478,13 +6480,21 @@
    "id": "FB-1404",
    "section": "14. Deployment, staged release and external requirements \u2014 P0/P1",
    "title": "Check live Kite access, quote throughput/limits and options-chain quote entitlement;",
-   "status": "NOT_STARTED",
-   "dependency": "EXTERNAL",
-   "blocker": "live Kite session and entitlement check (owner logs in daily)",
-   "note": "",
-   "source": [],
+   "status": "DONE",
+   "dependency": "IN_HOUSE",
+   "blocker": "",
+   "note": "measured option-quote entitlement and throughput",
+   "source": [
+    {
+     "path": "docs/five-desk/KITE_ENTITLEMENT_CHECK.md",
+     "ref": "worktree",
+     "object": "6de492f63683"
+    }
+   ],
    "test": [],
-   "unmerged": []
+   "unmerged": [
+    "worktree"
+   ]
   },
   {
    "id": "FB-1405",

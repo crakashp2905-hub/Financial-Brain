@@ -47,7 +47,6 @@ MEANING = {
 
 #: tasks that cannot be finished in-house: (kind, what is needed)
 EXTERNAL = {
-    "FB-0008": ("EXTERNAL", "licence/retention review of NSE, BSE, AMFI and Kite terms"),
     "FB-0009": ("OWNER", "hosted CI cannot start: GitHub billing/spending limit"),
     "FB-0010": ("OWNER", "branch protection is a repository-owner setting"),
     "FB-0205": ("EXTERNAL", "Kite WebSocket entitlement and a running archive task"),
@@ -57,7 +56,6 @@ EXTERNAL = {
     "FB-1213": ("TIME", "needs future independent sessions"),
     "FB-1320": ("OWNER", "hosted CI blocked by billing; market-hours rehearsal is the owner's"),
     "FB-1403": ("EXTERNAL", "genuine ETF/option/AMFI sources"),
-    "FB-1404": ("EXTERNAL", "live Kite session and entitlement check (owner logs in daily)"),
     "FB-1405": ("EXTERNAL", "only if live MF subscriptions are ever enabled"),
     "FB-1406": ("EXTERNAL", "broker, compliance and owner approval"),
     "FB-1407": ("TIME", "elapsed observed sessions"),
@@ -780,6 +778,9 @@ A.update({
 })
 _DH, _TDH = S + "paper/dashboard_html.py", "tests/test_dashboard_html.py"
 A.update({
+    "FB-0008": ("PARTIAL", ["docs/five-desk/DATA_LICENSING_REVIEW.md"],
+                "desk review of Kite, NSE, AMFI terms; written provider answers still needed"),
+    "FB-1404": (D, ["docs/five-desk/KITE_ENTITLEMENT_CHECK.md"], "measured option-quote entitlement and throughput"),
     "FB-0305": ("PARTIAL", ["src/financial_brain/providers/amfi_history.py", "tests/test_amfi_history.py"],
                 "bounded windows, resume, retries, rate limit; real AMFI fetch is external"),
     "FB-0306": (D, ["src/financial_brain/providers/amfi_history.py", "tests/test_amfi_history.py"],
