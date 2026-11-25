@@ -16108,7 +16108,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "commit": "25b88bc7",
       "test_evidence": [
         "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
       ],
