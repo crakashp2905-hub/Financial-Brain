@@ -35,6 +35,10 @@ def test_cross_desk_risk_integrates_current_and_shocked_views():
     assert sum(report.current.marginal_contribution.values()) == pytest.approx(report.current.volatility)
     assert report.current.expected_shortfall_loss > 0
     assert report.shocked.expected_shortfall_loss != report.current.expected_shortfall_loss
+    assert 0.5 <= report.current.risk_contribution_concentration_hhi <= 1.0
+    assert report.shocked.risk_contribution_concentration_hhi != pytest.approx(
+        report.current.risk_contribution_concentration_hhi
+    )
     assert report.current.scenario_count == 40
 
 
