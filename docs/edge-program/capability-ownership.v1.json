@@ -3148,6 +3148,12 @@
       "module_owner": "src/financial_brain/portfolio/position_ledger.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/rebalance.py",
+      "path": "src/financial_brain/portfolio/rebalance.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/rebalance.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/signals.py",
       "path": "src/financial_brain/portfolio/signals.py",
       "module_role": "portfolio_allocation_or_accounting",

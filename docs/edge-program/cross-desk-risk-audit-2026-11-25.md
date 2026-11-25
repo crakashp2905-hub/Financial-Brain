@@ -5,7 +5,7 @@ Date: 2026-11-25
 `portfolio.cross_desk_risk.analyze_cross_desk_risk` now computes one report over
 explicit signed INR position exposures. It reports gross/net exposure, long/short
 position HHI, signed factor exposures and factor concentration, current and shocked
-portfolio volatility, Euler marginal risk contributions, and historical expected-shortfall
+portfolio volatility, Euler marginal risk contributions and correlation-state-specific risk-contribution concentration, plus historical expected-shortfall
 and VaR losses for separate current and shocked scenario panels.
 
 The function rejects incomplete/duplicate covariance labels, asymmetric or non-PSD
