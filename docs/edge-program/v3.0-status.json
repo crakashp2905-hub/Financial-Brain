@@ -16259,7 +16259,7 @@
       ],
       "blocker": "The interval uses an iid Student-t model over caller-declared clusters; cluster independence, calibrated coverage, serial dependence, multiplicity/selection bias and source-backed cost uncertainty are not verified. The lower bound is integrated only in the research/paper primitive, not the live session runner and shared capital controls.",
       "last_audited_at_utc": "2026-11-25T01:03:17Z",
-      "commit": "be84217d",
+      "commit": "a7594250",
       "test_evidence": [
         "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 15 passed.",
         "ruff check src/financial_brain/portfolio/contextual_sleeves.py tests/test_portfolio_contextual_sleeves.py: passed.",
