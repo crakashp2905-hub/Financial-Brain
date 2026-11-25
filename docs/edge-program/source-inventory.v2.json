@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 736,
+  "source_count": 737,
   "sources": [
     {
       "capability_ids": [],
@@ -10928,6 +10928,26 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.kernel.position_signals",
+        "hashlib",
+        "json",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/cadence.py",
+      "source_sha256": "43855107de6fb81911ff954a76d6b12be217334162b0c0a599a6b546404b78e9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "contextlib",
         "dataclasses",
         "datetime",
@@ -13206,6 +13226,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 706,
-  "unassigned_role_count": 439
+  "unassessed_count": 707,
+  "unassigned_role_count": 440
 }

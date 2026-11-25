@@ -2950,6 +2950,12 @@
       "module_owner": "src/financial_brain/portfolio/behaviour_review.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/cadence.py",
+      "path": "src/financial_brain/portfolio/cadence.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/cadence.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/canonical_ledger.py",
       "path": "src/financial_brain/portfolio/canonical_ledger.py",
       "module_role": "ledger_or_journal",
