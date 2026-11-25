@@ -12,8 +12,11 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from statistics import stdev
 from types import MappingProxyType
 from typing import Mapping
+
+from scipy.stats import t as student_t
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -51,6 +54,7 @@ class MaturedSleeveReward:
 
     outcome_id: str
     sleeve_id: str
+    dependence_cluster_id: str
     context: Mapping[str, str]
     decision_at: datetime
     matured_at: datetime
@@ -58,8 +62,8 @@ class MaturedSleeveReward:
     source_sha256: str
 
     def __post_init__(self) -> None:
-        if not self.outcome_id.strip() or not self.sleeve_id.strip():
-            raise ContextualAllocationError("outcome and sleeve identities are required")
+        if not self.outcome_id.strip() or not self.sleeve_id.strip() or not self.dependence_cluster_id.strip():
+            raise ContextualAllocationError("outcome, sleeve and dependence-cluster identities are required")
         decision, matured = _utc(self.decision_at, "decision_at"), _utc(self.matured_at, "matured_at")
         if matured < decision:
             raise ContextualAllocationError("reward cannot mature before its decision")
@@ -139,7 +143,11 @@ class ContextualAllocation:
     weights: Mapping[str, float]
     cash_weight: float
     matched_observation_counts: Mapping[str, int]
+    matched_cluster_counts: Mapping[str, int]
     matched_mean_net_returns: Mapping[str, float]
+    lower_confidence_bounds: Mapping[str, float]
+    confidence_level: float
+    interval_method: str
     intents: tuple[FrozenSleeveOrderIntent, ...]
     allocation_sha256: str
     promotion_allowed: bool = False
@@ -149,12 +157,15 @@ class ContextualAllocation:
 class ContextualSleeveAllocator:
     minimum_matured_observations: int = 5
     maximum_sleeve_weight: float = 0.25
+    confidence_level: float = 0.95
 
     def __post_init__(self) -> None:
         if type(self.minimum_matured_observations) is not int or self.minimum_matured_observations < 1:
             raise ContextualAllocationError("minimum matured observations must be a positive integer")
         if not math.isfinite(self.maximum_sleeve_weight) or not 0 < self.maximum_sleeve_weight <= 1:
             raise ContextualAllocationError("maximum sleeve weight must be in (0, 1]")
+        if not math.isfinite(self.confidence_level) or not 0.5 < self.confidence_level < 1:
+            raise ContextualAllocationError("one-sided confidence level must be in (0.5, 1)")
 
     def allocate(
         self,
@@ -186,16 +197,27 @@ class ContextualSleeveAllocator:
         if any(dict(c.context) != context_body for c in candidates):
             raise ContextualAllocationError("candidate context must exactly match the frozen decision context")
 
-        by_sleeve: dict[str, list[float]] = {candidate.sleeve_id: [] for candidate in candidates}
+        by_sleeve: dict[str, dict[str, list[float]]] = {candidate.sleeve_id: {} for candidate in candidates}
         for row in observations:
             if row.decision_at < now and row.matured_at <= now and dict(row.context) == context_body:
                 if row.sleeve_id in by_sleeve:
-                    by_sleeve[row.sleeve_id].append(row.net_return)
-        counts = {sleeve: len(values) for sleeve, values in sorted(by_sleeve.items())}
-        means = {sleeve: sum(values) / len(values) for sleeve, values in sorted(by_sleeve.items()) if values}
-        edge = {sleeve: max(0.0, mean - cash_return_hurdle)
+                    by_sleeve[row.sleeve_id].setdefault(row.dependence_cluster_id, []).append(row.net_return)
+        counts = {sleeve: sum(len(rows) for rows in clusters.values())
+                  for sleeve, clusters in sorted(by_sleeve.items())}
+        cluster_counts = {sleeve: len(clusters) for sleeve, clusters in sorted(by_sleeve.items())}
+        cluster_means = {sleeve: [sum(rows) / len(rows) for _, rows in sorted(clusters.items())]
+                         for sleeve, clusters in sorted(by_sleeve.items()) if clusters}
+        means = {sleeve: sum(values) / len(values) for sleeve, values in cluster_means.items()}
+        lower_bounds: dict[str, float] = {}
+        for sleeve, values in cluster_means.items():
+            if len(values) < max(2, self.minimum_matured_observations):
+                continue
+            standard_error = stdev(values) / math.sqrt(len(values))
+            critical_value = float(student_t.ppf(self.confidence_level, len(values) - 1))
+            lower_bounds[sleeve] = means[sleeve] - critical_value * standard_error
+        edge = {sleeve: max(0.0, lower_bound - cash_return_hurdle)
                 if counts[sleeve] >= self.minimum_matured_observations else 0.0
-                for sleeve, mean in means.items()}
+                for sleeve, lower_bound in lower_bounds.items()}
         edge = {sleeve: value for sleeve, value in edge.items() if value > 0}
         weights: dict[str, float] = {}
         remaining = 1.0
@@ -218,7 +240,11 @@ class ContextualSleeveAllocator:
         allocation_body = {"as_of": now.isoformat(), "context_sha256": context_hash,
                            "cash_return_hurdle": cash_return_hurdle, "weights": weights,
                            "cash_weight": cash_weight, "matched_observation_counts": counts,
-                           "matched_mean_net_returns": means}
+                           "matched_cluster_counts": cluster_counts,
+                           "matched_mean_net_returns": means,
+                           "lower_confidence_bounds": lower_bounds,
+                           "confidence_level": self.confidence_level,
+                           "interval_method": "ONE_SIDED_STUDENT_T_ON_CONTEXT_MATCHED_CLUSTER_MEANS_IID"}
         allocation_hash = _hash(allocation_body)
         frozen_intents = []
         for candidate in sorted(candidates, key=lambda item: item.sleeve_id):
@@ -242,7 +268,10 @@ class ContextualSleeveAllocator:
                 allocation_sha256=allocation_hash, context_sha256=context_hash,
                 intent_sha256=_hash(intent_body)))
         return ContextualAllocation(now, context_hash, MappingProxyType(weights), cash_weight,
-                                    MappingProxyType(counts), MappingProxyType(means),
+                                    MappingProxyType(counts), MappingProxyType(cluster_counts),
+                                    MappingProxyType(means), MappingProxyType(lower_bounds),
+                                    self.confidence_level,
+                                    "ONE_SIDED_STUDENT_T_ON_CONTEXT_MATCHED_CLUSTER_MEANS_IID",
                                     tuple(frozen_intents), allocation_hash)
 
 

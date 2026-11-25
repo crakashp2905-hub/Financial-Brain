@@ -16233,19 +16233,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`portfolio.contextual_sleeves.ContextualSleeveAllocator` uses only prior, exact-context outcomes whose net reward and source hash are matured by the allocation clock; it retains cash when support is below the minimum or observed mean fails the explicit cash hurdle.",
+        "`portfolio.contextual_sleeves.ContextualSleeveAllocator` uses only prior, exact-context outcomes whose net reward and source hash are matured by the as-of clock; it retains cash when support is below the minimum or lower confidence bound fails the explicit cash hurdle.",
         "Generated broker-independent paper intents bind strategy version, instrument, side, quantity, tick, eligibility clock, context hash and allocation hash; content digests make the decision immutable and promotion remains disabled.",
-        "Four focused tests cover delayed-label exclusion, context isolation, support minimums, cash retention, risk-qualified candidates and frozen intent lineage; 14 tests pass across contextual sleeves, risk allocator, frozen capital allocation and outcome maturation, with Ruff and targeted mypy clean."
+        "The SL-22-08 core passed 14 focused tests before the SL-22-09 confidence-bound refinement; the current combined contextual/risk/frozen-allocation/outcome-maturation suite passes 15 tests, with Ruff and targeted mypy clean."
       ],
       "blocker": "The contextual allocator is a tested pure paper/research primitive; ForwardSessionRunner, persistent outcome maturation, shared book accounting and actual paper OMS intent/fill lifecycle are not wired to it. No prospective profitability evidence exists.",
-      "last_audited_at_utc": "2026-11-25T00:57:06Z",
+      "last_audited_at_utc": "2026-11-25T01:03:17Z",
       "commit": "9651b3de",
       "test_evidence": [
-        "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 14 passed.",
+        "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 15 passed.",
         "ruff check src/financial_brain/portfolio/contextual_sleeves.py tests/test_portfolio_contextual_sleeves.py: passed.",
         "python -m mypy src/financial_brain/portfolio/contextual_sleeves.py: no issues found."
       ],
-      "test_result": "Contextual sleeve allocator primitives and immutable paper intent contracts pass focused tests, lint and typing; operational runner/OMS integration remains outstanding."
+      "test_result": "Contextual sleeve allocator and immutable paper intent primitives pass focused tests, lint and typing; confidence-bound refinement is in the succeeding SL-22-09 package. Operational runner/OMS integration remains outstanding."
     },
     {
       "id": "SL-22-09",
@@ -16253,15 +16253,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`risk/allocator.py::decayed_edge` estimates an effective sample size and t-statistic; no calibrated lower confidence bound is passed into the portfolio optimizer to suppress risk under weak evidence."
+        "`ContextualSleeveAllocator` now computes an explicitly labeled one-sided Student-t lower bound over context-matched per-cluster net-return means; confidence level is configurable and included in the allocation hash.",
+        "A sleeve receives no weight if matured observation count is below policy, fewer than the required number of distinct dependence clusters exist, or its lower bound fails to clear the explicit cash hurdle. Repeated outcomes in one cluster cannot masquerade as independent evidence.",
+        "Five contextual sleeve tests cover LCB allocation, noisy evidence suppression, repeated-cluster suppression, delayed outcomes and frozen intent hashes; the combined contextual/risk/frozen allocation/maturation suites pass 15 tests, Ruff and targeted mypy."
       ],
-      "blocker": "Uncertainty-calibrated expected-return input and sizing gate are not integrated.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "The interval uses an iid Student-t model over caller-declared clusters; cluster independence, calibrated coverage, serial dependence, multiplicity/selection bias and source-backed cost uncertainty are not verified. The lower bound is integrated only in the research/paper primitive, not the live session runner and shared capital controls.",
+      "last_audited_at_utc": "2026-11-25T01:03:17Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 15 passed.",
+        "ruff check src/financial_brain/portfolio/contextual_sleeves.py tests/test_portfolio_contextual_sleeves.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/contextual_sleeves.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Context-matched iid cluster-level lower confidence bounds suppress capital when evidence is weak or insufficiently clustered; integration and calibration gaps keep this PARTIAL."
     },
     {
       "id": "SL-22-10",
