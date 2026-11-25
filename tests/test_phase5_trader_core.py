@@ -36,15 +36,38 @@ def cov3():
 
 def test_the_next_lakh_prefers_the_diversifier_over_a_twin_of_what_is_held():
     cands = pd.DataFrame({"ticker": ["TWIN", "DIVERS"], "net": [0.020, 0.018]})
-    r = NC.allocate(cands, cov3(), {"HELD": 400_000}, budget=100_000)
+    r = NC.allocate(cands, cov3(), {"HELD": 400_000}, budget=100_000, cash_return=0.0)
     assert r["allocation"].get("DIVERS", 0) > r["allocation"].get("TWIN", 0)
-    t = NC.compare(cands, cov3(), {"HELD": 400_000})
+    t = NC.compare(cands, cov3(), {"HELD": 400_000}, cash_return=0.0)
     assert t.iloc[0]["ticker"] == "DIVERS" and "moves with what you hold" in NC.reason(t)
 
 
 def test_no_positive_marginal_value_means_cash():
-    r = NC.allocate(pd.DataFrame({"ticker": ["TWIN"], "net": [-0.01]}), cov3(), {"HELD": 1}, budget=50_000)
+    r = NC.allocate(pd.DataFrame({"ticker": ["TWIN"], "net": [-0.01]}), cov3(),
+                    {"HELD": 1}, budget=50_000, cash_return=0.0)
     assert r["allocation"] == {} and r["cash"] == 50_000
+
+
+def test_explicit_cash_return_hurdle_controls_allocator_and_reports_opportunity_cost():
+    candidates = pd.DataFrame({"ticker": ["DIVERS"], "net": [0.02]})
+    table = NC.compare(candidates, cov3(), {}, cash_return=0.03)
+    assert not table.iloc[0]["clears_cash_hurdle"]
+    assert "keep cash" in NC.reason(table)
+
+    held_cash = NC.allocate(candidates, cov3(), {}, budget=100_000, cash_return=0.03)
+    assert held_cash["allocation"] == {}
+    assert held_cash["cash"] == 100_000
+    assert held_cash["cash_return_hurdle"] == pytest.approx(0.03)
+    assert held_cash["cash_counterfactual_return_inr"] == pytest.approx(3_000)
+    assert held_cash["cash_return_on_retained_cash_inr"] == pytest.approx(3_000)
+    assert held_cash["portfolio_utility_vs_all_cash_inr"] == pytest.approx(0)
+
+    invest = NC.allocate(pd.DataFrame({"ticker": ["DIVERS"], "net": [0.10]}), cov3(),
+                         {}, budget=100_000, cash_return=0.03)
+    assert invest["allocation"].get("DIVERS", 0) > 0
+    assert invest["cash_opportunity_cost_inr"] == pytest.approx(
+        0.03 * sum(invest["allocation"].values())
+    )
 
 
 def base(**kw):
