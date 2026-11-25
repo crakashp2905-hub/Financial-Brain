@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 731,
+  "source_count": 733,
   "sources": [
     {
       "capability_ids": [],
@@ -190,6 +190,28 @@
     {
       "capability_ids": [],
       "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "datetime",
+        "duckdb",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/backup.py",
+      "source_sha256": "0fd964be88604c3c1136a6b652c73c2d9cd2c64656a18f62c77a542b8f12e92c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
       "imports": [],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
@@ -294,7 +316,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "4a9e2354c476341fcab9dc054193c786642dedad3053997e56221226ce6e1662",
+      "source_sha256": "f05eee4eb8147cf8e5ee28a681a7e3ffe1ceda74a526b35a46f085a53f1ab970",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -681,7 +703,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/data_contracts.py",
-      "source_sha256": "2313934d5d81bd70573dcefec77d6739bb052698fb6bf18c2208f3186044de34",
+      "source_sha256": "2290cc1d60c309415df6464526b42ca3f8d192b937100f827c7ad615f34b401f",
       "test_paths": []
     },
     {
@@ -11186,6 +11208,26 @@
     {
       "capability_ids": [],
       "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "datetime",
+        "duckdb",
+        "pathlib",
+        "providers",
+        "shutil",
+        "socket"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/preflight.py",
+      "source_sha256": "bfc8662fb6fe8816a6d722b5f2b99166fdfc0f40a98ca36041fcea7cd4c5d4a9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
       "imports": [],
       "maturity": "unassessed",
       "owner_role_hint": "Integration",
@@ -13095,6 +13137,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 701,
-  "unassigned_role_count": 434
+  "unassessed_count": 703,
+  "unassigned_role_count": 436
 }

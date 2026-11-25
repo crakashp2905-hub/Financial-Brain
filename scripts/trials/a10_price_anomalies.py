@@ -1,5 +1,5 @@
 import json, time, warnings; warnings.simplefilter("ignore")
-import duckdb, numpy as np, pandas as pd
+import duckdb, pandas as pd
 from financial_brain.evaluation import anomalies as AN, standard as S, index_rules as IR, batch_three as B3, family_validation as FV
 t0=time.time(); out={}; fam={}
 con=duckdb.connect("data/financial_brain.duckdb",read_only=True)
