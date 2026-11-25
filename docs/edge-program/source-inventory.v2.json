@@ -11513,7 +11513,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/cross_desk_overlap.py",
-      "source_sha256": "2ef954c8ae9f0503b643433c3d2ac62f65c583686b5f4b039b5f89728454a9f6",
+      "source_sha256": "dd5324507c18e90309dfc93c40012f55b8ca02df05a8dcc5d7b95913f92c9737",
       "test_paths": []
     },
     {
