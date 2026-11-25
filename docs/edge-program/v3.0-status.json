@@ -16293,15 +16293,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`portfolio/stress.py`, risk stress modules and options Greek limits cover selected shocks; no joint sector/index crash/gamma/funding scenario optimizer proposes feasible capital weights."
+        "`portfolio.scenario_optimizer.optimize_scenarios` proposes long-only sleeve weights by maximizing expected net return over an explicit cash hurdle subject to a joint scenario loss cap, funding capacity and per-candidate/gross limits.",
+        "The scenario panel must include sector shock, index crash, option gamma shock and funding stress; source hashes and a common as-of clock bind inputs. Incomplete candidate coverage or missing scenario classes fail closed; unused capital remains cash and promotion is disabled.",
+        "Three focused tests verify joint scenario/funding constraints, cash retention when no candidate clears hurdle, source-panel coverage and deterministic replay; Ruff and targeted mypy pass."
       ],
-      "blocker": "Scenario analysis is not connected to portfolio re-optimization and funding constraints.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "Scenario vectors and shock limits are caller-supplied and not sourced/calibrated from Indian market/option surfaces or stress authority; nonlinear option repricing, shared holdings/greeks/margin aggregation, live runner integration and prospective validation are absent.",
+      "last_audited_at_utc": "2026-11-25T01:14:20Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_scenario_optimizer.py -q: 3 passed.",
+        "ruff check src/financial_brain/portfolio/scenario_optimizer.py tests/test_portfolio_scenario_optimizer.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/scenario_optimizer.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Scenario-constrained optimizer respects explicit loss/funding bounds and retains cash below the hurdle; source-backed scenarios and production wiring remain open."
     },
     {
       "id": "SL-22-12",
