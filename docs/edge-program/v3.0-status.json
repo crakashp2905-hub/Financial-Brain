@@ -7623,12 +7623,20 @@
     {
       "id": "PA-04-16",
       "text": "Add replay tests for lost acknowledgement, duplicated response, crash between outbox and fill, stale quote, forced EOD flatten and cross-process restarts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`tests/test_forward_edge_f01.py` covers failed/lost acknowledgements, durable outbox replay after restart, reconciliation before retry, duplicate postback idempotency and stale acknowledgement rejection.",
+        "`tests/test_forward_edge_session_runner.py` covers interrupted drain/resume, stale quote rejection, durable paper outbox, restart restoration without duplicate fills, unknown outbox receipt reconciliation and crash-before-receipt recovery.",
+        "`tests/test_exit_protection_ledger.py::test_position_close_requires_all_recorded_exit_fills_and_survives_restart` covers durable position-close recovery."
+      ],
+      "blocker": "No evidence found for a forced end-of-day flatten drill or a distinct cross-process restart/concurrency test spanning all requested crash points; option/legacy OMS integration is not covered by these forward-session tests.",
+      "last_audited_at_utc": "2026-11-25T04:35:00Z",
+      "commit": "main/test evidence (source audit)",
+      "test_evidence": [
+        "Source audit of named test cases; existing tests were not re-run in this package turn."
+      ],
+      "test_result": "Partial replay/restart coverage is present; full PA-04-16 acceptance matrix remains unverified."
     },
     {
       "id": "PA-04-17",
@@ -19236,7 +19244,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T04:20:00Z",
+    "as_of_utc": "2026-11-25T04:35:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19644,6 +19652,7 @@
       "FB-2543",
       "FB-2544",
       "PA-04-15",
+      "PA-04-16",
       "PA-04-17",
       "SL-00-01",
       "SL-00-02",
@@ -20068,13 +20077,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 829,
+    "audited_count": 830,
     "status_counts": {
       "COMPLETE": 83,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 724,
-      "UNASSESSED": 549
+      "PARTIAL": 725,
+      "UNASSESSED": 548
     },
     "verified_complete_count": 83,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -20205,7 +20214,7 @@
     "COMPLETE": 83,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 724,
-    "UNASSESSED": 549
+    "PARTIAL": 725,
+    "UNASSESSED": 548
   }
 }
