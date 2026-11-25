@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 732,
+  "source_count": 733,
   "sources": [
     {
       "capability_ids": [],
@@ -11023,6 +11023,23 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/drawdown_cap.py",
+      "source_sha256": "35ff674fdfdc08059c99441759da426f49ca0db5819404a735418c5d9887f5f4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "datetime",
         "decisions",
         "risk"
@@ -13119,6 +13136,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 702,
-  "unassigned_role_count": 435
+  "unassessed_count": 703,
+  "unassigned_role_count": 436
 }

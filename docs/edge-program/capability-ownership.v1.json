@@ -2980,6 +2980,12 @@
       "module_owner": "src/financial_brain/portfolio/cross_desk_risk.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/drawdown_cap.py",
+      "path": "src/financial_brain/portfolio/drawdown_cap.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/drawdown_cap.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/gate.py",
       "path": "src/financial_brain/portfolio/gate.py",
       "module_role": "portfolio_allocation_or_accounting",
