@@ -29,6 +29,11 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _canonical_text_bytes(path: Path) -> bytes:
+    """Read repository text identically from LF and CRLF working trees."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def _gate_status(counts: Counter[str], total: int) -> str:
     if total == 0:
         return "RED"
@@ -43,7 +48,7 @@ def build(root: Path) -> dict[str, Any]:
     root = root.resolve()
     status_path = root / STATUS_PATH
     audit_path = root / "docs/edge-program/v3.0-audit.jsonl"
-    status_bytes = status_path.read_bytes()
+    status_bytes = _canonical_text_bytes(status_path)
     status = json.loads(status_bytes.decode("utf-8"))
     audit_rows = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
     items = status.get("items")
@@ -127,7 +132,7 @@ def build(root: Path) -> dict[str, Any]:
         "checklist": status.get("checklist"),
         "checklist_source_sha256": status.get("source_sha256"),
         "status_ledger_sha256": _sha256(status_bytes),
-        "audit_export_sha256": _sha256(audit_path.read_bytes()),
+        "audit_export_sha256": _sha256(_canonical_text_bytes(audit_path)),
         "total_items": len(items),
         "counts_by_status": expected_counts,
         "assessed_count": assessed,

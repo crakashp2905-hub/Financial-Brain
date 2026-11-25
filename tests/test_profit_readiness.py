@@ -6,10 +6,18 @@ import shutil
 
 import pytest
 
-from scripts.profit_readiness import build, validate
+from scripts.profit_readiness import _canonical_text_bytes, build, validate
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_canonical_text_hash_input_normalizes_windows_line_endings(tmp_path) -> None:
+    lf = tmp_path / "lf.txt"
+    crlf = tmp_path / "crlf.txt"
+    lf.write_bytes(b"first\nsecond\n")
+    crlf.write_bytes(b"first\r\nsecond\r\n")
+    assert _canonical_text_bytes(lf) == _canonical_text_bytes(crlf)
 
 
 def test_readiness_is_derived_from_canonical_ledger_and_bound_to_evidence() -> None:
