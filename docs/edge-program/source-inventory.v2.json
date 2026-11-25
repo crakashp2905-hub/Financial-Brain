@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 739,
+  "source_count": 740,
   "sources": [
     {
       "capability_ids": [],
@@ -11150,6 +11150,25 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/equity_reconciliation.py",
+      "source_sha256": "33b11bd4ad30db5495875f9e22769d3d630aed8bbc1d11ab2ba97a7ab4930861",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decisions",
         "risk"
       ],
@@ -13269,6 +13288,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 709,
-  "unassigned_role_count": 442
+  "unassessed_count": 710,
+  "unassigned_role_count": 443
 }
