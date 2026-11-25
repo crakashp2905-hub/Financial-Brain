@@ -16239,7 +16239,7 @@
       ],
       "blocker": "The contextual allocator is a tested pure paper/research primitive; ForwardSessionRunner, persistent outcome maturation, shared book accounting and actual paper OMS intent/fill lifecycle are not wired to it. No prospective profitability evidence exists.",
       "last_audited_at_utc": "2026-11-25T00:57:06Z",
-      "commit": null,
+      "commit": "9651b3de",
       "test_evidence": [
         "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 14 passed.",
         "ruff check src/financial_brain/portfolio/contextual_sleeves.py tests/test_portfolio_contextual_sleeves.py: passed.",
