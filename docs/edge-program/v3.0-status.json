@@ -16333,15 +16333,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "India cost schedules, whole-share sizing, cash and margin controls exist by product; the mean-variance optimizer does not combine tax lots, settlement restrictions, financing and margin into one capacity optimizer."
+        "`portfolio.capacity_optimizer.optimize_capacity` now maximizes expected INR P&L after caller-supplied variable fees, transaction taxes, positive-gain tax assumptions, fixed charges and financing, using integer whole-share lots and explicit gross-leverage, margin and cumulative settlement-date cash constraints.",
+        "Every candidate input is bound to one as-of timestamp and a lowercase source hash. Four focused tests cover discrete lot selection and resource caps, fee/tax/financing arithmetic, fixed-charge rejection, uncovered settlement dates, malformed source identity and mismatched as-of clocks; Ruff and targeted mypy pass.",
+        "`docs/edge-program/discrete-capacity-optimizer-audit-2026-11-25.md` records scope and limitations. The module is paper/research-only and does not source fee/tax schedules or provide tax advice."
       ],
-      "blocker": "Full cost, tax, settlement and leverage capacity optimization is missing.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "No independently sourced current India fee/tax schedules, settlement calendars, margin/haircut inputs, or financing data are connected. Long-only equity lots only; derivative/short/currency/corporate-action cases and paper OMS integration and prospective validation remain absent.",
+      "last_audited_at_utc": "2026-11-25T01:50:40Z",
+      "commit": "67e700e8",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_capacity_optimizer.py tests/test_portfolio_scenario_optimizer.py tests/test_portfolio_allocator_benchmarks.py -q: 10 passed.",
+        "python -m ruff check src/financial_brain/portfolio/capacity_optimizer.py tests/test_portfolio_capacity_optimizer.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/capacity_optimizer.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "The optimizer accounts for variable and fixed charges, transaction/gain taxes, financing, whole-share lots, gross leverage, margin and cumulative settlement cash in a discrete paper allocation; provider schedule sourcing, broader product support and lifecycle integration remain incomplete."
     },
     {
       "id": "SL-22-14",

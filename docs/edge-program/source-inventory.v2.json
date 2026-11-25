@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 735,
+  "source_count": 736,
   "sources": [
     {
       "capability_ids": [],
@@ -10953,6 +10953,29 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "numpy",
+        "re",
+        "scipy.optimize",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/capacity_optimizer.py",
+      "source_sha256": "a9557747f2e992ee518bbfc2e04b12217509b10c75e5a6d9951a6b152ab4152e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "financial_brain.forward_edge.exposure_limits",
         "financial_brain.kernel.oms",
@@ -13183,6 +13206,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 705,
-  "unassigned_role_count": 438
+  "unassessed_count": 706,
+  "unassigned_role_count": 439
 }
