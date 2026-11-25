@@ -3028,6 +3028,12 @@
       "module_owner": "src/financial_brain/portfolio/equity_reconciliation.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/exit_coverage.py",
+      "path": "src/financial_brain/portfolio/exit_coverage.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/exit_coverage.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/gate.py",
       "path": "src/financial_brain/portfolio/gate.py",
       "module_role": "portfolio_allocation_or_accounting",
