@@ -1,0 +1,29 @@
+{
+ "months": 126,
+ "corr": 0.011307414056234349,
+ "mean_weight_mom": 0.14783738599998758,
+ "dynamic": {
+  "name": "P3 momentum + C1 carry, inverse-vol",
+  "prior": "B",
+  "family": 2,
+  "n": 126,
+  "years": 10.5,
+  "t_iid": 2.86,
+  "t_hac": 2.6,
+  "t_used": 2.6,
+  "z_adj": 2.36,
+  "z_live": null,
+  "t_a": 2.45,
+  "t_b": 3.04,
+  "both_halves": true,
+  "posterior": 0.641,
+  "tier": "INCUBATE",
+  "why": [],
+  "need_small": 2.71,
+  "need_candidate": 3.17,
+  "sharpe": 0.88,
+  "sharpe_shrunk": 0.28,
+  "vol": 0.04,
+  "capital_fraction": 0.0
+ }
+}

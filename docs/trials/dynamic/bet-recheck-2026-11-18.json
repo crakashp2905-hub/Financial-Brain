@@ -1,0 +1,81 @@
+{
+ "date": "2026-11-18",
+ "filled_cells": 328150,
+ "eq_only": {
+  "P3": {
+   "mean_pct": 1.2933781622480593,
+   "t": 3.03,
+   "halves": [
+    3.3,
+    1.11
+   ],
+   "posterior": 0.634,
+   "tier": "INCUBATE",
+   "n": 130,
+   "worst_month_pct": -10.846788688927136
+  },
+  "H003": {
+   "mean_pct": 1.2814249863639473,
+   "t": 3.19,
+   "halves": [
+    2.76,
+    1.66
+   ],
+   "posterior": 0.732,
+   "tier": "CANDIDATE_SMALL",
+   "n": 130,
+   "worst_month_pct": -11.646913194489324
+  },
+  "H005": {
+   "mean_pct": 1.4155448371142032,
+   "t": 3.52,
+   "halves": [
+    2.95,
+    2.1
+   ],
+   "posterior": 0.882,
+   "tier": "CANDIDATE_SMALL",
+   "n": 130,
+   "worst_month_pct": -13.644881324373067
+  }
+ },
+ "eq_plus_be_t": {
+  "P3": {
+   "mean_pct": 1.269927764928517,
+   "t": 2.97,
+   "halves": [
+    3.14,
+    1.08
+   ],
+   "posterior": 0.598,
+   "tier": "INCUBATE",
+   "n": 130,
+   "worst_month_pct": -10.846788688927136
+  },
+  "H003": {
+   "mean_pct": 1.1991007771271889,
+   "t": 2.83,
+   "halves": [
+    2.5,
+    1.43
+   ],
+   "posterior": 0.513,
+   "tier": "INCUBATE",
+   "n": 130,
+   "worst_month_pct": -12.130912236224368
+  },
+  "H005": {
+   "mean_pct": 1.5199450669792807,
+   "t": 3.82,
+   "halves": [
+    3.05,
+    2.28
+   ],
+   "posterior": 0.956,
+   "tier": "CANDIDATE_SMALL",
+   "n": 130,
+   "worst_month_pct": -13.644881324373067
+  }
+ },
+ "note": "null test not rerun; tiers are before the random-book null"
+}

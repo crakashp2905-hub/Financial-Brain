@@ -1,0 +1,140 @@
+{
+ "label": "TRAINING ONLY 2016-2021; holdout not read; closes not quotes",
+ "family": 8,
+ "coverage": {
+  "IB": {
+   "sum": 72,
+   "count": 72
+  },
+  "IC": {
+   "sum": 71,
+   "count": 72
+  },
+  "PCS": {
+   "sum": 72,
+   "count": 72
+  }
+ },
+ "structures": {
+  "IC": {
+   "months": 71,
+   "mean_ret_on_risk": -0.05082940022190471,
+   "t": -1.1773492185007663,
+   "t_2016_18": -0.9390807827389434,
+   "t_2019_21": -0.7951666885903933,
+   "win_rate": 0.7746478873239436,
+   "worst": -1.0,
+   "mean_credit_pts": 50.73521126760563,
+   "mean_cost_pts": 6.45811707746479,
+   "mean_max_loss_pts": 310.652483274648,
+   "sum_pnl_pts": -939.276312500003,
+   "worst_month": "2020-03-26",
+   "dynamic": {
+    "name": "IC defined-risk NIFTY premium (train)",
+    "prior": "B",
+    "family": 8,
+    "n": 71,
+    "years": 6.0,
+    "t_iid": -1.18,
+    "t_hac": -1.3,
+    "t_used": -1.3,
+    "z_adj": -5.67,
+    "z_live": null,
+    "t_a": -0.94,
+    "t_b": -0.8,
+    "both_halves": false,
+    "posterior": 0.0,
+    "tier": "FAIL",
+    "why": [
+     "not positive in both halves"
+    ],
+    "need_small": 3.14,
+    "need_candidate": 3.55,
+    "sharpe": -0.48,
+    "sharpe_shrunk": 0.0,
+    "vol": 1.251,
+    "capital_fraction": 0.0
+   }
+  },
+  "PCS": {
+   "months": 72,
+   "mean_ret_on_risk": -0.022290964029951163,
+   "t": -0.6603531999489418,
+   "t_2016_18": -1.1062111395761673,
+   "t_2019_21": 0.10608497902263943,
+   "win_rate": 0.8611111111111112,
+   "worst": -1.0,
+   "mean_credit_pts": 29.41597222222222,
+   "mean_cost_pts": 3.5919401041666665,
+   "mean_max_loss_pts": 313.06485677083333,
+   "sum_pnl_pts": -520.9196875000022,
+   "worst_month": "2020-03-26",
+   "dynamic": {
+    "name": "PCS defined-risk NIFTY premium (train)",
+    "prior": "B",
+    "family": 8,
+    "n": 72,
+    "years": 6.0,
+    "t_iid": -0.66,
+    "t_hac": -0.83,
+    "t_used": -0.83,
+    "z_adj": -4.52,
+    "z_live": null,
+    "t_a": -1.11,
+    "t_b": 0.11,
+    "both_halves": false,
+    "posterior": 0.0,
+    "tier": "FAIL",
+    "why": [
+     "not positive in both halves"
+    ],
+    "need_small": 3.14,
+    "need_candidate": 3.55,
+    "sharpe": -0.27,
+    "sharpe_shrunk": 0.0,
+    "vol": 0.992,
+    "capital_fraction": 0.0
+   }
+  },
+  "IB": {
+   "months": 72,
+   "mean_ret_on_risk": -0.15827181557421943,
+   "t": -1.8804916846119955,
+   "t_2016_18": -2.119759521925467,
+   "t_2019_21": -0.574199766560922,
+   "win_rate": 0.4027777777777778,
+   "worst": -1.0,
+   "mean_credit_pts": 255.59513888888887,
+   "mean_cost_pts": 12.617847222222222,
+   "mean_max_loss_pts": 218.13381944444447,
+   "sum_pnl_pts": -1903.7349999999988,
+   "worst_month": "2016-01-28",
+   "dynamic": {
+    "name": "IB defined-risk NIFTY premium (train)",
+    "prior": "B",
+    "family": 8,
+    "n": 72,
+    "years": 6.0,
+    "t_iid": -1.88,
+    "t_hac": -2.38,
+    "t_used": -2.38,
+    "z_adj": -8.21,
+    "z_live": null,
+    "t_a": -2.12,
+    "t_b": -0.57,
+    "both_halves": false,
+    "posterior": 0.0,
+    "tier": "FAIL",
+    "why": [
+     "not positive in both halves"
+    ],
+    "need_small": 3.14,
+    "need_candidate": 3.55,
+    "sharpe": -0.77,
+    "sharpe_shrunk": 0.0,
+    "vol": 2.473,
+    "capital_fraction": 0.0
+   }
+  }
+ }
+}
