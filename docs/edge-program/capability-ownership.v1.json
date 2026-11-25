@@ -3046,6 +3046,12 @@
       "module_owner": "src/financial_brain/portfolio/journal.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/legacy_exit_adjudication.py",
+      "path": "src/financial_brain/portfolio/legacy_exit_adjudication.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/legacy_exit_adjudication.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/legacy_migration.py",
       "path": "src/financial_brain/portfolio/legacy_migration.py",
       "module_role": "canonical_contract_or_signal_output",

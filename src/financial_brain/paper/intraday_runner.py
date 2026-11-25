@@ -3,7 +3,7 @@ minute candles - and keep the evidence.
 
     live     polls Kite's read-only quote endpoint every ``POLL_SECONDS`` from 09:15 to 15:30 IST, sets the
              opening range from the quote's own day high and low at 09:30, feeds every polled price to the
-             engine, flattens at 15:15 and writes the day's report. Exits on its own on a holiday (no trade
+             engine, attempts to flatten at 15:15 and writes the day's report. Exits on its own on a holiday (no trade
              printed today by 09:25) and if the Kite session is missing or expires.
     replay   the same engine fed a past day's exact one-minute candles (open, then the bar's extremes in
              the order its direction implies, then the close). Labelled ``replay`` everywhere: it uses rules
@@ -334,24 +334,26 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                                        else "Quote unavailable — retrying"),
                     polls=polls, prices=last, quote_at=quote_at)
             if failures >= max_failures and any(t.is_open for t in eng.trades) and not eng.closed_for_day:
-                # Open positions must not be abandoned (2026-11-03: 51 trades left without an exit).
-                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns; at the
-                # flatten time with no feed, close at the last good quote, labelled as stale.
+                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns.
+                # A last-good quote is valuation-only: it is not executable exit evidence.
                 if clock < I.TIME_EXIT:
                     record_run(con, day, "live", started=started, status="degraded", symbols=len(syms),
                                polls=polls, note=f"quotes failing, holding open positions: {str(e)[:100]}",
                                version=fingerprint)
                     sleep_fn(max(poll, 60))
                     continue
-                for t in eng.end_of_day(now.replace(tzinfo=None), last):
-                    t.exit_reason = "time_stale_quote"
-                    save(con, t, "live")
-                log.warning("feed down at the flatten time: open positions closed at the last good quote")
+                unresolved = sum(t.is_open for t in eng.trades)
+                log.warning("feed down at flatten time: %d open positions remain unresolved; last-good quotes are valuation estimates only",
+                            unresolved)
             if failures >= max_failures:
+                unresolved = sum(t.is_open for t in eng.trades)
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
                            symbols=len(syms), polls=polls,
-                           note=feed_health_note(failure_class=type(e).__name__), version=fingerprint)
+                           note=feed_health_note(failure_class=type(e).__name__, unresolved_positions=unresolved,
+                                                 valuation_estimate_only=True), version=fingerprint)
                 return {"day": day, "status": "aborted", "why": str(e)[:200],
+                        "unresolved_positions": unresolved, "valuation_estimate_only": bool(unresolved),
+                        "realized_pnl_released": False,
                         "feed_health": feed_health.snapshot(now=now_fn())}
             record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
                        note=feed_health_note(), version=fingerprint)

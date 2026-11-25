@@ -326,7 +326,12 @@ def board_daily():
 
 def test_the_live_day_posts_a_0930_board_and_resolves_it_at_the_close(setup):
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
-    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", daily_fn=board_daily)
+    permission = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+                  "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+                  "effective_through": None, "evidence_ref": "tests/synthetic-feed",
+                  "reviewer": "test-fixture"}
+    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
+               daily_fn=board_daily, data_permission=permission)
     con = R.ledger(setup / "l.duckdb")
     row = con.execute("SELECT symbol, top, clears, ret_close FROM board WHERE mode = 'live'").fetchone()
     assert row[0] == "X" and row[1] is True and row[2] is False and row[3] is not None
@@ -384,19 +389,30 @@ def _feed_breaks_after_entry(c, recover_at=None):
             raise OSError("getaddrinfo failed")
         if m < 592:
             return good(symbols, kind)
-        return {s: {"last_price": 106.9, "last_trade_time": "2026-10-06 11:00:00",
-                    "ohlc": {"open": 100.0, "high": 106.9, "low": 99.0, "close": 100.0}} for s in symbols}
+        recovered_px = 106.9 if recover_at is not None else 100.2
+        return {s: {"last_price": recovered_px, "last_trade_time": "2026-10-06 11:00:00",
+                    "ohlc": {"open": 100.0, "high": max(101.0, recovered_px), "low": 99.0,
+                             "close": 100.0}} for s in symbols}
     return q
 
 
-def test_feed_failure_with_open_positions_closes_them_at_the_flatten_not_abandons_them(setup):
+def test_feed_failure_at_flatten_keeps_positions_open_and_last_quote_valuation_only(setup):
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
     out = R.run_live(quote_fn=_feed_breaks_after_entry(c), now_fn=c.now, sleep_fn=c.sleep,
                      path=setup / "l.duckdb", max_failures=5)
     assert out["status"] == "aborted"
-    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason, exit_px, exit_ts FROM trades").fetchall()
-    assert rows and all(r[0] == "time_stale_quote" and abs(r[1] - 101.6) < 0.1 for r in rows)
-    assert all(r[2] >= "2026-10-06T15:15" for r in rows)
+    assert out["unresolved_positions"] > 0
+    assert out["valuation_estimate_only"] is True
+    assert out["realized_pnl_released"] is False
+    con = R.ledger(setup / "l.duckdb")
+    rows = con.execute("SELECT exit_reason, exit_px, exit_ts, gross_pnl, net_pnl FROM trades").fetchall()
+    open_rows = [row for row in rows if row[2] is None]
+    assert open_rows and all(row[0:2] == (None, None) for row in open_rows)
+    assert all(row[3:] == (0.0, 0.0) for row in open_rows)
+    run_note = con.execute("SELECT status, note FROM runs WHERE mode = 'live'").fetchone()
+    assert run_note[0] == "aborted"
+    assert '"valuation_estimate_only":true' in run_note[1]
+    assert '"unresolved_positions":' in run_note[1]
 
 
 def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
