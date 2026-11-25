@@ -169,7 +169,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/attribution/pipeline.py",
-      "source_sha256": "16b3cbed0140d1ca6fb23620566e6767dc5fdd32412ab3a7aa82ee4353bb09c9",
+      "source_sha256": "31becf4b87882d33220c827b76605fd0eda4da8bd56d3a24ca834760b691e2bd",
       "test_paths": []
     },
     {

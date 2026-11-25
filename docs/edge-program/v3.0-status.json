@@ -16412,15 +16412,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`attribution/pipeline.py` and `forward_edge/portfolio_alpha.py` attribute strategy and portfolio P&L layers; a complete sizing/beta/timing/execution/tax decomposition from one canonical account remains unverified."
+        "`attribution/pipeline.py::decompose_trader_layers` now combines strategy selection, sizing, market beta, timing, execution, taxes and other costs as additive decimal returns on a common opening-capital denominator. The available-evidence wrapper returns no total and lists missing components rather than silently substituting zero. This is an arithmetic combiner, not a causal attribution estimator.",
+        "Existing `attribution/pnl.py` and `forward_edge/portfolio_alpha.py` provide complementary benchmark and account-return reports; inputs are not yet auto-derived and reconciled from every desk and canonical account ledger."
       ],
-      "blocker": "Attribution source coverage and reconciliation across all desks remain incomplete.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "Component inputs remain caller supplied; beta/timing identification, canonical account ledger integration, cross-desk reconciliation and prospective validation remain open.",
+      "last_audited_at_utc": "2026-11-25T03:30:00Z",
+      "commit": "PENDING",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "`python -m pytest tests/test_portfolio_trader_layer_attribution.py tests/test_phase5_trader_layers.py tests/test_forward_edge_portfolio_alpha.py -q --basetemp=.pytest-sl2217`: 33 passed.",
+        "Ruff and targeted mypy passed for attribution/pipeline.py.",
+        "Source inventory, capability ownership, dependency graph and checklist audit export validators passed."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Trader-layer attribution tests: 33 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-22-18",
