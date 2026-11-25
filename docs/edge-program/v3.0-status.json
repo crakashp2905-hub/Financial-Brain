@@ -16172,7 +16172,7 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/portfolio/cross_desk_risk.py implements current/shocked covariance risk, Euler marginal contributions, source-supplied current/shocked scenario ES and VaR, signed INR factor exposure, and position/factor HHI with strict alignment, PSD, finiteness, and sample-size gates.",
+        "src/financial_brain/portfolio/cross_desk_risk.py implements current/shocked covariance risk, Euler marginal contributions, source-supplied current/shocked scenario ES and VaR, signed INR factor exposure, and position/factor HHI and correlation-state-specific absolute risk-contribution HHI with strict alignment, PSD, finiteness, and sample-size gates.",
         "tests/test_cross_desk_risk.py: 3 tests cover current/stressed risk outputs, contribution reconciliation, short exposure factor netting, malformed covariance/mapping, and insufficient or non-finite scenarios.",
         "docs/edge-program/cross-desk-risk-audit-2026-11-25.md records assumptions and explicitly limits the result to a calculation primitive pending production inputs."
       ],
@@ -16184,7 +16184,7 @@
         "python -m ruff check src/financial_brain/portfolio/cross_desk_risk.py tests/test_cross_desk_risk.py: all checks passed.",
         "python -m mypy src/financial_brain/portfolio/cross_desk_risk.py: no issues found."
       ],
-      "test_result": "Current and shocked covariance views, Euler marginal contributions, scenario expected shortfall and VaR, signed factor exposure, and concentration are implemented as an explicit-input calculation primitive; production cross-desk data wiring remains outstanding."
+      "test_result": "Current and shocked covariance views, Euler marginal contributions, scenario expected shortfall and VaR, signed factor exposure, and concentration by current/shocked marginal-risk contribution are implemented as an explicit-input calculation primitive; production cross-desk data wiring remains outstanding."
     },
     {
       "id": "SL-22-06",
