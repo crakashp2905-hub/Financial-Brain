@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T03:36:36Z",
+  "as_of_utc": "2026-11-25T03:45:36Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "352e6a58d3b300634758efa0497e45c3d2b51977f0e2192b99797488bdae4319",
-  "audit_export_sha256": "cc6804c2568386583601a6d3b5934a61a2e7240659a3f1e7a5f05debe3a2dfce",
+  "status_ledger_sha256": "b63e4f43d71d7bc551c24522b9384d10174ff6d7dda25f71d231fd5864f42629",
+  "audit_export_sha256": "daae26ec0de1a9aa634c6566a2dd9d542be5c7a1f86ca047790645c6bf92a2b5",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 727,
-    "UNASSESSED": 545
+    "PARTIAL": 728,
+    "UNASSESSED": 544
   },
-  "assessed_count": 833,
-  "unassessed_count": 545,
+  "assessed_count": 834,
+  "unassessed_count": 544,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 22,
-        "UNASSESSED": 12
+        "PARTIAL": 23,
+        "UNASSESSED": 11
       },
       "evidence": [
         {
@@ -940,16 +940,26 @@
         },
         {
           "item_id": "PA-04-06",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 988,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Pair **all** open positions with an exit policy and a crash-resumable monitor; require auditable exceptions for product types like NAV-based mutual funds."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "66d90e8d",
+          "blocker": "Partial: exit policies, durable per-position monitoring, NAV review behavior and a coverage audit exist, but there is no canonical cross-book inventory wired to the audit, no universal pre-entry coverage gate, and no operational restart drill proving every open position resumes monitoring.",
+          "evidence": [
+            "kernel.exit_policy defines immutable, versioned exit rules and requires hard-stop protection for its exchange-traded position contract.",
+            "kernel.exit_protection_ledger persists entry intents/fills, armed protections, exit intents/fills and closure in a hash-chained DurableJournal; replay reconstructs pending and open quantities and rejects unsafe transitions.",
+            "forward_edge.paper_book_adapter.due_exits evaluates sourced executable quotes and trading-session age for runner-owned paper-book positions; coverage is limited to that adapter path.",
+            "kernel.portfolio_exit_guard routes mutual-fund risk reduction to NAV_REDEMPTION_REVIEW and prohibits representing it as an intraday fill.",
+            "portfolio.exit_coverage adds a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and still needs a replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
+            "The coverage contract is pure and is not yet supplied by a canonical all-book position inventory or enforced by every entry/runner adapter; real crash/restart drills and monitor scheduling remain unverified."
+          ],
+          "tests": [
+            "python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q: 18 passed.",
+            "Ruff and targeted mypy passed for the new exit-coverage module and tests."
+          ]
         },
         {
           "item_id": "PA-04-07",
@@ -2411,5 +2421,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "ad88866b5704dae53164ff8b3bfb690d3ec5c45047a5ad3260aac4baaf1fedc9"
+  "report_sha256": "c20c41e4d13bde101de9489c4ee4c1907df9b52fdd848a4472f2b04529d38f2d"
 }
