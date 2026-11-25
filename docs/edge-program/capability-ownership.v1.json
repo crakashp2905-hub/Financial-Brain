@@ -2956,6 +2956,12 @@
       "module_owner": "src/financial_brain/portfolio/canonical_ledger.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/capacity_optimizer.py",
+      "path": "src/financial_brain/portfolio/capacity_optimizer.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/capacity_optimizer.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/capital_allocator.py",
       "path": "src/financial_brain/portfolio/capital_allocator.py",
       "module_role": "portfolio_allocation_or_accounting",
