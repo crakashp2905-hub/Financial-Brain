@@ -16299,7 +16299,7 @@
       ],
       "blocker": "Scenario vectors and shock limits are caller-supplied and not sourced/calibrated from Indian market/option surfaces or stress authority; nonlinear option repricing, shared holdings/greeks/margin aggregation, live runner integration and prospective validation are absent.",
       "last_audited_at_utc": "2026-11-25T01:14:20Z",
-      "commit": "16079556",
+      "commit": "03b5cb00",
       "test_evidence": [
         "python -m pytest tests/test_portfolio_scenario_optimizer.py -q: 3 passed.",
         "ruff check src/financial_brain/portfolio/scenario_optimizer.py tests/test_portfolio_scenario_optimizer.py: passed.",
