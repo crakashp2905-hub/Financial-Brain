@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 737,
+  "source_count": 738,
   "sources": [
     {
       "capability_ids": [],
@@ -11089,6 +11089,26 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/daily_budgets.py",
+      "source_sha256": "a1801ee4eab9800ec02d25f0cb021b1e7613bb4f4e5cb8e8556265c2104ad501",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "hashlib",
         "json",
         "math"
@@ -13226,6 +13246,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 707,
-  "unassigned_role_count": 440
+  "unassessed_count": 708,
+  "unassigned_role_count": 441
 }
