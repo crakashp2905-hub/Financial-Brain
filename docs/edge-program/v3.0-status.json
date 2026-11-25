@@ -16172,15 +16172,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`portfolio/marginal.py`, `risk/limits.py`, `risk/stress.py` and portfolio stress tools cover marginal/concentration/risk scenarios; expected shortfall under shocked correlation and one cross-desk factor map are not integrated."
+        "src/financial_brain/portfolio/cross_desk_risk.py implements current/shocked covariance risk, Euler marginal contributions, source-supplied current/shocked scenario ES and VaR, signed INR factor exposure, and position/factor HHI with strict alignment, PSD, finiteness, and sample-size gates.",
+        "tests/test_cross_desk_risk.py: 3 tests cover current/stressed risk outputs, contribution reconciliation, short exposure factor netting, malformed covariance/mapping, and insufficient or non-finite scenarios.",
+        "docs/edge-program/cross-desk-risk-audit-2026-11-25.md records assumptions and explicitly limits the result to a calculation primitive pending production inputs."
       ],
-      "blocker": "No unified current/stressed correlation and tail-risk report across all desks.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "No production adapter joins H005/H003/P3, options Greeks, point-in-time ETF/MF holdings, permission-cleared source data, and matched current/stressed covariance and scenario panels into an account-level risk report.",
+      "last_audited_at_utc": "2026-11-25T00:30:00Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_cross_desk_risk.py tests/test_cross_desk_overlap.py tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-sl2205: 18 passed.",
+        "python -m ruff check src/financial_brain/portfolio/cross_desk_risk.py tests/test_cross_desk_risk.py: all checks passed.",
+        "python -m mypy src/financial_brain/portfolio/cross_desk_risk.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Current and shocked covariance views, Euler marginal contributions, scenario expected shortfall and VaR, signed factor exposure, and concentration are implemented as an explicit-input calculation primitive; production cross-desk data wiring remains outstanding."
     },
     {
       "id": "SL-22-06",
@@ -19166,7 +19170,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T00:15:00Z",
+    "as_of_utc": "2026-11-25T00:30:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

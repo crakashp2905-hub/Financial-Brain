@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 730,
+  "source_count": 731,
   "sources": [
     {
       "capability_ids": [],
@@ -10997,6 +10997,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
+        "dataclasses",
+        "numpy",
+        "pandas",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/cross_desk_risk.py",
+      "source_sha256": "567364b08286a78a88ba62945e9a7c6916c770a2a78888154ee5f4fbc382a11c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decisions",
@@ -13077,6 +13095,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 700,
-  "unassigned_role_count": 432
+  "unassessed_count": 701,
+  "unassigned_role_count": 433
 }
