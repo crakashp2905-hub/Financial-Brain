@@ -16353,15 +16353,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Paper reviews and strategy evaluation use scheduled rebalances; event-driven risk exits and decision timestamps are available in separate components, but not one audited allocation cadence policy."
+        "`portfolio.cadence.evaluate_cadence` joins a frozen, source-hashed schedule with previously emitted typed `EmittedExitEvent` risk exits, preserving observed-trigger/event timestamps, position and source identity, and idempotency keys in a deterministic audit digest.",
+        "Four focused tests cover event priority at a scheduled slot, cursor-based duplicate suppression, duplicate/future event rejection, schedule validation and timezone/cursor gates; Ruff and targeted mypy pass.",
+        "`docs/edge-program/portfolio-cadence-audit-2026-11-25.md` records scope and remaining integration gaps."
       ],
-      "blocker": "Periodic rebalance and event-exit policy are not jointly frozen/audited.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "Exchange-session schedule sourcing, durable cursor persistence, portfolio runner/OMS dispatch, missed-exit escalation, event-to-risk policy evaluation, shared book closure and prospective operation remain unwired.",
+      "last_audited_at_utc": "2026-11-25T02:07:00Z",
+      "commit": "2535ae14",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_cadence.py -q: 4 passed.",
+        "python -m ruff check src/financial_brain/portfolio/cadence.py tests/test_portfolio_cadence.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/cadence.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "A frozen review schedule and emitted risk exits receive timestamped, prioritized, idempotent audit decisions; durable scheduling, runner/OMS dispatch and operational risk evaluation remain missing."
     },
     {
       "id": "SL-22-15",
