@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 779,
+  "source_count": 780,
   "sources": [
     {
       "capability_ids": [],
@@ -11506,6 +11506,23 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/cross_desk_overlap.py",
+      "source_sha256": "2ef954c8ae9f0503b643433c3d2ac62f65c583686b5f4b039b5f89728454a9f6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decisions",
         "risk"
       ],
@@ -13905,6 +13922,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 749,
-  "unassigned_role_count": 457
+  "unassessed_count": 750,
+  "unassigned_role_count": 458
 }
