@@ -2938,6 +2938,12 @@
       "module_owner": "src/financial_brain/patterns/views.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/aggregate_risk_budget.py",
+      "path": "src/financial_brain/portfolio/aggregate_risk_budget.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/aggregate_risk_budget.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/allocator_benchmarks.py",
       "path": "src/financial_brain/portfolio/allocator_benchmarks.py",
       "module_role": "portfolio_allocation_or_accounting",

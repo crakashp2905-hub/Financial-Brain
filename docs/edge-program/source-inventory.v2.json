@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 738,
+  "source_count": 739,
   "sources": [
     {
       "capability_ids": [],
@@ -10892,6 +10892,29 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
+        "enum",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "re",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/aggregate_risk_budget.py",
+      "source_sha256": "3d4d7cd800b07815a637b23e7ec2a4c5a4ed7f16e29bcd27c5bfb4438a8a7df3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "enum",
         "hashlib",
         "json",
@@ -13246,6 +13269,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 708,
-  "unassigned_role_count": 441
+  "unassessed_count": 709,
+  "unassigned_role_count": 442
 }

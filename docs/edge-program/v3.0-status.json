@@ -16108,7 +16108,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "commit": "25b88bc7",
       "test_evidence": [
         "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
       ],
@@ -16393,15 +16393,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`forward_edge/capital_allocator.py` reserves paper cash and exposure atomically; `portfolio/canonical_ledger.py` is append-only and source-bound, but uncertainty/reconciliation fail-closed behavior is not connected to all active desk guards."
+        "`portfolio/aggregate_risk_budget.py` adds a deterministic, hash-bound cross-desk loss-risk gate over exact-as-of desk estimates and the canonical account ledger. Missing/duplicate desk estimates, stale/future marks, unsupported currencies, unresolved positions, missing opening balance, incomplete projection, payload-hash mismatch, or ledger read failure deny order permission. Per-desk risk may not exceed the account cap; projected total risk may not exceed the account cap.",
+        "The gate consumes caller-supplied loss-risk estimates and is not atomically integrated with every desk guard or OMS. It does not independently calibrate risk scenarios, detect event deletion from the database, or prove economic completeness of ledger inputs."
       ],
-      "blocker": "Cross-desk risk budget and ledger uncertainty gate remain partially integrated.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
+      "blocker": "Caller-supplied risk evidence, durable deletion detection, complete desk guard/OMS integration and prospective validation remain open.",
+      "last_audited_at_utc": "2026-11-25T03:10:00Z",
       "commit": "013b0640",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "`python -m pytest tests/test_portfolio_aggregate_risk_budget.py tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-sl2216`: 14 passed.",
+        "`python -m ruff check src/financial_brain/portfolio/aggregate_risk_budget.py tests/test_portfolio_aggregate_risk_budget.py`: passed.",
+        "`python -m mypy src/financial_brain/portfolio/aggregate_risk_budget.py`: passed."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Fail-closed aggregate loss-risk budget: 14 focused tests passed; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-22-17",
@@ -19211,7 +19214,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T00:50:00Z",
+    "as_of_utc": "2026-11-25T03:10:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
