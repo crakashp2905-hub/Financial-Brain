@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 731,
+  "source_count": 732,
   "sources": [
     {
       "capability_ids": [],
@@ -10966,6 +10966,28 @@
         "dataclasses",
         "datetime",
         "decimal",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/contextual_sleeves.py",
+      "source_sha256": "f68a52ac85202afa9d8467f5b059c549f453be6f96155d9d468f1fd7e57f2719",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
         "typing"
       ],
       "maturity": "unassessed",
@@ -13095,6 +13117,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 701,
-  "unassigned_role_count": 434
+  "unassessed_count": 702,
+  "unassigned_role_count": 435
 }
