@@ -16233,15 +16233,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`risk/allocator.py` sizes risk-qualified sleeves and `forward_edge/capital_allocation.py` evaluates frozen independent book weights/cash; neither is a contextual, delayed-reward learner that emits frozen broker-independent intents."
+        "`portfolio.contextual_sleeves.ContextualSleeveAllocator` uses only prior, exact-context outcomes whose net reward and source hash are matured by the allocation clock; it retains cash when support is below the minimum or observed mean fails the explicit cash hurdle.",
+        "Generated broker-independent paper intents bind strategy version, instrument, side, quantity, tick, eligibility clock, context hash and allocation hash; content digests make the decision immutable and promotion remains disabled.",
+        "Four focused tests cover delayed-label exclusion, context isolation, support minimums, cash retention, risk-qualified candidates and frozen intent lineage; 14 tests pass across contextual sleeves, risk allocator, frozen capital allocation and outcome maturation, with Ruff and targeted mypy clean."
       ],
-      "blocker": "Context/action/outcome learner and paper intent wiring are absent.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "The contextual allocator is a tested pure paper/research primitive; ForwardSessionRunner, persistent outcome maturation, shared book accounting and actual paper OMS intent/fill lifecycle are not wired to it. No prospective profitability evidence exists.",
+      "last_audited_at_utc": "2026-11-25T00:57:06Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_contextual_sleeves.py tests/test_forward_edge_risk_allocator.py tests/test_forward_edge_capital_allocation.py tests/test_forward_edge_outcome_maturation.py -q: 14 passed.",
+        "ruff check src/financial_brain/portfolio/contextual_sleeves.py tests/test_portfolio_contextual_sleeves.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/contextual_sleeves.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Contextual sleeve allocator primitives and immutable paper intent contracts pass focused tests, lint and typing; operational runner/OMS integration remains outstanding."
     },
     {
       "id": "SL-22-09",
