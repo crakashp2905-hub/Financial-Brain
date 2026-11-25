@@ -16373,15 +16373,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Cost-aware optimizer penalizes turnover, and allocators cap sleeve weights; no explicit per-day policy turnover cap and separate commission budget across all active desks was found."
+        "`portfolio.daily_budgets.evaluate_daily_budgets` applies separate daily gross-turnover and commission ceilings to source-hashed reservations and proposals, with deterministic priority ordering and Decimal INR arithmetic. A proposal must fit both budgets; rejected orders consume neither.",
+        "Four focused tests cover independent cap failures, deterministic order priority, existing reservations, prior budget breach, duplicate IDs, scope/session mismatch, timestamp gates, and deterministic audit hashes; Ruff and targeted mypy pass.",
+        "`docs/edge-program/daily-turnover-commission-budget-audit-2026-11-25.md` documents the scope and non-atomicity limitation. The gate does not recalculate per-trade expected-cost penalties."
       ],
-      "blocker": "Daily turnover and commission ceilings are not unified.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "Daily reservations are not atomically persisted across desks, current commission schedules and product-specific turnover/netting rules are not sourced, and fill/cancel reconciliation, OMS integration and prospective paper validation remain missing.",
+      "last_audited_at_utc": "2026-11-25T02:26:47Z",
+      "commit": "5d4eb39b",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_daily_budgets.py -q: 4 passed.",
+        "python -m ruff check src/financial_brain/portfolio/daily_budgets.py tests/test_portfolio_daily_budgets.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/daily_budgets.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "A Decimal-based portfolio gate separately limits daily turnover and commissions and preserves source-hashed audit evidence; atomic cross-desk reservations, sourced schedules and OMS execution lifecycle are not integrated."
     },
     {
       "id": "SL-22-16",
