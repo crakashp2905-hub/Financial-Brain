@@ -16319,7 +16319,7 @@
       ],
       "blocker": "Allocation weight generation remains caller-supplied: equal-risk, volatility-targeted and robust mean-variance implementations are not orchestrated here, and the RL artifact is not independently trained or evaluated. This benchmark is not connected to source-backed costs, the paper OMS/shared books or prospective same-data cohorts.",
       "last_audited_at_utc": "2026-11-25T01:38:28Z",
-      "commit": "2d655334",
+      "commit": "307b2ec5",
       "test_evidence": [
         "python -m pytest tests/test_portfolio_allocator_benchmarks.py -q: 3 passed.",
         "ruff check src/financial_brain/portfolio/allocator_benchmarks.py tests/test_portfolio_allocator_benchmarks.py: passed.",
