@@ -16279,7 +16279,7 @@
       ],
       "blocker": "This is a pure post-allocator cap, not yet wired as an immutable control across all desks, runner entry points, persistent kill-switch state, shared cash/margin or OMS. Threshold ownership/calibration and human reset governance remain external.",
       "last_audited_at_utc": "2026-11-25T01:08:52Z",
-      "commit": null,
+      "commit": "8b8da11a",
       "test_evidence": [
         "python -m pytest tests/test_portfolio_drawdown_cap.py tests/test_phase5_risk_controls.py tests/test_portfolio_constraints.py -q: 27 passed.",
         "ruff check src/financial_brain/portfolio/drawdown_cap.py tests/test_portfolio_drawdown_cap.py: passed.",
