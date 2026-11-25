@@ -7633,12 +7633,20 @@
     {
       "id": "PA-04-17",
       "text": "Emit an `unresolved_positions` audit and deny capital deployment when any material unknown order/position exceeds an explicit zero-tolerance gate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.canonical_ledger.snapshot` emits an explicit `unresolved_positions` collection with source event IDs and preserves unknown legacy positions without inferring fills.",
+        "`portfolio.aggregate_risk_budget.evaluate_aggregate_risk_budget` uses a zero-tolerance gate: any unresolved position blocks the account as `BLOCKED_LEDGER_UNCERTAIN`; `tests/test_portfolio_aggregate_risk_budget.py::test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed` verifies order permission remains false.",
+        "Implementation evidence is in commit `25b88bc7` (SL-22-16 package; currently present in the open PR stack, not yet merged to main)."
+      ],
+      "blocker": "Unknown pending-order audit and universal order-path/OMS enforcement are not integrated; only canonical unresolved position rows are gated, and the implementation is not yet merged to main.",
+      "last_audited_at_utc": "2026-11-25T04:20:00Z",
+      "commit": "25b88bc7",
+      "test_evidence": [
+        "`python -m pytest tests/test_portfolio_aggregate_risk_budget.py tests/test_canonical_portfolio_ledger.py -q`: unresolved-position and ledger regressions passed (14 focused tests on the implementation package)."
+      ],
+      "test_result": "Canonical unresolved-position reporting and aggregate-risk deny path verified in the SL-22-16 test package; unknown pending-order integration remains open."
     },
     {
       "id": "PA-05-01",
@@ -19228,7 +19236,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T04:00:00Z",
+    "as_of_utc": "2026-11-25T04:20:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19636,6 +19644,7 @@
       "FB-2543",
       "FB-2544",
       "PA-04-15",
+      "PA-04-17",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -20059,13 +20068,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 828,
+    "audited_count": 829,
     "status_counts": {
       "COMPLETE": 83,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 723,
-      "UNASSESSED": 550
+      "PARTIAL": 724,
+      "UNASSESSED": 549
     },
     "verified_complete_count": 83,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -20196,7 +20205,7 @@
     "COMPLETE": 83,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 723,
-    "UNASSESSED": 550
+    "PARTIAL": 724,
+    "UNASSESSED": 549
   }
 }
