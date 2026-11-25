@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T04:04:14Z",
+  "as_of_utc": "2026-11-25T04:24:27Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "328bbda9ca6e6068c8158e356ff18ca2bb00c93c6fa5f97a74f02c2e0f8feaed",
-  "audit_export_sha256": "7f2364b1a58d7871a62504d7918d2bbcc3897ebea5857f361ff5ebe0d1e0fcb9",
+  "status_ledger_sha256": "24c54ec47c34171f6945ec72ac6ea517fc32aec410e9d7b179182e518aa239bb",
+  "audit_export_sha256": "86b3059af069357c0c83ecd716250a07ec171fb9c1eccb8cf16ad11ea42a002e",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 729,
-    "UNASSESSED": 543
+    "PARTIAL": 730,
+    "UNASSESSED": 542
   },
-  "assessed_count": 835,
-  "unassessed_count": 543,
+  "assessed_count": 836,
+  "unassessed_count": 542,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 24,
-        "UNASSESSED": 10
+        "PARTIAL": 25,
+        "UNASSESSED": 9
       },
       "evidence": [
         {
@@ -986,16 +986,23 @@
         },
         {
           "item_id": "PA-04-08",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 990,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Treat PR #39's stale last-good quote close as a **valuation estimate** and unresolved liquidation, not an observed executable `SELL` fill; release P&L only when exit evidence exists."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "PENDING",
+          "blocker": "Other legacy/forward paper books still need a shared execution-evidence gate so valuation marks cannot be posted as realized P&L across every ledger and reconciliation path.",
+          "evidence": [
+            "`src/financial_brain/paper/intraday_runner.py`: on feed failure at/after the 15:15 flatten, the runner no longer closes positions at a stale last-good quote or persists a synthetic SELL. It records unresolved position count and `valuation_estimate_only=true`; API response sets `realized_pnl_released=false`.",
+            "`tests/test_phase5_intraday_runner.py::test_feed_failure_at_flatten_keeps_positions_open_and_last_quote_valuation_only` passes: exit reason/price/time remain NULL and open-trade realized P&L remains zero under a feed outage.",
+            "Ruff passed for the changed runner and regression test."
+          ],
+          "tests": [
+            "`python -m pytest tests/test_phase5_intraday_runner.py -q -k feed_failure_at_flatten --basetemp .tmp/pytest-pa0408`: 1 passed in 65.63s.",
+            "The complete runner file was also attempted; local Windows sandbox path-length errors affected two unrelated live-view/replay cases."
+          ]
         },
         {
           "item_id": "PA-04-09",
@@ -2431,5 +2438,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "01ecee6ebb78acaf31021b5fd4f53ad48f0a7b64e022ce22c565be38e9176b77"
+  "report_sha256": "09625fcd56e8d0c24a9b26b885fe2d32341c9d1e9f9f4cd10eee5f1fc09b60fd"
 }
