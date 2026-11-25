@@ -1246,6 +1246,12 @@
       "module_owner": "src/financial_brain/execution/oms/model.py"
     },
     {
+      "capability_id": "module:src/financial_brain/execution/oms/oco.py",
+      "path": "src/financial_brain/execution/oms/oco.py",
+      "module_role": "broker_oms_component",
+      "module_owner": "src/financial_brain/execution/oms/oco.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/execution/oms/quality.py",
       "path": "src/financial_brain/execution/oms/quality.py",
       "module_role": "broker_oms_component",

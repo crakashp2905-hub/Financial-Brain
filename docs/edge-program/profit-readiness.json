@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T04:45:41Z",
+  "as_of_utc": "2026-11-25T04:53:26Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "3436b758ab31e0f9071a016c67a7858985f227a0addadc55f2ffc1bb39567a77",
-  "audit_export_sha256": "6eefe91e7a616e68d1ffb6962648b6831333878d312d62644835e7ddfe409b84",
+  "status_ledger_sha256": "39e6510a704f63aadad5eb2948ae1d8994c1bdafbac73ff35254b0846b5ac29a",
+  "audit_export_sha256": "3cef20bb09c53595574b9dc01a6e41b99cb75cf9ab87138f36d534d35e397b4b",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 731,
-    "UNASSESSED": 541
+    "PARTIAL": 732,
+    "UNASSESSED": 540
   },
-  "assessed_count": 837,
-  "unassessed_count": 541,
+  "assessed_count": 838,
+  "unassessed_count": 540,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 26,
-        "UNASSESSED": 8
+        "PARTIAL": 27,
+        "UNASSESSED": 7
       },
       "evidence": [
         {
@@ -1027,16 +1027,24 @@
         },
         {
           "item_id": "PA-04-10",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 992,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement mutually exclusive stop/target cancellation and replay-safe OCO simulation; handle race conditions when a fill arrives after cancellation."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "PENDING",
+          "blocker": "OCO is not yet attached to all legacy/forward runner position books or connected to an actual broker cancellation dispatcher; position quantity splitting and post-race flatten policy require account-specific risk integration.",
+          "evidence": [
+            "`src/financial_brain/execution/oms/oco.py` binds two existing durable child orders under one SHA-256-evidenced group; arming and transitions are hash-chained and deterministic.",
+            "After an exact durable child fill event, the OCO state records a cancel request and explicitly keeps the sibling live until its durable cancel confirmation.",
+            "A late sibling fill is surfaced as `SIBLING_FILL_RACE`/`UNKNOWN` and requires exposure reconciliation; a retry with the same triggering event is idempotent.",
+            "`tests/test_oms_oco.py` exercises cancel-pending semantics, late sibling fill, replay idempotency, conflicting group definitions and missing exact fill evidence. Existing forward order journal tests remain green."
+          ],
+          "tests": [
+            "`python -m pytest tests/test_oms_oco.py tests/test_forward_edge_order_journal.py -q`: 11 passed.",
+            "Ruff and mypy passed for the OCO module and tests."
+          ]
         },
         {
           "item_id": "PA-04-11",
@@ -2446,5 +2454,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "708182c947565da15a5e212224128a997fddc144a718e94797af3715d685a132"
+  "report_sha256": "02828ec421048f8f6f4f6bfa20ae06b40056bddd377ecbbf52b1b39fc9a5b9bc"
 }
