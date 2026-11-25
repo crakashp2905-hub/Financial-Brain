@@ -2938,6 +2938,12 @@
       "module_owner": "src/financial_brain/patterns/views.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/allocator_benchmarks.py",
+      "path": "src/financial_brain/portfolio/allocator_benchmarks.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/allocator_benchmarks.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/behaviour_review.py",
       "path": "src/financial_brain/portfolio/behaviour_review.py",
       "module_role": "portfolio_allocation_or_accounting",
