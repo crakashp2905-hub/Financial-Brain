@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 734,
+  "source_count": 735,
   "sources": [
     {
       "capability_ids": [],
@@ -10890,6 +10890,29 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "statistics",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/allocator_benchmarks.py",
+      "source_sha256": "1714834dad5100b832c6bc6a5e01d699cef9be7e432c9b6099755b113cc63ca0",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "numpy",
         "pandas"
       ],
@@ -13160,6 +13183,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 704,
-  "unassigned_role_count": 437
+  "unassessed_count": 705,
+  "unassigned_role_count": 438
 }
