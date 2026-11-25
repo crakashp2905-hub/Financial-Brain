@@ -60,12 +60,13 @@ def _ledger(path, *, mark_at_open=True):
 def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_fees(tmp_path):
     result = reconcile_account_equity(
         ledger=_ledger(tmp_path / "equity.sqlite"), account_id=ACCOUNT,
-        opening_as_of=START, closing_as_of=END,
+        opening_as_of=START, closing_as_of=END, reported_net_pnl_inr=Decimal("90"),
     )
     assert result.opening_equity_inr == Decimal("100000.00")
     assert result.closing_equity_inr == Decimal("100590.00")
     assert result.external_flows_inr == Decimal("500.00")
     assert result.net_investment_pnl_inr == Decimal("90.00")
+    assert result.reported_net_pnl_inr == Decimal("90")
     assert result.difference_inr == Decimal("0.00")
     assert result.reconciled
     assert result.event_count == 7
@@ -77,7 +78,7 @@ def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_
 def test_missing_opening_mark_fails_closed(tmp_path):
     result = reconcile_account_equity(
         ledger=_ledger(tmp_path / "equity.sqlite", mark_at_open=False), account_id=ACCOUNT,
-        opening_as_of=START, closing_as_of=END,
+        opening_as_of=START, closing_as_of=END, reported_net_pnl_inr=Decimal("90"),
     )
     assert not result.reconciled
     assert result.difference_inr is None
@@ -90,10 +91,12 @@ def test_naive_or_non_increasing_interval_is_rejected(tmp_path):
     ledger = _ledger(tmp_path / "equity.sqlite")
     with pytest.raises(EquityReconciliationError, match="timezone-aware"):
         reconcile_account_equity(ledger=ledger, account_id=ACCOUNT,
-                                 opening_as_of=START.replace(tzinfo=None), closing_as_of=END)
+                                 opening_as_of=START.replace(tzinfo=None), closing_as_of=END,
+                                 reported_net_pnl_inr=Decimal("90"))
     with pytest.raises(EquityReconciliationError, match="increasing reconciliation interval"):
         reconcile_account_equity(ledger=ledger, account_id=ACCOUNT,
-                                 opening_as_of=END, closing_as_of=START)
+                                 opening_as_of=END, closing_as_of=START,
+                                 reported_net_pnl_inr=Decimal("90"))
 
 
 def test_mutated_persisted_event_payload_fails_closed(tmp_path):
@@ -108,7 +111,19 @@ def test_mutated_persisted_event_payload_fails_closed(tmp_path):
             (row[0].replace('"cash_delta":"-20"', '"cash_delta":"-30"'),),
         )
     result = reconcile_account_equity(ledger=ledger, account_id=ACCOUNT,
-                                      opening_as_of=START, closing_as_of=END)
+                                      opening_as_of=START, closing_as_of=END,
+                                      reported_net_pnl_inr=Decimal("90"))
     assert not result.reconciled
     assert result.difference_inr is None
     assert any(blocker.startswith("LEDGER_UNCERTAIN") for blocker in result.blockers)
+
+
+def test_independent_pnl_mismatch_beyond_paise_tolerance_is_not_reconciled(tmp_path):
+    result = reconcile_account_equity(
+        ledger=_ledger(tmp_path / "equity.sqlite"), account_id=ACCOUNT,
+        opening_as_of=START, closing_as_of=END,
+        reported_net_pnl_inr=Decimal("90.02"),
+    )
+    assert result.net_investment_pnl_inr == Decimal("90.00")
+    assert result.difference_inr == Decimal("0.02")
+    assert not result.reconciled

@@ -32,6 +32,7 @@ class EquityReconciliation:
     closing_equity_inr: Decimal | None
     external_flows_inr: Decimal | None
     net_investment_pnl_inr: Decimal | None
+    reported_net_pnl_inr: Decimal
     difference_inr: Decimal | None
     tolerance_inr: Decimal
     reconciled: bool
@@ -123,6 +124,7 @@ def _check_mark_freshness(snapshot: dict[str, object], as_of: datetime, label: s
 
 def reconcile_account_equity(*, ledger: CanonicalPortfolioLedger, account_id: str,
                              opening_as_of: datetime, closing_as_of: datetime,
+                             reported_net_pnl_inr: Decimal,
                              tolerance_inr: Decimal = _CENT,
                              maximum_mark_age_seconds: int = 86400) -> EquityReconciliation:
     """Reconcile opening equity + external flows + investment P&L = closing equity.
@@ -135,6 +137,7 @@ def reconcile_account_equity(*, ledger: CanonicalPortfolioLedger, account_id: st
     start = _as_of(opening_as_of, "opening_as_of")
     end = _as_of(closing_as_of, "closing_as_of")
     tolerance = _money(tolerance_inr, "tolerance_inr")
+    reported_pnl = _money(reported_net_pnl_inr, "reported_net_pnl_inr")
     if not account_id.strip() or end <= start:
         raise EquityReconciliationError("account and increasing reconciliation interval are required")
     if tolerance < 0:
@@ -187,7 +190,7 @@ def reconcile_account_equity(*, ledger: CanonicalPortfolioLedger, account_id: st
             external = sum((_money(row.get("cash_delta"), "external cash flow")
                             for row in external_rows), _ZERO).quantize(_CENT, rounding=ROUND_HALF_EVEN)
             pnl = (closing_equity - opening_equity - external).quantize(_CENT, rounding=ROUND_HALF_EVEN)
-            difference = (opening_equity + external + pnl - closing_equity).quantize(
+            difference = (opening_equity + external + reported_pnl - closing_equity).quantize(
                 _CENT, rounding=ROUND_HALF_EVEN)
     except Exception as exc:  # Any uncertain read or projection fails closed.
         blockers.append(f"LEDGER_UNCERTAIN:{type(exc).__name__}")
@@ -197,7 +200,8 @@ def reconcile_account_equity(*, ledger: CanonicalPortfolioLedger, account_id: st
         "account_id": account_id, "opening_as_of": start.isoformat(),
         "closing_as_of": end.isoformat(), "opening_equity_inr": opening_equity,
         "closing_equity_inr": closing_equity, "external_flows_inr": external,
-        "net_investment_pnl_inr": pnl, "difference_inr": difference,
+        "net_investment_pnl_inr": pnl, "reported_net_pnl_inr": reported_pnl,
+        "difference_inr": difference,
         "tolerance_inr": tolerance, "reconciled": reconciled,
         "event_count": len(all_events) if "all_events" in locals() else 0,
         "event_sha256": event_hash, "opening_snapshot_sha256": opening_hash,
@@ -206,7 +210,7 @@ def reconcile_account_equity(*, ledger: CanonicalPortfolioLedger, account_id: st
     report_hash = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
                                           default=str, allow_nan=False).encode()).hexdigest()
     return EquityReconciliation(
-        account_id, start, end, opening_equity, closing_equity, external, pnl, difference,
+        account_id, start, end, opening_equity, closing_equity, external, pnl, reported_pnl, difference,
         tolerance, reconciled, len(all_events) if "all_events" in locals() else 0, event_hash, opening_hash,
         closing_hash, tuple(blockers), report_hash,
     )

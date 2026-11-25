@@ -11159,7 +11159,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/equity_reconciliation.py",
-      "source_sha256": "33b11bd4ad30db5495875f9e22769d3d630aed8bbc1d11ab2ba97a7ab4930861",
+      "source_sha256": "9591c5bedbb837710914bbce879e04c35af3c9eec481b219661e9c9aca754fe0",
       "test_paths": []
     },
     {
