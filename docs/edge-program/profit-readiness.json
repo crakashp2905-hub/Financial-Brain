@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-25T03:16:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "37fd295d773501da743ea2d3747181b169d2f9fc761aaecff0e6b23f250bf83a",
-  "audit_export_sha256": "eddc2930f742f604403ad30f38a691ba43401ebff45431683d5581b54869ed64",
+  "status_ledger_sha256": "67e0f11c902805ce0c4a96d3ad9011aae3dfbf0906dbecb85afebae182fa2acb",
+  "audit_export_sha256": "728bf6ec48615ce19b889221e77eb9a638699c69ee358bdebb5148fac94625e2",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
@@ -188,7 +188,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Emit a machine-readable `profit_readiness.json` listing current `RED/AMBER/GREEN` gates and links to exact evidence; reject hand-edited status percentages."
           },
-          "commit": "PENDING",
+          "commit": "83f29d38",
           "blocker": null,
           "evidence": [
             "`scripts/profit_readiness.py` deterministically generates `docs/edge-program/profit-readiness.json` from the v3 status ledger, per-item audit export, launch-gates contract and physical-order build policy.",
@@ -2392,5 +2392,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "45a7388d78b2de92bac5fd6e2060c2c5e4e50011d3713b39cc858cdca7806587"
+  "report_sha256": "948ace75f3cbb6e660d37fddddf30fb2fb2e5555b7a6ca406926ee838b71fd53"
 }

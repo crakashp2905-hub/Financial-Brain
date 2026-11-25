@@ -6982,7 +6982,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-25T03:16:00Z",
-      "commit": "PENDING",
+      "commit": "83f29d38",
       "test_evidence": [
         "`python -m pytest tests/test_profit_readiness.py -q`: 3 passed, including edited report and hand-edited ledger count rejection.",
         "`python scripts/profit_readiness.py --check`: passed for the generated report.",
