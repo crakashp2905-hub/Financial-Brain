@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 743,
+  "source_count": 744,
   "sources": [
     {
       "capability_ids": [],
@@ -2807,6 +2807,22 @@
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/slicer.py",
       "source_sha256": "911f28bd889a809aa814c32531f35200e92538f821975869d0920b109a10c0b7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/execution/oms/stops.py",
+      "source_sha256": "f9ca5303ab3cc31cb50b4abd43fda91ce2fb179d57d3cfc2b75e5d42955029cc",
       "test_paths": []
     },
     {
@@ -13349,6 +13365,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 713,
+  "unassessed_count": 714,
   "unassigned_role_count": 446
 }

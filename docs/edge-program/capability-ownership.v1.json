@@ -1282,6 +1282,12 @@
       "module_owner": "src/financial_brain/execution/oms/slicer.py"
     },
     {
+      "capability_id": "module:src/financial_brain/execution/oms/stops.py",
+      "path": "src/financial_brain/execution/oms/stops.py",
+      "module_role": "broker_oms_component",
+      "module_owner": "src/financial_brain/execution/oms/stops.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/execution/order_policy.py",
       "path": "src/financial_brain/execution/order_policy.py",
       "module_role": "execution_or_cost_model",

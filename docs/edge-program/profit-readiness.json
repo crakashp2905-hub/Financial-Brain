@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T04:24:27Z",
+  "as_of_utc": "2026-11-25T04:45:41Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "24c54ec47c34171f6945ec72ac6ea517fc32aec410e9d7b179182e518aa239bb",
-  "audit_export_sha256": "86b3059af069357c0c83ecd716250a07ec171fb9c1eccb8cf16ad11ea42a002e",
+  "status_ledger_sha256": "3436b758ab31e0f9071a016c67a7858985f227a0addadc55f2ffc1bb39567a77",
+  "audit_export_sha256": "6eefe91e7a616e68d1ffb6962648b6831333878d312d62644835e7ddfe409b84",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 730,
-    "UNASSESSED": 542
+    "PARTIAL": 731,
+    "UNASSESSED": 541
   },
-  "assessed_count": 836,
-  "unassessed_count": 542,
+  "assessed_count": 837,
+  "unassessed_count": 541,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 25,
-        "UNASSESSED": 9
+        "PARTIAL": 26,
+        "UNASSESSED": 8
       },
       "evidence": [
         {
@@ -1006,16 +1006,24 @@
         },
         {
           "item_id": "PA-04-09",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 991,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement stop-market and stop-limit paper semantics with bid/ask, gap-through-stop, partial fill, queue/latency and no-liquidity cases; SL is a trigger, not a guaranteed price."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "PENDING",
+          "blocker": "The stop evaluator is not wired into the legacy/forward paper runner or OMS lifecycle; queued limit priority, exchange-specific triggers, delayed later-quote execution and calibrated fill/slippage assumptions require integration and prospective data.",
+          "evidence": [
+            "`src/financial_brain/execution/oms/stops.py::evaluate_stop` adds a deterministic paper stop evaluator: SELL triggers on bid <= stop, BUY on ask >= stop; STOP_MARKET fills at observed executable side (so gap-through losses are represented), STOP_LIMIT can trigger without fill, displayed depth bounds partial fills, no depth produces no fill, and positive latency requires a later quote rather than assuming a trigger-price fill.",
+            "`tests/test_oms_stops.py` covers buy/sell triggers, gap-through stop, partial quantity, stop-limit unfilled, absent liquidity, latency, trigger-not-met and invalid protective limit orientation.",
+            "Combined `tests/test_oms_stops.py tests/test_kernel_closures_r.py`: 33 passed; Ruff and targeted mypy passed."
+          ],
+          "tests": [
+            "`python -m pytest tests/test_oms_stops.py tests/test_kernel_closures_r.py -q`: 33 passed.",
+            "`python -m ruff check src/financial_brain/execution/oms/stops.py tests/test_oms_stops.py`: passed.",
+            "`python -m mypy src/financial_brain/execution/oms/stops.py`: passed."
+          ]
         },
         {
           "item_id": "PA-04-10",
@@ -2438,5 +2446,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "09625fcd56e8d0c24a9b26b885fe2d32341c9d1e9f9f4cd10eee5f1fc09b60fd"
+  "report_sha256": "708182c947565da15a5e212224128a997fddc144a718e94797af3715d685a132"
 }
