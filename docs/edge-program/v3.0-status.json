@@ -16212,15 +16212,20 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Long-only optimizer keeps residual allocation as cash, and sleeve allocator returns explicit cash; no shared hurdle explicitly forces cash whenever all candidate net expected returns fail cost/uncertainty gates."
+        "src/financial_brain/portfolio/next_capital.py now requires an explicit horizon-matched cash return and compares each step against cash after marginal portfolio risk; it reports retained-cash return, invested-capital cash opportunity cost, expected excess return and utility versus all cash.",
+        "The trader terminal displays the cash hurdle and candidate return above cash. It explicitly uses a zero-return control because a sourced cash-yield feed is not connected.",
+        "tests/test_phase5_trader_core.py: 9 passed, including cash-retention when the hurdle dominates and explicit opportunity-cost accounting.",
+        "docs/edge-program/cash-opportunity-hurdle-audit-2026-11-25.md documents the inputs and remaining data/forward integration."
       ],
-      "blocker": "Cash hurdle and opportunity-cost policy are not integrated with candidate ranking.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "A source-backed, horizon-matched cash-yield alternative is not connected to the terminal allocator; taxes, payout timing, liquid alternatives and prospective paper evidence remain unintegrated.",
+      "last_audited_at_utc": "2026-11-25T00:50:00Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_phase5_trader_core.py -q: 9 passed.",
+        "python -m ruff check src/financial_brain/portfolio/next_capital.py src/financial_brain/paper/terminal.py tests/test_phase5_trader_core.py: all checks passed.",
+        "python -m mypy src/financial_brain/portfolio/next_capital.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Capital allocation now uses an explicit horizon-matched cash baseline, preserves cash when candidates fail the marginal risk-adjusted hurdle, and reports cash opportunity cost; terminal still uses a labeled zero-return control pending sourced yield inputs."
     },
     {
       "id": "SL-22-08",
@@ -19174,7 +19179,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T00:40:00Z",
+    "as_of_utc": "2026-11-25T00:50:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
