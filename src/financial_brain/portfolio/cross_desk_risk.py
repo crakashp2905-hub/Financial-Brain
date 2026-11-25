@@ -23,6 +23,7 @@ class PortfolioRiskView:
     volatility: float
     marginal_contribution: Mapping[str, float]
     marginal_share: Mapping[str, float]
+    risk_contribution_concentration_hhi: float
     expected_shortfall_loss: float
     tail_mean_return: float
     var_loss: float
@@ -97,10 +98,15 @@ def _risk_view(
     volatility = float(np.sqrt(max(0.0, variance)))
     contributions = weights * sigma_w / volatility if volatility > 0 else np.zeros(len(names))
     shares = contributions / volatility if volatility > 0 else np.zeros(len(names))
+    abs_contributions = np.abs(contributions)
+    contribution_total = float(abs_contributions.sum())
+    contribution_hhi = (float(np.square(abs_contributions / contribution_total).sum())
+                        if contribution_total else 0.0)
     return PortfolioRiskView(
         volatility=volatility,
         marginal_contribution=dict(zip(names, map(float, contributions), strict=True)),
         marginal_share=dict(zip(names, map(float, shares), strict=True)),
+        risk_contribution_concentration_hhi=contribution_hhi,
         expected_shortfall_loss=es_loss,
         tail_mean_return=tail_mean,
         var_loss=var_loss,
