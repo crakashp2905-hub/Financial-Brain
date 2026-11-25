@@ -7602,12 +7602,22 @@
     {
       "id": "PA-04-15",
       "text": "Reconcile beginning equity + trades + fees + distributions + external flows + mark changes = ending equity to paise-level accounting tolerances.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.equity_reconciliation.reconcile_account_equity` reconciles canonical-ledger opening/closing equity, explicitly classified external cash flows, and derived net investment P&L using paise-quantized values and an explicit INR tolerance.",
+        "The auditor verifies every stored account event payload hash, binds opening/closing snapshots and the event set by SHA-256, requires complete INR-only marked positions, opening balance, complete projection and no unresolved positions, and fails closed for stale/future marks or ledger uncertainty.",
+        "Trade cashflows, fees, distributions and mark changes are reflected through the canonical ledger dated fills/cash events/marks and ending valuation; distributions remain investment P&L unless explicitly classified as external contributions.",
+        "This verifies the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions; concurrent event insertion/atomic close cutoff and broker statement reconciliation are not yet integrated."
+      ],
+      "blocker": "Upstream completeness, broker/source statement matching and atomic close cutoff remain unverified; this report cannot detect events omitted before canonical-ledger ingestion.",
+      "last_audited_at_utc": "2026-11-25T04:00:00Z",
+      "commit": "15832486",
+      "test_evidence": [
+        "`python -m pytest tests/test_portfolio_equity_reconciliation.py tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-pa0415d`: 13 passed.",
+        "Ruff and targeted mypy passed for the new ledger reconciler."
+      ],
+      "test_result": "Canonical account equity reconciliation regression: 13 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "PA-04-16",
@@ -19217,7 +19227,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T03:10:00Z",
+    "as_of_utc": "2026-11-25T04:00:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19624,6 +19634,7 @@
       "FB-2542",
       "FB-2543",
       "FB-2544",
+      "PA-04-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -20047,13 +20058,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 827,
+    "audited_count": 828,
     "status_counts": {
       "COMPLETE": 83,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 722,
-      "UNASSESSED": 551
+      "PARTIAL": 723,
+      "UNASSESSED": 550
     },
     "verified_complete_count": 83,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -20184,7 +20195,7 @@
     "COMPLETE": 83,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 722,
-    "UNASSESSED": 551
+    "PARTIAL": 723,
+    "UNASSESSED": 550
   }
 }
