@@ -4984,7 +4984,7 @@
       ],
       "blocker": "Partial: prospective acceptance requires an authorized, preregistered protected exit cohort, immutable pre-entry receipts, independently attested live session data, validated costs and completed after-cost results. Historical replay output remains non-prospective.",
       "last_audited_at_utc": "2026-11-24T17:35:00Z",
-      "commit": "PENDING",
+      "commit": "ad80b87f",
       "test_evidence": [
         "python -m pytest tests/test_kernel_exit_scenarios.py -q --basetemp=.pytest-tmp-exitbench: 6 passed.",
         "ruff check src/financial_brain/kernel/exit_scenarios.py tests/test_kernel_exit_scenarios.py: passed.",
