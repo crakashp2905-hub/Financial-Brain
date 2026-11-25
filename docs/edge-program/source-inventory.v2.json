@@ -4811,7 +4811,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/options_risk.py",
-      "source_sha256": "51cf07fe8a26cd634a9647ac4b7c5b4c9b874d5cceccd25f0a27415aa94570a1",
+      "source_sha256": "3ac5984b84bc7e1a28b843b96310194fee2f66d344c6434495a60ec3022e1117",
       "test_paths": []
     },
     {
