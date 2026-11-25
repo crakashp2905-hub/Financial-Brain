@@ -1096,6 +1096,12 @@
       "module_owner": "src/financial_brain/evaluation/replication.py"
     },
     {
+      "capability_id": "module:src/financial_brain/evaluation/reports.py",
+      "path": "src/financial_brain/evaluation/reports.py",
+      "module_role": "strategy_research_or_evaluation",
+      "module_owner": "src/financial_brain/evaluation/reports.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/evaluation/research_program.py",
       "path": "src/financial_brain/evaluation/research_program.py",
       "module_role": "strategy_research_or_evaluation",
@@ -1124,6 +1130,12 @@
       "path": "src/financial_brain/evaluation/scorecard.py",
       "module_role": "strategy_research_or_evaluation",
       "module_owner": "src/financial_brain/evaluation/scorecard.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/evaluation/scorecards.py",
+      "path": "src/financial_brain/evaluation/scorecards.py",
+      "module_role": "strategy_research_or_evaluation",
+      "module_owner": "src/financial_brain/evaluation/scorecards.py"
     },
     {
       "capability_id": "module:src/financial_brain/evaluation/script_mechanisms.py",
@@ -1162,6 +1174,12 @@
       "module_owner": "src/financial_brain/evaluation/standard.py"
     },
     {
+      "capability_id": "module:src/financial_brain/evaluation/study_tools.py",
+      "path": "src/financial_brain/evaluation/study_tools.py",
+      "module_role": "strategy_research_or_evaluation",
+      "module_owner": "src/financial_brain/evaluation/study_tools.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/evaluation/swing.py",
       "path": "src/financial_brain/evaluation/swing.py",
       "module_role": "strategy_research_or_evaluation",
@@ -1198,10 +1216,28 @@
       "module_owner": "src/financial_brain/execution/algos.py"
     },
     {
+      "capability_id": "module:src/financial_brain/execution/exchange_paper.py",
+      "path": "src/financial_brain/execution/exchange_paper.py",
+      "module_role": "execution_or_cost_model",
+      "module_owner": "src/financial_brain/execution/exchange_paper.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/execution/exec_study.py",
       "path": "src/financial_brain/execution/exec_study.py",
       "module_role": "execution_or_cost_model",
       "module_owner": "src/financial_brain/execution/exec_study.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/execution/mf_orders.py",
+      "path": "src/financial_brain/execution/mf_orders.py",
+      "module_role": "execution_or_cost_model",
+      "module_owner": "src/financial_brain/execution/mf_orders.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/execution/mf_plans.py",
+      "path": "src/financial_brain/execution/mf_plans.py",
+      "module_role": "execution_or_cost_model",
+      "module_owner": "src/financial_brain/execution/mf_plans.py"
     },
     {
       "capability_id": "module:src/financial_brain/execution/oms/broker.py",
@@ -1282,6 +1318,12 @@
       "module_owner": "src/financial_brain/execution/oms/slicer.py"
     },
     {
+      "capability_id": "module:src/financial_brain/execution/option_book.py",
+      "path": "src/financial_brain/execution/option_book.py",
+      "module_role": "execution_or_cost_model",
+      "module_owner": "src/financial_brain/execution/option_book.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/execution/order_policy.py",
       "path": "src/financial_brain/execution/order_policy.py",
       "module_role": "execution_or_cost_model",
@@ -1312,6 +1354,12 @@
       "module_owner": "src/financial_brain/forecasting/calibration.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forecasting/calibration_tools.py",
+      "path": "src/financial_brain/forecasting/calibration_tools.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/calibration_tools.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forecasting/dataset.py",
       "path": "src/financial_brain/forecasting/dataset.py",
       "module_role": "index_forecast_or_evaluation",
@@ -1336,10 +1384,22 @@
       "module_owner": "src/financial_brain/forecasting/index_15m.py"
     },
     {
+      "capability_id": "module:src/financial_brain/forecasting/index_extras.py",
+      "path": "src/financial_brain/forecasting/index_extras.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_extras.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/forecasting/index_market.py",
       "path": "src/financial_brain/forecasting/index_market.py",
       "module_role": "index_forecast_or_evaluation",
       "module_owner": "src/financial_brain/forecasting/index_market.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forecasting/index_ops.py",
+      "path": "src/financial_brain/forecasting/index_ops.py",
+      "module_role": "index_forecast_or_evaluation",
+      "module_owner": "src/financial_brain/forecasting/index_ops.py"
     },
     {
       "capability_id": "module:src/financial_brain/forecasting/kronos.py",
@@ -2518,6 +2578,12 @@
       "module_owner": "src/financial_brain/paper/charts.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/control_room.py",
+      "path": "src/financial_brain/paper/control_room.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/paper/control_room.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/daily.py",
       "path": "src/financial_brain/paper/daily.py",
       "module_role": "paper_engine_or_output",
@@ -2530,10 +2596,28 @@
       "module_owner": "src/financial_brain/paper/daily_results.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/dashboard_html.py",
+      "path": "src/financial_brain/paper/dashboard_html.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/paper/dashboard_html.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/day_cycle.py",
+      "path": "src/financial_brain/paper/day_cycle.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/day_cycle.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/decision_journal.py",
       "path": "src/financial_brain/paper/decision_journal.py",
       "module_role": "ledger_or_journal",
       "module_owner": "src/financial_brain/paper/decision_journal.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/desk_runs.py",
+      "path": "src/financial_brain/paper/desk_runs.py",
+      "module_role": "signal_report_or_trader_renderer",
+      "module_owner": "src/financial_brain/paper/desk_runs.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/engine.py",
@@ -2552,6 +2636,18 @@
       "path": "src/financial_brain/paper/execution_audit.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/execution_audit.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/five_desk_cli.py",
+      "path": "src/financial_brain/paper/five_desk_cli.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/five_desk_cli.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/five_desk_engine.py",
+      "path": "src/financial_brain/paper/five_desk_engine.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/five_desk_engine.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/intraday.py",
@@ -2686,6 +2782,12 @@
       "module_owner": "src/financial_brain/paper/mf_systematic_flow_book.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/ops.py",
+      "path": "src/financial_brain/paper/ops.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/ops.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/options.py",
       "path": "src/financial_brain/paper/options.py",
       "module_role": "paper_engine_or_output",
@@ -2716,10 +2818,22 @@
       "module_owner": "src/financial_brain/paper/options_spread.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/policy.py",
+      "path": "src/financial_brain/paper/policy.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/policy.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/reconcile.py",
       "path": "src/financial_brain/paper/reconcile.py",
       "module_role": "paper_engine_or_output",
       "module_owner": "src/financial_brain/paper/reconcile.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/paper/router.py",
+      "path": "src/financial_brain/paper/router.py",
+      "module_role": "paper_engine_or_output",
+      "module_owner": "src/financial_brain/paper/router.py"
     },
     {
       "capability_id": "module:src/financial_brain/paper/run_manifest.py",
@@ -2998,6 +3112,12 @@
       "module_owner": "src/financial_brain/portfolio/marginal.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/multi_asset_ledger.py",
+      "path": "src/financial_brain/portfolio/multi_asset_ledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/portfolio/multi_asset_ledger.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/my_book.py",
       "path": "src/financial_brain/portfolio/my_book.py",
       "module_role": "portfolio_allocation_or_accounting",
@@ -3014,6 +3134,12 @@
       "path": "src/financial_brain/portfolio/optimizer.py",
       "module_role": "portfolio_allocation_or_accounting",
       "module_owner": "src/financial_brain/portfolio/optimizer.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/portfolio/position_ledger.py",
+      "path": "src/financial_brain/portfolio/position_ledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/portfolio/position_ledger.py"
     },
     {
       "capability_id": "module:src/financial_brain/portfolio/rebalance.py",
@@ -3034,6 +3160,12 @@
       "module_owner": "src/financial_brain/portfolio/stress.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/tax_lots.py",
+      "path": "src/financial_brain/portfolio/tax_lots.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/tax_lots.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/tradebook_import.py",
       "path": "src/financial_brain/portfolio/tradebook_import.py",
       "module_role": "portfolio_allocation_or_accounting",
@@ -3044,6 +3176,12 @@
       "path": "src/financial_brain/providers/amfi.py",
       "module_role": "provider_adapter",
       "module_owner": "src/financial_brain/providers/amfi.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/providers/amfi_history.py",
+      "path": "src/financial_brain/providers/amfi_history.py",
+      "module_role": "provider_adapter",
+      "module_owner": "src/financial_brain/providers/amfi_history.py"
     },
     {
       "capability_id": "module:src/financial_brain/providers/base.py",
@@ -3226,6 +3364,12 @@
       "module_owner": "src/financial_brain/research/counterfactual_store.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/cross_asset.py",
+      "path": "src/financial_brain/research/cross_asset.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/cross_asset.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/cross_market.py",
       "path": "src/financial_brain/research/cross_market.py",
       "module_role": "research_or_strategy_research",
@@ -3268,10 +3412,22 @@
       "module_owner": "src/financial_brain/research/knowledge.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/mf_metrics.py",
+      "path": "src/financial_brain/research/mf_metrics.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_metrics.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/mf_peer_comparison.py",
       "path": "src/financial_brain/research/mf_peer_comparison.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/mf_peer_comparison.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/mf_portfolio.py",
+      "path": "src/financial_brain/research/mf_portfolio.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/mf_portfolio.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/mf_portfolio_analytics.py",
@@ -3340,6 +3496,12 @@
       "module_owner": "src/financial_brain/risk/allocator.py"
     },
     {
+      "capability_id": "module:src/financial_brain/risk/capital_allocator.py",
+      "path": "src/financial_brain/risk/capital_allocator.py",
+      "module_role": "risk_decision_or_control",
+      "module_owner": "src/financial_brain/risk/capital_allocator.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/risk/covariance.py",
       "path": "src/financial_brain/risk/covariance.py",
       "module_role": "risk_decision_or_control",
@@ -3406,6 +3568,48 @@
       "module_owner": "src/financial_brain/services/trading.py"
     },
     {
+      "capability_id": "module:src/financial_brain/signals/admissibility.py",
+      "path": "src/financial_brain/signals/admissibility.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/admissibility.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/contracts.py",
+      "path": "src/financial_brain/signals/contracts.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/contracts.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/desk_logic.py",
+      "path": "src/financial_brain/signals/desk_logic.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/desk_logic.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/evidence.py",
+      "path": "src/financial_brain/signals/evidence.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/evidence.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/exit_plans.py",
+      "path": "src/financial_brain/signals/exit_plans.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/exit_plans.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/exit_triggers.py",
+      "path": "src/financial_brain/signals/exit_triggers.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/exit_triggers.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/signals/index_options.py",
+      "path": "src/financial_brain/signals/index_options.py",
+      "module_role": "signal_generation",
+      "module_owner": "src/financial_brain/signals/index_options.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/signals/watch.py",
       "path": "src/financial_brain/signals/watch.py",
       "module_role": "canonical_contract_or_signal_output",
@@ -3422,6 +3626,12 @@
       "path": "src/financial_brain/strategies/challengers.py",
       "module_role": "strategy_source_or_contract",
       "module_owner": "src/financial_brain/strategies/challengers.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/strategies/etf_rank.py",
+      "path": "src/financial_brain/strategies/etf_rank.py",
+      "module_role": "strategy_source_or_contract",
+      "module_owner": "src/financial_brain/strategies/etf_rank.py"
     },
     {
       "capability_id": "module:src/financial_brain/strategies/evaluation_controls.py",
