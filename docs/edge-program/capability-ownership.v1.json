@@ -3016,6 +3016,12 @@
       "module_owner": "src/financial_brain/portfolio/drawdown_cap.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/durable_reservations.py",
+      "path": "src/financial_brain/portfolio/durable_reservations.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/durable_reservations.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/equity_reconciliation.py",
       "path": "src/financial_brain/portfolio/equity_reconciliation.py",
       "module_role": "portfolio_allocation_or_accounting",
