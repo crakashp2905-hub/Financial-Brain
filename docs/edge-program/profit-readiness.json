@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-25T03:25:00Z",
+  "as_of_utc": "2026-11-25T03:36:36Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "4cba2471ac063ef1ea4cdd02b6a9d0577be3aae68213ce44305dc50d0d93c910",
-  "audit_export_sha256": "2eda753abfa3643e95a9ea236625191dbb9b883910ca74ae614470465644494b",
+  "status_ledger_sha256": "352e6a58d3b300634758efa0497e45c3d2b51977f0e2192b99797488bdae4319",
+  "audit_export_sha256": "cc6804c2568386583601a6d3b5934a61a2e7240659a3f1e7a5f05debe3a2dfce",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 726,
-    "UNASSESSED": 546
+    "PARTIAL": 727,
+    "UNASSESSED": 545
   },
-  "assessed_count": 832,
-  "unassessed_count": 546,
+  "assessed_count": 833,
+  "unassessed_count": 545,
   "verified_complete_count": 84,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -850,8 +850,8 @@
         "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 21,
-        "UNASSESSED": 13
+        "PARTIAL": 22,
+        "UNASSESSED": 12
       },
       "evidence": [
         {
@@ -916,16 +916,27 @@
         },
         {
           "item_id": "PA-04-05",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 987,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Validate every transition before mutation; reject negative reserved cash, oversold quantity, ghost lots, inverted option legs and duplicate fill identifiers."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "d1b31a9a",
+          "blocker": "Partial: option debit vertical orientation and several local transition invariants now fail closed, but no common mutation boundary covers every desk/OMS/book path. Cross-path oversell/ghost-lot checks and atomic reservation-to-position reconciliation remain incomplete.",
+          "evidence": [
+            "The immutable OMS transition function rejects illegal state jumps, terminal-state transitions, and decreasing partial-fill quantities before returning an updated order.",
+            "portfolio.daily_budgets validates finite nonnegative turnover, commission, reserved amounts, unique order IDs, session/scope, and event times before computing reservations.",
+            "portfolio.canonical_ledger validates fill identity and positive finite quantity/price before append; database uniqueness makes identical source replays no-ops and conflicting replays fail. Short positions are intentionally representable, so the ledger alone is not an oversell guard.",
+            "kernel.exit_protection_ledger checks entry fills against intent and pre-armed protection, exit fills against open quantity and emitted intent, and duplicate/conflicting fill IDs before append.",
+            "forward_edge.options_risk now rejects unsupported non-vertical structures and inverted two-leg debit verticals: calls require long lower strike, puts require long higher strike. Correctly oriented call and put debit verticals are covered by focused tests.",
+            "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation."
+          ],
+          "tests": [
+            "Focused options, daily-budget, canonical-portfolio-ledger, and exit-protection suites: 33 passed.",
+            "OMS state-machine suite: 21 passed.",
+            "Ruff and targeted mypy passed for the options risk module and tests."
+          ]
         },
         {
           "item_id": "PA-04-06",
@@ -2400,5 +2411,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "9b71b1666bfcc1e6f812a38a8c2facd2b850b7461aad816d22857a3a28e38af8"
+  "report_sha256": "ad88866b5704dae53164ff8b3bfb690d3ec5c45047a5ad3260aac4baaf1fedc9"
 }
