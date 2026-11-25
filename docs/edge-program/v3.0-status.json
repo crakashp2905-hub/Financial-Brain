@@ -16192,15 +16192,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`portfolio/optimizer.py` charges turnover-proportional costs and MF review has rebalance bands; fixed per-trade charges and a common cross-desk no-trade band are not represented together."
+        "src/financial_brain/portfolio/rebalance.py implements a paper-only cost-aware rebalance planner with signed NAV weights, per-instrument no-trade bands, proportional plus per-order fixed cost, and a horizon-matched expected-improvement gate.",
+        "tests/test_portfolio_rebalance.py: 3 tests cover exact no-trade-band boundaries, fixed-fee rejection of small trades, net benefit/turnover arithmetic, and invalid or incomplete inputs.",
+        "docs/edge-program/cost-aware-rebalance-audit-2026-11-25.md documents behavior and the unimplemented production integrations."
       ],
-      "blocker": "No shared fixed-charge-aware rebalance optimizer for all desks.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "No authorized venue cost schedule, lot/tick/settlement constraints, shared cash/margin integration, or paper-book execution/fill lifecycle is connected to this pure planner.",
+      "last_audited_at_utc": "2026-11-25T00:40:00Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_rebalance.py -q: 3 passed.",
+        "python -m ruff check src/financial_brain/portfolio/rebalance.py tests/test_portfolio_rebalance.py: all checks passed.",
+        "python -m mypy src/financial_brain/portfolio/rebalance.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Paper rebalance proposals now honor explicit no-trade bands and reject trades whose expected improvement does not cover proportional plus fixed charges; live schedule, portfolio constraints, and fills remain unintegrated."
     },
     {
       "id": "SL-22-07",
@@ -19170,7 +19174,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T00:30:00Z",
+    "as_of_utc": "2026-11-25T00:40:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

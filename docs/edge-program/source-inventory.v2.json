@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 730,
+  "source_count": 731,
   "sources": [
     {
       "capability_ids": [],
@@ -11122,6 +11122,23 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
+        "dataclasses",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/rebalance.py",
+      "source_sha256": "3233e7333a0dad42845ec0d392b2db05ed032201c3a8b06d8977a73e2dab3cb2",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs",
         "evaluation",
         "math",
@@ -13078,6 +13095,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 700,
-  "unassigned_role_count": 433
+  "unassessed_count": 701,
+  "unassigned_role_count": 434
 }
