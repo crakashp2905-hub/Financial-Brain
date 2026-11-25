@@ -16152,20 +16152,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/portfolio/cross_desk_overlap.py adds a timestamp-aligned signed INR exposure vector and reports shared gross exposure, direction-aware overlap, known-only and conservative overlap ratios, per-book coverage, and unresolved look-through notional.",
-        "Canonical namespaced keys allow equity strategy, option delta-equivalent, ETF and mutual-fund look-through adapters to compare issuer/index/factor exposures without silently treating unmatched or unknown holdings as zero.",
-        "tests/test_cross_desk_overlap.py: 3 passed, including opposite-signed shared exposures, partial fund look-through coverage, source references, malformed identities, negative unresolved gross and mismatched as-of rejection.",
-        "Ruff and targeted mypy passed for the overlap module and tests."
+        "src/financial_brain/portfolio/cross_desk_overlap.py provides a gross-preserving, timestamp-aligned exposure comparison and a canonical-ledger snapshot adapter.",
+        "tests/test_cross_desk_overlap.py: 6 passed, including a real CanonicalPortfolioLedger snapshot with equity, ETF, MF, short option and unresolved legacy exposure; ledger regression suite adds 9 passing tests.",
+        "Ruff and targeted mypy passed."
       ],
       "blocker": "Still partial: H005/H003/P3 books, Nifty option Greeks/constituent weights, point-in-time ETF and MF holdings, and canonical ledger adapters are not wired. The primitive requires caller-supplied normalized INR exposures and does not establish realized portfolio overlap or validate source rights.",
-      "last_audited_at_utc": "2026-11-24T23:23:00Z",
+      "last_audited_at_utc": "2026-11-25T00:15:00Z",
       "commit": null,
       "test_evidence": [
-        "python -m pytest tests/test_cross_desk_overlap.py -q: 3 passed.",
+        "python -m pytest tests/test_cross_desk_overlap.py tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-checklist-cross-desk-20261125: 15 passed.",
         "python -m ruff check src/financial_brain/portfolio/cross_desk_overlap.py tests/test_cross_desk_overlap.py: all checks passed.",
-        "python -m mypy src/financial_brain/portfolio/cross_desk_overlap.py --follow-imports=silent: no issues found."
+        "python -m mypy src/financial_brain/portfolio/cross_desk_overlap.py: no issues found."
       ],
-      "test_result": "Cross-desk exposure overlap now has a typed, coverage-aware point-in-time comparison primitive; real books and look-through data remain unintegrated."
+      "test_result": "Canonical portfolio snapshots adapt through sourced per-unit look-through mappings while preserving gross exposure before netting; 6 overlap tests and 9 ledger tests passed. Production book and data-provider adapters remain missing."
     },
     {
       "id": "SL-22-05",
@@ -19167,7 +19166,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-24T23:23:00Z",
+    "as_of_utc": "2026-11-25T00:15:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
