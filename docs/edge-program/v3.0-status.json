@@ -16273,15 +16273,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Risk kill-switches, degradation states and portfolio stress controls support hard reductions; no integrated cross-desk drawdown cap is verified as immutable against policy output."
+        "`portfolio.drawdown_cap.cap_risk_for_drawdown` applies a content-hashed hard cap after any allocator: at the configured reduction level allowed exposure begins to decline linearly, and it is zero at the hard halt level.",
+        "The cap is monotonic in worst drawdown across the supplied equity path, never exceeds the allocator proposal or configured maximum, and remains binding after partial recovery within that path; repeated evaluation is deterministic.",
+        "Four new tests cover monotonic reduction, hard halt, post-loss recovery, no doubling of risk, deterministic report lineage and invalid limits; combined with portfolio constraints and phase-5 risk tests: 27 passed, Ruff and targeted mypy clean."
       ],
-      "blocker": "Drawdown deleveraging is fragmented across risk and sleeve controls.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "This is a pure post-allocator cap, not yet wired as an immutable control across all desks, runner entry points, persistent kill-switch state, shared cash/margin or OMS. Threshold ownership/calibration and human reset governance remain external.",
+      "last_audited_at_utc": "2026-11-25T01:08:52Z",
+      "commit": null,
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "python -m pytest tests/test_portfolio_drawdown_cap.py tests/test_phase5_risk_controls.py tests/test_portfolio_constraints.py -q: 27 passed.",
+        "ruff check src/financial_brain/portfolio/drawdown_cap.py tests/test_portfolio_drawdown_cap.py: passed.",
+        "python -m mypy src/financial_brain/portfolio/drawdown_cap.py: no issues found."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "A worst-observed-drawdown cap monotonically constrains proposed portfolio risk and hard-halts at the configured threshold; operational wiring and threshold governance keep this PARTIAL."
     },
     {
       "id": "SL-22-11",
