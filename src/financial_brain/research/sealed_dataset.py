@@ -7,8 +7,10 @@ returning them to the evaluator.
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from financial_brain.forward_edge.approvals import Approval
 from financial_brain.research.holdout_access import HoldoutAccessLedger, HoldoutReceipt
@@ -86,5 +88,36 @@ class SealedDatasetReader:
             raise SealedDatasetError("sealed dataset bytes do not match the frozen manifest hash")
         return receipt, payload
 
+    def open_session(self, *, relative_path: Path | str, dataset_id: str,
+                     dataset_sha256: str, run_id: str, preregistration_sha256: str,
+                     approval: Approval, now: datetime) -> SealedDatasetSession:
+        """Consume owner approval once, then expose only this verified in-memory dataset."""
+        receipt, payload = self.read_bytes(
+            relative_path=relative_path, dataset_id=dataset_id,
+            dataset_sha256=dataset_sha256, run_id=run_id,
+            preregistration_sha256=preregistration_sha256, approval=approval, now=now,
+        )
+        return SealedDatasetSession(Path(relative_path).as_posix(), receipt, payload)
 
-__all__ = ["SealedDatasetError", "SealedDatasetReader"]
+
+class SealedDatasetSession:
+    """One authorized dataset held in memory for one preregistered evaluation run."""
+
+    def __init__(self, relative_path: str, receipt: HoldoutReceipt, payload: bytes) -> None:
+        self.relative_path = relative_path
+        self.receipt = receipt
+        self._payload = payload
+
+    def read_bytes(self, *, relative_path: Path | str) -> bytes:
+        if Path(relative_path).as_posix() != self.relative_path:
+            raise SealedDatasetError("authorized session cannot read a different dataset")
+        return self._payload
+
+    def read_json(self, *, relative_path: Path | str) -> Any:
+        try:
+            return json.loads(self.read_bytes(relative_path=relative_path))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SealedDatasetError("authorized dataset is not valid UTF-8 JSON") from exc
+
+
+__all__ = ["SealedDatasetError", "SealedDatasetReader", "SealedDatasetSession"]

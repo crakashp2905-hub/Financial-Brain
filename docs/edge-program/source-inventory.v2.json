@@ -1752,13 +1752,14 @@
         "collections",
         "events.classify",
         "json",
-        "pathlib"
+        "pathlib",
+        "research.sealed_dataset"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/labels.py",
-      "source_sha256": "c7e9d3957cd87e7dd5cf9dfc73e39d5eda9e057238412e803570cf8c55125bde",
+      "source_sha256": "3a42e89a791c3148f43c35817b5e979e27d5bf2296d16fe36e4ffd35d476e658",
       "test_paths": []
     },
     {
@@ -1848,13 +1849,15 @@
         "itertools",
         "json",
         "llm",
-        "pathlib"
+        "pathlib",
+        "research.sealed_dataset",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/models.py",
-      "source_sha256": "6877a7660de117dce57734011737cead35f95ca16698190f0ce66d42fc0b1c6f",
+      "source_sha256": "f2a79bb960ae961c2dda980f7feed2f66e599623d67e95ec0a91838ab5068b2c",
       "test_paths": []
     },
     {
@@ -12758,13 +12761,15 @@
         "financial_brain.forward_edge.approvals",
         "financial_brain.research.holdout_access",
         "hashlib",
-        "pathlib"
+        "json",
+        "pathlib",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/sealed_dataset.py",
-      "source_sha256": "c294cf1872135b384e2471b36077c117da2dc68d8237d3a7746676e97cb23308",
+      "source_sha256": "81a8daf4dccae372d6875b5b52e9fab8a0b16bed3442772c75378abf4d03334c",
       "test_paths": []
     },
     {

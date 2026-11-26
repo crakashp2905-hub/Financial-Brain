@@ -21,13 +21,23 @@ from collections import Counter
 from pathlib import Path
 
 from ..events.classify import HIGH, classify
+from ..research.sealed_dataset import SealedDatasetError, SealedDatasetSession
 
 FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
 SETS = {"tuning": "announcement_labels.json", "holdout": "announcement_labels_holdout.json"}
 
 
-def score(name: str) -> dict:
-    rows = json.loads((FIXTURES / SETS[name]).read_text(encoding="utf-8"))["rows"]
+def score(name: str, *, holdout_session: SealedDatasetSession | None = None) -> dict:
+    if name not in SETS:
+        raise ValueError(f"unknown label set {name!r}")
+    relative_path = SETS[name]
+    if name == "holdout":
+        if holdout_session is None:
+            raise SealedDatasetError("holdout scoring requires an owner-authorized sealed dataset session")
+        dataset = holdout_session.read_json(relative_path=relative_path)
+    else:
+        dataset = json.loads((FIXTURES / relative_path).read_text(encoding="utf-8"))
+    rows = dataset["rows"]
     per_type: Counter = Counter()
     right: Counter = Counter()
     misses = []

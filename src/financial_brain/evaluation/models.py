@@ -21,9 +21,11 @@ import json
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from ..events.classify import classify
 from ..llm import backends, system1
+from ..research.sealed_dataset import SealedDatasetError, SealedDatasetSession
 
 FIXTURES = Path(__file__).resolve().parents[3] / "tests" / "fixtures"
 MIN_SUPPORT = 3                 # a label's threshold needs at least this many examples
@@ -36,23 +38,26 @@ SENTIMENT_NOTES = {"positive": "states a favourable fact for shareholders (order
                    "neutral": "routine, procedural, or no stated direction"}
 
 
-def _rows(task: str) -> list[dict]:
+def _rows(task: str, *, holdout_session: SealedDatasetSession | None = None) -> list[dict[str, Any]]:
+    def read_fixture(filename: str) -> dict[str, Any]:
+        if filename.endswith("_holdout.json"):
+            if holdout_session is None:
+                raise SealedDatasetError("holdout evaluation requires an owner-authorized sealed dataset session")
+            return holdout_session.read_json(relative_path=filename)
+        return json.loads((FIXTURES / filename).read_text("utf-8"))
+
     if task in ("sentiment", "sentiment_holdout", "sentiment_news",
                 "sentiment_news_holdout"):
         f = {"sentiment": "sentiment_labels.json",
              "sentiment_holdout": "sentiment_labels_holdout.json",
              "sentiment_news": "sentiment_labels_news.json",
              "sentiment_news_holdout": "sentiment_labels_news_holdout.json"}[task]
-        return [{"state": r["headline"], "gold": r["gold"]} for r in
-                json.loads((FIXTURES / f).read_text("utf-8"))["rows"]]
-    if task == "event_type":
-        out = []
-        for f in ("announcement_labels.json", "announcement_labels_holdout.json"):
-            for r in json.loads((FIXTURES / f).read_text("utf-8"))["rows"]:
-                out.append({"state": f"BSE subcategory: {r['subcategory']}\n"
-                                     f"Subject: {r['subject']}\nHeadline: {r['headline']}",
-                            "gold": r["gold_type"], "raw": r})
-        return out
+        return [{"state": r["headline"], "gold": r["gold"]} for r in read_fixture(f)["rows"]]
+    if task in ("event_type", "event_type_holdout"):
+        filename = "announcement_labels_holdout.json" if task.endswith("_holdout") else "announcement_labels.json"
+        return [{"state": f"BSE subcategory: {r['subcategory']}\n"
+                          f"Subject: {r['subject']}\nHeadline: {r['headline']}",
+                 "gold": r["gold_type"], "raw": r} for r in read_fixture(filename)["rows"]]
     raise ValueError(f"unknown task {task}")
 
 
@@ -66,7 +71,7 @@ def base(task: str) -> str:
 def choices(task: str) -> list[str]:
     if base(task) == "sentiment":
         return SENTIMENT_CHOICES
-    return sorted({r["gold"] for r in _rows(task)})
+    return sorted({r["gold"] for r in _rows(base(task))})
 
 
 INSTRUCTION = {
@@ -130,7 +135,7 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
     # predictions were right >= target of the time (min MIN_SUPPORT of them). Overall
     # accuracy would let a model that confidently says "neutral" to everything qualify on
     # an imbalanced set while missing every adverse filing.
-    thresholds = {}
+    thresholds: dict[str, float | None] = {}
     for lab in labels:
         preds = [(d.confidence, c) for d, c in zip(decisions, correct, strict=True) if d.label == lab]
         thresholds[lab] = None
@@ -152,8 +157,9 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
 
 
 def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None = None,
-          record: bool = True) -> dict:
-    rows = _rows(task)[:limit] if limit else _rows(task)
+          record: bool = True, holdout_session: SealedDatasetSession | None = None) -> dict:
+    rows = _rows(task, holdout_session=holdout_session)[:limit] if limit else _rows(
+        task, holdout_session=holdout_session)
     decide = decider(task, model)
     decisions = [decide(r) for r in rows]
     out = score([r["gold"] for r in rows], decisions, target)
@@ -171,14 +177,15 @@ def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None 
     return out
 
 
-def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None = None) -> dict:
+def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None = None,
+                   holdout_session: SealedDatasetSession | None = None) -> dict:
     """End-to-end result of a router cascade, replayed from stored benchmark items:
     accuracy, share answered by each step, share left uncertain, mean latency paid, and
     how often an *accepted* answer was wrong. ``items_task`` replays the same steps (and
     their thresholds) on another set - that is how a route is verified out-of-sample."""
     task = items_task or task
-    golds = [r["gold"] for r in _rows(task)]
-    items = {}
+    golds = [r["gold"] for r in _rows(task, holdout_session=holdout_session)]
+    items: dict[str, list[Any]] = {}
     for s in steps:
         row = con.execute("""SELECT detail FROM model_bench WHERE task = ? AND model = ?
                              ORDER BY run_at DESC LIMIT 1""", [task, s["model"]]).fetchone()
@@ -186,8 +193,10 @@ def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None 
         if not stored or len(stored) != len(golds):
             raise ValueError(f"no per-item benchmark for {s['model']} on {task}; re-run bench")
         items[s["model"]] = stored
-    right, paid, answered_by, uncertain = 0, 0.0, Counter(), 0
-    accepted, accepted_wrong, per_label = 0, 0, Counter()
+    right, paid, uncertain = 0, 0.0, 0
+    answered_by: Counter[str] = Counter()
+    accepted, accepted_wrong = 0, 0
+    per_label: Counter[tuple[str, str]] = Counter()
     for i, g in enumerate(golds):
         label, was_accepted = None, False
         for s in steps:
@@ -203,7 +212,7 @@ def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None 
         right += label == g
         accepted += was_accepted
         accepted_wrong += was_accepted and label != g
-        per_label[(g, label if was_accepted else "uncertain")] += 1
+        per_label[(str(g), str(label) if was_accepted and label is not None else "uncertain")] += 1
     n = len(golds)
     recall = {g: per_label[(g, g)] / max(1, sum(v for (gg, _), v in per_label.items()
                                                 if gg == g)) for g in set(golds)}
@@ -222,10 +231,11 @@ def accepts(step: dict, label: str, confidence: float) -> bool:
     return step.get("threshold") is not None and confidence >= step["threshold"]
 
 
-def rescore(con, task: str, *, target: float = 0.9) -> list[dict]:
+def rescore(con, task: str, *, target: float = 0.9,
+            holdout_session: SealedDatasetSession | None = None) -> list[dict]:
     """Recompute thresholds for each model's latest run from its stored items - no model
     calls. Appends new rows marked ``rescored``."""
-    golds = [r["gold"] for r in _rows(task)]
+    golds = [r["gold"] for r in _rows(task, holdout_session=holdout_session)]
     out = []
     for model, detail, lat in con.execute("""
             SELECT model, detail, latency_ms FROM (SELECT *, ROW_NUMBER() OVER (
@@ -250,7 +260,8 @@ def rescore(con, task: str, *, target: float = 0.9) -> list[dict]:
 
 
 def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3,
-                   verify_on: str | None = None, max_accepted_error: float = 0.10) -> dict:
+                   verify_on: str | None = None, max_accepted_error: float = 0.10,
+                   holdout_session: SealedDatasetSession | None = None) -> dict:
     """Rank chains on ``task``, then **verify the best ones on ``verify_on``** - a set
     whose labels played no part in choosing the thresholds - and return the first whose
     accepted answers are wrong no more than ``max_accepted_error`` of the time.
@@ -266,14 +277,14 @@ def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3,
     steps = router.plan(con, task, optimised=False)
     ranked = []
     for k in range(1, max_len + 1):
-        for chain in combinations(steps, k):
+        for candidate_chain in combinations(steps, k):
             try:
-                sim = simulate_route(con, task, list(chain))
+                sim = simulate_route(con, task, list(candidate_chain))
             except ValueError:
                 continue
             if sim["latency_ms"] <= budget_ms:
                 ranked.append(((sim["accuracy"] - sim["uncertain"], -sim["latency_ms"]),
-                               list(chain), sim))
+                               list(candidate_chain), sim))
     ranked.sort(key=lambda r: r[0], reverse=True)
     if not ranked:
         return {"task": task, "chain": [], "note": f"nothing fits {budget_ms:.0f} ms"}
@@ -284,7 +295,8 @@ def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3,
     rejected = []
     for _, chain, sim in ranked:
         try:
-            held = simulate_route(con, task, chain, items_task=verify_on)
+            held = simulate_route(con, task, list(chain), items_task=verify_on,
+                                  holdout_session=holdout_session)
         except ValueError as e:
             rejected.append({"chain": [c["model"] for c in chain], "why": str(e)})
             continue
@@ -299,14 +311,15 @@ def optimise_route(con, task: str, *, budget_ms: float = 4000, max_len: int = 3,
                     f"{verify_on}; the router will decline this task"}
 
 
-def validate_route(con, route_task: str, holdout: str) -> dict:
+def validate_route(con, route_task: str, holdout: str, *,
+                   holdout_session: SealedDatasetSession | None = None) -> dict:
     """Run the *stored* route for ``route_task`` - thresholds and chain fixed on the
     tuning set - live on a held-out set, and score it. Nothing is tuned here."""
     from ..llm import router
     steps = router.plan(con, route_task)
-    rows = _rows(holdout)
+    rows = _rows(holdout, holdout_session=holdout_session)
     golds, labels, accepted, lat = [], [], 0, 0
-    per = Counter()
+    per: Counter[tuple[str, str]] = Counter()
     for r in rows:
         routed = router.decide(con, route_task, r, steps=steps)
         golds.append(r["gold"])
