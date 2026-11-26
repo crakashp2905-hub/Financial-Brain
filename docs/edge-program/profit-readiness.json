@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:46:26Z",
+  "as_of_utc": "2026-11-26T20:49:18Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "587bf872d2b139cd8cacd539a0708f66052e052294cace01da8ffc39ebf4dbd5",
-  "audit_export_sha256": "d4dc842f9e6a04316fee85cbb97ba57503dd41537babb34e2f7db6f40e9b3963",
+  "status_ledger_sha256": "75b294584eefb551025b89b438bff0eeac132b40643b6d7c12c516f2dc4708eb",
+  "audit_export_sha256": "aa2bc3335be060fbf8d6610163836284210e871754e9d24eef41806cdcde3fd0",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
@@ -2266,17 +2266,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Lock realistic baseline controls: cash, buy-and-hold matched index, equal-weight universe, equal-turnover random, exposure-matched and cost-matched nulls."
           },
-          "commit": null,
+          "commit": "8c4d05c6",
           "blocker": null,
           "evidence": [
-            "Existing baselines are fragmented: evaluation.economic.baselines compares strategy rules to the equal-weight universe, selected index levels and an engine floor; forward_edge.intraday_nulls compares same-session time/side peers. They do not emit the full six-control set under one identity.",
-            "src/financial_brain/evaluation/baseline_controls.py adds a frozen contract for cash, matched-index buy-and-hold, equal-weight universe, equal-turnover random, exposure-matched, and cost-matched nulls. It requires a shared experiment universe/calendar/window/cost schedule, exact random-turnover match, strategy exposure match and source hashes.",
-            "The contract validates identities, not benchmark return calculations. Production data-backed generation for all six controls, cash accrual terms, randomized selection evidence and end-to-end strategy comparison are not integrated."
+            "The six frozen identities remain bound to one universe, calendar, window and cost schedule; equal-turnover random and exposure-matched controls must match the strategy specification.",
+            "FrozenBaselineSet.compare now produces one deterministic report comparing strategy net returns against all six controls on exactly aligned periods. It verifies series IDs, frozen construction/source hashes, complete control set, finite net returns and exact period coverage, and reports mean/cumulative net excess without making profitability claims.",
+            "Nine focused comparison/contract tests pass; Ruff and mypy pass.",
+            "Market-data builders for cash accrual, index buy-hold, equal-weight, random, exposure-matched and cost-matched returns are not yet joined to a shared production runner; the input evidence hashes and exposure matching are declared identities, not independently recalculated by this report."
           ],
           "tests": [
-            "python -m pytest tests/test_baseline_controls.py -q --basetemp .pytest-pa0606: 6 passed.",
-            "ruff check src/financial_brain/evaluation/baseline_controls.py tests/test_baseline_controls.py: passed.",
-            "mypy src/financial_brain/evaluation/baseline_controls.py: passed."
+            "python -m pytest tests/test_baseline_controls.py -q --basetemp .pytest-pa0606-comparison: 9 passed.",
+            "python -m ruff check src/financial_brain/evaluation/baseline_controls.py tests/test_baseline_controls.py: passed.",
+            "python -m mypy src/financial_brain/evaluation/baseline_controls.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2985,5 +2986,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "334e3a4cdafbbe761e9c9f4a081cfb555746da1c80cb9d42d662db22e13ff49a"
+  "report_sha256": "83d12aa211a42af3ed08abdabbccc854c9f2b75050534cea3830e252fac0a93d"
 }

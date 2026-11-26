@@ -8485,17 +8485,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing baselines are fragmented: evaluation.economic.baselines compares strategy rules to the equal-weight universe, selected index levels and an engine floor; forward_edge.intraday_nulls compares same-session time/side peers. They do not emit the full six-control set under one identity.",
-        "src/financial_brain/evaluation/baseline_controls.py adds a frozen contract for cash, matched-index buy-and-hold, equal-weight universe, equal-turnover random, exposure-matched, and cost-matched nulls. It requires a shared experiment universe/calendar/window/cost schedule, exact random-turnover match, strategy exposure match and source hashes.",
-        "The contract validates identities, not benchmark return calculations. Production data-backed generation for all six controls, cash accrual terms, randomized selection evidence and end-to-end strategy comparison are not integrated."
+        "The six frozen identities remain bound to one universe, calendar, window and cost schedule; equal-turnover random and exposure-matched controls must match the strategy specification.",
+        "FrozenBaselineSet.compare now produces one deterministic report comparing strategy net returns against all six controls on exactly aligned periods. It verifies series IDs, frozen construction/source hashes, complete control set, finite net returns and exact period coverage, and reports mean/cumulative net excess without making profitability claims.",
+        "Nine focused comparison/contract tests pass; Ruff and mypy pass.",
+        "Market-data builders for cash accrual, index buy-hold, equal-weight, random, exposure-matched and cost-matched returns are not yet joined to a shared production runner; the input evidence hashes and exposure matching are declared identities, not independently recalculated by this report."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:41:54+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T20:49:18+00:00",
+      "commit": "8c4d05c6",
       "test_evidence": [
-        "python -m pytest tests/test_baseline_controls.py -q --basetemp .pytest-pa0606: 6 passed.",
-        "ruff check src/financial_brain/evaluation/baseline_controls.py tests/test_baseline_controls.py: passed.",
-        "mypy src/financial_brain/evaluation/baseline_controls.py: passed."
+        "python -m pytest tests/test_baseline_controls.py -q --basetemp .pytest-pa0606-comparison: 9 passed.",
+        "python -m ruff check src/financial_brain/evaluation/baseline_controls.py tests/test_baseline_controls.py: passed.",
+        "python -m mypy src/financial_brain/evaluation/baseline_controls.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19951,7 +19952,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:46:26Z",
+    "as_of_utc": "2026-11-26T20:49:18Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
