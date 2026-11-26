@@ -12461,7 +12461,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/fragility.py",
-      "source_sha256": "1e6f030708d04062706287abd5a71702343f0d419ed153cf791014cb361ed917",
+      "source_sha256": "e53759fa5ba1e2aa42151d65bd4f7daca2dbb6d33b136656bfe40c3761e68431",
       "test_paths": []
     },
     {

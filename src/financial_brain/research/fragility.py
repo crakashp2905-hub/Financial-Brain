@@ -13,7 +13,7 @@ class FragilityError(ValueError):
     """Invalid or incomplete fragility evidence."""
 
 
-_DIMENSIONS = ("session", "instrument_bucket", "regime", "exposure_bucket", "holding_bucket",
+_DIMENSIONS = ("source_date", "session", "instrument_bucket", "regime", "exposure_bucket", "holding_bucket",
                "cost_level", "slippage_bucket", "exclusion_filter")
 
 
@@ -21,6 +21,7 @@ _DIMENSIONS = ("session", "instrument_bucket", "regime", "exposure_bucket", "hol
 class NetOutcomeSlice:
     outcome_id: str
     session: date
+    source_date: date
     instrument_id: str
     instrument_bucket: str
     regime: str
@@ -76,7 +77,7 @@ def build_fragility_report(outcomes: tuple[NetOutcomeSlice, ...], *, min_group_s
     for dimension in _DIMENSIONS:
         groups: dict[str, list[float]] = defaultdict(list)
         for row in outcomes:
-            value = row.session.isoformat() if dimension == "session" else str(getattr(row, dimension))
+            value = getattr(row, dimension).isoformat() if dimension in {"session", "source_date"} else str(getattr(row, dimension))
             groups[value].append(row.net_return)
         dimension_summaries[dimension] = {key: _summary(values, min_group_size)
                                           for key, values in sorted(groups.items())}
@@ -88,6 +89,7 @@ def build_fragility_report(outcomes: tuple[NetOutcomeSlice, ...], *, min_group_s
     concentration = {"instruments": len(by_instrument), "top_five_positive_share":
                      sum(max(value, 0.0) for value in top_five) / total_positive if total_positive > 0 else 0.0}
     input_body = [{"outcome_id": row.outcome_id, "session": row.session.isoformat(),
+                   "source_date": row.source_date.isoformat(),
                    "instrument_id": row.instrument_id, "instrument_bucket": row.instrument_bucket,
                    "regime": row.regime, "exposure_bucket": row.exposure_bucket,
                    "holding_bucket": row.holding_bucket, "cost_level": row.cost_level,
