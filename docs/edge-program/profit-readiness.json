@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:05:35Z",
+  "as_of_utc": "2026-11-26T21:08:45Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "ff14b1cf64adbad43d5b855e7dba878470e1a086cdbde4507a7e24bc3bf33aa9",
-  "audit_export_sha256": "18c6e2884c336603a1c8c821537a3471bf1e661b3b1c548014133efe18abf143",
+  "status_ledger_sha256": "94f3df99b590338f2aa8a6ab1bc6720d1dd7dc7c4a3d78e3ffc6f994bdfa2a59",
+  "audit_export_sha256": "cf1ebd269e1bb8dd9d0cf1d624d7af88266942f28c3d9a971adc927e53a0a00e",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 103,
@@ -2480,17 +2480,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Produce machine-readable pass/fail decision with exactly which confidence, cost, null, robustness, drawdown or fidelity gate failed."
           },
-          "commit": null,
+          "commit": "30bf6813",
           "blocker": null,
           "evidence": [
-            "forward_edge.evidence_stats.promotion_verdict previously reported named reasons for confidence, cost stress, regime concentration, sample design, evidence tier and falsification, but had no explicit null, drawdown or fidelity status map.",
-            "The promotion verdict now requires explicit null/fidelity inputs and a predeclared maximum drawdown gate; missing values block promotion. It returns machine-readable PASS/FAIL/UNASSESSED statuses for confidence, cost, null, robustness, drawdown and fidelity and exact reason codes.",
-            "Gate results and null/fidelity inputs remain caller-supplied and are not recomputed from a canonical source-hashed evidence package. This is a transparent decision contract, not proof that a gate was independently measured."
+            "forward_edge.evidence_stats.promotion_verdict reports machine-readable confidence, cost, null, robustness, drawdown and fidelity gate states with exact reason codes; missing null/fidelity/drawdown evidence blocks promotion.",
+            "The verdict now rejects malformed or non-finite return observations, NaN regime concentration, invalid session counts/limits, truthy non-boolean null/fidelity values, unknown falsification states and non-finite cost-stress inputs before computing a decision.",
+            "Forty focused F08/falsification/claim-tier tests pass, including six malformed-evidence cases; Ruff and mypy pass.",
+            "Gate evidence is still caller supplied and not recomputed from a canonical source-hashed evidence package; therefore source measurement integrity and universal evaluator wiring remain open."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_f08.py tests/test_forward_edge_falsification.py tests/test_forward_edge_claim_tier.py -q --basetemp .pytest-pa0616: 34 passed.",
-            "ruff check src/financial_brain/forward_edge/evidence_stats.py src/financial_brain/forward_edge/cli.py tests/test_forward_edge_f08.py: passed.",
-            "mypy src/financial_brain/forward_edge/evidence_stats.py src/financial_brain/forward_edge/cli.py: passed."
+            "python -m pytest tests/test_forward_edge_f08.py tests/test_forward_edge_falsification.py tests/test_forward_edge_claim_tier.py -q --basetemp .pytest-pa0616-hardening: 40 passed.",
+            "python -m ruff check src/financial_brain/forward_edge/evidence_stats.py tests/test_forward_edge_f08.py: passed.",
+            "python -m mypy src/financial_brain/forward_edge/evidence_stats.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2993,5 +2994,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c555e8dbc510aea0626e48b85df94d145d366734602b7b99a8a0f25588afe622"
+  "report_sha256": "26fec8b6c3dd10c1d3f8c202431341ae645a2aa6fe5da4a8245053f6538a8f60"
 }
