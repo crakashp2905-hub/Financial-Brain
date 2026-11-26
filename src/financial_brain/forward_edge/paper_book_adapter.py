@@ -372,6 +372,15 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
     except Exception:
         book.execute("ROLLBACK")
         raise
+    latest_mark = max(marks, key=lambda row: (row[2].available_at, row[2].event_id), default=None)
+    heartbeat_at = runner.clock.now()
+    runner.record_component_heartbeat(
+        session_id=session_id, component="position_monitor",
+        heartbeat_id=(f"position-monitor:{exchange_date.isoformat()}:{heartbeat_at.isoformat()}"
+                      f":{latest_mark[2].event_id if latest_mark else 'empty'}"),
+        occurred_at=heartbeat_at,
+        last_good_event_id=latest_mark[2].event_id if latest_mark else None,
+        last_good_event_at=latest_mark[2].available_at if latest_mark else None)
     return tuple(output)
 
 

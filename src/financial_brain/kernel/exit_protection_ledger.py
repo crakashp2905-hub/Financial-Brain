@@ -378,15 +378,74 @@ class ExitProtectionLedger:
         created = self._append_idempotent(self.journal, records, record, idempotency_key)
         return created
 
-    def record_exit_fill(self, *, exit_key: str, fill_id: str, quantity: Decimal,
-                         idempotency_key: str) -> bool:
-        qty = _decimal(quantity, "exit fill quantity")
-        if qty <= 0 or not fill_id.strip():
-            raise ExitLedgerError("exit fill id and positive quantity are required")
+    def record_exit_execution(self, *, exit_key: str, execution_id: str, simulated_at: datetime,
+                              quote_event_id: str, quote_observed_at: datetime,
+                              quote_available_at: datetime, quote_evidence_sha256: str,
+                              idempotency_key: str) -> bool:
+        """Persist a paper execution attempt separately from trigger and fill clocks."""
+        clocks = (simulated_at, quote_observed_at, quote_available_at)
+        if any(value.tzinfo is None or value.utcoffset() is None for value in clocks):
+            raise ExitLedgerError("paper execution and quote clocks must be timezone-aware")
+        if not execution_id.strip() or not quote_event_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("execution, quote and idempotency identities are required")
+        if (len(quote_evidence_sha256) != 64 or
+                any(char not in "0123456789abcdef" for char in quote_evidence_sha256)):
+            raise ExitLedgerError("quote evidence must be lowercase SHA-256")
         records = self._position_records()
+        trigger = next((row for row in records if row.get("type") == "EXIT_TRIGGERED"
+                        and row.get("idempotency_key") == exit_key), None)
+        if trigger is None:
+            raise ExitLedgerError("paper execution references an unknown emitted exit")
+        trigger_at = datetime.fromisoformat(str(trigger["observed_trigger_at"]))
+        emitted_at = datetime.fromisoformat(str(trigger["occurred_at"]))
+        if simulated_at < max(trigger_at, emitted_at):
+            raise ExitLedgerError("paper execution cannot precede the observed exit trigger")
+        if quote_available_at < quote_observed_at or quote_available_at > simulated_at:
+            raise ExitLedgerError("paper execution quote must be observed and available by execution time")
+        record = {"type": "EXIT_EXECUTION", "position_id": self.position_id,
+                  "exit_key": exit_key, "execution_id": execution_id,
+                  "simulated_at": simulated_at.isoformat(), "quote_event_id": quote_event_id,
+                  "quote_observed_at": quote_observed_at.isoformat(),
+                  "quote_available_at": quote_available_at.isoformat(),
+                  "quote_evidence_sha256": quote_evidence_sha256,
+                  "idempotency_key": idempotency_key}
+        prior_id = next((row for row in records if row.get("type") == "EXIT_EXECUTION"
+                         and row.get("execution_id") == execution_id), None)
+        if prior_id is not None:
+            if prior_id != record:
+                raise ExitLedgerError("execution ID conflicts with prior evidence")
+            return False
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def record_exit_fill(self, *, exit_key: str, execution_id: str, fill_id: str, quantity: Decimal,
+                         occurred_at: datetime, price: Decimal, idempotency_key: str) -> bool:
+        qty = _decimal(quantity, "exit fill quantity")
+        fill_price = _decimal(price, "exit fill price")
+        if qty <= 0 or fill_price <= 0 or not fill_id.strip() or not execution_id.strip():
+            raise ExitLedgerError("exit fill, execution IDs, positive quantity and price are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("observed fill time must be timezone-aware")
+        records = self._position_records()
+        execution = next((row for row in records if row.get("type") == "EXIT_EXECUTION"
+                          and row.get("execution_id") == execution_id and row.get("exit_key") == exit_key), None)
+        if execution is None:
+            raise ExitLedgerError("exit fill requires a matching persisted paper execution")
+        simulated_at = datetime.fromisoformat(str(execution["simulated_at"]))
+        if occurred_at < simulated_at:
+            raise ExitLedgerError("observed fill cannot precede paper execution time")
+        record: dict[str, object] = {"type": "EXIT_FILL", "position_id": self.position_id,
+                                     "exit_key": exit_key, "execution_id": execution_id,
+                                     "fill_id": fill_id, "quantity": str(qty),
+                                     "price": str(fill_price), "occurred_at": occurred_at.isoformat(),
+                                     "idempotency_key": idempotency_key,
+                                     "oco_cancelled_siblings": []}
         prior_fill = next((r for r in records if r.get("type") == "EXIT_FILL" and r.get("fill_id") == fill_id), None)
         if prior_fill is not None:
-            if prior_fill.get("exit_key") == exit_key and prior_fill.get("quantity") == str(qty):
+            # OCO sibling reductions are derived atomically from the winning fill and
+            # are persisted only on the original event. Compare the supplied fill facts
+            # exactly while preserving that immutable derived cancellation evidence.
+            if ({key: value for key, value in prior_fill.items() if key != "oco_cancelled_siblings"} ==
+                    {key: value for key, value in record.items() if key != "oco_cancelled_siblings"}):
                 return False
             raise ExitLedgerError("exit fill id conflicts with prior evidence")
         if self.state.closed_event_id is not None:
@@ -403,9 +462,6 @@ class ExitProtectionLedger:
                                   if r.get("type") == "EXIT_CANCELLED" and r.get("exit_key") == exit_key), Decimal(0))
         if filled_for_exit + cancelled_for_exit + qty > intents[exit_key]:
             raise ExitLedgerError("exit fill quantity exceeds emitted exit intent")
-        record: dict[str, object] = {"type": "EXIT_FILL", "position_id": self.position_id, "exit_key": exit_key,
-                                     "fill_id": fill_id, "quantity": str(qty),
-                                     "idempotency_key": idempotency_key}
         prior_records = [r for r in records if r.get("idempotency_key") == idempotency_key]
         if prior_records:
             if prior_records[0] != record:
@@ -447,6 +503,10 @@ class ExitProtectionLedger:
             raise ExitLedgerError("position close time must be timezone-aware")
         if not reason.strip() or not idempotency_key.strip():
             raise ExitLedgerError("position close requires reason and idempotency key")
+        latest_fill = max((datetime.fromisoformat(str(row["occurred_at"])) for row in self._position_records()
+                           if row.get("type") == "EXIT_FILL" and row.get("occurred_at")), default=None)
+        if latest_fill is not None and occurred_at < latest_fill:
+            raise ExitLedgerError("position accounting close cannot precede its latest observed exit fill")
         state = self.state
         if state.entry_filled_quantity <= 0 or state.open_quantity != 0:
             raise ExitLedgerError("position cannot close before recorded fills close its quantity")

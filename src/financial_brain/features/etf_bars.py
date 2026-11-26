@@ -69,6 +69,11 @@ def aggregate_session_bars(
 
     bars: list[dict[str, Any]] = []
     for bucket, rows in sorted(grouped.items()):
+        bucket_end = session_open + timedelta(seconds=(bucket + 1) * span)
+        # Never publish the current in-progress candle as complete. A shortened final
+        # interval (for example the last 15 minutes of an hourly bucket) is omitted too.
+        if bucket_end > cutoff or bucket_end > session_close:
+            continue
         prices = [row[3] for row in rows]
         bars.append({
             "venue": venue,

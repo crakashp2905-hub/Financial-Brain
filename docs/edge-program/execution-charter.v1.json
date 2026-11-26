@@ -1,0 +1,84 @@
+{
+  "schema": "fb.execution_charter.v1",
+  "version": 1,
+  "owner_id": "UNSET_OWNER_APPROVAL_REQUIRED",
+  "capital_budget_inr": 0,
+  "hard_loss_limits": {
+    "daily_loss_inr": 0,
+    "peak_to_trough_drawdown_inr": 0
+  },
+  "execution_mode": "PAPER_ONLY",
+  "permitted_instruments": [
+    {
+      "asset_class": "EQUITY",
+      "desks": [
+        "SWING",
+        "INTRADAY"
+      ],
+      "allowed_actions": [
+        "BUY",
+        "SELL_EXISTING_POSITION",
+        "NO_TRADE",
+        "CASH"
+      ]
+    },
+    {
+      "asset_class": "ETF",
+      "desks": [
+        "SWING",
+        "INTRADAY",
+        "ETF"
+      ],
+      "allowed_actions": [
+        "BUY",
+        "SELL_EXISTING_POSITION",
+        "NO_TRADE",
+        "CASH"
+      ]
+    },
+    {
+      "asset_class": "OPTION",
+      "desks": [
+        "OPTIONS"
+      ],
+      "allowed_actions": [
+        "BUY_CALL",
+        "BUY_PUT",
+        "DEFINED_RISK_DEBIT_SPREAD",
+        "CLOSE",
+        "NO_TRADE",
+        "CASH"
+      ]
+    },
+    {
+      "asset_class": "MUTUAL_FUND",
+      "desks": [
+        "MUTUAL_FUND"
+      ],
+      "allowed_actions": [
+        "SUBSCRIBE",
+        "REDEEM",
+        "SWITCH",
+        "HOLD",
+        "NO_TRADE",
+        "CASH"
+      ],
+      "execution_clock": "SCHEME_BUSINESS_DAY_CUTOFF_NAV"
+    }
+  ],
+  "physical_orders_enabled": false,
+  "model_may_self_approve_real_cash": false,
+  "human_approval": {
+    "status": "NOT_SIGNED",
+    "actor_id": null,
+    "signed_at_utc": null,
+    "signature": null
+  },
+  "activation_requirements": [
+    "Named owner identity and explicit nonzero/zero capital budget decision.",
+    "Owner-approved nonzero loss limits, if any.",
+    "Human signature or approval bound to this exact charter hash.",
+    "Independent compliance and broker gates before any physical order path."
+  ],
+  "charter_sha256": "a1d6277d358ce10589f8b12fc733f8627ea517d7ea82d6732d5e973853f46a55"
+}

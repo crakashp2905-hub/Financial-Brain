@@ -8,6 +8,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from statistics import NormalDist
+from typing import TypeVar
+
+_ClusterKey = TypeVar("_ClusterKey")
 
 
 class ClusterAttributionError(ValueError):
@@ -37,6 +40,34 @@ class ClusterAttributionReport:
     ci_upper: float
     unclipped_variance: float
     variance_clipped_to_zero: bool
+    method: str
+    report_hash: str
+
+
+@dataclass(frozen=True)
+class TradeSessionObservation:
+    """One mark/realization for a trade position during a market session."""
+
+    session: date
+    trade_id: str
+    net_attribution: float
+
+    def __post_init__(self) -> None:
+        if not self.trade_id.strip() or not math.isfinite(float(self.net_attribution)):
+            raise ClusterAttributionError("trade ID and finite net attribution are required")
+
+
+@dataclass(frozen=True)
+class TradeSessionClusterReport:
+    observations: int
+    session_clusters: int
+    trade_clusters: int
+    effective_independent_observations: float
+    mean_attribution: float
+    standard_error: float
+    confidence_level: float
+    ci_lower: float
+    ci_upper: float
     method: str
     report_hash: str
 
@@ -89,3 +120,56 @@ def two_way_cluster_mean(observations: tuple[AttributionObservation, ...], *,
     return ClusterAttributionReport(n, len(date_groups), len(instrument_groups), mean,
                                     standard_error, confidence_level, lower, upper, variance,
                                     clipped, "TWO_WAY_CLUSTER_DATE_INSTRUMENT_NORMAL_DIAGNOSTIC", digest)
+
+
+def two_way_trade_session_mean(observations: tuple[TradeSessionObservation, ...], *,
+                               confidence_level: float = 0.95) -> TradeSessionClusterReport:
+    """Two-way cluster-robust mean by trade and session with a conservative effective N.
+
+    The effective count is the smaller Kish effective cluster count across the two dependence
+    dimensions. It is not the raw number of trade-session marks and the interval remains a
+    diagnostic normal approximation, not a standalone promotion gate.
+    """
+    if len(observations) < 4:
+        raise ClusterAttributionError("at least four trade-session observations are required")
+    if not math.isfinite(confidence_level) or not 0.5 < confidence_level < 1:
+        raise ClusterAttributionError("confidence_level must be in (0.5, 1)")
+    cells = [(row.session, row.trade_id) for row in observations]
+    if len(set(cells)) != len(cells):
+        raise ClusterAttributionError("one attribution value per session/trade cell is required")
+    session_groups: dict[date, list[float]] = defaultdict(list)
+    trade_groups: dict[str, list[float]] = defaultdict(list)
+    for row in observations:
+        session_groups[row.session].append(row.net_attribution)
+        trade_groups[row.trade_id].append(row.net_attribution)
+    if len(session_groups) < 2 or len(trade_groups) < 2:
+        raise ClusterAttributionError("at least two session and two trade clusters are required")
+    n = len(observations)
+    mean = sum(row.net_attribution for row in observations) / n
+    session_sums = [sum(value - mean for value in values) for values in session_groups.values()]
+    trade_sums = [sum(value - mean for value in values) for values in trade_groups.values()]
+    cell_sums = [row.net_attribution - mean for row in observations]
+    gs, gt = len(session_groups), len(trade_groups)
+    correction_session = (gs / (gs - 1)) * ((n - 1) / n)
+    correction_trade = (gt / (gt - 1)) * ((n - 1) / n)
+    correction_cell = n / (n - 1)
+    variance = (correction_session * sum(x * x for x in session_sums)
+                + correction_trade * sum(x * x for x in trade_sums)
+                - correction_cell * sum(x * x for x in cell_sums)) / (n * n)
+    standard_error = math.sqrt(max(0.0, variance))
+    z = NormalDist().inv_cdf(0.5 + confidence_level / 2.0)
+    lower, upper = mean - z * standard_error, mean + z * standard_error
+
+    def kish_effective_count(groups: dict[_ClusterKey, list[float]]) -> float:
+        sizes = [len(rows) for rows in groups.values()]
+        return float(sum(sizes) ** 2 / sum(size * size for size in sizes))
+
+    effective_n = min(kish_effective_count(session_groups), kish_effective_count(trade_groups))
+    fields = {"observations": n, "session_clusters": gs, "trade_clusters": gt,
+              "effective_independent_observations": effective_n, "mean_attribution": mean,
+              "standard_error": standard_error, "confidence_level": confidence_level,
+              "ci_lower": lower, "ci_upper": upper, "method": "TWO_WAY_CLUSTER_TRADE_SESSION_KISH_MIN_DIAGNOSTIC"}
+    digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
+                                      allow_nan=False).encode()).hexdigest()
+    return TradeSessionClusterReport(n, gs, gt, effective_n, mean, standard_error, confidence_level,
+                                     lower, upper, "TWO_WAY_CLUSTER_TRADE_SESSION_KISH_MIN_DIAGNOSTIC", digest)

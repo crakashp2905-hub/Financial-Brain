@@ -30,6 +30,8 @@ def test_capacity_curve_degrades_net_alpha_and_caps_at_supported_depth() -> None
     assert report.recommended_max_notional == 10_000
     assert report.scenarios[2].within_visible_depth is False
     assert "CONDITIONAL" in report.recommendation_status
+    assert report.break_even_max_notional == pytest.approx(15_000)
+    assert report.alpha_assumption == "CONSTANT_GROSS_ALPHA_SCENARIO"
 
 
 def test_fixture_or_low_coverage_never_produces_size_recommendation() -> None:
@@ -37,6 +39,7 @@ def test_fixture_or_low_coverage_never_produces_size_recommendation() -> None:
     low = _report(coverage=0.80)
     assert low.recommended_max_notional is None
     assert not any(row.supported_by_calibration for row in low.scenarios)
+    assert low.break_even_max_notional == pytest.approx(15_000)
 
 
 def test_cost_curve_must_be_monotone_and_no_extrapolation_is_allowed() -> None:
@@ -50,6 +53,15 @@ def test_cost_curve_must_be_monotone_and_no_extrapolation_is_allowed() -> None:
     row = _report().scenarios[-1]
     assert row.cost_bps is None
     assert row.expected_net_alpha_bps is None
+
+
+def test_break_even_notional_is_not_extrapolated_outside_observed_cost_range() -> None:
+    report = evaluate_capacity(gross_alpha_bps=100, adv_notional=1_000_000,
+                               visible_depth_notional=50_000,
+                               notionals=(5_000, 10_000, 20_000), cost_curve=_curve(),
+                               source_hash="calibration-sha", owner_attested_live_observations=True,
+                               observed_quote_coverage=1.0)
+    assert report.break_even_max_notional is None
 
 
 def test_universe_capacity_report_hashes_dated_adv_depth_and_impact_rows() -> None:

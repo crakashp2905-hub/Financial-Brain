@@ -216,10 +216,10 @@ OVERRIDES: dict[str, Entry] = {
                                   "test_schedule_identity_is_immutable_and_effective_ranges_cannot_overlap",
                                   "test_missing_or_out_of_effective_date_schedule_fails_closed"), (),
                      "Effective-dated immutable schedule wraps existing Indian STT/exchange/SEBI/stamp/brokerage/GST/DP/impact model and itemizes fill-side charges. Rates are owner-configured, not independently validated against every current broker tariff; OMS/ledger charging remains unwired."),
-    "FE-0061": Entry("PARTIAL", ("test_sensitivity_reports_required_multipliers_and_net_profit_survival",
-                                  "test_unobserved_assumptions_are_marked_uncalibrated",
+    "FE-0061": Entry("PARTIAL", ("test_sensitivity_builds_independent_cost_and_slippage_grid",
+                                  "test_depth_must_be_best_to_worst_and_uncalibrated_without_quote",
                                   "test_missing_or_invalid_estimates_fail_closed"), (),
-                     "Reports net P&L under fixed 1x/1.5x/2x slippage and impact multipliers including existing statutory/broker fees. Calibration is provenance-labeled; actual observed base estimates and attachment to profit claims remain outstanding."),
+                     "Reports net outcomes across independent cost and slippage stress grids, with observed quote spread/depth establishing an execution floor. Calibration is provenance-labeled; prospective size/time impact and attachment to profit claims remain outstanding."),
     "FE-0062": Entry("PARTIAL", ("test_executable_multileg_quotes_report_legging_and_unverified_margin",
                                   "test_expiry_intrinsic_is_only_a_scenario_and_verified_margin_is_explicit",
                                   "test_non_executable_or_stale_leg_quotes_fail_closed"), (BLK_DATA,),
@@ -585,7 +585,10 @@ def capability_matrix() -> dict:
         identifier = item["id"]
         entry = table[identifier]
         group = groups[entry.status]
-        matrix[group].append(identifier)  # type: ignore[union-attr]
+        group_items = matrix[group]
+        if not isinstance(group_items, list):
+            raise TypeError(f"capability matrix group is not a list: {group}")
+        group_items.append(identifier)
         capabilities.append({
             "id": identifier,
             "wave": item["wave"],

@@ -64,12 +64,51 @@ class OptionableIndexRecord:
             raise IndexMarketError("optionability effective interval is inverted")
 
 
+@dataclass(frozen=True)
+class ListedOptionContract:
+    """One observed listed option from a source snapshot; never synthesized from an index."""
+
+    canonical_id: str
+    underlying: str
+    exchange: str
+    tradingsymbol: str
+    instrument_token: int
+    expiry: date
+    strike: float
+    right: str
+    lot_size: int
+    tick_size: float
+    source_snapshot_sha256: str
+
+    def __post_init__(self) -> None:
+        if not all((self.canonical_id, self.underlying, self.exchange, self.tradingsymbol)):
+            raise IndexMarketError("listed contract requires exact source identifiers")
+        if self.instrument_token <= 0 or self.lot_size <= 0:
+            raise IndexMarketError("listed contract token and lot size must be positive")
+        if self.right not in {"CE", "PE"}:
+            raise IndexMarketError("listed contract right must be CE or PE")
+        if not isfinite(self.strike) or self.strike <= 0 or not isfinite(self.tick_size) or self.tick_size <= 0:
+            raise IndexMarketError("listed contract strike and tick must be finite and positive")
+        if len(self.source_snapshot_sha256) != 64 or any(
+                c not in "0123456789abcdef" for c in self.source_snapshot_sha256):
+            raise IndexMarketError("listed contract needs a lowercase SHA-256 source snapshot")
+
+
+@dataclass(frozen=True)
+class OptionResolution:
+    status: str
+    contracts: tuple[ListedOptionContract, ...]
+    reason: str
+
+
 class IndexCatalogue:
     """Separate index forecast coverage from effective-dated option eligibility."""
 
-    def __init__(self, indices: list[IndexRecord], optionable: list[OptionableIndexRecord]):
+    def __init__(self, indices: list[IndexRecord], optionable: list[OptionableIndexRecord],
+                 listed_contracts: list[ListedOptionContract] | None = None):
         self.indices = tuple(indices)
         self.optionable = tuple(optionable)
+        self.listed_contracts = tuple(listed_contracts or ())
         for records, key in ((self.indices, lambda r: (r.canonical_id, r.valid_from)),
                              (self.optionable, lambda r: (r.canonical_id, r.valid_from))):
             if len({key(row) for row in records}) != len(records):
@@ -77,6 +116,16 @@ class IndexCatalogue:
         for record in self.optionable:
             if not any(i.canonical_id == record.canonical_id for i in self.indices):
                 raise IndexMarketError("optionable index must exist in forecast index catalogue")
+        optionable_keys = {(r.canonical_id, r.underlying.upper(), r.exchange.upper())
+                           for r in self.optionable}
+        for contract in self.listed_contracts:
+            option_key = (contract.canonical_id, contract.underlying.upper(), contract.exchange.upper())
+            if option_key not in optionable_keys:
+                raise IndexMarketError("listed contract does not match an effective optionability record")
+        contract_keys = [(r.canonical_id, r.tradingsymbol, r.expiry, r.source_snapshot_sha256)
+                         for r in self.listed_contracts]
+        if len(set(contract_keys)) != len(contract_keys):
+            raise IndexMarketError("duplicate listed option contract in source snapshot")
         self._validate_no_overlap(self.indices)
         self._validate_no_overlap(self.optionable)
 
@@ -98,6 +147,25 @@ class IndexCatalogue:
     def is_optionable_at(self, canonical_id: str, day: date) -> bool:
         return any(r.canonical_id == canonical_id and r.valid_from <= day
                    and (r.valid_to is None or day <= r.valid_to) for r in self.optionable)
+
+    def resolve_options(self, canonical_id: str, day: date) -> OptionResolution:
+        """Resolve only listed, unexpired contracts; absent/unsupported rows mean NO_OPTION_TRADE."""
+        index = self.index_at(canonical_id, day)
+        if index is None:
+            return OptionResolution("NO_OPTION_TRADE", (), "index_not_effective")
+        optionability = next((r for r in self.optionable if r.canonical_id == canonical_id
+                              and r.valid_from <= day and (r.valid_to is None or day <= r.valid_to)), None)
+        if optionability is None:
+            return OptionResolution("NO_OPTION_TRADE", (), "underlying_not_optionable")
+        contracts = tuple(sorted(
+            (r for r in self.listed_contracts if r.canonical_id == canonical_id
+             and r.underlying.upper() == optionability.underlying.upper()
+             and r.exchange.upper() == optionability.exchange.upper() and r.expiry >= day
+             and r.source_snapshot_sha256 == optionability.source_snapshot_sha256),
+            key=lambda r: (r.expiry, r.strike, r.right, r.tradingsymbol)))
+        if not contracts:
+            return OptionResolution("NO_OPTION_TRADE", (), "no_currently_listed_contract_in_source_snapshot")
+        return OptionResolution("CONTRACTS_AVAILABLE", contracts, "source_snapshot_listed_contracts")
 
 
 @dataclass(frozen=True)

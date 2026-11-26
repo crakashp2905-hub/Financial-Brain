@@ -17,6 +17,7 @@ from financial_brain.portfolio.canonical_ledger import (
     EventKind,
     PortfolioEvent,
 )
+from financial_brain.forward_edge.order_journal import OrderJournal
 
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -59,6 +60,7 @@ class AggregateRiskDisposition(StrEnum):
     DENIED_RISK_BUDGET = "DENIED_RISK_BUDGET"
     BLOCKED_LEDGER_UNCERTAIN = "BLOCKED_LEDGER_UNCERTAIN"
     BLOCKED_RISK_EVIDENCE = "BLOCKED_RISK_EVIDENCE"
+    BLOCKED_ORDER_STATE_UNCERTAIN = "BLOCKED_ORDER_STATE_UNCERTAIN"
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +128,8 @@ class AggregateRiskDecision:
     desk_risk_inr: Mapping[str, Decimal]
     ledger_events_sha256: str | None
     ledger_snapshot_sha256: str | None
+    order_audit_sha256: str | None
+    unresolved_order_ids: tuple[str, ...]
     policy_sha256: str
     risk_evidence_sha256: str | None
     decision_sha256: str
@@ -133,14 +137,15 @@ class AggregateRiskDecision:
 
 
 def evaluate_aggregate_risk_budget(*, ledger: CanonicalPortfolioLedger,
+                                   order_journal: OrderJournal,
                                    policy: AggregateRiskPolicy, as_of: datetime,
                                    desk_risks: tuple[DeskRiskEstimate, ...]
                                    ) -> AggregateRiskDecision:
     """Check all active desks against one loss-risk cap and a complete fresh ledger.
 
-    Any exception or uncertain canonical snapshot blocks permission. Desk risk estimates
-    remain sourced inputs; this wrapper does not calibrate their scenarios or infer missing
-    loss exposure. It can be used as a pure gate callback, but atomic OMS wiring is separate.
+    Any exception or uncertain canonical snapshot/order journal blocks permission. Desk risk
+    estimates remain sourced inputs; this wrapper does not calibrate their scenarios or infer
+    missing loss exposure. Universal OMS wiring remains a separate integration requirement.
     """
     now = _utc(as_of, "as_of")
     desk_map = {row.desk_id: row for row in desk_risks}
@@ -150,6 +155,8 @@ def evaluate_aggregate_risk_budget(*, ledger: CanonicalPortfolioLedger,
     desk_totals: dict[str, Decimal] = {}
     events_hash: str | None = None
     snapshot_hash: str | None = None
+    order_audit_hash: str | None = None
+    unresolved_order_ids: tuple[str, ...] = ()
     disposition = AggregateRiskDisposition.BLOCKED_RISK_EVIDENCE
     reason = "desk risk evidence does not exactly cover the active-desk policy"
 
@@ -158,12 +165,30 @@ def evaluate_aggregate_risk_budget(*, ledger: CanonicalPortfolioLedger,
             or any(row.current_loss_risk_inr + row.proposed_incremental_loss_risk_inr
                    > policy.maximum_loss_risk_inr for row in desk_risks)):
         return _decision(disposition, reason, policy, now, current, projected, desk_totals,
-                         events_hash, snapshot_hash, evidence_hash)
+                         events_hash, snapshot_hash, evidence_hash, order_audit_hash,
+                         unresolved_order_ids)
 
     for desk, row in desk_map.items():
         desk_totals[desk] = row.current_loss_risk_inr + row.proposed_incremental_loss_risk_inr
     current = sum((row.current_loss_risk_inr for row in desk_map.values()), _ZERO)
     projected = current + sum((row.proposed_incremental_loss_risk_inr for row in desk_map.values()), _ZERO)
+
+    try:
+        order_audit = order_journal.audit_state(now)
+        order_audit_hash = str(order_audit["sha256"])
+        unresolved_order_ids = tuple(order_audit["ambiguous_order_ids"])
+        if unresolved_order_ids:
+            return _decision(
+                AggregateRiskDisposition.BLOCKED_ORDER_STATE_UNCERTAIN,
+                "ambiguous pending orders exceed the zero-tolerance account gate: "
+                + ",".join(unresolved_order_ids), policy, now, current, projected, desk_totals,
+                events_hash, snapshot_hash, evidence_hash, order_audit_hash, unresolved_order_ids)
+    except Exception as exc:  # journal errors must never permit risk
+        return _decision(
+            AggregateRiskDisposition.BLOCKED_ORDER_STATE_UNCERTAIN,
+            f"ORDER_AUDIT_FAILED:{type(exc).__name__}", policy, now, current, projected,
+            desk_totals, events_hash, snapshot_hash, evidence_hash, order_audit_hash,
+            unresolved_order_ids)
 
     try:
         events = ledger.events(policy.account_id, as_of=now.isoformat())
@@ -181,7 +206,8 @@ def evaluate_aggregate_risk_budget(*, ledger: CanonicalPortfolioLedger,
     if reasons:
         disposition = AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
         return _decision(disposition, ";".join(reasons), policy, now, current, projected,
-                         desk_totals, events_hash, snapshot_hash, evidence_hash)
+                         desk_totals, events_hash, snapshot_hash, evidence_hash,
+                         order_audit_hash, unresolved_order_ids)
 
     if projected > policy.maximum_loss_risk_inr:
         disposition = AggregateRiskDisposition.DENIED_RISK_BUDGET
@@ -190,7 +216,8 @@ def evaluate_aggregate_risk_budget(*, ledger: CanonicalPortfolioLedger,
         disposition = AggregateRiskDisposition.PERMITTED
         reason = "all active desks fit the account-wide loss-risk cap and ledger freshness gates"
     return _decision(disposition, reason, policy, now, current, projected, desk_totals,
-                     events_hash, snapshot_hash, evidence_hash)
+                     events_hash, snapshot_hash, evidence_hash, order_audit_hash,
+                     unresolved_order_ids)
 
 
 def _ledger_uncertainties(snapshot: object, policy: AggregateRiskPolicy,
@@ -268,19 +295,23 @@ def _portfolio_event(row: dict[str, object]) -> PortfolioEvent:
 def _decision(disposition: AggregateRiskDisposition, reason: str, policy: AggregateRiskPolicy,
               as_of: datetime, current: Decimal | None, projected: Decimal | None,
               desk_risk: Mapping[str, Decimal], events_hash: str | None, snapshot_hash: str | None,
-              evidence_hash: str | None) -> AggregateRiskDecision:
+              evidence_hash: str | None, order_audit_hash: str | None,
+              unresolved_order_ids: tuple[str, ...]) -> AggregateRiskDecision:
     remaining = max(_ZERO, policy.maximum_loss_risk_inr - projected) if projected is not None else None
     body = {"disposition": disposition.value, "reason": reason, "account_id": policy.account_id,
             "as_of": as_of.isoformat(), "current_loss_risk_inr": current,
             "projected_loss_risk_inr": projected, "maximum_loss_risk_inr": policy.maximum_loss_risk_inr,
             "remaining_loss_risk_inr": remaining, "desk_risk_inr": dict(desk_risk),
             "ledger_events_sha256": events_hash, "ledger_snapshot_sha256": snapshot_hash,
+            "order_audit_sha256": order_audit_hash,
+            "unresolved_order_ids": unresolved_order_ids,
             "policy_sha256": policy.digest(), "risk_evidence_sha256": evidence_hash,
             "order_permitted": disposition is AggregateRiskDisposition.PERMITTED}
     return AggregateRiskDecision(disposition, reason, policy.account_id, as_of, current, projected,
                                  policy.maximum_loss_risk_inr, remaining,
                                  MappingProxyType(dict(sorted(desk_risk.items()))), events_hash,
-                                 snapshot_hash, policy.digest(), evidence_hash, _digest(body),
+                                 snapshot_hash, order_audit_hash, unresolved_order_ids,
+                                 policy.digest(), evidence_hash, _digest(body),
                                  disposition is AggregateRiskDisposition.PERMITTED)
 
 

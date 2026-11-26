@@ -26,6 +26,7 @@ class Intent:
     lots: int | OptionLots = 1
     max_entry_delay: timedelta = timedelta(minutes=1)
     max_exit_delay: timedelta = timedelta(minutes=1)
+    max_quote_age: timedelta = timedelta(seconds=30)
 
     def __post_init__(self) -> None:
         # Keep the durable payload scalar-compatible after validating the domain unit.
@@ -39,7 +40,8 @@ class Intent:
         if self.planned_exit_at <= self.decided_at:
             raise OptionPaperError("planned exit must follow the signal")
         option_lot_count(self.lots)
-        if self.max_entry_delay <= timedelta(0) or self.max_exit_delay <= timedelta(0):
+        if (self.max_entry_delay <= timedelta(0) or self.max_exit_delay <= timedelta(0)
+                or self.max_quote_age <= timedelta(0)):
             raise OptionPaperError("quote delay limits must be positive")
 
 
@@ -50,19 +52,47 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
     base = {"signal_id": intent.signal_id, "cohort": intent.cohort,
             "rule_version": intent.rule_version, "mode": "replay", **metadata("replay")}
     ordered = sorted((q for q in quotes if q.token == intent.token), key=lambda q: q.observed_at)
-    entry = next((q for q in ordered if intent.decided_at < q.observed_at <=
-                  intent.decided_at + intent.max_entry_delay and _valid(q)), None)
+    entry_candidates = [q for q in ordered if intent.decided_at < q.observed_at <=
+                        intent.decided_at + intent.max_entry_delay]
+    stale_entry = next((q for q in entry_candidates if
+                        (q.observed_at - intent.decided_at) > intent.max_quote_age), None)
+    zero_depth_entry = next((q for q in entry_candidates if q.bid_qty == 0 or q.ask_qty == 0), None)
+    entry = next((q for q in entry_candidates if _valid(q)
+                  and (q.observed_at - intent.decided_at) <= intent.max_quote_age
+                  and q.bid_qty > 0 and q.ask_qty > 0), None)
     if entry is None:
+        if stale_entry is not None:
+            return {**base, "status": "NO_FILL", "reason": "STALE_QUOTE", "entry_at": stale_entry.observed_at}
+        if zero_depth_entry is not None:
+            return {**base, "status": "NO_FILL", "reason": "ZERO_VISIBLE_DEPTH",
+                    "entry_at": zero_depth_entry.observed_at}
         return {**base, "status": "NO_ENTRY_QUOTE"}
     hurdle = cost_hurdle(entry, lots=lots, expected_exit_bid=intent.expected_exit_bid)
     if not hurdle["passes"]:
-        return {**base, "status": "SKIPPED_COST_OR_LIQUIDITY", **hurdle}
-    exit_quote = next((q for q in ordered if intent.planned_exit_at <= q.observed_at <=
+        if entry.ask_qty == 0:
+            reason = "ZERO_VISIBLE_DEPTH"
+        elif entry.ask_qty < lots * entry.lot_size:
+            reason = "INSUFFICIENT_VISIBLE_DEPTH"
+        else:
+            reason = "COST_DOMINATED"
+        return {**base, "status": "NO_FILL" if reason != "COST_DOMINATED" else "SKIPPED_COST_OR_LIQUIDITY",
+                **hurdle, "reason": reason}
+    exit_candidates = [q for q in ordered if intent.planned_exit_at <= q.observed_at <=
                        intent.planned_exit_at + intent.max_exit_delay and q.observed_at > entry.observed_at
-                       and _valid(q) and q.bid_qty >= lots * q.lot_size
+                       ]
+    stale_exit = next((q for q in exit_candidates if
+                       (q.observed_at - intent.planned_exit_at) > intent.max_quote_age), None)
+    zero_depth_exit = next((q for q in exit_candidates if q.bid_qty == 0), None)
+    exit_quote = next((q for q in exit_candidates if _valid(q)
+                       and (q.observed_at - intent.planned_exit_at) <= intent.max_quote_age
+                       and q.bid_qty >= lots * q.lot_size
                        and (q.symbol, q.expiry, q.lot_size) ==
                        (entry.symbol, entry.expiry, entry.lot_size)), None)
     if exit_quote is None:
+        if stale_exit is not None:
+            return {**base, "status": "NO_FILL", "reason": "STALE_QUOTE", "entry_at": entry.observed_at}
+        if zero_depth_exit is not None:
+            return {**base, "status": "NO_FILL", "reason": "ZERO_VISIBLE_DEPTH", "entry_at": entry.observed_at}
         return {**base, "status": "NO_EXIT_QUOTE", "entry_at": entry.observed_at,
                 "entry_premium_inr": entry.ask * entry.lot_size * lots}
     return {**base, "status": "CLOSED", **long_round_trip(entry, exit_quote, lots=lots)}

@@ -94,7 +94,8 @@ def test_required_sessions_scale_with_noise_and_target_precision() -> None:
 
 GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FORWARD,
                net_by_cost_multiplier={1.0: 0.004, 1.5: 0.003, 2.0: 0.002}, best_block=0.35,
-               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND")
+               sample_design_predeclared=True, falsification_status="NO_FALSIFICATION_FOUND",
+               null_pass=True, max_drawdown=0.12, max_drawdown_limit=0.30, fidelity_pass=True)
 
 
 def test_a_clear_effect_with_everything_in_order_is_promotion_grade() -> None:
@@ -122,6 +123,12 @@ def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
         ({"best_block": 0.9}, "REGIME_CONCENTRATION"),
         ({"net_by_cost_multiplier": {1.0: 0.004, 1.5: 0.001, 2.0: -0.001}}, "FAILS_COST_STRESS"),
         ({"falsification_status": "INSUFFICIENT_EVIDENCE"}, "FALSIFICATION_INSUFFICIENT_EVIDENCE"),
+        ({"null_pass": None}, "NULL_NOT_ASSESSED"),
+        ({"null_pass": False}, "NULL_FAILED"),
+        ({"fidelity_pass": None}, "EVIDENCE_FIDELITY_NOT_ASSESSED"),
+        ({"fidelity_pass": False}, "EVIDENCE_FIDELITY_FAILED"),
+        ({"max_drawdown": 0.4}, "MAX_DRAWDOWN_EXCEEDED"),
+        ({"max_drawdown_limit": None}, "DRAWDOWN_GATE_NOT_PREDECLARED"),
     ],
 )
 def test_each_gate_independently_blocks_promotion(override: dict, reason: str) -> None:
@@ -163,3 +170,11 @@ def test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail() -
     full = {c: True for c in E.FALSIFICATION_CHECKS}
     assert E.falsification_report(full)["status"] == "NO_FALSIFICATION_FOUND"
     assert E.falsification_report({**full, "lookahead": False})["status"] == "FAIL"
+
+
+def test_verdict_exposes_exact_gate_dispositions() -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    assert report["verdict"] == "PROMOTION_GRADE"
+    assert report["gates"] == {"confidence": "PASS", "cost": "PASS", "null": "PASS",
+                                "robustness": "PASS", "drawdown": "PASS", "fidelity": "PASS"}

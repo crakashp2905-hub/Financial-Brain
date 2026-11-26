@@ -352,5 +352,6 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
                 "unknown_order_ids": accounting["unresolved_order_ids"]}
     finally:
         runner.close()
+        runner.state_store.close()
         if temporary is not None:
             temporary.cleanup()

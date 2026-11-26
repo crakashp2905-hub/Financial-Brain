@@ -1,0 +1,33 @@
+{
+  "schema": "fb.trial_count_reconciliation.v1",
+  "as_of_utc": "2026-11-26T17:23:06Z",
+  "authority": "The protected JSONL ledger bytes and protected SHA-256 pin determine the count.",
+  "ledger": {
+    "path": "docs/trials/ledger.jsonl",
+    "raw_sha256_current_worktree": "a93669515894070781edacb8ae76ed926ef4b712281ab5200dde03e3875698d1",
+    "normalized_lf_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+    "protected_pin_sha256": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c",
+    "jsonl_record_count": 14,
+    "record_kinds": {
+      "history": 1,
+      "trial": 13
+    },
+    "protected_trial_count": 13,
+    "protected_trial_verdicts": {
+      "FAIL": 13
+    }
+  },
+  "contradiction": {
+    "historical_claim": "The imported 2026-11-17 v1.4 audit/index says the ledger contains 14 failed Q4 2026 trials.",
+    "source": [
+      "docs/audits/five-desk-v1_4/audit.json",
+      "docs/edge-program/v1.4-traceability-index.json (FB-0004)"
+    ],
+    "resolution": "The 14 count includes the single kind=history pre-ADR-0004 summary row. The ledger has 13 kind=trial rows, and all 13 are FAIL. The current checklist's 13 protected-trial count is correct.",
+    "handling": "The historical claim is retained and annotated here; no protected ledger or historical source bytes were rewritten."
+  },
+  "limitations": [
+    "Raw working-tree SHA differs from the protected pin because the checkout has CRLF line endings on 14 lines; the repository pin explicitly normalizes those line endings to LF.",
+    "This reconciles row counts and verdicts only. The separate preservation audit records that original input hashes/read windows are missing for 10 of 13 trials."
+  ]
+}

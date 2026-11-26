@@ -10,8 +10,10 @@ def at(h, m, s=0):
     return datetime(2026, 10, 6, h, m, s)
 
 
-def engine(prev=100.0, open_px=100.0, hi=101.0, lo=99.0, strategies=("ORB",)):
-    e = I.DayEngine("2026-10-06", strategies=strategies)
+def engine(prev=100.0, open_px=100.0, hi=101.0, lo=99.0, strategies=("ORB",),
+           require_observed_quote=False):
+    e = I.DayEngine("2026-10-06", strategies=strategies,
+                    require_observed_quote=require_observed_quote)
     e.add_symbol("X", prev)
     e.set_opening("X", open_px=open_px, or_hi=hi, or_lo=lo)
     return e
@@ -169,6 +171,32 @@ def test_live_fills_take_the_ask_to_buy_and_the_bid_to_sell_and_record_the_sprea
     out = e.on_price("X", at(10, 0), 98.9, bid=98.85, ask=98.95)
     assert out[0].exit_reason == "stop" and out[0].exit_px == 98.85
     assert out[0].shortfall_bp > 0                        # crossing the spread both ways is a cost
+    assert t.entry_price_basis == "OBSERVED_TWO_SIDED_QUOTE"
+    assert out[0].exit_price_basis == "OBSERVED_TWO_SIDED_QUOTE"
+
+
+def test_live_mode_refuses_missing_or_stale_quotes_without_fabricating_fills():
+    e = engine(require_observed_quote=True)
+    assert e.on_price("X", at(9, 40), 101.5) == []
+    assert "no current two-sided quote" in e.skipped[-1]["why"]
+
+    opened = e.on_price("X", at(9, 41), 101.5, bid=101.45, ask=101.60)[0]
+    assert opened.entry_price_basis == "OBSERVED_TWO_SIDED_QUOTE"
+    assert e.on_price("X", at(9, 42), 98.9) == []
+    assert opened.is_open
+    assert e.skipped[-1]["position_unresolved"] is True
+
+    closed = e.on_price("X", at(9, 43), 98.9, bid=98.85, ask=98.95)[0]
+    assert closed.exit_px == 98.85
+    assert closed.exit_price_basis == "OBSERVED_TWO_SIDED_QUOTE"
+
+
+def test_replay_half_spread_is_explicitly_non_executable_research_evidence():
+    e = engine()
+    trade = e.on_price("X", at(9, 40), 101.5)[0]
+    assert trade.entry_price_basis == "RESEARCH_ONLY_BUCKET_HALF_SPREAD_ESTIMATE"
+    e.on_price("X", at(10, 30), 106.7)
+    assert trade.exit_price_basis == "RESEARCH_ONLY_BUCKET_HALF_SPREAD_ESTIMATE"
 
 
 def test_with_live_quotes_the_bucket_impact_is_not_charged_on_top_of_the_spread():

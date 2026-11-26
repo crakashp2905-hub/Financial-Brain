@@ -7,7 +7,7 @@ no single-regime concentration, an adequate predeclared sample design, and an IN
 from __future__ import annotations
 
 from enum import Enum
-from math import sqrt
+from math import isfinite, sqrt
 
 import numpy as np
 
@@ -227,7 +227,10 @@ def falsification_report(results: dict[str, bool | None]) -> dict:
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str, min_sessions: int = 60, lags: int = 5, z: float = 1.96,
+                      falsification_status: str, null_pass: bool | None = None,
+                      max_drawdown: float | None = None, max_drawdown_limit: float | None = None,
+                      fidelity_pass: bool | None = None,
+                      min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
     reasons: list[str] = []
     n = len(daily_net_alpha)
@@ -245,12 +248,44 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("FALSIFICATION_" + falsification_status)
     if best_block > max_block_share:
         reasons.append("REGIME_CONCENTRATION")
-    if not stress_robust(net_by_cost_multiplier):
+    cost_ok = stress_robust(net_by_cost_multiplier)
+    if not cost_ok:
         reasons.append("FAILS_COST_STRESS")
+    if null_pass is None:
+        reasons.append("NULL_NOT_ASSESSED")
+    elif not null_pass:
+        reasons.append("NULL_FAILED")
+    if fidelity_pass is None:
+        reasons.append("EVIDENCE_FIDELITY_NOT_ASSESSED")
+    elif not fidelity_pass:
+        reasons.append("EVIDENCE_FIDELITY_FAILED")
+    drawdown_ok = False
+    if max_drawdown is None or max_drawdown_limit is None:
+        reasons.append("DRAWDOWN_GATE_NOT_PREDECLARED")
+    elif (not isfinite(max_drawdown) or not 0 <= max_drawdown <= 1
+          or not isfinite(max_drawdown_limit) or not 0 < max_drawdown_limit <= 1):
+        raise StatsError("drawdown and its predeclared limit must be fractions in [0,1]")
+    else:
+        drawdown_ok = max_drawdown <= max_drawdown_limit
+        if not drawdown_ok:
+            reasons.append("MAX_DRAWDOWN_EXCEEDED")
     if lcb is None or lcb <= 0:
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
-        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": []}
-    hard_fail = mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons
+        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
+                "gates": {"confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
+                          "drawdown": "PASS", "fidelity": "PASS"}}
+    hard_fail = (mean <= 0 and n >= 3 or not cost_ok or null_pass is False or not drawdown_ok
+                 or (max_drawdown is not None and max_drawdown_limit is not None
+                     and max_drawdown > max_drawdown_limit) or "FALSIFICATION_FAIL" in reasons)
+    gates = {
+        "confidence": "UNASSESSED" if lcb is None else ("PASS" if lcb > 0 else "FAIL"),
+        "cost": "PASS" if cost_ok else "FAIL",
+        "null": "UNASSESSED" if null_pass is None else ("PASS" if null_pass else "FAIL"),
+        "robustness": "PASS" if best_block <= max_block_share else "FAIL",
+        "drawdown": ("UNASSESSED" if max_drawdown is None or max_drawdown_limit is None
+                     else ("PASS" if drawdown_ok else "FAIL")),
+        "fidelity": "UNASSESSED" if fidelity_pass is None else ("PASS" if fidelity_pass else "FAIL"),
+    }
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons}
+            "reasons": reasons, "gates": gates}

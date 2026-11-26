@@ -1,7 +1,12 @@
 from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
+import json
+import os
+from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 
 import duckdb
 import pytest
@@ -109,6 +114,60 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     assert records["events"][0]["ingested_at"] == archived_at.isoformat()
     assert records["events"][0]["ingest_clock_source"] == "QUOTE_ARCHIVE"
     archive.close()
+    runner.close()
+
+
+def test_event_offsets_resume_after_restart_without_replaying_acknowledged_prefix(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    events = [make_event(event_id=f"offset-{index}", available_at=NOW + timedelta(seconds=index),
+                         event_time=NOW + timedelta(seconds=index)) for index in range(3)]
+    assert runner.ingest("s", config, events) == {"received": 3, "persisted": 3, "duplicate": 0}
+
+    batch = runner.read_events_after("s", "strategy:momentum", limit=2)
+    assert [row["event_id"] for row in batch] == ["offset-0", "offset-1"]
+    with pytest.raises(ForwardSessionRunnerError, match="exact persisted prefix"):
+        runner.acknowledge_event_offset("s", "strategy:momentum", expected_offset=0,
+                                        through_offset=batch[1]["offset"],
+                                        event_ids=("offset-0",))
+
+    committed = runner.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=0, through_offset=batch[1]["offset"],
+        event_ids=("offset-0", "offset-1"))
+    retried = runner.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=0, through_offset=batch[1]["offset"],
+        event_ids=("offset-0", "offset-1"))
+    assert retried["idempotent"] is True
+    assert retried["cursor_sha256"] == committed["cursor_sha256"]
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.event_cursor("s", "strategy:momentum")["event_offset"] == batch[1]["offset"]
+    remaining = resumed.read_events_after("s", "strategy:momentum")
+    assert [row["event_id"] for row in remaining] == ["offset-2"]
+    resumed.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=batch[1]["offset"],
+        through_offset=remaining[0]["offset"], event_ids=("offset-2",))
+    assert resumed.read_events_after("s", "strategy:momentum") == []
+    resumed.close()
+
+
+def test_session_heartbeat_snapshot_tracks_live_producers_and_missing_components(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="heartbeat-quote")
+    runner.ingest("s", config, [event])
+
+    persisted = runner.records("s")["component_heartbeats"]
+    assert persisted["components"]["quote_feed"]["status"] == "RECORDED"
+    assert persisted["components"]["quote_feed"]["last_good_event_id"] == event.event_id
+    assert persisted["components"]["ledger_writer"]["status"] == "RECORDED"
+    health = runner.heartbeat_health("s", now=runner.clock.now())
+    assert health["entry_readiness"] == "NO_ENTRY"
+    assert {"completed_bars", "strategy_process", "clock_sync", "position_monitor"} <= set(
+        health["missing_or_stale"])
     runner.close()
 
 
@@ -909,6 +968,14 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
     assert buy["charges_inr"] > "0"
+    assert buy["cost_fidelity"]["schema"] == "fb.cost_fidelity.v1"
+    assert buy["cost_fidelity"]["quote_source"] == "FIXTURE"
+    assert buy["cost_fidelity"]["provider_clock"] == fill_event.event_time.isoformat()
+    assert buy["cost_fidelity"]["cost_model_version"] == "v1"
+    assert buy["cost_fidelity"]["cost_model_id"] == "test-india"
+    assert buy["cost_fidelity"]["cost_schedule_sha256"] == "c" * 64
+    assert buy["cost_fidelity"]["impact_calibration"] == "UNAVAILABLE"
+    assert "impact_calibration" in buy["cost_fidelity"]["unavailable_fields"]
     assert buy["execution_cost_basis"] == "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE"
     assert buy["simulated_adverse_selection_cost_inr"] == "0.00"
     assert buy["cost_items"][0]["impact"] == 0
@@ -1722,6 +1789,40 @@ def test_restart_rebuilds_terminal_order_state_from_dispatched_receipt(tmp_path,
     assert [row["state"] for row in recovery["records"]["order_events"]] == [
         "CREATED", "SUBMITTED", "FILLED"]
     recovered.close()
+
+
+def test_paper_receipt_reopens_in_a_distinct_process_without_duplicate_fill(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    first = execute(runner, event, decided)
+    assert first["status"] == "FILLED"
+    assert len(runner.records("s")["execution_receipts"]) == 1
+    runner.close()
+
+    script = """
+import json, os, sys
+from pathlib import Path
+from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+from financial_brain.forward_edge.session_state import ForwardSessionStore
+root = Path(sys.argv[1])
+runner = ForwardSessionRunner(ForwardSessionStore(root / 'state.sqlite'), root / 'journal.sqlite')
+recovery = runner.resume('s')
+records = runner.records('s')
+print(json.dumps({'pid': os.getpid(), 'state': recovery['state'],
+                  'manual_reconciliation_required': recovery['manual_reconciliation_required'],
+                  'receipt_count': len(records['execution_receipts']),
+                  'filled_quantities': [row['filled_quantity'] for row in records['execution_receipts']]}))
+runner.close()
+"""
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(Path.cwd() / "src") + os.pathsep + environment.get("PYTHONPATH", "")
+    result = subprocess.run([sys.executable, "-c", script, str(tmp_path)], cwd=Path.cwd(), env=environment,
+                            check=True, capture_output=True, text=True, timeout=30)
+    recovered = json.loads(result.stdout.strip().splitlines()[-1])
+    assert recovered["pid"] != os.getpid()
+    assert recovered["state"] == "OPEN"
+    assert recovered["manual_reconciliation_required"] is False
+    assert recovered["receipt_count"] == 1
+    assert recovered["filled_quantities"] == [2]
 
 
 def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt(tmp_path, monkeypatch):

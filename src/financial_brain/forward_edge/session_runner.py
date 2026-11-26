@@ -19,6 +19,7 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_passive_scenario,
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
+from financial_brain.forward_edge.heartbeats import SessionHeartbeatLedger
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.forward_edge.data_distribution import DistributionThresholds, compare_windows
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
@@ -178,6 +179,7 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, rejection_id TEXT NOT NULL, record_sha256 TEXT NOT NULL,
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
         self.durable = DurableSessionJournal(self._con)
+        self.heartbeats = SessionHeartbeatLedger(self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -185,6 +187,10 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, checkpoint_id TEXT NOT NULL, phase TEXT NOT NULL,
             checkpoint_sha256 TEXT NOT NULL, checkpoint_json TEXT NOT NULL,
             PRIMARY KEY(session_id, checkpoint_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_event_cursors (
+            session_id TEXT NOT NULL, consumer_id TEXT NOT NULL, event_offset INTEGER NOT NULL,
+            event_id TEXT NOT NULL, updated_at TEXT NOT NULL, cursor_sha256 TEXT NOT NULL,
+            PRIMARY KEY(session_id, consumer_id))""")
         self._con.execute("""CREATE TABLE IF NOT EXISTS paper_intents (
             session_id TEXT NOT NULL, order_id TEXT NOT NULL, decision_id TEXT NOT NULL,
             event_id TEXT NOT NULL, request_sha256 TEXT NOT NULL, request_json TEXT NOT NULL,
@@ -254,6 +260,24 @@ class ForwardSessionRunner:
 
     def close(self) -> None:
         self._con.close()
+
+    def record_component_heartbeat(self, *, session_id: str, component: str, heartbeat_id: str,
+                                  occurred_at: datetime | None = None,
+                                  last_good_event_id: str | None = None,
+                                  last_good_event_at: datetime | None = None) -> bool:
+        """Accept an explicit component heartbeat; missing producers remain degraded in records()."""
+        try:
+            self.state_store.state(session_id)
+        except Exception as exc:
+            raise ForwardSessionRunnerError("heartbeat requires a known forward session") from exc
+        now = occurred_at or capture_local_time(self.clock, label="component heartbeat time")
+        try:
+            return self.heartbeats.record(
+                session_id=session_id, component=component, heartbeat_id=heartbeat_id,
+                occurred_at=now, last_good_event_id=last_good_event_id,
+                last_good_event_at=last_good_event_at)
+        except ValueError as exc:
+            raise ForwardSessionRunnerError(f"component heartbeat rejected: {exc}") from exc
         self.state_store.close()
 
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
@@ -513,6 +537,7 @@ class ForwardSessionRunner:
         expected = set(config.instrument_universe)
         counts = {"received": 0, "persisted": 0, "duplicate": 0}
         batch = list(events)
+        persisted_events: list[tuple[MarketEvent, datetime]] = []
         self._con.execute("SAVEPOINT ingest_batch")
         try:
             for event in batch:
@@ -592,6 +617,7 @@ class ForwardSessionRunner:
                                     "data_permission": permission_evidence,
                                     "provenance": self.provenance})
                 counts["persisted"] += 1
+                persisted_events.append((event, ingested_at))
         except Exception as exc:
             self._con.execute("ROLLBACK TO ingest_batch")
             self._con.execute("RELEASE ingest_batch")
@@ -600,6 +626,37 @@ class ForwardSessionRunner:
             raise
         self._con.execute("RELEASE ingest_batch")
         self._con.commit()
+        batch_ingested_at = max((ingested_at for _, ingested_at in persisted_events), default=None)
+        usable = [(event, ingested_at) for event, ingested_at in persisted_events
+                  if event.kind in {EventKind.QUOTE, EventKind.TICK}]
+        if usable:
+            if batch_ingested_at is None:
+                raise ForwardSessionRunnerError("persisted quote lacks its ingest clock")
+            latest, _ = max(usable, key=lambda row: (row[0].available_at, row[0].event_id))
+            prior_heartbeat = self.heartbeats.last_heartbeat_at(session_id, "quote_feed")
+            quote_heartbeat_at = max(batch_ingested_at, prior_heartbeat) if prior_heartbeat else batch_ingested_at
+            heartbeat_suffix = quote_heartbeat_at.isoformat()
+            self.record_component_heartbeat(
+                session_id=session_id, component="quote_feed",
+                heartbeat_id=f"quote:{latest.event_id}:{heartbeat_suffix}", occurred_at=quote_heartbeat_at,
+                last_good_event_id=latest.event_id, last_good_event_at=latest.available_at)
+            self.record_component_heartbeat(
+                session_id=session_id, component="ledger_writer",
+                heartbeat_id=f"ledger:{latest.event_id}:{heartbeat_suffix}", occurred_at=quote_heartbeat_at,
+                last_good_event_id=latest.event_id, last_good_event_at=latest.available_at)
+        bars = [(event, ingested_at) for event, ingested_at in persisted_events
+                if event.kind is EventKind.BAR]
+        if bars:
+            if batch_ingested_at is None:
+                raise ForwardSessionRunnerError("persisted bar lacks its ingest clock")
+            latest_bar, _ = max(bars, key=lambda row: (row[0].available_at, row[0].event_id))
+            prior_heartbeat = self.heartbeats.last_heartbeat_at(session_id, "completed_bars")
+            bar_heartbeat_at = max(batch_ingested_at, prior_heartbeat) if prior_heartbeat else batch_ingested_at
+            self.record_component_heartbeat(
+                session_id=session_id, component="completed_bars",
+                heartbeat_id=f"bar:{latest_bar.event_id}:{bar_heartbeat_at.isoformat()}",
+                occurred_at=bar_heartbeat_at,
+                last_good_event_id=latest_bar.event_id, last_good_event_at=latest_bar.available_at)
         return counts
 
     def ingest_kite_archive(self, session_id: str, config: ForwardRunConfig,
@@ -758,6 +815,10 @@ class ForwardSessionRunner:
         self._append_audit("decision", session_id, decision_id, clock,
                            {**body, "provenance": self.provenance})
         self._con.commit()
+        self.record_component_heartbeat(
+            session_id=session_id, component="strategy_process",
+            heartbeat_id=f"decision:{decision_id}", occurred_at=clock,
+            last_good_event_id=decision_id, last_good_event_at=clock)
         return True
 
     def record_risk_verdict(self, *, session_id: str, decision_id: str, verdict_id: str,
@@ -904,7 +965,99 @@ class ForwardSessionRunner:
                   "data_rejections": data_rejections,
                   "audit_log": audit_log, "accounting": accounting}
         result["timing_telemetry"] = _timing_telemetry(result)
+        result["component_heartbeats"] = self.heartbeats.latest(session_id)
         return result
+
+    def read_events_after(self, session_id: str, consumer_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
+        """Read persisted market events after a consumer's acknowledged insertion offset."""
+        if not consumer_id.strip():
+            raise ForwardSessionRunnerError("event cursor consumer ID is required")
+        if limit < 1 or limit > 10000:
+            raise ForwardSessionRunnerError("event cursor read limit must be between 1 and 10000")
+        row = self._con.execute(
+            "SELECT event_offset FROM runner_event_cursors WHERE session_id=? AND consumer_id=?",
+            [session_id, consumer_id]).fetchone()
+        offset = int(row[0]) if row else 0
+        rows = self._con.execute(
+            "SELECT rowid,event_id,kind,available_at,ingested_at,ingest_clock_source,event_sha256,event_json "
+            "FROM runner_events WHERE session_id=? AND rowid>? "
+            "AND kind NOT IN ('preflight','calendar_plan') ORDER BY rowid LIMIT ?",
+            [session_id, offset, limit]).fetchall()
+        return [{"offset": int(item[0]), "event_id": item[1], "kind": item[2],
+                 "available_at": item[3], "ingested_at": item[4], "ingest_clock_source": item[5],
+                 "event_sha256": item[6], "event": json.loads(item[7])} for item in rows]
+
+    def acknowledge_event_offset(self, session_id: str, consumer_id: str, *,
+                                 expected_offset: int, through_offset: int,
+                                 event_ids: tuple[str, ...], now: datetime | None = None) -> dict[str, Any]:
+        """Advance an event cursor over an exact durable prefix using compare-and-swap."""
+        consumer_id = consumer_id.strip()
+        if not consumer_id:
+            raise ForwardSessionRunnerError("event cursor consumer ID is required")
+        if expected_offset < 0 or through_offset < 1 or through_offset <= expected_offset:
+            raise ForwardSessionRunnerError("event cursor offsets must advance from a non-negative offset")
+        if not event_ids or len(event_ids) != len(set(event_ids)):
+            raise ForwardSessionRunnerError("event cursor acknowledgement requires unique event IDs")
+        now = now or capture_local_time(self.clock, label="event cursor acknowledgement")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("event cursor timestamp must be timezone aware")
+        updated_at = now.astimezone(timezone.utc).isoformat()
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            current = self._con.execute(
+                "SELECT event_offset,event_id,updated_at,cursor_sha256 FROM runner_event_cursors "
+                "WHERE session_id=? AND consumer_id=?", [session_id, consumer_id]).fetchone()
+            current_offset = int(current[0]) if current else 0
+            if current and current_offset == through_offset:
+                row = self._con.execute(
+                    "SELECT event_id FROM runner_events WHERE session_id=? AND rowid=?",
+                    [session_id, through_offset]).fetchone()
+                if row and row[0] == event_ids[-1]:
+                    self._con.commit()
+                    return {"session_id": session_id, "consumer_id": consumer_id,
+                            "event_offset": current_offset, "event_id": current[1],
+                            "updated_at": current[2], "cursor_sha256": current[3], "idempotent": True}
+            if current_offset != expected_offset:
+                raise ForwardSessionRunnerError("event cursor changed; reread before acknowledging")
+            rows = self._con.execute(
+                "SELECT rowid,event_id FROM runner_events WHERE session_id=? AND rowid>? AND rowid<=? "
+                "AND kind NOT IN ('preflight','calendar_plan') ORDER BY rowid",
+                [session_id, expected_offset, through_offset]).fetchall()
+            if (not rows or int(rows[-1][0]) != through_offset or
+                    tuple(str(row[1]) for row in rows) != event_ids):
+                raise ForwardSessionRunnerError("event cursor acknowledgement does not match the exact persisted prefix")
+            body = {"schema": "fb.forward-event-cursor.v1", "session_id": session_id,
+                    "consumer_id": consumer_id, "event_offset": through_offset,
+                    "event_id": event_ids[-1], "event_ids_sha256": self._sha256(list(event_ids)),
+                    "updated_at": updated_at}
+            canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            self._con.execute(
+                "INSERT INTO runner_event_cursors VALUES (?,?,?,?,?,?) "
+                "ON CONFLICT(session_id,consumer_id) DO UPDATE SET event_offset=excluded.event_offset, "
+                "event_id=excluded.event_id,updated_at=excluded.updated_at,cursor_sha256=excluded.cursor_sha256",
+                [session_id, consumer_id, through_offset, event_ids[-1], updated_at, digest])
+            self._con.commit()
+            return body | {"cursor_sha256": digest, "idempotent": False}
+        except Exception:
+            self._con.rollback()
+            raise
+
+    def event_cursor(self, session_id: str, consumer_id: str) -> dict[str, Any] | None:
+        """Return the latest durable consumer offset, or None before the first acknowledgement."""
+        row = self._con.execute(
+            "SELECT event_offset,event_id,updated_at,cursor_sha256 FROM runner_event_cursors "
+            "WHERE session_id=? AND consumer_id=?", [session_id, consumer_id]).fetchone()
+        if row is None:
+            return None
+        return {"session_id": session_id, "consumer_id": consumer_id, "event_offset": int(row[0]),
+                "event_id": row[1], "updated_at": row[2], "cursor_sha256": row[3]}
+
+    def heartbeat_health(self, session_id: str, *, now: datetime | None = None,
+                         stale_after: timedelta = timedelta(seconds=60)) -> dict[str, Any]:
+        """Return a wall-clock health view separately from deterministic session records."""
+        observed = now or capture_local_time(self.clock, label="heartbeat health cutoff")
+        return self.heartbeats.snapshot(session_id, now=observed, stale_after=stale_after)
 
     def _append_paper_order_event(self, *, session_id: str, order_id: str, state: str,
                                   occurred_at: datetime, quantity: int, filled_quantity: int,
@@ -1553,6 +1706,8 @@ class ForwardSessionRunner:
         config = self.state_store.config(session_id)
         bucket = config.constraints.get("liquidity_bucket")
         passive = request.get("execution_style") == "PASSIVE_LIMIT"
+        fidelity = self._cost_fidelity_evidence(session_id, request, receipt, config, bucket)
+        receipt["cost_fidelity"] = fidelity
         if config.constraints.get("cost_schedule") is None:
             receipt["simulated_adverse_selection_cost_inr"] = self._passive_adverse_cost(
                 session_id, request, price, filled_quantity) if passive else "0.00"
@@ -1590,6 +1745,79 @@ class ForwardSessionRunner:
         receipt["cost_items"] = cost_items
         receipt["simulated_adverse_selection_cost_inr"] = format(adverse_charge, "f")
         receipt["charges_inr"] = format(total_charges, "f")
+        fidelity["cost_model_version"] = schedule.version
+        fidelity["cost_model_id"] = schedule.schedule_id
+        fidelity["cost_schedule_sha256"] = schedule.source_sha256
+        fidelity["cost_schedule_source"] = schedule.source_ref
+        fidelity["stress_scenario"] = config.constraints.get("cost_stress_scenario", "UNAVAILABLE")
+        fidelity["unavailable_fields"] = [name for name, value in fidelity.items()
+                                           if value == "UNAVAILABLE"]
+
+    def _cost_fidelity_evidence(self, session_id: str, request: dict[str, Any], receipt: dict[str, Any],
+                                config: Any, bucket: Any) -> dict[str, Any]:
+        provenance = receipt.get("quote_provenance") or {}
+        event_ids = request.get("quote_event_ids") or request.get("input_quote_event_ids") or []
+        if not event_ids:
+            event_ids = request.get("market_event_ids", [])
+        quote_rows = []
+        for event_id in event_ids:
+            row = self._con.execute("SELECT event_json, event_sha256 FROM runner_events "
+                                    "WHERE session_id=? AND event_id=? AND kind='quote'",
+                                    [session_id, event_id]).fetchone()
+            if row is not None:
+                event = json.loads(row[0])
+                quote_rows.append({"event_id": event_id, "sha256": row[1],
+                                   "source": event.get("source", "UNAVAILABLE"),
+                                   "event_time": event.get("event_time", "UNAVAILABLE"),
+                                   "received_at": event.get("received_at", "UNAVAILABLE"),
+                                   "available_at": event.get("available_at", "UNAVAILABLE")})
+        if not quote_rows and isinstance(provenance, dict) and provenance.get("event_id"):
+            quote_rows.append({"event_id": provenance["event_id"],
+                               "sha256": provenance.get("event_sha256", "UNAVAILABLE"),
+                               "source": provenance.get("source", "UNAVAILABLE"),
+                               "event_time": provenance.get("event_time_utc", "UNAVAILABLE"),
+                               "received_at": provenance.get("received_at_utc", "UNAVAILABLE"),
+                               "available_at": provenance.get("available_at_utc", "UNAVAILABLE")})
+        if not quote_rows:
+            instrument_id = request.get("instrument_id") or request.get("symbol")
+            receipt_clock = receipt.get("simulated_at")
+            if instrument_id and receipt_clock:
+                candidates = self._con.execute("""SELECT event_id, event_json, event_sha256 FROM runner_events
+                    WHERE session_id=? AND kind='quote' AND available_at<=?
+                    ORDER BY available_at DESC, event_id DESC""", [session_id, receipt_clock]).fetchall()
+                for event_id, event_raw, digest in candidates:
+                    event = json.loads(event_raw)
+                    event_instrument = event.get("instrument_id")
+                    normalized_matches = (isinstance(event_instrument, str)
+                                          and isinstance(instrument_id, str)
+                                          and event_instrument.split(":", 1)[-1] ==
+                                          instrument_id.split(":", 1)[-1])
+                    if event_instrument != instrument_id and not normalized_matches:
+                        continue
+                    quote_rows.append({"event_id": event_id, "sha256": digest,
+                                       "source": event.get("source", "UNAVAILABLE"),
+                                       "event_time": event.get("event_time", "UNAVAILABLE"),
+                                       "received_at": event.get("received_at", "UNAVAILABLE"),
+                                       "available_at": event.get("available_at", "UNAVAILABLE")})
+                    break
+        receipt_clock = receipt.get("simulated_at", "UNAVAILABLE")
+        return {"schema": "fb.cost_fidelity.v1",
+                "provider_clock": quote_rows[-1]["event_time"] if quote_rows else "UNAVAILABLE",
+                "receipt_clock": receipt_clock,
+                "quote_source": quote_rows[-1]["source"] if quote_rows else "UNAVAILABLE",
+                "quote_event_ids": [row["event_id"] for row in quote_rows],
+                "quote_sha256": [row["sha256"] for row in quote_rows],
+                "quote_clocks": quote_rows,
+                "liquidity_bucket": bucket or "UNAVAILABLE",
+                "cost_model_version": "UNAVAILABLE", "cost_model_id": "UNAVAILABLE",
+                "cost_schedule_sha256": "UNAVAILABLE", "cost_schedule_source": "UNAVAILABLE",
+                "stress_scenario": config.constraints.get("cost_stress_scenario", "UNAVAILABLE"),
+                "impact_calibration": "UNAVAILABLE",
+                "data_rights_attestation": "UNAVAILABLE",
+                "unavailable_fields": ["provider_clock", "quote_source", "quote_event_ids", "quote_sha256",
+                                       "liquidity_bucket", "cost_model_version", "cost_model_id",
+                                       "cost_schedule_sha256", "cost_schedule_source", "stress_scenario",
+                                       "impact_calibration", "data_rights_attestation"]}
 
     def _passive_adverse_cost(self, session_id: str, request: dict[str, Any],
                               price: Decimal | None, filled_quantity: int) -> str:

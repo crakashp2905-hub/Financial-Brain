@@ -36,8 +36,9 @@ def test_options_runner_requires_later_entry_and_real_exit():
 def test_options_runner_skips_cost_dominated_or_thin_entry():
     entry = quote(D + timedelta(seconds=10))
     assert run_intent(intent(expected=101.01), [entry])["status"] == "SKIPPED_COST_OR_LIQUIDITY"
-    assert run_intent(intent(), [quote(D + timedelta(seconds=10), ask_qty=10)])[
-        "status"] == "SKIPPED_COST_OR_LIQUIDITY"
+    thin = run_intent(intent(), [quote(D + timedelta(seconds=10), ask_qty=10)])
+    assert thin["status"] == "NO_FILL"
+    assert thin["reason"] == "INSUFFICIENT_VISIBLE_DEPTH"
 
 
 def test_option_intent_normalizes_nominal_lots_before_replay():
@@ -45,6 +46,30 @@ def test_option_intent_normalizes_nominal_lots_before_replay():
     typed = Intent(base.signal_id, base.cohort, base.rule_version, base.token, base.decided_at,
                    base.planned_exit_at, base.expected_exit_bid, lots=OptionLots(2))
     assert typed.lots == 2
+
+
+def test_stale_and_zero_depth_option_quotes_are_no_fill():
+    i = intent()
+    stale = quote(D + timedelta(seconds=45))
+    assert run_intent(i, [stale])["status"] == "NO_FILL"
+    assert run_intent(i, [stale])["reason"] == "STALE_QUOTE"
+    zero = quote(D + timedelta(seconds=10), bid_qty=0)
+    assert run_intent(i, [zero])["status"] == "NO_FILL"
+    assert run_intent(i, [zero])["reason"] == "ZERO_VISIBLE_DEPTH"
+
+
+def test_stale_and_zero_depth_exit_quotes_never_realize_a_win():
+    i = intent()
+    entry = quote(D + timedelta(seconds=10))
+    stale_exit_time = i.planned_exit_at + timedelta(seconds=45)
+    stale_exit = quote(stale_exit_time, bid=120)
+    stale_result = run_intent(i, [entry, stale_exit])
+    assert stale_result["status"] == "NO_FILL"
+    assert stale_result["reason"] == "STALE_QUOTE"
+    zero_exit = quote(i.planned_exit_at, bid=120, bid_qty=0)
+    zero_result = run_intent(i, [entry, zero_exit])
+    assert zero_result["status"] == "NO_FILL"
+    assert zero_result["reason"] == "ZERO_VISIBLE_DEPTH"
 
 
 def test_archive_requires_fresh_broker_timestamp():

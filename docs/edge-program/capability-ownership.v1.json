@@ -778,6 +778,12 @@
       "module_owner": "src/financial_brain/evaluation/band.py"
     },
     {
+      "capability_id": "module:src/financial_brain/evaluation/baseline_controls.py",
+      "path": "src/financial_brain/evaluation/baseline_controls.py",
+      "module_role": "strategy_research_or_evaluation",
+      "module_owner": "src/financial_brain/evaluation/baseline_controls.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/evaluation/basis.py",
       "path": "src/financial_brain/evaluation/basis.py",
       "module_role": "strategy_research_or_evaluation",
@@ -1190,6 +1196,12 @@
       "path": "src/financial_brain/evidence/ledger.py",
       "module_role": "ledger_or_journal",
       "module_owner": "src/financial_brain/evidence/ledger.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/execution/account_size_sweep.py",
+      "path": "src/financial_brain/execution/account_size_sweep.py",
+      "module_role": "execution_or_cost_model",
+      "module_owner": "src/financial_brain/execution/account_size_sweep.py"
     },
     {
       "capability_id": "module:src/financial_brain/execution/algos.py",
@@ -1706,6 +1718,12 @@
       "path": "src/financial_brain/forward_edge/horizon_freeze.py",
       "module_role": "forward_trading_contract_or_support",
       "module_owner": "src/financial_brain/forward_edge/horizon_freeze.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/forward_edge/impact_calibration.py",
+      "path": "src/financial_brain/forward_edge/impact_calibration.py",
+      "module_role": "forward_trading_contract_or_support",
+      "module_owner": "src/financial_brain/forward_edge/impact_calibration.py"
     },
     {
       "capability_id": "module:src/financial_brain/forward_edge/instrument_rules.py",
@@ -2548,6 +2566,12 @@
       "module_owner": "src/financial_brain/paper/decision_journal.py"
     },
     {
+      "capability_id": "module:src/financial_brain/paper/derivatives_subledger.py",
+      "path": "src/financial_brain/paper/derivatives_subledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/paper/derivatives_subledger.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/paper/engine.py",
       "path": "src/financial_brain/paper/engine.py",
       "module_role": "paper_engine_or_output",
@@ -2992,6 +3016,12 @@
       "module_owner": "src/financial_brain/portfolio/capital_allocator.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/capital_efficiency.py",
+      "path": "src/financial_brain/portfolio/capital_efficiency.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/capital_efficiency.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/constraints.py",
       "path": "src/financial_brain/portfolio/constraints.py",
       "module_role": "portfolio_allocation_or_accounting",
@@ -3298,6 +3328,12 @@
       "module_owner": "src/financial_brain/research/causal_regime.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/chronological_split.py",
+      "path": "src/financial_brain/research/chronological_split.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/chronological_split.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/combo_agent.py",
       "path": "src/financial_brain/research/combo_agent.py",
       "module_role": "research_or_strategy_research",
@@ -3322,10 +3358,22 @@
       "module_owner": "src/financial_brain/research/diagnostics.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/dual_skill_report.py",
+      "path": "src/financial_brain/research/dual_skill_report.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/dual_skill_report.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/ensemble_walkforward.py",
       "path": "src/financial_brain/research/ensemble_walkforward.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/ensemble_walkforward.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/evaluation_tiers.py",
+      "path": "src/financial_brain/research/evaluation_tiers.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/evaluation_tiers.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/execution_compare.py",
@@ -3334,10 +3382,46 @@
       "module_owner": "src/financial_brain/research/execution_compare.py"
     },
     {
+      "capability_id": "module:src/financial_brain/research/experiment_spec.py",
+      "path": "src/financial_brain/research/experiment_spec.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/experiment_spec.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/family_registration.py",
+      "path": "src/financial_brain/research/family_registration.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/family_registration.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/family_registry.py",
+      "path": "src/financial_brain/research/family_registry.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/family_registry.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/fragility.py",
+      "path": "src/financial_brain/research/fragility.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/fragility.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/research/history_audit.py",
       "path": "src/financial_brain/research/history_audit.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/history_audit.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/holdout_access.py",
+      "path": "src/financial_brain/research/holdout_access.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/holdout_access.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/inference_registration.py",
+      "path": "src/financial_brain/research/inference_registration.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/inference_registration.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/inverse_strategy.py",
@@ -3350,6 +3434,12 @@
       "path": "src/financial_brain/research/knowledge.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/knowledge.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/look_ledger.py",
+      "path": "src/financial_brain/research/look_ledger.py",
+      "module_role": "ledger_or_journal",
+      "module_owner": "src/financial_brain/research/look_ledger.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/mf_peer_comparison.py",
@@ -3368,6 +3458,12 @@
       "path": "src/financial_brain/research/mf_return_accounting.py",
       "module_role": "research_or_strategy_research",
       "module_owner": "src/financial_brain/research/mf_return_accounting.py"
+    },
+    {
+      "capability_id": "module:src/financial_brain/research/parameter_sensitivity.py",
+      "path": "src/financial_brain/research/parameter_sensitivity.py",
+      "module_role": "research_or_strategy_research",
+      "module_owner": "src/financial_brain/research/parameter_sensitivity.py"
     },
     {
       "capability_id": "module:src/financial_brain/research/preregistry.py",

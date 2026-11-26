@@ -1,0 +1,85 @@
+{
+  "schema": "fb.research_search_space_reconciliation.v1",
+  "scope": "Known search-space and multiplicity evidence found in the current repository. This is not a reconstructed exhaustive candidate ledger.",
+  "documented_historical_family_counts": {
+    "momentum": 69,
+    "reversal": 25,
+    "volatility": 25,
+    "events": 16,
+    "candles": 7,
+    "volume": 5,
+    "unassigned": 3
+  },
+  "claims": {
+    "historical_total_counts": [
+      150,
+      151
+    ],
+    "150_count_note": "The family table totals 150 and says 76 of those entries are in five features; the first five family counts plus the remaining categories sum to 150.",
+    "151_count_note": "ADR-0004 and the 90-indicator registration refer to 151 firewall trials; the event census says 22 new candidates were added after those 151.",
+    "historical_total_reconciled": false,
+    "q4_2026_protected_trials": 13,
+    "q4_2026_all_verdicts": "FAIL",
+    "q4_2026_budget_status": "EXHAUSTED",
+    "ninety_indicator_search": {
+      "declared_indicators": 90,
+      "candidate_columns_tested": 113,
+      "replicated": 7,
+      "survived_multiplicity": 7,
+      "flipped_between_tiers": 47,
+      "lookahead_contaminated_candidate_count": 1
+    },
+    "hundred_algorithm_survey": {
+      "catalogued_algorithms": 100,
+      "refused_as_market_manipulation": 5,
+      "no_venue_or_market_in_india": 11,
+      "no_data_to_test": 19,
+      "remaining_claimed_built_and_tested": 65
+    },
+    "original_quarter_cap": 8,
+    "global_search_look_budget": null,
+    "rule_permutations_and_all_historical_failed_candidates_enumerated": false,
+    "candidate_level_archive_complete": false,
+    "historical_evaluation_runs_data_available_in_checkout": false
+  },
+  "finding": "The current evidence can describe selected search families and two major sweeps, but it cannot establish one cumulative historical look count. The source corpus conflicts between 150 and 151, while candidate columns, parameter variants, event-census tests and formal registered trials are different counting units. The raw historical evaluation_runs series and a complete candidate/parameter archive are not present in the checked-in data. Do not sum these categories or use 150/151 as a verified global denominator.",
+  "future_control": "The protected confirmatory Q4-2026 program has an explicit budget of 13 and is exhausted; Q1-2027 remains unauthorized. This does not constitute a global budget for exploratory indicators, parameter permutations, horizons, or model choices.",
+  "sources": [
+    {
+      "path": "brain/07-Research/A hundred and fifty trials are not a hundred and fifty discoveries.md",
+      "sha256_lf": "1dbf326f496800a388fff83b0315b601e6ef2c567a4ebb9296accb6437bd4256"
+    },
+    {
+      "path": "brain/07-Research/PRE-REGISTERED ninety indicator sweep.md",
+      "sha256_lf": "a75b0fdc151be5d2c24aa7be0ee0881bdd0150d243aa16af3eca3b83ff684bbc"
+    },
+    {
+      "path": "brain/07-Research/Result of the ninety-indicator sweep.md",
+      "sha256_lf": "0e3f3bfcc8e39a10dea3490ca512261f5afb405b87544cfded387920eab858bb"
+    },
+    {
+      "path": "brain/07-Research/Result of the hundred algorithms.md",
+      "sha256_lf": "6e51464774bbcd9d1f9e50b68436d708747922ea44ac1f78157c796f69263473"
+    },
+    {
+      "path": "brain/07-Research/The event archive is real and it is not tradeable.md",
+      "sha256_lf": "d1f37ff0e220d2df593dee5d9c2df9e2a04b8b23000030caf9f61cfd46981592"
+    },
+    {
+      "path": "docs/adr/0004-one-evidence-standard.md",
+      "sha256_lf": "7bb21af726f7f056d3bd956c7f33a07093e5d077fd1c1ea89d3049826691d991"
+    },
+    {
+      "path": "docs/trials/ledger.jsonl",
+      "sha256_lf": "9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c"
+    },
+    {
+      "path": "docs/forward-edge/trial-program.v1.json",
+      "sha256_lf": "f905dccf455bf83056d93c6c84ee33928882d6db5b3e68b135ea3a723d8b4c9e"
+    },
+    {
+      "path": "src/financial_brain/evaluation/families.py",
+      "sha256_lf": "86287b3475a204656e66878cbd9daa8f8ec46e71fe4e6c77e04f143c9546080d"
+    }
+  ]
+}

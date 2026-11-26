@@ -103,6 +103,28 @@ def test_unknown_and_timeout_require_evidence_before_resolution_and_never_invent
         journal.close()
 
 
+def test_order_state_audit_is_point_in_time_and_reports_ambiguous_orders(tmp_path) -> None:
+    journal = OrderJournal(tmp_path / "orders.sqlite3")
+    try:
+        journal.append(_event(0, "CREATED", 0))
+        journal.append(_event(1, "SUBMITTED", 0))
+        journal.append(_event(2, "UNKNOWN", 0))
+        audit_at_unknown = journal.audit_state(NOW + timedelta(seconds=2))
+        assert audit_at_unknown["states"] == {"ord-1": "UNKNOWN"}
+        assert audit_at_unknown["ambiguous_order_ids"] == ["ord-1"]
+        assert len(audit_at_unknown["sha256"]) == 64
+
+        journal.append(OrderEvent("ord-1", "evt-3-reconciled", 3, "MISSED", NOW + timedelta(seconds=3),
+                                  10, 0, None, {"reason": "broker absence"},
+                                  reconciliation_evidence_id="b" * 64))
+        audit_after_resolution = journal.audit_state(NOW + timedelta(seconds=4))
+        assert audit_after_resolution["states"] == {"ord-1": "MISSED"}
+        assert audit_after_resolution["ambiguous_order_ids"] == []
+        assert audit_after_resolution["sha256"] != audit_at_unknown["sha256"]
+    finally:
+        journal.close()
+
+
 def test_fill_increase_without_immutable_receipt_is_rejected(tmp_path) -> None:
     journal = OrderJournal(tmp_path / "orders.sqlite3")
     try:

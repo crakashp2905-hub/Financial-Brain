@@ -10,6 +10,7 @@ from financial_brain.forecasting.index_market import (
     IndexMarketError,
     IndexMinute,
     IndexRecord,
+    ListedOptionContract,
     OptionableIndexRecord,
     build_15m_bars,
     direction_label,
@@ -47,6 +48,36 @@ def test_catalogue_separates_index_universe_from_optionable_indices() -> None:
     assert catalogue.index_at("NIFTY50", DAY).provider_token == 256265
     assert catalogue.is_optionable_at("NIFTY50", DAY)
     assert not catalogue.is_optionable_at("NIFTY50", date(2025, 1, 1))
+
+
+def test_option_resolution_uses_only_exact_listed_snapshot_contracts_and_fails_closed():
+    source_hash = "a" * 64
+    optionable = OptionableIndexRecord("NIFTY50", "NIFTY", "NFO", source_hash, date(2026, 1, 1))
+    call = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV25000CE", 12345,
+        date(2026, 11, 26), 25000.0, "CE", 25, 0.05, source_hash)
+    expired = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV20000PE", 12346,
+        date(2026, 11, 24), 20000.0, "PE", 25, 0.05, source_hash)
+    catalogue = IndexCatalogue([sample_index()], [optionable], [call, expired])
+
+    resolution = catalogue.resolve_options("NIFTY50", DAY)
+    assert resolution.status == "CONTRACTS_AVAILABLE"
+    assert resolution.contracts == (call,)
+
+    no_listing = IndexCatalogue([sample_index()], [optionable])
+    unavailable = no_listing.resolve_options("NIFTY50", DAY)
+    assert unavailable.status == "NO_OPTION_TRADE"
+    assert unavailable.contracts == ()
+    assert unavailable.reason == "no_currently_listed_contract_in_source_snapshot"
+
+
+def test_option_contract_must_match_an_optionable_underlying_and_source_hash():
+    record = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV25000CE", 12345,
+        date(2026, 11, 26), 25000.0, "CE", 25, 0.05, "b" * 64)
+    with pytest.raises(IndexMarketError, match="match an effective optionability"):
+        IndexCatalogue([sample_index()], [], [record])
 
 
 def test_catalogue_rejects_overlapping_effective_ranges() -> None:

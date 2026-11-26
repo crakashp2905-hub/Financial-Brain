@@ -15,6 +15,7 @@ from financial_brain.portfolio.canonical_ledger import (
     EventKind,
     PortfolioEvent,
 )
+from financial_brain.forward_edge.order_journal import OrderEvent, OrderJournal
 
 
 AS_OF = datetime(2026, 11, 26, 15, 30, tzinfo=timezone(timedelta(hours=5, minutes=30)))
@@ -80,52 +81,49 @@ def _risks(current_swing="1000", add_swing="500", current_options="2000", add_op
     )
 
 
+def _evaluate(*, ledger, policy, as_of=AS_OF, desk_risks=None, order_journal=None):
+    journal = order_journal or OrderJournal(connection=sqlite3.connect(":memory:"))
+    return evaluate_aggregate_risk_budget(
+        ledger=ledger, order_journal=journal, policy=policy, as_of=as_of,
+        desk_risks=_risks() if desk_risks is None else desk_risks,
+    )
+
+
 def test_shared_account_loss_budget_sums_all_desks_and_binds_ledger_evidence(tmp_path):
     ledger = _ledger(tmp_path / "portfolio.sqlite")
-    result = evaluate_aggregate_risk_budget(ledger=ledger, policy=_policy(), as_of=AS_OF,
-                                            desk_risks=_risks())
+    result = _evaluate(ledger=ledger, policy=_policy())
     assert result.disposition is AggregateRiskDisposition.PERMITTED
     assert result.current_loss_risk_inr == Decimal("3000")
     assert result.projected_loss_risk_inr == Decimal("4500")
     assert result.remaining_loss_risk_inr == Decimal("500")
     assert result.ledger_events_sha256 and result.ledger_snapshot_sha256
+    assert result.order_audit_sha256 and result.unresolved_order_ids == ()
     assert result.order_permitted
     assert len(result.decision_sha256) == 64
 
 
 def test_cap_excess_denies_across_desks_and_risk_evidence_gaps_block(tmp_path):
     ledger = _ledger(tmp_path / "portfolio.sqlite")
-    over = evaluate_aggregate_risk_budget(
-        ledger=ledger, policy=_policy(maximum_loss_risk_inr=Decimal("4000")),
-        as_of=AS_OF, desk_risks=_risks(),
-    )
+    over = _evaluate(ledger=ledger, policy=_policy(maximum_loss_risk_inr=Decimal("4000")))
     assert over.disposition is AggregateRiskDisposition.DENIED_RISK_BUDGET
     assert not over.order_permitted
 
-    missing_desk = evaluate_aggregate_risk_budget(
-        ledger=ledger, policy=_policy(), as_of=AS_OF, desk_risks=_risks()[:1],
-    )
+    missing_desk = _evaluate(ledger=ledger, policy=_policy(), desk_risks=_risks()[:1])
     assert missing_desk.disposition is AggregateRiskDisposition.BLOCKED_RISK_EVIDENCE
     assert not missing_desk.order_permitted
 
 
 def test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed(tmp_path):
-    unresolved = evaluate_aggregate_risk_budget(
-        ledger=_ledger(tmp_path / "unresolved.sqlite", unresolved=True),
-        policy=_policy(), as_of=AS_OF, desk_risks=_risks(),
-    )
+    unresolved = _evaluate(ledger=_ledger(tmp_path / "unresolved.sqlite", unresolved=True),
+                           policy=_policy())
     assert unresolved.disposition is AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
 
-    no_opening = evaluate_aggregate_risk_budget(
-        ledger=_ledger(tmp_path / "no-opening.sqlite", opening=False),
-        policy=_policy(), as_of=AS_OF, desk_risks=_risks(),
-    )
+    no_opening = _evaluate(ledger=_ledger(tmp_path / "no-opening.sqlite", opening=False),
+                           policy=_policy())
     assert no_opening.disposition is AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
 
-    stale = evaluate_aggregate_risk_budget(
-        ledger=_ledger(tmp_path / "stale.sqlite", mark_age_seconds=600),
-        policy=_policy(), as_of=AS_OF, desk_risks=_risks(),
-    )
+    stale = _evaluate(ledger=_ledger(tmp_path / "stale.sqlite", mark_age_seconds=600),
+                      policy=_policy())
     assert stale.disposition is AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
 
     tampered_path = tmp_path / "tampered.sqlite"
@@ -138,9 +136,7 @@ def test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed(t
             "UPDATE portfolio_events SET event_json=? WHERE source_event_id='cash'",
             (row[0].replace("200000", "210000"),),
         )
-    tampered = evaluate_aggregate_risk_budget(
-        ledger=tampered_ledger, policy=_policy(), as_of=AS_OF, desk_risks=_risks(),
-    )
+    tampered = _evaluate(ledger=tampered_ledger, policy=_policy())
     assert tampered.disposition is AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
     assert "LEDGER_READ_FAILED" in tampered.reason
 
@@ -150,8 +146,7 @@ def test_future_or_mismatched_as_of_risk_estimate_blocks(tmp_path):
     future = list(_risks())
     future[0] = DeskRiskEstimate("swing", AS_OF + timedelta(seconds=1),
                                  Decimal("1"), Decimal("1"), _hash("future"))
-    result = evaluate_aggregate_risk_budget(ledger=ledger, policy=_policy(), as_of=AS_OF,
-                                            desk_risks=tuple(future))
+    result = _evaluate(ledger=ledger, policy=_policy(), desk_risks=tuple(future))
     assert result.disposition is AggregateRiskDisposition.BLOCKED_RISK_EVIDENCE
 
 
@@ -159,7 +154,48 @@ def test_one_desk_over_account_cap_is_blocked_even_if_sum_would_fit(tmp_path):
     ledger = _ledger(tmp_path / "portfolio.sqlite")
     risks = _risks(current_swing="4000", add_swing="2000",
                    current_options="0", add_options="0")
-    result = evaluate_aggregate_risk_budget(ledger=ledger, policy=_policy(), as_of=AS_OF,
-                                            desk_risks=risks)
+    result = _evaluate(ledger=ledger, policy=_policy(), desk_risks=risks)
     assert result.disposition is AggregateRiskDisposition.BLOCKED_RISK_EVIDENCE
+    assert not result.order_permitted
+
+
+def test_ambiguous_order_in_durable_journal_blocks_account_risk(tmp_path):
+    ledger = _ledger(tmp_path / "portfolio.sqlite")
+    journal = OrderJournal(tmp_path / "orders.sqlite")
+    created = OrderEvent("ambiguous-1", "event-0", 0, "CREATED", AS_OF - timedelta(minutes=2),
+                         10, 0, None, {})
+    submitted = OrderEvent("ambiguous-1", "event-1", 1, "SUBMITTED",
+                           AS_OF - timedelta(minutes=1, seconds=30),
+                           10, 0, None, {})
+    unknown = OrderEvent("ambiguous-1", "event-2", 2, "UNKNOWN", AS_OF - timedelta(minutes=1),
+                         10, 0, None, {})
+    journal.append(created)
+    journal.append(submitted)
+    journal.append(unknown)
+
+    result = _evaluate(ledger=ledger, policy=_policy(), order_journal=journal)
+
+    assert result.disposition is AggregateRiskDisposition.BLOCKED_ORDER_STATE_UNCERTAIN
+    assert result.unresolved_order_ids == ("ambiguous-1",)
+    assert result.order_audit_sha256
+    assert not result.order_permitted
+
+
+def test_corrupt_order_event_hash_fails_closed(tmp_path):
+    ledger = _ledger(tmp_path / "portfolio.sqlite")
+    journal_path = tmp_path / "orders.sqlite"
+    journal = OrderJournal(journal_path)
+    journal.append(OrderEvent("working-1", "event-0", 0, "CREATED", AS_OF - timedelta(minutes=2),
+                              10, 0, None, {}))
+    with sqlite3.connect(journal_path) as connection:
+        connection.execute("UPDATE order_events SET event_json=? WHERE event_id='event-0'",
+                           ('{"order_id":"working-1","event_id":"event-0","sequence":0,'
+                            '"state":"CREATED","occurred_at":"2026-11-26T09:28:00+00:00",'
+                            '"quantity":10,"filled_quantity":0,"price":null,"accounting":{},'
+                            '"fill_evidence_id":null,"reconciliation_evidence_id":null}',))
+
+    result = _evaluate(ledger=ledger, policy=_policy(), order_journal=journal)
+
+    assert result.disposition is AggregateRiskDisposition.BLOCKED_ORDER_STATE_UNCERTAIN
+    assert result.reason == "ORDER_AUDIT_FAILED:OrderJournalError"
     assert not result.order_permitted

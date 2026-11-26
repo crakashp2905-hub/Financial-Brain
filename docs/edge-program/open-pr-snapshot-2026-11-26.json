@@ -1,0 +1,6319 @@
+{
+  "schema": "fb.open_pr_snapshot.v1",
+  "captured_at_utc": "2026-11-26T17:16:23.723Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "query": {
+    "state": "open",
+    "result_count": 26,
+    "method": "GitHub repository PR listing; per-PR base/head SHA comparison and latest PR-triggered workflow run"
+  },
+  "summary": {
+    "open_prs": 26,
+    "mergeable": 22,
+    "reported_conflicts": 4,
+    "latest_ci_success": 24,
+    "latest_ci_failure": 2,
+    "ci_unknown_or_no_run": 0,
+    "protected_artifact_change_prs": 19
+  },
+  "limitations": [
+    "CI records are latest PR-triggered workflow runs returned by the GitHub API, not all required checks or branch-protection decisions.",
+    "Protected artifact paths are identified, but exact content hashes were not fetched for every changed protected file.",
+    "PR metadata and compare results are a point-in-time snapshot; branch tips can advance after capture.",
+    "Unmerged work remains non-production evidence."
+  ],
+  "pull_requests": [
+    {
+      "number": 113,
+      "title": "Audit exit coverage for all open positions",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/113",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-pa04-05-transition-validation",
+        "sha": "ed8536ffca304d2b3d426070e10f9a93599c9767"
+      },
+      "head": {
+        "ref": "codex/v3-pa04-06-exit-coverage",
+        "sha": "63b66600a847b054f117f8a77386099237265782"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 13,
+        "behind_by": 0,
+        "total_commits": 13,
+        "merge_base_sha": "ed8536ffca304d2b3d426070e10f9a93599c9767"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45550299908,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2409,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/legacy-intraday-exit-adjudication.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/profit-readiness.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/reconcile_legacy_intraday_exits.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/exit_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/portfolio/legacy_exit_adjudication.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_exit_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_legacy_exit_adjudication.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_phase5_intraday_runner.py",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 112,
+      "title": "Validate transition and option leg safety",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/112",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-pa04-04-durable-reservations-20261125",
+        "sha": "71b044b5fa9b08638d058a71a0fa082de4e66c80"
+      },
+      "head": {
+        "ref": "codex/v3-pa04-05-transition-validation",
+        "sha": "ed8536ffca304d2b3d426070e10f9a93599c9767"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 5,
+        "behind_by": 0,
+        "total_commits": 5,
+        "merge_base_sha": "71b044b5fa9b08638d058a71a0fa082de4e66c80"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45543205778,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_number": 2391,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/profit-readiness.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/options_risk.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_options_risk.py",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 111,
+      "title": "Add atomic durable portfolio reservations",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/111",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-pa00-12-profit-readiness-20261125",
+        "sha": "e4fd5542963ba7df91984cdfa7a133f1474154fc"
+      },
+      "head": {
+        "ref": "codex/v3-pa04-04-durable-reservations-20261125",
+        "sha": "71b044b5fa9b08638d058a71a0fa082de4e66c80"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 4,
+        "behind_by": 0,
+        "total_commits": 4,
+        "merge_base_sha": "e4fd5542963ba7df91984cdfa7a133f1474154fc"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45543118585,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2389,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/profit-readiness.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/durable_reservations.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_durable_reservations.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 109,
+      "title": "Reconcile paper account equity through canonical ledger",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/109",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-17-attribution-20261125",
+        "sha": "59f546bd6418360c4fa66cebdae76aa62996fdde"
+      },
+      "head": {
+        "ref": "codex/v3-pa04-15-reconcile-20261125",
+        "sha": "abaca3772fc77d7a2251fe86f293754d06caa443"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 11,
+        "behind_by": 0,
+        "total_commits": 11,
+        "merge_base_sha": "59f546bd6418360c4fa66cebdae76aa62996fdde"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45544456573,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2397,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/profit-readiness.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/profit_readiness.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/portfolio/equity_reconciliation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_equity_reconciliation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_profit_readiness.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 108,
+      "title": "Add complete-evidence trader layer attribution",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/108",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-16-aggregate-risk-20261125",
+        "sha": "206c36e6f75ec9defa0d5e1123d48d27cad6a99f"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-17-attribution-20261125",
+        "sha": "59f546bd6418360c4fa66cebdae76aa62996fdde"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "206c36e6f75ec9defa0d5e1123d48d27cad6a99f"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45535993362,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2359,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/attribution/pipeline.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_portfolio_trader_layer_attribution.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 107,
+      "title": "Enforce a fail-closed aggregate account risk budget",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/107",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-15-budget-20261125",
+        "sha": "0a0705c745461545b0219d1dd52e45f202d8772a"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-16-aggregate-risk-20261125",
+        "sha": "206c36e6f75ec9defa0d5e1123d48d27cad6a99f"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "0a0705c745461545b0219d1dd52e45f202d8772a"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45535152942,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2353,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/aggregate_risk_budget.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_aggregate_risk_budget.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 106,
+      "title": "Cap daily portfolio turnover and commissions",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/106",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-14-cadence-20261125",
+        "sha": "c3f2af2fd4ae1fdc2ffd17318fa7816c7d2adfad"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-15-budget-20261125",
+        "sha": "0a0705c745461545b0219d1dd52e45f202d8772a"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "c3f2af2fd4ae1fdc2ffd17318fa7816c7d2adfad"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45533360486,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2340,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/daily-turnover-commission-budget-audit-2026-11-25.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/daily_budgets.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_daily_budgets.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 105,
+      "title": "Add frozen portfolio cadence audit",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/105",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-13-capacity-20261125",
+        "sha": "a8e92e895e95dcacc4507cab5dc78b44f9e0a4e6"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-14-cadence-20261125",
+        "sha": "c3f2af2fd4ae1fdc2ffd17318fa7816c7d2adfad"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "a8e92e895e95dcacc4507cab5dc78b44f9e0a4e6"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45532438882,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2338,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/portfolio-cadence-audit-2026-11-25.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/cadence.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_cadence.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 104,
+      "title": "Add discrete cost-aware capacity optimizer",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/104",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-12-allocation-benchmark-20261125",
+        "sha": "b96e7f08696f94ad990aed52ccd48521f6a9bdcb"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-13-capacity-20261125",
+        "sha": "a8e92e895e95dcacc4507cab5dc78b44f9e0a4e6"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "b96e7f08696f94ad990aed52ccd48521f6a9bdcb"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45532296760,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2336,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/discrete-capacity-optimizer-audit-2026-11-25.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/capacity_optimizer.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_capacity_optimizer.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 103,
+      "title": "Compare frozen allocation methods on one cohort",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/103",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-11-scenario-optimizer-20261125",
+        "sha": "8e85d3dfcdf4ea6499bb037a75fe5cb9084b4dcc"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-12-allocation-benchmark-20261125",
+        "sha": "b96e7f08696f94ad990aed52ccd48521f6a9bdcb"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 3,
+        "behind_by": 0,
+        "total_commits": 3,
+        "merge_base_sha": "8e85d3dfcdf4ea6499bb037a75fe5cb9084b4dcc"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45532128115,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2334,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/allocator_benchmarks.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_allocator_benchmarks.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 102,
+      "title": "Add joint scenario-constrained portfolio optimizer",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/102",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-10-drawdown-cap-20261125",
+        "sha": "47df2f5d9e7074a403ef2fe16c2a8e8e7fe91577"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-11-scenario-optimizer-20261125",
+        "sha": "8e85d3dfcdf4ea6499bb037a75fe5cb9084b4dcc"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 5,
+        "behind_by": 0,
+        "total_commits": 5,
+        "merge_base_sha": "47df2f5d9e7074a403ef2fe16c2a8e8e7fe91577"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45531969247,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2332,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/scenario_optimizer.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_scenario_optimizer.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 101,
+      "title": "Add monotonic portfolio drawdown risk cap",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/101",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "codex/v3-sl22-09-alpha-lcb-20261125",
+        "sha": "01d003ad1254272678ed4f8928f0799cfa35a810"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-10-drawdown-cap-20261125",
+        "sha": "47df2f5d9e7074a403ef2fe16c2a8e8e7fe91577"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 5,
+        "behind_by": 0,
+        "total_commits": 5,
+        "merge_base_sha": "01d003ad1254272678ed4f8928f0799cfa35a810"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45531815937,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2330,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/drawdown_cap.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_drawdown_cap.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 99,
+      "title": "Add contextual delayed-reward sleeve allocator",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/99",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "codex/v3-sl22-08-contextual-sleeves-20261125",
+        "sha": "f0562b93c1d5e6baf24408766889c3e2975a8332"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 13,
+        "behind_by": 0,
+        "total_commits": 13,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45535422602,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2355,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/contextual_sleeves.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_portfolio_contextual_sleeves.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 87,
+      "title": "Advance Financial-Brain unified checklist implementation",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/87",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": {
+        "ref": "main",
+        "sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8"
+      },
+      "head": {
+        "ref": "feature/forward-edge-f00-f01",
+        "sha": "d41ff82955a7b6e3e059cfa76c8d2f37969fe355"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 226,
+        "behind_by": 0,
+        "total_commits": 226,
+        "merge_base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45267488419,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1894,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "status": "modified"
+        },
+        {
+          "path": "docs/ARCHITECTURE.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/adr/0007-protected-record-hash-normalization.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/audits/protected-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/CHANGELOG.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/FB-0001-baseline-2026-11-23.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/PAPER_ENGINE_EQUIVALENCE.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/authoritative-contracts.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/branch-governance-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/canonical-merge-sequence.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/canonical-portfolio-ledger.v1.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-provenance.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/checklist-release-bundle-report.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/checklist-release-evidence-v3.0.zip",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/checklist-release-inputs.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/ci-validation-matrix.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/clean-release-candidate-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/continuous-protective-exit-cadence-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/data-unusable-fail-closed-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/data-use-matrix.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/deterministic-delayed-fixture-replay-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/deterministic-forward-session-loop-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/entrypoint-inventory.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/environment-baseline-2026-11-23.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/feed-quality-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/future-source-mutation-lookahead-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/h056-h068-exdividend-probe-availability-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/historical-strategy-pins.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/instrument-master-design-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/instrument-master.v1.schema.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/instrument-session-feed-quality-metrics-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/kite-paper-rights-runtime-gate-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/ledger-authority-reconciliation-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/main-ci-failure-analysis-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/market-data-rights-review.v1.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/market-event-dedupe-correction-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/market-fact-clock-contract-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/merger-integration-fixture-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/nse-calendar-expiry-halts-settlement-cutoff-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/open-pr-snapshot-2026-11-23.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/paper-engine-equivalence.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/physical-order-routing-lock-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/point-in-time-universe-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pr40-main-contract-reconciliation-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pr40-trial-governance-reconciliation-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/price-total-return-corporate-action-audit-2026-11-24.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/product-charter.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/profit_readiness.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/provider-product-data-use-matrix-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/replay-release-rollback-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/reproducibility-contract.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/research-outcome-freeze.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/research-search-space-reconciliation.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/scheduled-checkout-provenance-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/trial-count-reconciliation.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/trial-preservation-audit.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/trial-preservation-baseline.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v1.4-traceability-index.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-baseline-2026-11-23-r3.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v3.0-pr-graph-2026-11-23-r3.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/forward-edge/logs/full-suite-f04-tip.txt",
+          "status": "modified"
+        },
+        {
+          "path": "docs/forward-edge/protected-pins.json",
+          "status": "modified"
+        },
+        {
+          "path": "requirements-forecasting-lock.txt",
+          "status": "added"
+        },
+        {
+          "path": "requirements-lock.txt",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/audit/paper_engine_equivalence.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/audit_canonical_portfolio_migration.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/audit_checklist_baseline.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/capability_ownership.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/capability_provenance.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/capture_environment_baseline.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/check_critical_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/data_use_matrix.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/entrypoint_inventory.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/migrate_legacy_paper_books.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/profit_readiness.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/release_candidate_audit.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/release_provenance.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research_outcome_freeze.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/run_hidden.vbs",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/source_inventory.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/text_hash.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/trial_preservation_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/validate_capability_ownership.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_ci_matrix.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_historical_strategy_pins.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_merge_sequence.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_pr40_main_contract_reconciliation.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_pr_dependency_snapshot.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_product_charter.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/validate_requirements_lock.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_research_search_space.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/validate_v1_4_traceability_index.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/cli.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/etf_bars.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_execution.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_feed.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_history.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_liquidity.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_returns.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/etf_valuation.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/learners.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/execution/oms/kite_broker.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/availability.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/cli.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/cockpit.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/data_gate.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/data_permissions.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/durable.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/eligibility.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/evidence_bundle.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/evidence_labels.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/execution_charter.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/feed_quality.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/fixtures.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/instrument_master.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/market_data.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/market_events.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/quote_archive.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/raw_observation.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_event_loop.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/trials.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/kite_live.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/mf_portfolio_disclosure.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/ingest/mf_scheme_profile.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/ingest/mfnav.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/mfnav_history.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/ingest/reference.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/clock.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/etf_exposure.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/evidence.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/instruments.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/paper_account.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/units.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/mf_exit_load.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/mf_lookthrough.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/mf_peer_comparison.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/mf_redemption.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/mf_total_return.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/options_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/canonical_ledger.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/portfolio/legacy_migration.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/providers/amfi.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/providers/amfi_scheme_profile.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/providers/etf_disclosures.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/providers/etf_reference.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/providers/mf_portfolio_disclosure.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/assessment.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/context.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/contract.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/counterfactual.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/deduplicate.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/intents.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/lifecycle.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/mf_allocation.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/plan.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/position_signals.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/publication.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/quality.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/sleeves.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/storage/db.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/storage/schema.sql",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_api_broker_isolation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_canonical_merge_sequence.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_canonical_portfolio_ledger.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_capability_ownership.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_capability_provenance.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_capture_environment_baseline.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_checklist_baseline.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_ci_matrix.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_critical_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_data_use_matrix.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_decision_availability.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_entrypoint_inventory.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_bars.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_etf_disclosures.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_execution.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_feed.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_history.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_liquidity_feature.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_reference_provider.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_returns.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_valuation_feature.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_execution_charter.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_data_gate.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f00.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_feed_quality.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_fixture_replay.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_future_source_mutation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_instrument_master.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_integrity_gates.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_market_events.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_provenance.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_quote_archive.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_session_event_loop.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_historical_strategy_pins.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_kernel_instruments.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_kernel_units_clock.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_kite_broker_readonly.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_legacy_portfolio_migration.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_mcp_server.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_allocation_recommendation_feature.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_exit_load.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_flow_book.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_mf_lookthrough.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_peer_comparison.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_mf_portfolio_disclosure.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_redemption.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_scheme_profile.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_total_return.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mfnav_as_known.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mfnav_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mfnav_history.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mfnav_revisions.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_migrations.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_oms.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_oms_evidence.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_opportunity_learning_service.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_account.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_pattern_acceptance.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase2_sources.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_learned_model.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_learners.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_position_signals_feature.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_pr40_main_contract_reconciliation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_pr_dependency_snapshot.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_product_charter.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_profit_readiness.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_raw_observation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_release_candidate_audit.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_release_provenance.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_reproduce.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_requirements_lock.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_research_outcome_freeze.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_research_search_space_reconciliation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_risk_exposure.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_risk_stress.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_assessment.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_context.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_contract.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_counterfactual.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_deduplicate.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_intents.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_lifecycle.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_plan.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_publication.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_quality.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_sleeves.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_source_inventory.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_trial_preservation_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_v1_4_traceability_index.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/audits/protected-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/FB-0001-baseline-2026-11-23.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/clean-release-candidate-audit-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/environment-baseline-2026-11-23.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/historical-strategy-pins.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pr40-trial-governance-reconciliation-2026-11-23.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/research-outcome-freeze.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/research-search-space-reconciliation.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/trial-count-reconciliation.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/trial-preservation-audit.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/trial-preservation-baseline.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-baseline-2026-11-23-r3.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/forward-edge/protected-pins.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 86,
+      "title": "FB-0807: point-in-time option contract routing",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/86",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": {
+        "ref": "main",
+        "sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8"
+      },
+      "head": {
+        "ref": "codex/v3-0807-options",
+        "sha": "9df1c16a5a7e62332bbda852d3125a2ff6c510ca"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 83,
+        "behind_by": 0,
+        "total_commits": 83,
+        "merge_base_sha": "3c99b5dddc775db888822b4cec1849e5ebca56c8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45084665183,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "failure",
+          "run_number": 1655,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/edge-program/V3.0_PROGRESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-edge-equivalence-report.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/cli.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/corpactions/actions.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/features/definition.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/etf_liquidity.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/features/etf_trader_panel.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/event_availability.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/index_cross_section.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/indicators.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/features/neutralization.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/options_surface.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/snapshot.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/features/streaming_bars.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forecasting/dataset.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/alerts.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/feed_health.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/manual_paper_decisions.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/market_data.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/options_risk.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/options_spread.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/raw_observation.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/index_tri.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/options_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/options_quotes.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/paper_account.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/lake/retention.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/lake/store.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/options_lifecycle.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/options_routing.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/terminal.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/storage/db.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_etf_liquidity.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_etf_trader_panel.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_event_availability.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_feature_definition.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_feature_neutralization.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_feature_snapshot.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_desk_alerts.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_feed_health.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_kite_market_data.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_lookahead.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_options_risk.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_options_spread.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_quote_archive.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_raw_observation.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_index_cross_section.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_lake_retention.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_manual_paper_decisions.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_lot_book.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_migrations.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_options_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_options_quotes.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_options_surface.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_account.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_paper_options_lifecycle.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_options_routing.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_phase0.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_dataset.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_streaming_bars.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/v3.0-audit.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/v3.0-status.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 39,
+      "title": "Momentum shadow books, monthly-book freeze fix, live-v1 feed-outage close-out",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/39",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "5e00c174126e0f0b7bfccb32f21dfeae9406aec4"
+      },
+      "head": {
+        "ref": "feature/momentum-shadow-abort-closeout",
+        "sha": "fd4a8751c9480a2d7b804a0e9591f9ebf0234143"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "5e00c174126e0f0b7bfccb32f21dfeae9406aec4"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45509654409,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2207,
+          "html_url": null
+        }
+      },
+      "changed_files": [],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 38,
+      "title": "Four-Node 128-variant study, legacy-runner bridge, licence and Kite checks",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/38",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "feature/five-desk-d2-data-parity",
+        "sha": "d33c84895c347f2f19733608009eec90251254f3"
+      },
+      "head": {
+        "ref": "feature/four-node-variants",
+        "sha": "ad8e32a0fd684d982623bdd0850e1618d1c23007"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 11,
+        "behind_by": 0,
+        "total_commits": 11,
+        "merge_base_sha": "d33c84895c347f2f19733608009eec90251254f3"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45535492058,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2357,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/audits/five-desk-v1_4/AUDIT.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/audits/five-desk-v1_4/audit.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/strategies/four_node_v2/PREREGISTRATION.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/strategies/four_node_v2/README.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/strategies/four_node_v2/results/run.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/strategies/four_node_v3/PREREGISTRATION.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/strategies/four_node_v3/README.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/strategies/four_node_v3/results/run.json",
+          "status": "added"
+        },
+        {
+          "path": "scripts/audit/five_desk_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/five_desk_nightly.cmd",
+          "status": "added"
+        },
+        {
+          "path": "scripts/five_desk_nightly.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/four_node_v2_run.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/four_node_v3_run.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/legacy_bridge.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/strategies/four_node_v2/__init__.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/strategies/four_node_v2/backtest.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/strategies/four_node_v3/__init__.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/strategies/four_node_v3/backtest.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_four_node_v2.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_four_node_v3.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_legacy_bridge.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 37,
+      "title": "Five-desk D1: instrument foundation (FB-0101 to FB-0110)",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/37",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "feature/five-desk-d1-instruments",
+        "sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 11,
+        "behind_by": 0,
+        "total_commits": 11,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45534348585,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2345,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/audits/five-desk-v1_4/AUDIT.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/audits/five-desk-v1_4/audit.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/audit/five_desk_audit.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/__init__.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/adapters.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/clocks.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/corporate_actions.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/master.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/store.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/units.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/storage/schema.sql",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_instruments_d1.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 36,
+      "title": "Five-desk D2: data parity, signals, paper engine and control room",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/36",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "feature/five-desk-d1-instruments",
+        "sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4"
+      },
+      "head": {
+        "ref": "feature/five-desk-d2-data-parity",
+        "sha": "d33c84895c347f2f19733608009eec90251254f3"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 64,
+        "behind_by": 0,
+        "total_commits": 64,
+        "merge_base_sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45534931718,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2351,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/audits/five-desk-v1_4/AUDIT.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/audits/five-desk-v1_4/audit.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/five-desk/CAPABILITY_MATRIX.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/five-desk/CHARTER.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/five-desk/DATA_SOURCES.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/forward-edge/strategy-eligibility.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/runbooks/five-desk-operator.md",
+          "status": "added"
+        },
+        {
+          "path": "scripts/audit/five_desk_audit.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/evaluation/reports.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/scorecards.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/study_tools.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/execution/exchange_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/execution/mf_orders.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/execution/mf_plans.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/execution/option_book.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forecasting/calibration_tools.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forecasting/index_extras.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forecasting/index_ops.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/etf_reference.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/market_quality.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/mf_scheme.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/instruments/pit.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/control_room.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/dashboard_html.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/day_cycle.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/desk_runs.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/five_desk_cli.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/five_desk_engine.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/ops.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/policy.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/router.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/portfolio/multi_asset_ledger.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/portfolio/position_ledger.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/portfolio/tax_lots.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/providers/amfi_history.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/research/cross_asset.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/research/mf_metrics.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/research/mf_portfolio.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/risk/capital_allocator.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/admissibility.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/contracts.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/desk_logic.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/evidence.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/exit_plans.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/exit_triggers.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/signals/index_options.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/strategies/etf_rank.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_admissibility_allocator_s16_17.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_adversarial_s13.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_amfi_history.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_broker_isolation_five_desk.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_calibration_ops.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_control_room_s11_23.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_cross_asset_s20.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_dashboard_html.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_day_cycle_s10.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_desk_logic.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_desk_runs.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_etf_mf_s5_s6.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_evidence_reports.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_exchange_paper_s8.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_exit_plans.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_exit_triggers_4a.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_five_desk_cli.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_five_desk_engine.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_index_extras.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_index_ops.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_index_options_s24d.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_instruments_etf_reference.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_lifecycle_tables_4a.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_market_quality.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_journal_folio.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_orders_s7.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_plans.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_portfolio.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_mf_scheme.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_multi_asset_ledger_s9.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_option_book.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_partial_and_timeouts.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_pit_d2.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_policy_and_more_adversarial.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_position_tax.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_router.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_scorecards_s21_22.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signals_d3.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_study_tools.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 35,
+      "title": "Add cryptography to the dev extra so custody tests run in CI",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/35",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "50248f1474f8f3476d723584da410a6fac7e4219"
+      },
+      "head": {
+        "ref": "claude/dev-extra-cryptography",
+        "sha": "294f40ff80e5366549c81d6d2a20f4e5a2330d15"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "50248f1474f8f3476d723584da410a6fac7e4219"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 44905462004,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 1027,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "pyproject.toml",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 34,
+      "title": "Accept ADR-0007 dynamic evidence standard; register P3 momentum out of sample",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/34",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "feature/dynamic-evidence-standard",
+        "sha": "93f24c341c65647ddf77a96bda54ba0031fa9e97"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 58,
+        "behind_by": 0,
+        "total_commits": 58,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45534489752,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2349,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "brain/07-Research/PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard.md",
+          "status": "added"
+        },
+        {
+          "path": "brain/07-Research/PRE-REGISTERED the hundred candidates under the dynamic standard.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/adr/0007-dynamic-evidence-standard.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/capability-ownership.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/trials/dynamic/PREREG-momentum-crash-timing.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/RESULTS-2026-11-16.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/bet-recheck-2026-11-18.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/combo-momentum-carry.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/RESULTS.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/results.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/series.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/survivors.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/ledger.jsonl",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-excess-2026-11-16.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-excess-series.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-implementation-2026-11-18.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/options-defined-risk-train-trades.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/options-defined-risk-train.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/rescore-2026-11-16.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/rescore-2026-11-16.md",
+          "status": "added"
+        },
+        {
+          "path": "scripts/archive_coverage.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/bet_recheck.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/combo_momentum_carry.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/hundred.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/hundred_spec.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/momentum_excess.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/momentum_implementation.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/options_defined_risk.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/research/rescore_dynamic.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/dynamic_standard.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/oos_monitor.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/zoo_edges.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_dynamic_standard.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/trials/dynamic/PREREG-momentum-crash-timing.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/RESULTS-2026-11-16.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/bet-recheck-2026-11-18.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/combo-momentum-carry.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/RESULTS.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/results.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/series.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/hundred/survivors.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/ledger.jsonl",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-excess-2026-11-16.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-excess-series.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/momentum-implementation-2026-11-18.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/options-defined-risk-train-trades.parquet",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/options-defined-risk-train.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/rescore-2026-11-16.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/dynamic/rescore-2026-11-16.md",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 33,
+      "title": "Consolidate local branches into one pipeline (draft)",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/33",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": {
+        "ref": "main",
+        "sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b"
+      },
+      "head": {
+        "ref": "integrate/clean-branches-20261114",
+        "sha": "0393da6c01485bc7631d368efe299585f9b4baf9"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 157,
+        "behind_by": 0,
+        "total_commits": 157,
+        "merge_base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 44318963353,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 899,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": ".gitattributes",
+          "status": "modified"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "status": "modified"
+        },
+        {
+          "path": ".gitignore",
+          "status": "modified"
+        },
+        {
+          "path": ".python-version",
+          "status": "added"
+        },
+        {
+          "path": "brain/05-Components/C29 Learning loop.md",
+          "status": "added"
+        },
+        {
+          "path": "brain/05-Components/Learning from losses.md",
+          "status": "modified"
+        },
+        {
+          "path": "brain/07-Research/PRE-REGISTERED intraday chart candle and indicator family.md",
+          "status": "added"
+        },
+        {
+          "path": "brain/07-Research/Result of intraday chart candle and indicator family.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/CONNECTOR-AND-LIVE-READINESS.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/HANDOFF.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/LEARNING-LOOP.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/READINESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/RUNBOOK-OPS.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/TRADING-EDGE-CHECKLIST-STATUS-2026-10-30.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/TRADINGVIEW-CHARTING-LIBRARY.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/adr/0004-one-evidence-standard.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/book-horizon-adapter-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/capture-replay-equivalence-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/current-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/data-source-matrix.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/deviation-log.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/executable-cohort-contract.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/failed-parameter-reuse-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/fixture-runner-parity-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-paper-account-bridge-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-paper-execution-adapter-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-session-crash-recovery-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/human-approved-paper-eligibility-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/indian-cash-cost-schedule-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/live-historical-divergence-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/main-branch-protection-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/market-capture-replay-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/mode-capability-matrix.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/opportunity-coverage-report-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/paper-account-audit-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0017-fixture-runner-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0018-fixture-runner-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0020-book-horizon-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0021-crash-recovery-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0022-transactional-outbox-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0023-paper-account-bridge-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0024-attempt-identity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0025-session-clock-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0026-session-date-outcome-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0028-offline-session-resume-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0029-checkpoint-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0030-market-data-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0032-ingest-lineage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0033-effective-instrument-order-rules-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0034-read-only-kite-polling-adapter-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0035-durable-feed-health-and-stale-no-trade-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0036-time-aligned-market-capture-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0037-kite-source-timestamp-tolerance-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0040-quote-quality-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0041-market-data-rights-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0042-opportunity-coverage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0043-live-historical-divergence-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0044-capture-replay-equivalence-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0045-strategy-variant-inventory-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0046-failed-parameter-reuse-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0047-unregistered-shadow-only-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0048-paper-eligibility-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0049-slow-factor-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0049-slow-factor-exploratories.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0050-low-vol-atr-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0050-low-vol-atr-overlap.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0051-target-portfolio-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0051-target-portfolio-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0052-learned-challenger-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0052-learned-challenger-lineage.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0053-futures-carry-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0053-futures-carry-governance.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0054-monitoring-only-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0054-monitoring-only-families.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-journal.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0056-mechanism-hypothesis-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0056-mechanism-hypothesis.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0057-feature-timing-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0057-feature-timing-metadata.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0058-strategy-version-diff-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0058-strategy-version-diff.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0059-frozen-benchmarks-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0059-frozen-benchmarks.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0060-shared-signal-allocator-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0060-shared-signal-allocator.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0077-indian-cost-model-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0078-cost-attribution-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0079-fidelity-isolation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0080-adverse-stop-quote-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0081-slippage-calibration-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0082-fill-cost-stress-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0083-no-fill-denominator-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0084-cost-drag-measures-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0085-quote-arrival-shortfall-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0086-instrument-order-rule-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0087-immutable-paper-fill-provenance-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0088-execution-perturbation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0089-common-asset-order-event-contract-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0093-cash-equity-corporate-action-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0094-futures-variation-margin-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0095-options-expiry-settlement-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0102-paper-account-audit-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0110-paper-cohort-adapter-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/quote-quality-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/raw-kite-quote-archive-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/release-semantics.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/reproducible-runtime.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/session-checkpoint-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/session-clock-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/session-date-outcome-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/strategy-variant-inventory-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/strategy-variant-inventory.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/task-status.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/unregistered-shadow-only-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/forward-edge/TRACKER.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/forward-edge/offline-paper-cli.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/forward-edge/protected-pins.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/forward-edge/strategy-eligibility.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/shadow/skip-rules.v2.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/trials/ledger.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/trials/manifests/v2_intraday.json",
+          "status": "added"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified"
+        },
+        {
+          "path": "requirements-lock.txt",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/daily_refresh.cmd",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/depth_archive.cmd",
+          "status": "added"
+        },
+        {
+          "path": "scripts/kite_status.cmd",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/paper_intraday_v2.cmd",
+          "status": "added"
+        },
+        {
+          "path": "scripts/preflight.cmd",
+          "status": "added"
+        },
+        {
+          "path": "scripts/register_depth_archive_task.ps1",
+          "status": "added"
+        },
+        {
+          "path": "scripts/register_paper_v2_task.ps1",
+          "status": "added"
+        },
+        {
+          "path": "scripts/register_preflight_task.ps1",
+          "status": "added"
+        },
+        {
+          "path": "scripts/source_inventory.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/strategy_variant_inventory.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/trials/a10_price_anomalies.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/d1_delivery_share.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/f3_short_buildup.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/v2_intraday_family.py",
+          "status": "added"
+        },
+        {
+          "path": "scripts/trials/x3_mf_fundamentals.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/backup.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/cli.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/data_contracts.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/decisions/postmortem.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/evaluation/bounded_search.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/evaluation/intraday_v2.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/learned_model.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/evaluation/microstructure.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/paper_cohort_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/evaluation/standard.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/execution/oms/engine.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/execution/oms/quality.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/features/library.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/features/metadata.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/book_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/capture_replay.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/eligibility.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/evidence_stats.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/execution.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/exploratory_families.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/family_overlap.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/fixture_replay.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/futures_carry.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/historical_divergence.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/market_data.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/monitoring_candidates.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/offline_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/paper_account_bridge.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/paper_execution_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/pipeline.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/raw_quote_archive.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/registry.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/rehearsal.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/research_library.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_checkpoints.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_clock.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_ops.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/signal_allocator.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/target_portfolio.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/tracker.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/trials.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/forward_edge/version_diff.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/ingest/archive_health.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/ingest/depth_archive.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/ingest/kite_live.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/interfaces/advanced_charts_datafeed.mjs",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/advanced_charts_widget.mjs",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/chart_datafeed.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/chart_udf_api.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/tradingview_alert.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/tradingview_ingress.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/interfaces/tradingview_webhook.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/fills.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/futures_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/instruments.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/ledger.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/options_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/paper_account.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/kernel/paper_account_audit.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/paper_portfolio.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/kernel/schemas.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/learning/__init__.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/activation.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/autopsy.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/calibrate.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/features.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/governance.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/incidents.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/personal.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/pipeline.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/protocol.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/report.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/shadow.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/learning/store.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/paper/book.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/intraday.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/paper/terminal.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/patterns/study.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/preflight.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/providers/kite_data.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/research/preregistry.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/research/protocol.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/research/reproduce.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/js/advanced_charts_datafeed.test.mjs",
+          "status": "added"
+        },
+        {
+          "path": "tests/js/advanced_charts_widget.test.mjs",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_backup.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_capture_replay.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_champion_executable.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_chart_datafeed.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_depth_archive.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_edge_program_baseline.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_edge_program_matrices.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_edge_program_release_semantics.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_edge_program_runtime.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_execution_quote_perturbations.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_execution_slippage_calibration.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_family_overlap.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_book_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_edge_f00.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f02.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f03.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f05.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f08.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f12.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f13.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_edge_f14.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_forward_feed_health.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_fixture_replay.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_offline_paper_cli.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_paper_account_bridge.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_paper_execution_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_session_clock.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_session_crash_matrix.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_forward_session_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_futures_carry_governance.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_historical_divergence.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_intraday_v2.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_kernel_fills.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_kernel_futures_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_kernel_instruments.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_kernel_options_paper.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_kernel_schemas.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_kite_forward_events.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_learning_autopsy.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_calibrate.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_conformance.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_features.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_governance.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_incidents.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_pipeline.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_protocol.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_report.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_learning_runner.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_monitoring_candidates.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_oms.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_paper_account_audit.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_account_corporate_actions.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_account_portfolio.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_paper_cohort_adapter.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_phase3_kite.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_book.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_feature_library.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_intraday_paper.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_intraday_runner.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_learned_model.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_phase5_preregistry.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_postmortem_fdr.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_preflight.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_protocol.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_raw_quote_archive.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_research_library.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_session_checkpoints.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_session_date_ledger.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_signal_allocator.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_source_inventory.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_strategy_variant_inventory.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/current-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-journal.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/forward-edge/protected-pins.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/trials/ledger.jsonl",
+          "status": "modified"
+        },
+        {
+          "path": "docs/trials/manifests/v2_intraday.json",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 32,
+      "title": "Add checklist evidence and source capability audits",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/32",
+      "state": "open",
+      "draft": false,
+      "mergeable": false,
+      "base": {
+        "ref": "main",
+        "sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1"
+      },
+      "head": {
+        "ref": "codex/branch-protection-evidence-20261113",
+        "sha": "b2fa176041e3818a33c1e748e5206fffa57b7eba"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 269,
+        "behind_by": 0,
+        "total_commits": 269,
+        "merge_base_sha": "91707001ceb87b7fe6dfb55369d04d9d2f1d7ed1"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 43690380062,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 705,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": ".github/pull_request_template.md",
+          "status": "added"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "status": "modified"
+        },
+        {
+          "path": ".python-version",
+          "status": "added"
+        },
+        {
+          "path": "docs/audits/capability-evidence.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/audits/capability-matrix.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/book-horizon-adapter-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/capture-replay-equivalence-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/critical-coverage-policy.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/current-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/data-source-matrix.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/dependency-reproducibility.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/deviation-log.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/evaluation-identity-contract.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/executable-cohort-contract.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/failed-parameter-reuse-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/fixture-runner-parity-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-paper-account-bridge-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-paper-execution-adapter-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-session-crash-recovery-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/fx-paper-rulebook.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/human-approved-paper-eligibility-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/india-options-expiry-rules.v1.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/indian-cash-cost-schedule-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/live-historical-divergence-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/main-branch-protection-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/market-capture-replay-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/mode-capability-matrix.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/opportunity-coverage-report-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/paper-account-audit-contract.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/paper-session-runbook.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0003-backup-evidence.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/pe-0010-reproducible-runtime-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0011-paper-authority-boundary-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0017-fixture-runner-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0018-fixture-runner-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0020-book-horizon-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0021-crash-recovery-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0022-transactional-outbox-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0023-paper-account-bridge-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0024-attempt-identity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0025-session-clock-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0026-session-date-outcome-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0027-offline-real-paper-cli-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0028-offline-session-resume-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0029-checkpoint-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0030-market-data-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0032-ingest-lineage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0033-effective-instrument-order-rules-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0034-read-only-kite-polling-adapter-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0035-durable-feed-health-and-stale-no-trade-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0036-time-aligned-market-capture-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0037-kite-source-timestamp-tolerance-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0038-calendar-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0039-corporate-action-succession-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0040-quote-quality-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0041-market-data-rights-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0042-opportunity-coverage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0043-live-historical-divergence-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0044-capture-replay-equivalence-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0045-strategy-variant-inventory-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0046-failed-parameter-reuse-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0047-unregistered-shadow-only-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0048-paper-eligibility-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0049-slow-factor-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0049-slow-factor-exploratories.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0050-low-vol-atr-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0050-low-vol-atr-overlap.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0051-target-portfolio-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0051-target-portfolio-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0052-learned-challenger-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0052-learned-challenger-lineage.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0053-futures-carry-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0053-futures-carry-governance.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0054-monitoring-only-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0054-monitoring-only-families.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-journal.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0056-mechanism-hypothesis-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0056-mechanism-hypothesis.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0057-feature-timing-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0057-feature-timing-metadata.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0058-strategy-version-diff-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0058-strategy-version-diff.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0059-frozen-benchmarks-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0059-frozen-benchmarks.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0060-shared-signal-allocator-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0060-shared-signal-allocator.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0061-paper-entry-net-alpha-hurdle-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0061-paper-entry-net-alpha-hurdle.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0062-development-only-threshold-calibration-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0062-development-only-threshold-calibration.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0063-turnover-no-trade-band-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0063-turnover-no-trade-band.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0064-position-and-sector-diversification-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0064-position-and-sector-diversification.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0065-development-calibrated-uncertainty-sizing-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0065-development-calibrated-uncertainty-sizing.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0066-beta-neutral-candidate-identity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0066-beta-neutral-candidate-identity.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0067-calibrated-cost-to-benefit-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0067-calibrated-cost-to-benefit-gate.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0068-budgeted-development-horizon-search-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0068-budgeted-development-horizon-search.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0069-cash-carry-return-reconciliation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0069-cash-carry-return-reconciliation.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0070-inventory-aware-sell-rules-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0070-inventory-aware-sell-rules.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0071-capacity-evidence-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0071-capacity-evidence-gate.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0072-correlated-book-risk-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0072-correlated-book-risk-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0073-training-pareto-archive-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0073-training-pareto-archive.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0074-marketable-limit-depth-fill-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0074-marketable-limit-depth-fill.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0075-arrival-latency-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0075-arrival-latency-gate.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0076-order-lifecycle-reconciliation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0076-order-lifecycle-reconciliation.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0077-effective-dated-charge-table-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0077-effective-dated-charge-table.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0077-indian-cost-model-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0078-cost-attribution-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0079-fidelity-isolation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0080-adverse-stop-quote-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0081-slippage-calibration-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0081-slippage-calibration.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0082-fill-cost-stress-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0082-fill-cost-stress.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0083-no-fill-denominator-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0084-cost-drag-measures-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0085-quote-arrival-shortfall-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0086-instrument-order-rule-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0087-immutable-paper-fill-provenance-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0088-execution-perturbation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0089-common-asset-order-event-contract-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0090-multibook-cash-reconciliation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0093-cash-equity-corporate-action-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0094-futures-variation-margin-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0095-options-expiry-settlement-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0096-multicurrency-fx-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0096-multicurrency-fx.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0097-complete-pnl-attribution-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0097-complete-pnl-attribution.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0098-eod-independent-reconciliation-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0098-eod-independent-reconciliation.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0099-persistent-risk-latch-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0099-persistent-risk-latch.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0100-provider-fill-idempotency-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0100-provider-fill-idempotency.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0101-full-nav-performance-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0101-full-nav-performance.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0102-paper-account-audit-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0103-frozen-cohort-schedule-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0103-frozen-cohort-schedule.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0104-preentry-decision-manifest-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0104-preentry-decision-manifest.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0105-durable-manifest-outcome-ledger-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0105-durable-manifest-outcome-ledger.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0106-optional-trusted-timestamp-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0106-optional-trusted-timestamp.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0107-local-hash-chain-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0107-local-hash-chain.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0108-canonical-schedule-verification-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0108-canonical-schedule-verification.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0109-deterministic-cohort-snapshot-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0109-deterministic-cohort-snapshot.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0110-paper-cohort-adapter-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0118-matched-net-benchmark-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0118-matched-net-benchmark.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0119-performance-summary-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0119-performance-summary.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0120-frozen-dependence-policy-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0120-frozen-dependence-policy.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0121-two-way-trade-clustering-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0121-two-way-trade-clustering.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0122-registered-familywise-adjustment-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0122-registered-familywise-adjustment.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0123-spa-reality-check-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0123-spa-reality-check.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0124-prospective-champion-cohort-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0124-prospective-champion-cohort.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0125-confidence-bounds-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0125-confidence-bounds.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0126-fixed-look-risk-stop-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0126-fixed-look-risk-stop.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0127-power-based-sample-size-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0127-power-based-sample-size.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0128-stratified-outcomes-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0128-stratified-outcomes.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0129-critical-falsification-gates-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0129-critical-falsification-gates.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0130-queue-fill-boundaries-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0130-queue-fill-boundaries.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0131-contributor-removal-report-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0131-contributor-removal-report.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0132-edge-confirmation-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0132-edge-confirmation-gate.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0133-daily-pnl-bridge-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0133-daily-pnl-bridge.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0134-evidence-linked-loss-categories-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0134-evidence-linked-loss-categories.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0135-gross-loss-cost-erasure-report-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0135-gross-loss-cost-erasure-report.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0136-matched-opportunity-controls-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0136-matched-opportunity-controls.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0137-frozen-training-ablation-archive-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0137-frozen-training-ablation-archive.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0138-signal-decay-turnover-report-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0138-signal-decay-turnover-report.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0139-stop-target-development-sensitivity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0139-stop-target-development-sensitivity.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0140-trade-data-quality-strata-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0140-trade-data-quality-strata.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0141-rejected-opportunity-shadow-book-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0141-rejected-opportunity-shadow-book.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0142-development-hypothesis-proposals-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0142-development-hypothesis-proposals.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0143-adversarial-preregistration-review-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0143-adversarial-preregistration-review.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0144-frozen-degradation-alarms-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0144-frozen-degradation-alarms.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0145-premarket-preflight-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0145-premarket-preflight.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0146-registered-paper-books-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0146-registered-paper-books.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0147-source-capture-start-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0147-source-capture-start.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0148-kite-paper-readonly-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0148-kite-paper-readonly.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0149-sealed-signals-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0149-sealed-signals.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0150-pretrade-gates-and-skips-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0150-pretrade-gates-and-skips.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0151-paper-order-lifecycle-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0151-paper-order-lifecycle.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0152-calendar-holding-exits-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0152-calendar-holding-exits.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0153-eod-paper-archive-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0153-eod-paper-archive.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0154-feed-clock-fail-closed-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0154-feed-clock-fail-closed.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0155-daily-evidence-bundle-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0155-daily-evidence-bundle.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0156-session-coverage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0156-session-coverage.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0157-book-performance-report-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0157-book-performance-report.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0158-paper-session-runbook-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0158-paper-session-runbook.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0159-orb-gap-shadow-only-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0159-orb-gap-shadow-only.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0160-orb-inverse-fade-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0160-orb-inverse-fade-hypothesis.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0161-intraday-training-selectivity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0161-intraday-training-selectivity.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0162-intraday-book-coverage-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0162-intraday-book-coverage.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0163-point-in-time-regime-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0163-point-in-time-regime-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0164-futures-lifecycle-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0164-futures-lifecycle-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0165-options-leg-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0165-options-leg-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0166-options-partial-fill-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0166-options-partial-fill-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0167-options-expiry-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0167-options-expiry-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0168-fx-paper-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0168-fx-paper-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0169-asset-class-economics-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0169-asset-class-economics-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0170-family-automation-gate-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0170-family-automation-gate-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0171-matured-offline-training-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0171-matured-offline-training-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0172-purged-embargoed-training-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0172-purged-embargoed-training-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0173-separate-forecast-components-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0173-separate-forecast-components-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0174-validation-calibration-artifact-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0174-validation-calibration-artifact-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0175-point-in-time-inference-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0175-point-in-time-inference-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0176-complete-outcome-training-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0176-complete-outcome-training-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0177-challenger-registry-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0177-challenger-registry-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0178-factor-turnover-regularization-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0178-factor-turnover-regularization-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0179-counterfactual-decision-memory-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0179-counterfactual-decision-memory-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0180-search-budget-multiplicity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0180-search-budget-multiplicity-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0181-locked-cohort-model-identity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0181-locked-cohort-model-identity-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0182-approved-rollback-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0182-approved-rollback-evidence.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0183-session-overview-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0183-session-overview-evidence.md",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/edge-program/current-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0055-bounded-research-journal.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0066-beta-neutral-candidate-identity-evidence.json",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/pe-0066-beta-neutral-candidate-identity.md",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 18,
+      "title": "Source notes for Nison and Bulkowski, testability synthesis, pattern catalogue",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/18",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "6321153165b62de068d1e69f89aa6676fdc0e3e0"
+      },
+      "head": {
+        "ref": "codex/source-notes-pattern-books",
+        "sha": "0f8ae523ebbb7cebc69ee0a5e091c03de58304a3"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 3,
+        "behind_by": 0,
+        "total_commits": 3,
+        "merge_base_sha": "6321153165b62de068d1e69f89aa6676fdc0e3e0"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 42683391348,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 130,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "docs/audits/protected-baseline.json",
+          "status": "modified"
+        },
+        {
+          "path": "requirements-lock.txt",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_pattern_acceptance.py",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_changes": [
+        {
+          "path": "docs/audits/protected-baseline.json",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 17,
+      "title": "Preflight, verified backups, tested lockfile, venv-based nightly refresh",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/17",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "codex/ops-reliability-20261104",
+        "sha": "2abe70015caf79b32b5f14f9b3379b720e20072f"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 52,
+        "behind_by": 0,
+        "total_commits": 52,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 45534412852,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 2347,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": ".github/workflows/ci.yml",
+          "status": "modified"
+        },
+        {
+          "path": ".gitignore",
+          "status": "modified"
+        },
+        {
+          "path": "docs/READINESS.md",
+          "status": "modified"
+        },
+        {
+          "path": "docs/RUNBOOK-OPS.md",
+          "status": "added"
+        },
+        {
+          "path": "docs/edge-program/forward-engine-dependency-graph.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/releases/unified-checklist-v3.0-c0fbd419.zip.sha256",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/reproducibility-contract.v1.json",
+          "status": "modified"
+        },
+        {
+          "path": "docs/edge-program/source-inventory.v2.json",
+          "status": "modified"
+        },
+        {
+          "path": "pyproject.toml",
+          "status": "modified"
+        },
+        {
+          "path": "requirements-lock.txt",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/daily_refresh.cmd",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/kite_status.cmd",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/preflight.cmd",
+          "status": "added"
+        },
+        {
+          "path": "scripts/register_preflight_task.ps1",
+          "status": "added"
+        },
+        {
+          "path": "scripts/trials/a10_price_anomalies.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/d1_delivery_share.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/f3_short_buildup.py",
+          "status": "modified"
+        },
+        {
+          "path": "scripts/trials/x3_mf_fundamentals.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/backup.py",
+          "status": "added"
+        },
+        {
+          "path": "src/financial_brain/cli.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/data_contracts.py",
+          "status": "modified"
+        },
+        {
+          "path": "src/financial_brain/preflight.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_backup.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/test_preflight.py",
+          "status": "added"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    },
+    {
+      "number": 16,
+      "title": "Reject malformed protocol schedule dates",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/16",
+      "state": "open",
+      "draft": false,
+      "mergeable": true,
+      "base": {
+        "ref": "main",
+        "sha": "a2130ba8160231ec84133e04fc22ba69723aecbd"
+      },
+      "head": {
+        "ref": "codex/protocol-date-validation-20261103",
+        "sha": "fb5452901c13497c43b2cadd575f947c3daa9c3a"
+      },
+      "ancestry": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "total_commits": 2,
+        "merge_base_sha": "a2130ba8160231ec84133e04fc22ba69723aecbd"
+      },
+      "ci": {
+        "status_api_records": 0,
+        "status_api": [],
+        "latest_workflow_run": {
+          "id": 41651177676,
+          "name": "ci",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 109,
+          "html_url": null
+        }
+      },
+      "changed_files": [
+        {
+          "path": "src/financial_brain/research/protocol.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/test_protocol.py",
+          "status": "modified"
+        }
+      ],
+      "protected_artifact_changes": [],
+      "protected_artifact_content_hashes": "not_collected; changed paths are flagged for explicit artifact review"
+    }
+  ]
+}

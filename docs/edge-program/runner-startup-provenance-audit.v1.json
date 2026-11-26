@@ -1,0 +1,16 @@
+{
+  "schema": "fb.runner_startup_provenance_audit.v1",
+  "as_of": "2026-11-26",
+  "observed": {
+    "runner": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner",
+    "startup_behavior": "Calls repository_provenance(entry_point=\"ForwardSessionRunner\") and records commit, branch, dirty/clean state and executable entry point in runner events.",
+    "provenance_source": "src/financial_brain/forward_edge/provenance.py uses git rev-parse HEAD, branch --show-current and status --porcelain; git failures become null/UNKNOWN rather than startup rejection.",
+    "runtime_fingerprint": "scripts/runtime_fingerprint.py captures commit/tree/runtime, lock and scheduler/entitlement evidence but is an operator command, not a runner startup gate."
+  },
+  "gaps": [
+    "No approved deployment manifest binds permitted commit SHA to reviewed CI/review evidence.",
+    "Runner currently records dirty or unknown state but does not refuse starting stale, dirty, or unreviewed branch content.",
+    "Actual scheduled checkout paths and startup behavior have not been verified in the scheduled environment."
+  ],
+  "conclusion": "PARTIAL; local source identity is recorded, deployment provenance is not enforced."
+}

@@ -1,0 +1,569 @@
+{
+  "schema": "fb.research_outcome_freeze.v1",
+  "scope": "Every Markdown file named Result*.md directly under brain/07-Research; this freezes the note bytes only and does not reconstruct historical source data, code, costs, periods, exposure, or independent run identity.",
+  "result_note_count": 42,
+  "required_metadata_fields": [
+    "run_id",
+    "cost_assumptions",
+    "train_period",
+    "validation_period",
+    "test_period",
+    "exposure"
+  ],
+  "result_notes_missing_required_metadata": {
+    "run_id": 42,
+    "cost_assumptions": 42,
+    "train_period": 42,
+    "validation_period": 42,
+    "test_period": 42,
+    "exposure": 42
+  },
+  "records": [
+    {
+      "path": "brain/07-Research/Result of betting against beta in futures.md",
+      "git_blob_sha1": "f3d61bd41fb2e4254b85f6e3e082c4e083860cc1",
+      "sha256_lf": "bbbf97c55c97eac619dfe7fc8a4a8c02d946e40ad2f68e9499a61fd50731f479",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of cash-and-carry and basis trading.md",
+      "git_blob_sha1": "278bcaac0616b0be29cad6fc0720c4067a1840d3",
+      "sha256_lf": "a54e6055b43023c0bf2ac1356328f4e66b2f912b0eace87040f9aa91e06c25ec",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of chart and candle setups in futures.md",
+      "git_blob_sha1": "d9674724e167d069dc98e47bf301f8e823f036af",
+      "sha256_lf": "d55aa349bfadb9fa95bd6b811f31c20680f7de804876a65a1cfd11553d1d695a",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of delivery share.md",
+      "git_blob_sha1": "087cdc808bdd27db4bf006a826c700c21b2a1056",
+      "sha256_lf": "8a2528488a363a037ed09db44dcb09d244032cf85f16f26bad8726be01d65092",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of earnings surprise drift out of sample.md",
+      "git_blob_sha1": "71f4a2a7a7487b3062684e5ff9fb25fbd75f1965",
+      "sha256_lf": "ffadfe18206a9ed3d23e336d0298382488bd5ac33d366eefdfb45dc210967e98",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of edges batch three.md",
+      "git_blob_sha1": "d1d224b68a84d24008ea7192d5ba23d7c0cbd296",
+      "sha256_lf": "2349a5277759fb39b545d87e60bcffb5846c17da8b569c8c863c56a4d9fe3d7c",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of edges batch two.md",
+      "git_blob_sha1": "06092c41c8459f7667990bf63d494f684c3537b4",
+      "sha256_lf": "45fa76fb5fcef883968b4d07054c92c9143dcaefe515769c6aed9cdc48afe13d",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of edges for every mode.md",
+      "git_blob_sha1": "1f014df1d4a7c8ef279f996dadce6104aafdcdfa",
+      "sha256_lf": "666033860d1181bf842b207087313d84a5ae90372327eda500f2206ac979cb38",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of exit rules.md",
+      "git_blob_sha1": "95af412bc82ea9870b44bdbbbd740ce83b26d67d",
+      "sha256_lf": "935509b11aa71e42afa7f823b0a84cdd7e69fd0b4c8e03152ee8ebdd9d9e4f94",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of fundamentals factors (holdout).md",
+      "git_blob_sha1": "be1549c1a2420da7844b08e58aa3b7d25cdb4a22",
+      "sha256_lf": "668ec35b44b893b740f5f4d6818c511a30aa936c654ac83858ad0c367ef37695",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of fundamentals factors (primary sample).md",
+      "git_blob_sha1": "6ce6850e9ecafe04d78defeedfe1c659205c0566",
+      "sha256_lf": "ffde2a517e6e05a9f7c6841705198f46bc483c1e5fab4f4b9a6f2f6efd38d423",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of half-life and second-order spillover.md",
+      "git_blob_sha1": "443b92a7446c3e882b117edd0b6f96db985fc3a1",
+      "sha256_lf": "5e4ac7eb1684f84e39f3fa2befab4d2a56e104c889308c9ee7f453d8cb437596",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of index mean reversion and VWAP.md",
+      "git_blob_sha1": "e294ab1a9dc74c744274566247ca1006abeed0cd",
+      "sha256_lf": "2b1a434035f7d10b8ddd3ed1d0c777a5d99519f267651d8c158f31258815979d",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of indicator consensus vote.md",
+      "git_blob_sha1": "f8ba07691dccd799930c70a31f53d500a84cd4b2",
+      "sha256_lf": "63e12398c74af1d9d69ffba784133498744ab07aaf6e1b5349eb24e69b1d113d",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of intraday half-life.md",
+      "git_blob_sha1": "2c736747dabc8376ed58b326fdc830de66cfd7f8",
+      "sha256_lf": "d8b95b9c7283747a56ff58f24033cfcfa934c8882b05496442a1fcafbb9f0e99",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of learned model with events.md",
+      "git_blob_sha1": "55c3a149ab72823bd56beea85ded2bb935584b41",
+      "sha256_lf": "198f7c6fa4f75dcf4337e04c1222e620bb83dfe598351e4caee56dd8220e85ba",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of market timing.md",
+      "git_blob_sha1": "67722a0d684bbbac034f1ced1fd3e9dde84c760d",
+      "sha256_lf": "7bd4ed50291a1150d9dac03148443a04e703e7a6dbf0faf18e37438e18d512d8",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of neutralised signal tests.md",
+      "git_blob_sha1": "f2dd4af7f2e73776a33250d6548233deee9b80f0",
+      "sha256_lf": "7628522b9e27bb8420af8e452fb6e6b58d8c33860d16ef5783f2a0659c05cc75",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of published price anomalies.md",
+      "git_blob_sha1": "946e0a5aaf4ccabde2414689c548c1010b4a1716",
+      "sha256_lf": "b2a0228eac3ae0dac337ed1a5214f34fc5b0ae61ab06979310635178c4e2ea68",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of ranking v2.md",
+      "git_blob_sha1": "5c83e062d17dc6a2d892c53e24d9d074bcf8df5f",
+      "sha256_lf": "9ef4c4542ea1768697014e79510e5f9f19824d5b49f9509d8d6fadb5953a9279",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of setup analogues and earnings reaction.md",
+      "git_blob_sha1": "4033b7860134a1f7b16e411ad461c880405c47fb",
+      "sha256_lf": "ff8be74d66839fe6b26dfe9e69012f10c1925e34ee26b4b2a01a9773751c4940",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of Sharpe ratio and Sharpe allocation.md",
+      "git_blob_sha1": "fc1e2cb81f51686cd869e55213decd35a9412844",
+      "sha256_lf": "da0e00e1646aeeeb97818b016e285cedc55db705860a9798fc91bcf8e2269d19",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of swing setups.md",
+      "git_blob_sha1": "36f6850053957ec30e2682015c358e8c37f3f02d",
+      "sha256_lf": "798a05a77f371a3d56fd204dedd847b23a0516dbc6cff91fd3cc53644ccf3b65",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of tax-aware returns.md",
+      "git_blob_sha1": "0b0d492a2e4c4b8d4d9ce358b0ff00b626176619",
+      "sha256_lf": "ae2980e2fcc5399d5ff9bfc206a22d77dacba577f30082fff6b6482388b24b62",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the combination agent search phase.md",
+      "git_blob_sha1": "128e31fa412fadc433a38baf0265511acaf1cdb4",
+      "sha256_lf": "82b5f38ca3a5ea9e8126cd9bbc2c77c6f6592a7ca2e96a36482d33fd0bccf32a",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the cost-aware momentum book.md",
+      "git_blob_sha1": "e63795c339ae2d7292ab9d93550262e57fafe83c",
+      "sha256_lf": "072b143e2beb284bed777803c68d1441f624d0d65511cd9b2e9412d4b1f90151",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the deep feature library.md",
+      "git_blob_sha1": "f1e00ee475983f14a66a86e8f4ced1c42cb77c47",
+      "sha256_lf": "367297a478922c83913db77dc96dde63736ac1a84620233bbb5d0abfeaccbf42",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the hundred algorithms.md",
+      "git_blob_sha1": "25e50e1daf0793f69baed41a80a01a03bb95942d",
+      "sha256_lf": "6e51464774bbcd9d1f9e50b68436d708747922ea44ac1f78157c796f69263473",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the intraday and swing family on minute bars.md",
+      "git_blob_sha1": "1f0d4e05b70d02cfd331f0aeb42e6c61b490f393",
+      "sha256_lf": "6ad96c6287909c961efd5f5e67bc6b33fda0e57f53d0ec1b37f8bbbc2f039fb7",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the intraday study and the slippage calibration.md",
+      "git_blob_sha1": "18af1a9395a4f6383d05d65cf907a29ba58863f0",
+      "sha256_lf": "f42b195301c4dd56fa7e28f962c73fcf1e40e14501a47530ebb8991dc6609deb",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the multi-factor quality value low-risk book.md",
+      "git_blob_sha1": "dccfd80d5d0fb6f65760a0233e0dee3966cf1fc4",
+      "sha256_lf": "307cb78066424337964a4e3ddab4d7441de57436d8bf2e6e93f554f3e8631345",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the news classifier on filings.md",
+      "git_blob_sha1": "40c0faf45c1188ca813bc0ffc338c8d453d74633",
+      "sha256_lf": "75fe08417b97655cef0e264e406abab1df9d38b7e75bf4a91d86586d010145bb",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the ninety-indicator sweep.md",
+      "git_blob_sha1": "139d8364ac9974ee62771dc3d468360d39ed7d9c",
+      "sha256_lf": "0e3f3bfcc8e39a10dea3490ca512261f5afb405b87544cfded387920eab858bb",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the opening-range breakout with stops.md",
+      "git_blob_sha1": "3ca7ffe7e32415a0122e22b2964fca55da053163",
+      "sha256_lf": "079599724ed052277b67eace740db214aecbd5adc799c283fdf5c61e47be2d77",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the opportunity engine replay.md",
+      "git_blob_sha1": "4f796a589ff421bfd468405e27df926717da6e7b",
+      "sha256_lf": "87bd02ba158d745d01401c453f8ac971832880572937cce3164ce6d2a0d03078",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the pre-registered out-of-sample test.md",
+      "git_blob_sha1": "4716c5b345db475391a1795910c1bde1bdd069c7",
+      "sha256_lf": "433e1aec159a14cff47dde7daa20721009d7b806dc79033a757b04878b384fc5",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the promoter graph and pledging tests.md",
+      "git_blob_sha1": "08945feea8c835eb35b58e4c86f5b2f693ff3410",
+      "sha256_lf": "c3c760af8b1644549575c4c41dca7e5b47d1ff6b2ff0378fd7b09643b74e4b95",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the regime and decay tests.md",
+      "git_blob_sha1": "ece67fbdac907f7b7c891d6eeb87db74a371594a",
+      "sha256_lf": "3d4140860ab9c86b39ec5245d5aab2f446c01591a116901c2e5799e9f47e5c8f",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the short build-up avoid filter.md",
+      "git_blob_sha1": "805d23d9954c46a6168829951a207ae7115c5a33",
+      "sha256_lf": "cabcfb918fa17af9b1de7297ee3f218bee2b7e218c796f8016a39e6ca359b977",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the suggestion paper books.md",
+      "git_blob_sha1": "b2b3606949cbf8c41ae6f9e9348278b2a3cff6c2",
+      "sha256_lf": "bb00dbd9d5f4b16a7b0397a9db5c3cece1f83849f57b4b5a853e7b5b074c449a",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of the volume family holdout.md",
+      "git_blob_sha1": "8f1407eb977eea17281a72c6fe2eb0393ce76a52",
+      "sha256_lf": "3735936beb40813f96491f880eae79e14d5182ff2212b5b68edc0b32e3518867",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    },
+    {
+      "path": "brain/07-Research/Result of trading with the market trend.md",
+      "git_blob_sha1": "d045e1b75644079a8a951b9d2ea9202603fc0339",
+      "sha256_lf": "728372176f333f791f61c29a6f08f709b05d01989308f897f58ec51626282e8a",
+      "required_machine_metadata": {
+        "run_id": false,
+        "cost_assumptions": false,
+        "train_period": false,
+        "validation_period": false,
+        "test_period": false,
+        "exposure": false
+      }
+    }
+  ]
+}

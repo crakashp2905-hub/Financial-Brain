@@ -17,7 +17,8 @@ def _attribution(*, ledger_override=None):
     net = 100.0
     row = StrategyPnlComponents("swing-v1", date(2026, 11, 16), 150, 0, 0,
                                 10, 15, 20, 5, 0,
-                                net if ledger_override is None else ledger_override)
+                                net if ledger_override is None else ledger_override,
+                                "HISTORICAL_PAPER")
     return attribute_strategy_pnl(session=row.session, components=(row,),
                                   strategy_weights={"swing-v1": 1.0},
                                   covariance_matrix=((0.04,),))
@@ -32,6 +33,7 @@ def test_pnl_view_reconciles_components_to_ledger_and_shows_benchmark(tmp_path):
     assert "Risk contribution" in page
     assert "100.00" in page
     assert "70.00" in page
+    assert "HISTORICAL_PAPER" in page
     assert "b" * 64 in page
 
 
@@ -46,7 +48,7 @@ def test_nonreconciled_or_unprovenanced_pnl_is_rejected():
 
 def test_strategy_labels_are_escaped_in_pnl_page(tmp_path):
     row = StrategyPnlComponents("<script>", date(2026, 11, 16), 2, 0, 0,
-                                0, 0, 0, 0, 0, 2)
+                                0, 0, 0, 0, 0, 2, "HISTORICAL_PAPER")
     attribution = attribute_strategy_pnl(session=row.session, components=(row,),
                                          strategy_weights={"<script>": 1.0},
                                          covariance_matrix=((0.01,),))

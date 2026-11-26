@@ -1,0 +1,164 @@
+{
+  "schema": "fb.release_provenance.v1",
+  "generated_at_utc": "2026-11-26T18:13:54.864264+00:00",
+  "release_status": "NOT_RELEASED",
+  "source": {
+    "commit_sha": "a58bf3a49cbb6373315a8b4c84c81a48b4f2b6fa",
+    "branch": "codex/v3-pa04-07-legacy-trade-reconciliation",
+    "worktree": "DIRTY",
+    "generated_outputs_excluded": [
+      "artifacts/ci/pa0113-release-provenance-tests.xml",
+      "artifacts/ci/pa0116-physical-order-tests.xml",
+      "docs/edge-program/profit-readiness.json",
+      "docs/edge-program/release-provenance.current.json",
+      "docs/edge-program/v3.0-audit.jsonl",
+      "docs/edge-program/v3.0-status.json"
+    ],
+    "worktree_content_sha256": "5a5708d6531623b08ebc24ad4454a292380e1e98ff7384fa0ddb9eec00254d36"
+  },
+  "test_artifacts": [
+    {
+      "path": "artifacts/ci/pa0113-release-provenance-tests.xml",
+      "sha256": "6f292ddc30cdce6e8705cc4e6c5924564b16b6b92a71cb7345f26dc20b16b07a"
+    },
+    {
+      "path": "artifacts/ci/pa0116-physical-order-tests.xml",
+      "sha256": "71d5dac60947b59893ed67138c5625e95f993cc7a7eb26021460c89bd32bee82"
+    }
+  ],
+  "changelog": {
+    "path": "docs/edge-program/V3.0_PROGRESS.md",
+    "sha256": "9ebea483daab26c449e6020605e890d62dbf5f3f294a574fa8f32ffdcdd75f4a",
+    "kind": "v3 checklist progress/change record"
+  },
+  "strategy_rule_hashes": [
+    {
+      "path": "src/financial_brain/strategies/__init__.py",
+      "sha256": "97df6bf4de9d23fdef7cdd91ac3efe610d009e92ac9fd30ca9ae2d5b8c4a4303"
+    },
+    {
+      "path": "src/financial_brain/strategies/breakouts.py",
+      "sha256": "3d08f11c59a2c890656d38b8f417dbbd7daea6d72d96658db97a03a363d88ed9"
+    },
+    {
+      "path": "src/financial_brain/strategies/challengers.py",
+      "sha256": "0811c2b388632fa977109b449ea678689d989b50f65c871bddf198e39e80918a"
+    },
+    {
+      "path": "src/financial_brain/strategies/evaluation_controls.py",
+      "sha256": "29ce189801d1146fc6dc2abb9bb9c4cd69254b6ea8c8b80ecedde23f9a37c964"
+    },
+    {
+      "path": "src/financial_brain/strategies/execution_rules.py",
+      "sha256": "057485fd172ae3c449e2410d73fca96f1cfa3957de1db589a6be74fe165e756e"
+    },
+    {
+      "path": "src/financial_brain/strategies/families.py",
+      "sha256": "761d85a10f33ae34e71a33023db38c7e7bdcf1356685fb83b0a0da8990e58cb0"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/__init__.py",
+      "sha256": "5f9b0011d68b3fef6fca738f366a0108ed547ac4607925890eaa45ba4306ed3e"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/backtest.py",
+      "sha256": "99ea553af782de0770bd7db885e837821ec0351e499099cc86c8f353ed29c24f"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/durable_stream.py",
+      "sha256": "32ca469ffbf110f01915ee9a26f3499797562b1993ddf5035d7bb742ae704647"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/eligibility.py",
+      "sha256": "c9b25acff14d039642a42f7d4bfb7cc92eca9bf58bad7fd07e6400d8f5cd153f"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/indicators.py",
+      "sha256": "3326468982d51b812aa444a5896d1087a939cd481764ef4c6857fc198265fe9b"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/nodes.py",
+      "sha256": "3c4bc24de09db4f59207d6908bd3589d51cc491a44dfbab1d4385c6c11ceab0e"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/options.py",
+      "sha256": "35ac94c202130bb17d9826adb0f5fda7c4f510465db43e48656f50fc0beec079"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/replay.py",
+      "sha256": "2224e6ec5cfd4c159cca3bfbf85fceaf67e6149a3d0ebbd844e9d6dc9e67742e"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/rules.py",
+      "sha256": "63d1d4477c4e680389b10c5d0a8690acb7849e599b8c2f0f4de3ca07ef1035fb"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/spec.py",
+      "sha256": "ee43ed73cee97be14bfa4ac51a8786e07d458b208d4895f5612e6da4784ae29a"
+    },
+    {
+      "path": "src/financial_brain/strategies/four_node/stream.py",
+      "sha256": "e34887d7f8bd5979d629568ec733f49954d807f047f475babb0781858bbd6a4c"
+    },
+    {
+      "path": "src/financial_brain/strategies/lifecycle.py",
+      "sha256": "02d943516963c9e333ff1f8126db5972f1b56f331ed85d8ef8e733a652ad1de2"
+    },
+    {
+      "path": "src/financial_brain/strategies/mean_reversion.py",
+      "sha256": "0ac68c98074f2304de0cf14e6f1d04787c91be4e5ccd277b7f27dca084c2ff27"
+    },
+    {
+      "path": "src/financial_brain/strategies/reports.py",
+      "sha256": "2a2f6898820a286e2baa3ba53b7eff7d5551874c812dab7a85628319419b7b9e"
+    },
+    {
+      "path": "src/financial_brain/strategies/session_breakout.py",
+      "sha256": "73738beb16fe18c8e6f8acc9822571cbc7c6e4829ffdda10b0a87f86a0cd7a95"
+    },
+    {
+      "path": "src/financial_brain/strategies/specs.py",
+      "sha256": "72c7615120db4f7c3e78a997017224d700c32bd522f50d5d2392921dc50f980c"
+    },
+    {
+      "path": "src/financial_brain/strategies/structure.py",
+      "sha256": "8502fbb55f79e2a4dd36197745290ac8192a382abe2678dc731c67f565f7c82e"
+    },
+    {
+      "path": "src/financial_brain/strategies/ui.py",
+      "sha256": "6e692bba07490c97959277da32bc51078b114201b5ebbba24760f44e22f91807"
+    },
+    {
+      "path": "docs/sources/algorithm-source-registry.json",
+      "sha256": "515142560e206865b1de5bb6582e7210f0d0247e23a15a5547fed053ae8a45c7"
+    },
+    {
+      "path": "docs/strategies/four_node/source/xauusd_4node_reference.pine",
+      "sha256": "f316a055468c7607596e23fbd18acfb4d038592e6d51f1052cf194b94d17c4e7"
+    },
+    {
+      "path": "docs/strategies/four_node/source/original_rules_2025-08-22.txt",
+      "sha256": "c5e8b1ccdd40b9dd13e6386c1689b23909a1ab7aae42da82466dd62225b8bc15"
+    }
+  ],
+  "data_rights_posture": {
+    "registry_path": "docs/edge-program/market-data-sources.v1.json",
+    "registry_sha256": "f62b835b482b1d4a30ba88d4d6d42d75e657aed1ea7e25d63804843a9779f323",
+    "review_path": "docs/edge-program/market-data-rights-review.v1.md",
+    "review_sha256": "ff33843617ad2b8edd6b73d1abf1338ec9ef61cfa30e3fb1d50d88af8cae55da",
+    "source_status_counts": {
+      "LICENSED": 1,
+      "UNVERIFIED": 13,
+      "MISSING": 3
+    },
+    "clearance": "UNVERIFIED_OR_BLOCKED_UNTIL_SOURCE_SPECIFIC_RIGHTS_ARE_CONFIRMED",
+    "credential_values_recorded": false
+  },
+  "release_gates": {
+    "clean_worktree": false,
+    "hosted_release_ci_attested": false,
+    "data_rights_cleared": false,
+    "physical_orders_enabled": false
+  },
+  "manifest_sha256": "02b684e7771a333342d952e47f3e3f67d9eb658a27abfa25ea10352d5c31f4b8"
+}

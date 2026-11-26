@@ -25,6 +25,8 @@ class OptionLegQuote:
     ask: float
     bid_qty: int
     ask_qty: int
+    underlying_price: float | None = None
+    implied_volatility: float | None = None
 
     def validate(self, *, as_of: datetime, quantity: int) -> None:
         if self.side not in {"BUY", "SELL"} or self.token <= 0 or not self.symbol or not self.underlying:

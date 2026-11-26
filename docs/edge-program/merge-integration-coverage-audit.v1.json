@@ -1,0 +1,115 @@
+{
+  "schema": "fb.merge_integration_coverage_audit.v1",
+  "as_of": "2026-11-26",
+  "areas": [
+    {
+      "area": "equities/intraday/swing",
+      "tests": [
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_forward_edge_session_runner.py"
+      ],
+      "present_tests": [
+        "tests/test_phase5_intraday_runner.py",
+        "tests/test_forward_edge_session_runner.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "ETF",
+      "tests": [
+        "tests/test_etf_intraday_screen.py",
+        "tests/test_etf_momentum.py",
+        "tests/test_etf_terminal_panel.py"
+      ],
+      "present_tests": [
+        "tests/test_etf_intraday_screen.py",
+        "tests/test_etf_momentum.py",
+        "tests/test_etf_terminal_panel.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "long/defined-risk options",
+      "tests": [
+        "tests/test_paper_options_runner.py",
+        "tests/test_forward_edge_options_spread.py"
+      ],
+      "present_tests": [
+        "tests/test_paper_options_runner.py",
+        "tests/test_forward_edge_options_spread.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "NAV-based mutual funds",
+      "tests": [
+        "tests/test_mf_flow_book.py",
+        "tests/test_mf_lot_book.py",
+        "tests/test_mf_order_book.py"
+      ],
+      "present_tests": [
+        "tests/test_mf_flow_book.py",
+        "tests/test_mf_lot_book.py",
+        "tests/test_mf_order_book.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "existing paper strategy zoos",
+      "tests": [
+        "tests/test_phase5_zoo.py",
+        "tests/test_phase5_zoo_edges.py",
+        "tests/test_zoo_h_targets.py"
+      ],
+      "present_tests": [
+        "tests/test_phase5_zoo.py",
+        "tests/test_phase5_zoo_edges.py",
+        "tests/test_zoo_h_targets.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "closed-trade ledger reconciliation",
+      "tests": [
+        "tests/test_forward_edge_ledger_reconcile.py",
+        "tests/test_forward_edge_strategy_attribution.py"
+      ],
+      "present_tests": [
+        "tests/test_forward_edge_ledger_reconcile.py",
+        "tests/test_forward_edge_strategy_attribution.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "event custody",
+      "tests": [
+        "tests/test_forward_edge_f04.py",
+        "tests/test_forward_edge_champion_governance.py"
+      ],
+      "present_tests": [
+        "tests/test_forward_edge_f04.py",
+        "tests/test_forward_edge_champion_governance.py"
+      ],
+      "missing_tests": []
+    },
+    {
+      "area": "negative physical-order probes",
+      "tests": [
+        "tests/test_forward_edge_f00.py",
+        "tests/test_oms.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "present_tests": [
+        "tests/test_forward_edge_f00.py",
+        "tests/test_oms.py",
+        "tests/test_forward_edge_pipeline_compat.py"
+      ],
+      "missing_tests": []
+    }
+  ],
+  "coverage_summary": {
+    "area_count": 8,
+    "all_referenced_test_files_present": true
+  },
+  "gap": "Coverage exists as separate domain-level suites. No single merger integration fixture currently composes five desk lifecycles, zoo strategies, closed-trade reconciliation, event custody and physical-order denial into one migration/merge scenario."
+}

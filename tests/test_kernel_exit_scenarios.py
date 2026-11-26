@@ -164,6 +164,35 @@ def test_short_gap_through_stop_uses_adverse_open_and_records_gap_loss():
     assert result.outcomes[0].gap_loss_inr == Decimal("100")
 
 
+def test_same_bar_short_stop_and_target_resolves_adverse_first():
+    short_signal = replace(
+        signal(), signal_id="e043444d-c290-4fb4-bf0a-d6941fd168a5", side=SignalSide.SELL_SHORT)
+    short_plan = replace(plan(), side="SELL_SHORT", stop_price=Decimal("110"),
+                         target_price=Decimal("80"))
+    short_policy = ExitPolicy(
+        strategy_id="momentum", strategy_version="v1", policy_version="short-p1",
+        rules=(
+            ExitRule("stop", ExitTrigger.HARD_STOP, ExitRuleAction.FULL_EXIT,
+                     quantity_fraction=Decimal(1), trigger_price=Decimal("110")),
+            ExitRule("target", ExitTrigger.TAKE_PROFIT, ExitRuleAction.FULL_EXIT,
+                     quantity_fraction=Decimal(1), trigger_price=Decimal("80")),
+            ExitRule("time", ExitTrigger.TIME_STOP, ExitRuleAction.TIME_EXIT,
+                     quantity_fraction=Decimal(1), after_sessions=3),
+        ),
+    )
+    bars = [bar(19, open_=100, high=111, low=79, close=100, minute=1),
+            bar(20, open_=100, high=105, low=95, close=101, minute=1),
+            bar(20, open_=101, high=105, low=95, close=100, minute=2)]
+    result = estimate_exit_probabilities(
+        signal=short_signal, plan=short_plan, policy=short_policy,
+        samples=[sample("short-ambiguous", bars)],
+    )
+    assert result.outcomes[0].ambiguous_bar_count == 1
+    assert result.outcomes[0].final_exit == "STOP"
+    assert result.outcomes[0].target_was_executed is False
+    assert result.outcomes[0].gross_pnl_inr == Decimal("-100")
+
+
 def test_exit_variant_benchmark_costs_every_variant_and_adjusts_family():
     baseline = policy()
     changed = ExitPolicy(

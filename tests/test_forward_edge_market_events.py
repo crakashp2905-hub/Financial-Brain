@@ -53,6 +53,20 @@ def test_explicit_source_exchange_and_publication_timestamps_roundtrip() -> None
     assert restored.published_at == published
     assert event.as_dict()["received_at"] == event.received_at.isoformat()
     assert event.as_dict()["available_at"] == event.available_at.isoformat()
+    assert "computed_at" not in event.as_dict()  # legacy event hashes stay stable when absent
+
+
+def test_computation_clock_roundtrips_and_is_available_before_decision() -> None:
+    computed = T0 + timedelta(milliseconds=4)
+    event = _event(EventKind.TICK, {"price": 10}, computed_at=computed)
+    restored = MarketEvent.from_dict(event.as_dict())
+    assert restored.computed_at == computed
+    assert restored.decision_time >= computed
+
+    with pytest.raises(MarketEventError, match="computed event cannot precede"):
+        _event(EventKind.TICK, {"price": 10}, computed_at=T0)
+    with pytest.raises(MarketEventError, match="not available"):
+        _event(EventKind.TICK, {"price": 10}, computed_at=T0 + timedelta(milliseconds=6))
 
 
 def test_publication_cannot_follow_strategy_availability() -> None:

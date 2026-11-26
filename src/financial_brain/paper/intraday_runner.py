@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS runs (day VARCHAR, mode VARCHAR, version VARCHAR, sta
 EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE"), ("spread_bp", "DOUBLE"),
                  ("shortfall_bp", "DOUBLE"), ("mkt_ret", "DOUBLE"), ("daily_up", "BOOLEAN"), ("gap", "DOUBLE"),
                  ("or_width", "DOUBLE"), ("entry_minute", "INTEGER"), ("entry_vwap", "DOUBLE"), ("exit_vwap", "DOUBLE"),
-                 ("entry_walk_bp", "DOUBLE"))
+                  ("entry_walk_bp", "DOUBLE"), ("entry_price_basis", "VARCHAR"), ("exit_price_basis", "VARCHAR"))
 
 
 def cohort_path(base: Path, cohort: str | None, strategies, rules: dict[str, I.StrategyRule] | None) -> tuple[Path, str]:
@@ -117,12 +117,13 @@ def save(con, t: I.Trade, mode: str) -> None:
     con.execute("""INSERT OR REPLACE INTO trades (trade_id, mode, version, day, strategy, symbol, side, qty, entry_ts,
                    entry_px, stop, target, exit_ts, exit_px, exit_reason, gross_pnl, costs, net_pnl, r_multiple, bucket,
                    entry_decision_px, exit_decision_px, spread_bp, shortfall_bp, mkt_ret, daily_up, gap, or_width,
-                   entry_minute, entry_vwap, exit_vwap, entry_walk_bp)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   entry_minute, entry_vwap, exit_vwap, entry_walk_bp, entry_price_basis, exit_price_basis)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [t.trade_id, mode, t.version, t.day, t.strategy, t.symbol, t.side, t.qty, t.entry_ts, t.entry_px,
                  t.stop, t.target, t.exit_ts, t.exit_px, t.exit_reason, t.gross_pnl, t.costs, t.net_pnl,
                  t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp,
-                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute, t.entry_vwap, t.exit_vwap, t.entry_walk_bp])
+                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute, t.entry_vwap, t.exit_vwap,
+                 t.entry_walk_bp, t.entry_price_basis, t.exit_price_basis])
 
 
 def record_run(con, day: str, mode: str, **kw) -> None:
@@ -263,7 +264,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
-    eng = I.DayEngine(day, strategies=strategies, rules=rules)
+    eng = I.DayEngine(day, strategies=strategies, rules=rules, require_observed_quote=True)
     eng.daily_up = daily_up(date.fromisoformat(day))
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()

@@ -1,0 +1,19 @@
+{
+  "schema": "fb.ci_check_matrix.v1",
+  "workflow": ".github/workflows/ci.yml",
+  "triggers": ["push", "pull_request"],
+  "platforms": ["ubuntu-24.04", "windows-latest"],
+  "checks": [
+    {"category": "lint", "step": "Lint", "command": "python -m ruff check src tests"},
+    {"category": "static_types", "step": "Type check (OMS, evidence standard, pre-registry)", "command": "python -m mypy"},
+    {"category": "migrations", "step": "Schema migrations", "command": "python -m pytest -q tests/test_migrations.py"},
+    {"category": "invariants", "step_group": "Pre-suite repository and evidence gates", "commands": ["validate_capability_matrix.py", "forward_edge_capability_matrix.py --check", "validate_market_data_sources.py", "market_data_use_matrix.py --check", "validate_release_semantics.py", "source_inventory.py --output docs/edge-program/source-inventory.v2.json --check", "capability_ownership.py --check", "validate_product_charter.py --check", "validate_launch_gates.py --check", "export_checklist_audit.py --check", "profit_readiness.py --check", "forward_engine_graph.py --check", "forward_edge_equivalence_report.py --check", "validate_codeowners_map.py", "validate_reference_candidates.py", "build_checklist_evidence_bundle.py --check", "state_ownership.py", "validate_trial_program.py", "validate_deviation_log.py"]},
+    {"category": "unit", "step": "Test suite", "command": "python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml", "shared_run": "full_suite"},
+    {"category": "integration", "step": "Test suite", "command": "python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml", "shared_run": "full_suite"},
+    {"category": "release_provenance", "steps": ["Build release provenance manifest", "Verify release provenance manifest"], "commands": ["python scripts/build_release_provenance.py --test-artifact pytest-results.xml", "python scripts/build_release_provenance.py --check"]},
+    {"category": "coverage", "steps": ["Critical-module coverage", "Chart-pattern package coverage floor", "Coverage XML", "Upload coverage"], "minimum_chart_pattern_percent": 85},
+    {"category": "dependency_audit", "step": "Dependency audit", "command": "python -m pip_audit --skip-editable"},
+    {"category": "chart_pattern_specific", "steps": ["Chart-pattern completion matrix is current", "Chart-pattern offline demo (network denied)", "Chart-pattern package coverage floor"], "each_step_must_appear_once": true}
+  ],
+  "limitations": ["Unit and integration tests currently execute in one full-suite command, not separate jobs.", "This matrix documents configured checks; only hosted run evidence proves a particular commit passed them."]
+}

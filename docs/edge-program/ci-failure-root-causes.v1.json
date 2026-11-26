@@ -1,0 +1,85 @@
+{
+  "schema": "fb.ci_failure_root_cause_audit.v1",
+  "as_of": "2026-11-26",
+  "observed_runs": [
+    {
+      "run_id": 44898633158,
+      "scope": "hosted CI matrix",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "job": "test (ubuntu-24.04)",
+          "failed_step": "Test suite",
+          "root_cause": "Four fixture-permission tests failed on both OS; setup, lint, provenance and reproducibility completed successfully."
+        },
+        {
+          "job": "test (windows-latest)",
+          "failed_step": "Test suite",
+          "root_cause": "Same four fixture-permission tests."
+        },
+        {
+          "job": "reproducibility (ubuntu-24.04)",
+          "conclusion": "success"
+        },
+        {
+          "job": "reproducibility (windows-2022)",
+          "conclusion": "success"
+        }
+      ],
+      "resolution": "Commit d6008d1d made fixture permissions explicit; follow-up run 44900645078 passed test and reproducibility jobs on both OS."
+    },
+    {
+      "run_id": 45084665183,
+      "scope": "PR #86 CI at 9df1c16a5a7e62332bbda852d3125a2ff6c510ca",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "job": "test (ubuntu-24.04)",
+          "failed_step": "Verify source inventory snapshot"
+        },
+        {
+          "job": "test (windows-latest)",
+          "failed_step": "Verify source inventory snapshot"
+        },
+        {
+          "job": "reproducibility (ubuntu-24.04)",
+          "conclusion": "success"
+        },
+        {
+          "job": "reproducibility (windows-2022)",
+          "conclusion": "success"
+        }
+      ],
+      "root_cause": "Committed generated source inventory was stale; the subsequent test-summary step failed because the earlier required check failed. This is a repository snapshot freshness failure, not a hosted runner/billing failure."
+    },
+    {
+      "run_id": 45543205778,
+      "scope": "PR #112 CI at ed8536ffca304d2b3d426070e10f9a93599c9767",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "job": "test (ubuntu-24.04)",
+          "failed_step": "Verify old/new forward-engine dependency graph"
+        },
+        {
+          "job": "test (windows-latest)",
+          "failed_step": "Verify old/new forward-engine dependency graph"
+        },
+        {
+          "job": "reproducibility (ubuntu-24.04)",
+          "conclusion": "success"
+        },
+        {
+          "job": "reproducibility (windows-2022)",
+          "conclusion": "success"
+        }
+      ],
+      "root_cause": "Committed dependency graph snapshot was stale; the test-summary step failed as a consequence. This is a generated artifact freshness failure, not a hosted runner/billing failure."
+    }
+  ],
+  "infrastructure_findings": "No inspected run failed in job setup, checkout, Python setup or installation; both reproducibility jobs passed in all three runs. The observed failures are test permission assertions or generated snapshot drift, not evidence of runner/billing failure.",
+  "limitations": [
+    "GitHub workflow-run connector only returns PR-triggered runs and does not enumerate the complete push-triggered history for main; this audit cannot claim exhaustive coverage of every historical main-branch run.",
+    "Latest open-PR snapshot is point-in-time; branch tips may move."
+  ]
+}

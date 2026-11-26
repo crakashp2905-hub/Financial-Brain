@@ -1,0 +1,38 @@
+{
+  "schema": "fb.branch_protection_audit.v1",
+  "as_of": "2026-11-26",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "default_branch": "main",
+  "local_evidence": {
+    "codeowners_file": ".github/CODEOWNERS",
+    "validator": "scripts/validate_codeowners_map.py",
+    "validator_result": "PASS",
+    "ci_workflow": ".github/workflows/ci.yml",
+    "workflow_triggers": [
+      "push",
+      "pull_request"
+    ],
+    "required_in_workflow": [
+      "Lint",
+      "Validate CI check matrix and unique chart-pattern steps",
+      "Schema migrations",
+      "Test suite",
+      "Critical-module coverage",
+      "Chart-pattern package coverage floor",
+      "Dependency audit"
+    ]
+  },
+  "remote_branch_protection": {
+    "status": "UNVERIFIED",
+    "reason": "Available GitHub connector exposes repository metadata and PR workflows but no branch-protection/ruleset endpoint; public REST protection endpoint is inaccessible through the browser tool.",
+    "required_checks_enforcement": null,
+    "approval_requirement": null,
+    "code_owner_review_enforcement": null
+  },
+  "claim_policy": "CI workflow presence and local CODEOWNERS validation do not prove main branch requires those checks or code-owner approval.",
+  "next_required_evidence": [
+    "Read main branch protection or repository ruleset using an endpoint with administration/rules read access.",
+    "Compare required check contexts to current CI job names.",
+    "Verify required review/code-owner policy and any bypass actors."
+  ]
+}

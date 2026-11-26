@@ -88,7 +88,7 @@ def price_at(t):
         return 100.5
     if m < 600:
         return 101.6          # breaks above the 101 range high -> ORB long
-    return 106.9              # beyond the 2R target
+    return 107.1              # beyond the 2R target after ask-side entry pricing
 
 
 def fake_quotes(clock, day="2026-10-06", traded=True):
@@ -96,6 +96,8 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
         px = price_at(clock.t)
         hi = max(101.0, px) if clock.t.hour * 60 + clock.t.minute >= 570 else 101.0
         return {s: {"last_price": px, "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
+                    "depth": {"buy": [{"price": px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": px + 0.05, "quantity": 10_000}]},
                     "ohlc": {"open": 100.0, "high": hi if clock.t.hour * 60 + clock.t.minute > 570 else 101.0,
                              "low": 99.0, "close": 100.0}} for s in symbols}
     return q
@@ -301,7 +303,10 @@ def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_hig
                  "close": 100.0} for k in range(15)]
 
     def quotes(symbols, kind):                          # by now the day's high is 107: the wrong range
-        return {s: {"last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
+        px = 101.6 if c.t.minute < 55 else 107.1
+        return {s: {"last_price": px, "last_trade_time": "2026-10-06 09:49:00",
+                    "depth": {"buy": [{"price": px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": px + 0.05, "quantity": 10_000}]},
                     "ohlc": {"open": 100.0, "high": 107.0, "low": 99.0, "close": 100.0}} for s in symbols}
     R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
                candles_fn=candles, token_fn=lambda s: 1)
@@ -389,8 +394,10 @@ def _feed_breaks_after_entry(c, recover_at=None):
             raise OSError("getaddrinfo failed")
         if m < 592:
             return good(symbols, kind)
-        recovered_px = 106.9 if recover_at is not None else 100.2
+        recovered_px = 107.1 if recover_at is not None else 100.2
         return {s: {"last_price": recovered_px, "last_trade_time": "2026-10-06 11:00:00",
+                    "depth": {"buy": [{"price": recovered_px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": recovered_px + 0.05, "quantity": 10_000}]},
                     "ohlc": {"open": 100.0, "high": max(101.0, recovered_px), "low": 99.0,
                              "close": 100.0}} for s in symbols}
     return q

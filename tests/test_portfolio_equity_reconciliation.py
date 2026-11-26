@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from threading import Event, Thread
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -127,3 +128,39 @@ def test_independent_pnl_mismatch_beyond_paise_tolerance_is_not_reconciled(tmp_p
     assert result.net_investment_pnl_inr == Decimal("90.00")
     assert result.difference_inr == Decimal("0.02")
     assert not result.reconciled
+
+
+def test_concurrent_append_waits_until_open_close_snapshots_share_one_cutoff(tmp_path):
+    ledger = _ledger(tmp_path / "equity.sqlite")
+    original_events = ledger.events
+    writer_started = Event()
+    writer_finished = Event()
+
+    def append_event() -> None:
+        writer_started.set()
+        ledger.append(_event("late-distribution", EventKind.CASH_FLOW, END,
+                             cash_delta="25", metadata={"flow_type": "DISTRIBUTION"}))
+        writer_finished.set()
+
+    writer = Thread(target=append_event)
+
+    def events_then_start_writer(account_id, *, as_of=None):
+        rows = original_events(account_id, as_of=as_of)
+        if not writer_started.is_set():
+            writer.start()
+            assert writer_started.wait(timeout=2)
+            # The reconciliation's reserved SQLite write lock prevents a concurrent
+            # append from splitting its event-set hash and opening/closing snapshots.
+            assert not writer_finished.wait(timeout=0.05)
+        return rows
+
+    ledger.events = events_then_start_writer
+    result = reconcile_account_equity(
+        ledger=ledger, account_id=ACCOUNT, opening_as_of=START, closing_as_of=END,
+        reported_net_pnl_inr=Decimal("90"),
+    )
+    writer.join(timeout=5)
+    assert not writer.is_alive()
+    assert result.reconciled
+    assert result.event_count == 7
+    assert ledger.snapshot(ACCOUNT, as_of=END.isoformat())["cash"]["INR"] == Decimal("99515")

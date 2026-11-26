@@ -13,8 +13,9 @@ from financial_brain.forward_edge.strategy_attribution import (
 def _components(*, mismatch=False):
     day = date(2026, 11, 16)
     return (StrategyPnlComponents("momentum", day, 100, -10, 2, 5, 3, 4, 1, 2,
-                                  76 if mismatch else 77),
-            StrategyPnlComponents("swing", day, -5, 4, 0.5, 0.5, 0.5, 0, 0, 0, -1.5))
+                                  76 if mismatch else 77, "HISTORICAL_PAPER"),
+            StrategyPnlComponents("swing", day, -5, 4, 0.5, 0.5, 0.5, 0, 0, 0, -1.5,
+                                  "HISTORICAL_PAPER"))
 
 
 def _report(mismatch=False):
@@ -48,4 +49,5 @@ def test_missing_strategy_covariance_or_negative_cost_is_rejected() -> None:
         attribute_strategy_pnl(session=date(2026, 11, 16), components=_components(),
                                strategy_weights={"momentum": 1}, covariance_matrix=((0.04, 0), (0, 0.09)))
     with pytest.raises(StrategyAttributionError, match="cost components"):
-        StrategyPnlComponents("x", date(2026, 11, 16), 0, 0, 0, -1, 0, 0, 0, 0, 1)
+        StrategyPnlComponents("x", date(2026, 11, 16), 0, 0, 0, -1, 0, 0, 0, 0, 1,
+                              "HISTORICAL_PAPER")

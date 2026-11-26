@@ -9,6 +9,7 @@
       "financial_brain.forward_edge.data_permissions",
       "financial_brain.forward_edge.durable",
       "financial_brain.forward_edge.execution_scenario",
+      "financial_brain.forward_edge.heartbeats",
       "financial_brain.forward_edge.instrument_rules",
       "financial_brain.forward_edge.intent_timing",
       "financial_brain.forward_edge.market_data",
@@ -159,6 +160,10 @@
     {
       "source": "financial_brain.forward_edge.session_runner",
       "target": "financial_brain.forward_edge.execution_scenario"
+    },
+    {
+      "source": "financial_brain.forward_edge.session_runner",
+      "target": "financial_brain.forward_edge.heartbeats"
     },
     {
       "source": "financial_brain.forward_edge.session_runner",
@@ -389,6 +394,6 @@
     "financial_brain.forward_edge.quote_archive",
     "financial_brain.kernel.units"
   ],
-  "source_count": 745,
-  "source_tree_sha256": "d58fa10697194944a8a6a2d9bbfa11b16e2932709ad5611d327d0b6167eb238f"
+  "source_count": 763,
+  "source_tree_sha256": "04a450e510660b11ed9cc800fcabf3d69fd8a08862850c9a7a5d09388bddbbc4"
 }

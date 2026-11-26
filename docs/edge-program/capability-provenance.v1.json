@@ -1,0 +1,617 @@
+{
+  "schema": "fb.capability_provenance.v2",
+  "captured_at_utc": "2026-11-26T17:32:24.777Z",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "capture_basis": {
+    "current_main_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8",
+    "source": "GitHub API repository PR listing, exact base/head compare API, current main ref comparison, capability ownership file Git blob SHAs"
+  },
+  "sources": [
+    {
+      "source_id": "main",
+      "kind": "baseline",
+      "ref": "main",
+      "commit_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8",
+      "source_verified_by": "GitHub compare main...main at capture",
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "c2c98dcace03547af4b30b125f39b65e33e4eaf9",
+        "capability_count": 25,
+        "module_count": 491
+      }
+    },
+    {
+      "source_id": "PR-34",
+      "kind": "pull_request",
+      "pr_number": 34,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/34",
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "feature/dynamic-evidence-standard",
+        "sha": "93f24c341c65647ddf77a96bda54ba0031fa9e97"
+      },
+      "comparison_base_to_head": {
+        "status": "ahead",
+        "ahead_by": 58,
+        "behind_by": 0,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8",
+        "total_commits": 58
+      },
+      "current_main_relation": {
+        "source": "PR-34",
+        "status": "ahead",
+        "ahead": 58,
+        "behind": 0,
+        "mergeBase": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "latest_pr_workflow_run": {
+        "id": 45534489752,
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "changed_paths": {
+        "count": 35,
+        "source_code": [
+          "src/financial_brain/evaluation/dynamic_standard.py",
+          "src/financial_brain/evaluation/oos_monitor.py",
+          "src/financial_brain/paper/zoo_edges.py"
+        ],
+        "protected_research": [
+          "brain/07-Research/PRE-REGISTERED frog-in-the-pan momentum under the dynamic standard.md",
+          "brain/07-Research/PRE-REGISTERED the hundred candidates under the dynamic standard.md",
+          "docs/trials/dynamic/PREREG-momentum-crash-timing.md",
+          "docs/trials/dynamic/RESULTS-2026-11-16.md",
+          "docs/trials/dynamic/bet-recheck-2026-11-18.json",
+          "docs/trials/dynamic/combo-momentum-carry.json",
+          "docs/trials/dynamic/hundred/RESULTS.md",
+          "docs/trials/dynamic/hundred/results.json",
+          "docs/trials/dynamic/hundred/series.parquet",
+          "docs/trials/dynamic/hundred/survivors.parquet",
+          "docs/trials/dynamic/ledger.jsonl",
+          "docs/trials/dynamic/momentum-excess-2026-11-16.json",
+          "docs/trials/dynamic/momentum-excess-series.parquet",
+          "docs/trials/dynamic/momentum-implementation-2026-11-18.json",
+          "docs/trials/dynamic/options-defined-risk-train-trades.parquet",
+          "docs/trials/dynamic/options-defined-risk-train.json",
+          "docs/trials/dynamic/rescore-2026-11-16.json",
+          "docs/trials/dynamic/rescore-2026-11-16.md"
+        ]
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "0c4028a2cbd0a8b104b3b45ef7f6738d3651a6ae",
+        "capability_count": 25,
+        "module_count": 492,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          },
+          "modules": {
+            "added": [
+              "src/financial_brain/evaluation/dynamic_standard.py"
+            ],
+            "removed": [],
+            "modified": []
+          }
+        }
+      }
+    },
+    {
+      "source_id": "PR-37",
+      "kind": "pull_request",
+      "pr_number": 37,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/37",
+      "base": {
+        "ref": "main",
+        "sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "head": {
+        "ref": "feature/five-desk-d1-instruments",
+        "sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4"
+      },
+      "comparison_base_to_head": {
+        "status": "ahead",
+        "ahead_by": 11,
+        "behind_by": 0,
+        "merge_base_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8",
+        "total_commits": 11
+      },
+      "current_main_relation": {
+        "source": "PR-37",
+        "status": "ahead",
+        "ahead": 11,
+        "behind": 0,
+        "mergeBase": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "latest_pr_workflow_run": {
+        "id": 45534348585,
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "changed_paths": {
+        "count": 14,
+        "source_code": [
+          "src/financial_brain/instruments/__init__.py",
+          "src/financial_brain/instruments/adapters.py",
+          "src/financial_brain/instruments/clocks.py",
+          "src/financial_brain/instruments/corporate_actions.py",
+          "src/financial_brain/instruments/master.py",
+          "src/financial_brain/instruments/store.py",
+          "src/financial_brain/instruments/units.py",
+          "src/financial_brain/storage/schema.sql"
+        ],
+        "protected_research": []
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "c2c98dcace03547af4b30b125f39b65e33e4eaf9",
+        "capability_count": 25,
+        "module_count": 491,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          },
+          "modules": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          }
+        }
+      }
+    },
+    {
+      "source_id": "PR-36",
+      "kind": "pull_request",
+      "pr_number": 36,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/36",
+      "base": {
+        "ref": "feature/five-desk-d1-instruments",
+        "sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4"
+      },
+      "head": {
+        "ref": "feature/five-desk-d2-data-parity",
+        "sha": "d33c84895c347f2f19733608009eec90251254f3"
+      },
+      "comparison_base_to_head": {
+        "status": "ahead",
+        "ahead_by": 64,
+        "behind_by": 0,
+        "merge_base_sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4",
+        "total_commits": 64
+      },
+      "current_main_relation": {
+        "source": "PR-36",
+        "status": "ahead",
+        "ahead": 75,
+        "behind": 0,
+        "mergeBase": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "latest_pr_workflow_run": {
+        "id": 45534931718,
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "changed_paths": {
+        "count": 89,
+        "source_code": [
+          "src/financial_brain/evaluation/reports.py",
+          "src/financial_brain/evaluation/scorecards.py",
+          "src/financial_brain/evaluation/study_tools.py",
+          "src/financial_brain/execution/exchange_paper.py",
+          "src/financial_brain/execution/mf_orders.py",
+          "src/financial_brain/execution/mf_plans.py",
+          "src/financial_brain/execution/option_book.py",
+          "src/financial_brain/forecasting/calibration_tools.py",
+          "src/financial_brain/forecasting/index_extras.py",
+          "src/financial_brain/forecasting/index_ops.py",
+          "src/financial_brain/instruments/etf_reference.py",
+          "src/financial_brain/instruments/market_quality.py",
+          "src/financial_brain/instruments/mf_scheme.py",
+          "src/financial_brain/instruments/pit.py",
+          "src/financial_brain/paper/control_room.py",
+          "src/financial_brain/paper/dashboard_html.py",
+          "src/financial_brain/paper/day_cycle.py",
+          "src/financial_brain/paper/desk_runs.py",
+          "src/financial_brain/paper/five_desk_cli.py",
+          "src/financial_brain/paper/five_desk_engine.py",
+          "src/financial_brain/paper/ops.py",
+          "src/financial_brain/paper/policy.py",
+          "src/financial_brain/paper/router.py",
+          "src/financial_brain/portfolio/multi_asset_ledger.py",
+          "src/financial_brain/portfolio/position_ledger.py",
+          "src/financial_brain/portfolio/tax_lots.py",
+          "src/financial_brain/providers/amfi_history.py",
+          "src/financial_brain/research/cross_asset.py",
+          "src/financial_brain/research/mf_metrics.py",
+          "src/financial_brain/research/mf_portfolio.py",
+          "src/financial_brain/risk/capital_allocator.py",
+          "src/financial_brain/signals/admissibility.py",
+          "src/financial_brain/signals/contracts.py",
+          "src/financial_brain/signals/desk_logic.py",
+          "src/financial_brain/signals/evidence.py",
+          "src/financial_brain/signals/exit_plans.py",
+          "src/financial_brain/signals/exit_triggers.py",
+          "src/financial_brain/signals/index_options.py",
+          "src/financial_brain/strategies/etf_rank.py"
+        ],
+        "protected_research": []
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "3cc5cb5ae3b4f0f2bda58d0e0d474de396751c8f",
+        "capability_count": 25,
+        "module_count": 526,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          },
+          "modules": {
+            "added": [
+              "src/financial_brain/evaluation/reports.py",
+              "src/financial_brain/evaluation/scorecards.py",
+              "src/financial_brain/evaluation/study_tools.py",
+              "src/financial_brain/execution/exchange_paper.py",
+              "src/financial_brain/execution/mf_orders.py",
+              "src/financial_brain/execution/mf_plans.py",
+              "src/financial_brain/execution/option_book.py",
+              "src/financial_brain/forecasting/calibration_tools.py",
+              "src/financial_brain/forecasting/index_extras.py",
+              "src/financial_brain/forecasting/index_ops.py",
+              "src/financial_brain/paper/control_room.py",
+              "src/financial_brain/paper/dashboard_html.py",
+              "src/financial_brain/paper/day_cycle.py",
+              "src/financial_brain/paper/desk_runs.py",
+              "src/financial_brain/paper/five_desk_cli.py",
+              "src/financial_brain/paper/five_desk_engine.py",
+              "src/financial_brain/paper/ops.py",
+              "src/financial_brain/paper/policy.py",
+              "src/financial_brain/paper/router.py",
+              "src/financial_brain/portfolio/multi_asset_ledger.py",
+              "src/financial_brain/portfolio/position_ledger.py",
+              "src/financial_brain/portfolio/tax_lots.py",
+              "src/financial_brain/providers/amfi_history.py",
+              "src/financial_brain/research/cross_asset.py",
+              "src/financial_brain/research/mf_metrics.py",
+              "src/financial_brain/research/mf_portfolio.py",
+              "src/financial_brain/risk/capital_allocator.py",
+              "src/financial_brain/signals/admissibility.py",
+              "src/financial_brain/signals/contracts.py",
+              "src/financial_brain/signals/desk_logic.py",
+              "src/financial_brain/signals/evidence.py",
+              "src/financial_brain/signals/exit_plans.py",
+              "src/financial_brain/signals/exit_triggers.py",
+              "src/financial_brain/signals/index_options.py",
+              "src/financial_brain/strategies/etf_rank.py"
+            ],
+            "removed": [],
+            "modified": []
+          }
+        }
+      }
+    },
+    {
+      "source_id": "PR-38",
+      "kind": "pull_request",
+      "pr_number": 38,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/38",
+      "base": {
+        "ref": "feature/five-desk-d2-data-parity",
+        "sha": "d33c84895c347f2f19733608009eec90251254f3"
+      },
+      "head": {
+        "ref": "feature/four-node-variants",
+        "sha": "ad8e32a0fd684d982623bdd0850e1618d1c23007"
+      },
+      "comparison_base_to_head": {
+        "status": "ahead",
+        "ahead_by": 11,
+        "behind_by": 0,
+        "merge_base_sha": "d33c84895c347f2f19733608009eec90251254f3",
+        "total_commits": 11
+      },
+      "current_main_relation": {
+        "source": "PR-38",
+        "status": "ahead",
+        "ahead": 86,
+        "behind": 0,
+        "mergeBase": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8"
+      },
+      "latest_pr_workflow_run": {
+        "id": 45535492058,
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "changed_paths": {
+        "count": 24,
+        "source_code": [
+          "src/financial_brain/paper/legacy_bridge.py",
+          "src/financial_brain/strategies/four_node_v2/__init__.py",
+          "src/financial_brain/strategies/four_node_v2/backtest.py",
+          "src/financial_brain/strategies/four_node_v3/__init__.py",
+          "src/financial_brain/strategies/four_node_v3/backtest.py"
+        ],
+        "protected_research": []
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "50161c7d33c0dccb810a9113e0f0633bc61f3c26",
+        "capability_count": 25,
+        "module_count": 527,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          },
+          "modules": {
+            "added": [
+              "src/financial_brain/evaluation/reports.py",
+              "src/financial_brain/evaluation/scorecards.py",
+              "src/financial_brain/evaluation/study_tools.py",
+              "src/financial_brain/execution/exchange_paper.py",
+              "src/financial_brain/execution/mf_orders.py",
+              "src/financial_brain/execution/mf_plans.py",
+              "src/financial_brain/execution/option_book.py",
+              "src/financial_brain/forecasting/calibration_tools.py",
+              "src/financial_brain/forecasting/index_extras.py",
+              "src/financial_brain/forecasting/index_ops.py",
+              "src/financial_brain/paper/control_room.py",
+              "src/financial_brain/paper/dashboard_html.py",
+              "src/financial_brain/paper/day_cycle.py",
+              "src/financial_brain/paper/desk_runs.py",
+              "src/financial_brain/paper/five_desk_cli.py",
+              "src/financial_brain/paper/five_desk_engine.py",
+              "src/financial_brain/paper/legacy_bridge.py",
+              "src/financial_brain/paper/ops.py",
+              "src/financial_brain/paper/policy.py",
+              "src/financial_brain/paper/router.py",
+              "src/financial_brain/portfolio/multi_asset_ledger.py",
+              "src/financial_brain/portfolio/position_ledger.py",
+              "src/financial_brain/portfolio/tax_lots.py",
+              "src/financial_brain/providers/amfi_history.py",
+              "src/financial_brain/research/cross_asset.py",
+              "src/financial_brain/research/mf_metrics.py",
+              "src/financial_brain/research/mf_portfolio.py",
+              "src/financial_brain/risk/capital_allocator.py",
+              "src/financial_brain/signals/admissibility.py",
+              "src/financial_brain/signals/contracts.py",
+              "src/financial_brain/signals/desk_logic.py",
+              "src/financial_brain/signals/evidence.py",
+              "src/financial_brain/signals/exit_plans.py",
+              "src/financial_brain/signals/exit_triggers.py",
+              "src/financial_brain/signals/index_options.py",
+              "src/financial_brain/strategies/etf_rank.py"
+            ],
+            "removed": [],
+            "modified": []
+          }
+        }
+      }
+    },
+    {
+      "source_id": "PR-39",
+      "kind": "pull_request",
+      "pr_number": 39,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/39",
+      "base": {
+        "ref": "main",
+        "sha": "5e00c174126e0f0b7bfccb32f21dfeae9406aec4"
+      },
+      "head": {
+        "ref": "feature/momentum-shadow-abort-closeout",
+        "sha": "fd4a8751c9480a2d7b804a0e9591f9ebf0234143"
+      },
+      "comparison_base_to_head": {
+        "status": "ahead",
+        "ahead_by": 2,
+        "behind_by": 0,
+        "merge_base_sha": "5e00c174126e0f0b7bfccb32f21dfeae9406aec4",
+        "total_commits": 2
+      },
+      "current_main_relation": {
+        "source": "PR-39",
+        "status": "diverged",
+        "ahead": 2,
+        "behind": 12,
+        "mergeBase": "5e00c174126e0f0b7bfccb32f21dfeae9406aec4"
+      },
+      "latest_pr_workflow_run": {
+        "id": 45509654409,
+        "name": "ci",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "changed_paths": {
+        "count": 0,
+        "source_code": [],
+        "protected_research": []
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "c3df76b3ce42b85e8d043d4219e4942193ff2d0a",
+        "capability_count": 25,
+        "module_count": 488,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [],
+            "modified": []
+          },
+          "modules": {
+            "added": [],
+            "removed": [
+              "src/financial_brain/portfolio/cross_desk_overlap.py",
+              "src/financial_brain/portfolio/cross_desk_risk.py",
+              "src/financial_brain/portfolio/rebalance.py"
+            ],
+            "modified": []
+          }
+        }
+      }
+    },
+    {
+      "source_id": "PR-40",
+      "kind": "merged_pull_request",
+      "pr_number": 40,
+      "title": "Bring the running forward-edge branch into main",
+      "state": "closed",
+      "merged": true,
+      "base": "main",
+      "base_sha": "5c7ae82a314b1e547d345e7b988e90f77d57224b",
+      "head": "merge/forward-edge-branch-version",
+      "head_sha": "39817e98dea70640c26d7530dcf51a23d0cce2bb",
+      "merge_commit_sha": "50248f1474f8f3476d723584da410a6fac7e4219",
+      "url": "https://github.com/crakashp2905-hub/Financial-Brain/pull/40",
+      "current_main_relation": {
+        "status": "merged ancestor of captured main",
+        "merge_commit_is_ancestor": true,
+        "current_main_ahead_by": 454,
+        "current_main_behind_by": 0,
+        "merge_base_sha": "50248f1474f8f3476d723584da410a6fac7e4219"
+      },
+      "capability_registry": {
+        "path": "docs/edge-program/capability-ownership.v1.json",
+        "git_blob_sha1": "b1bed9b4690dc0a00f14313c8f307b723559adc0",
+        "capability_count": 21,
+        "module_count": 430,
+        "delta_vs_main": {
+          "capabilities": {
+            "added": [],
+            "removed": [
+              "index_forecast_market_contract",
+              "mf_paper_lot_accounting",
+              "paired_paper_sleeve_evaluation",
+              "trade_admissibility_gate"
+            ],
+            "modified": []
+          },
+          "modules": {
+            "added": [],
+            "removed": [
+              "src/financial_brain/forecasting/bars.py",
+              "src/financial_brain/forecasting/calibration.py",
+              "src/financial_brain/forecasting/dataset.py",
+              "src/financial_brain/forecasting/distribution.py",
+              "src/financial_brain/forecasting/ensemble.py",
+              "src/financial_brain/forecasting/index_15m.py",
+              "src/financial_brain/forecasting/index_market.py",
+              "src/financial_brain/forecasting/kronos.py",
+              "src/financial_brain/forecasting/null.py",
+              "src/financial_brain/forecasting/store.py",
+              "src/financial_brain/forecasting/walkforward.py",
+              "src/financial_brain/forward_edge/data_distribution.py",
+              "src/financial_brain/forward_edge/manual_paper_decisions.py",
+              "src/financial_brain/forward_edge/option_surface.py",
+              "src/financial_brain/forward_edge/paired_paper.py",
+              "src/financial_brain/forward_edge/strategy_pipeline.py",
+              "src/financial_brain/ingest/mf_portfolio_disclosures.py",
+              "src/financial_brain/ingest/mf_scheme_flows.py",
+              "src/financial_brain/ingest/mf_scheme_lifecycle.py",
+              "src/financial_brain/ingest/mf_scheme_master.py",
+              "src/financial_brain/ingest/mf_scheme_terms.py",
+              "src/financial_brain/kernel/candidate_publication.py",
+              "src/financial_brain/kernel/entry_constraints.py",
+              "src/financial_brain/kernel/exit_protection_ledger.py",
+              "src/financial_brain/kernel/probability_calibration.py",
+              "src/financial_brain/kernel/trade_admissibility.py",
+              "src/financial_brain/kernel/trade_economics_receipt.py",
+              "src/financial_brain/paper/mf_account_ledger.py",
+              "src/financial_brain/paper/mf_allocation_policy.py",
+              "src/financial_brain/paper/mf_decisions.py",
+              "src/financial_brain/paper/mf_exit_loads.py",
+              "src/financial_brain/paper/mf_flow_book.py",
+              "src/financial_brain/paper/mf_folio_book.py",
+              "src/financial_brain/paper/mf_lot_book.py",
+              "src/financial_brain/paper/mf_order_book.py",
+              "src/financial_brain/paper/mf_paper_realism_book.py",
+              "src/financial_brain/paper/mf_periodic_review.py",
+              "src/financial_brain/paper/mf_purchase_book.py",
+              "src/financial_brain/paper/mf_redemption_constraints.py",
+              "src/financial_brain/paper/mf_redemption_settlement.py",
+              "src/financial_brain/paper/mf_scheme_flows.py",
+              "src/financial_brain/paper/mf_sip_book.py",
+              "src/financial_brain/paper/mf_switch_book.py",
+              "src/financial_brain/paper/mf_systematic_flow_book.py",
+              "src/financial_brain/paper/options_plan.py",
+              "src/financial_brain/paper/today_screen.py",
+              "src/financial_brain/portfolio/capital_allocator.py",
+              "src/financial_brain/portfolio/constraints.py",
+              "src/financial_brain/portfolio/cross_desk_overlap.py",
+              "src/financial_brain/portfolio/cross_desk_risk.py",
+              "src/financial_brain/portfolio/rebalance.py",
+              "src/financial_brain/providers/etf_reference.py",
+              "src/financial_brain/providers/kite_stream.py",
+              "src/financial_brain/providers/mf_portfolio_disclosures.py",
+              "src/financial_brain/providers/mf_scheme_flows.py",
+              "src/financial_brain/providers/mf_scheme_lifecycle.py",
+              "src/financial_brain/providers/mf_scheme_master.py",
+              "src/financial_brain/providers/mf_scheme_terms.py",
+              "src/financial_brain/research/mf_peer_comparison.py",
+              "src/financial_brain/research/mf_portfolio_analytics.py",
+              "src/financial_brain/research/mf_return_accounting.py"
+            ],
+            "modified": []
+          }
+        }
+      }
+    }
+  ],
+  "dependency_edges": [
+    {
+      "from": "PR-37",
+      "to": "PR-36",
+      "basis": "PR-36 declared base SHA equals PR-37 exact head SHA",
+      "verified": true
+    },
+    {
+      "from": "PR-36",
+      "to": "PR-38",
+      "basis": "PR-38 declared base SHA equals PR-36 exact head SHA",
+      "verified": true
+    },
+    {
+      "from": "PR-40",
+      "to": "main",
+      "basis": "GitHub compare says merge commit is an ancestor of current main",
+      "verified": true
+    }
+  ],
+  "unconnected_sources": [
+    "PR-34",
+    "PR-39"
+  ],
+  "limitations": [
+    "Open PRs are snapshots and are not production capabilities until merged and re-verified.",
+    "PR-39 declares an older main base and is diverged from captured main; it is not assigned a dependency edge by assumption.",
+    "Capability ownership files describe declared ownership and module inventory, not behavioral test evidence; deltas do not prove implementation quality.",
+    "PR #40 source SHA is the merged PR head; merge commit SHA is recorded separately."
+  ]
+}

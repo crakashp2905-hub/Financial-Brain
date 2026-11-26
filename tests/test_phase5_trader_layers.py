@@ -38,7 +38,26 @@ def test_small_account_rounds_down_to_whole_shares_and_drops_what_it_cannot_affo
     names = {p["ticker"]: p for p in s["positions"]}
     assert names["SUNPHARMA"]["shares"] == 11 and names["ITC"]["shares"] == 78
     assert "MARUTI" not in names and s["skipped"][0]["ticker"] == "MARUTI"
-    assert s["cash"] == pytest.approx(100_000 - s["deployed"]) and s["cash"] > 0
+    assert s["cash"] == pytest.approx(100_000 - s["cash_committed"]) and s["cash"] > 0
+    assert s["cash_committed"] == pytest.approx(s["deployed"] + s["entry_fees_total"])
+    assert s["fees_total"] >= s["entry_fees_total"]
+
+
+def test_small_account_ticket_caps_oversubscribed_targets_after_entry_costs():
+    result = TK.size_book(
+        [{"ticker": "A", "weight": 0.8}, {"ticker": "B", "weight": 0.8}],
+        capital_inr=10_000, prices={"A": 1_000, "B": 1_000}, min_order_inr=1_000,
+    )
+    assert result["cash_committed"] <= result["capital"]
+    assert result["cash"] >= 0
+    assert sum(row["notional"] for row in result["positions"]) == result["deployed"]
+
+
+@pytest.mark.parametrize("weight", [-0.01, 1.01, float("nan"), float("inf")])
+def test_small_account_ticket_rejects_invalid_target_weights(weight):
+    with pytest.raises(TK.TicketError):
+        TK.size_book([{"ticker": "A", "weight": weight}], capital_inr=50_000,
+                     prices={"A": 1_000})
 
 
 def test_ticket_module_has_no_network_or_broker_code():

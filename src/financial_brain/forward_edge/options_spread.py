@@ -6,6 +6,7 @@ import json
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from statistics import NormalDist
 
 from .options_risk import OptionLegQuote
 
@@ -22,6 +23,99 @@ class ExpiryScenario:
     def __post_init__(self) -> None:
         if not self.scenario_id.strip() or not math.isfinite(float(self.underlying_price)) or self.underlying_price < 0:
             raise OptionsSpreadError("expiry scenario requires an ID and finite non-negative underlying price")
+
+
+@dataclass(frozen=True)
+class OptionMarketStress:
+    scenario_id: str
+    minutes_to_expiry: float
+    underlying_return: float
+    iv_change: float
+    spread_multiplier: float
+    liquidity_multiplier: float
+
+    def __post_init__(self) -> None:
+        if (not self.scenario_id.strip() or not math.isfinite(self.minutes_to_expiry)
+                or self.minutes_to_expiry <= 0 or not math.isfinite(self.underlying_return)
+                or self.underlying_return <= -1 or not math.isfinite(self.iv_change)
+                or not math.isfinite(self.spread_multiplier) or self.spread_multiplier < 1
+                or not math.isfinite(self.liquidity_multiplier)
+                or not 0 < self.liquidity_multiplier <= 1):
+            raise OptionsSpreadError("invalid option-market stress dimensions")
+
+
+def _theoretical_option_value(spot: float, strike: float, years: float,
+                              volatility: float, option_type: str) -> float:
+    if years <= 0 or volatility <= 1e-8:
+        return max(0.0, spot - strike) if option_type == "CE" else max(0.0, strike - spot)
+    root_t = math.sqrt(years)
+    d1 = (math.log(spot / strike) + volatility * volatility * years / 2) / (volatility * root_t)
+    d2 = d1 - volatility * root_t
+    cdf = NormalDist().cdf
+    if option_type == "CE":
+        return spot * cdf(d1) - strike * cdf(d2)
+    return strike * cdf(-d2) - spot * cdf(-d1)
+
+
+def stress_option_market(*, legs: tuple[OptionLegQuote, ...], lots: int, as_of: datetime,
+                         fees_inr: float, scenarios: tuple[OptionMarketStress, ...],
+                         minimum_liquidity_contracts: int = 1) -> dict[str, object]:
+    """Stress executable option-spread values under explicit expiry/news assumptions.
+
+    Theoretical marks and liquidity haircuts are uncalibrated scenarios, not fill forecasts.
+    Every leg must carry observed spot and IV; requested lots must remain within shocked
+    displayed size or the scenario has no executable exit P&L.
+    """
+    if (not legs or lots < 1 or as_of.tzinfo is None or not math.isfinite(fees_inr)
+            or fees_inr < 0 or type(minimum_liquidity_contracts) is not int
+            or minimum_liquidity_contracts < 1 or not scenarios):
+        raise OptionsSpreadError("legs, lots, aware as_of, fees, liquidity and stress scenarios are required")
+    if len({leg.leg_id for leg in legs}) != len(legs):
+        raise OptionsSpreadError("stress option legs must have unique identities")
+    entry_cash = 0.0
+    for leg in legs:
+        leg.validate(as_of=as_of, quantity=lots)
+        if (leg.underlying_price is None or not math.isfinite(leg.underlying_price)
+                or leg.underlying_price <= 0 or leg.implied_volatility is None
+                or not math.isfinite(leg.implied_volatility) or leg.implied_volatility <= 0):
+            raise OptionsSpreadError("stress requires positive observed spot and implied volatility per leg")
+        entry_cash += (-leg.ask if leg.side == "BUY" else leg.bid) * lots * leg.lot_size
+    outputs = []
+    for scenario in scenarios:
+        exit_cash = 0.0
+        unavailable: list[str] = []
+        for leg in legs:
+            spot0, iv0 = leg.underlying_price, leg.implied_volatility
+            if spot0 is None or iv0 is None:
+                raise OptionsSpreadError("stress requires observed spot and implied volatility per leg")
+            spot = spot0 * (1 + scenario.underlying_return)
+            volatility = max(0.0, iv0 + scenario.iv_change)
+            years = scenario.minutes_to_expiry / (365 * 24 * 60)
+            mark = _theoretical_option_value(spot, leg.strike, years, volatility, leg.option_type)
+            half_spread = (leg.ask - leg.bid) / 2 * scenario.spread_multiplier
+            bid, ask = max(0.0, mark - half_spread), mark + half_spread
+            available = math.floor(min(leg.bid_qty, leg.ask_qty) * scenario.liquidity_multiplier)
+            if available < lots or available < minimum_liquidity_contracts:
+                unavailable.append(leg.leg_id)
+                continue
+            exit_cash += (bid if leg.side == "BUY" else -ask) * lots * leg.lot_size
+        can_exit = not unavailable
+        outputs.append({"scenario_id": scenario.scenario_id,
+                        "near_atm": any(leg.underlying_price is not None and
+                                        abs(leg.underlying_price - leg.strike) / leg.underlying_price <= 0.02
+                                        for leg in legs),
+                        "minutes_to_expiry": scenario.minutes_to_expiry,
+                        "spread_multiplier": scenario.spread_multiplier,
+                        "iv_change": scenario.iv_change,
+                        "liquidity_multiplier": scenario.liquidity_multiplier,
+                        "exit_available": can_exit, "unavailable_legs": unavailable,
+                        "estimated_net_pnl_inr": entry_cash + exit_cash - fees_inr if can_exit else None,
+                        "evidence_tier": "UNCALIBRATED_SCENARIO"})
+    body = {"entry_cash_flow_inr": entry_cash, "fees_inr": fees_inr, "scenarios": outputs,
+            "calibrated": False, "pricing_model": "BLACK_SCHOLES_ZERO_RATE_SCENARIO"}
+    body["report_hash"] = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                                          allow_nan=False).encode()).hexdigest()
+    return body
 
 
 def evaluate_executable_spread(*, entry_legs: tuple[OptionLegQuote, ...],
