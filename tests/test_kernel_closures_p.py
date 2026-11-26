@@ -122,8 +122,13 @@ def test_dividend_adjustment_scales_prices_before_ex_date() -> None:
     adjusted = adjust_for_dividends([100.0, 100.0], {1: 1.0})
     assert adjusted[0] == pytest.approx(99.0)
     assert adjusted[1] == pytest.approx(100.0)
+    ex_dividend = adjust_for_dividends([100.0, 95.0], {1: 5.0})
+    assert ex_dividend == pytest.approx([95.0, 95.0])
+    assert ex_dividend[1] / ex_dividend[0] - 1 == pytest.approx(0.0)
     with pytest.raises(ValueError):
         adjust_for_dividends([100.0, 100.0], {0: 1.0})
+    with pytest.raises(ValueError, match="prior close"):
+        adjust_for_dividends([100.0, 95.0], {1: 101.0})
 
 
 def test_rolling_participation_has_warmup() -> None:
