@@ -12,6 +12,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock
@@ -127,6 +128,10 @@ class QuoteArchive:
         ingested_at = ingested_at.astimezone(timezone.utc)
         if ingested_at < event.available_at:
             raise QuoteArchiveError("ingest time cannot precede event availability")
+        try:
+            MarketEvent.from_dict(event.as_dict())
+        except (TypeError, ValueError) as exc:
+            raise QuoteArchiveError("event payload changed or became invalid before archive append") from exc
         body = event.as_dict()
         digest = event.sha256()
         semantic_hash, payload_hash, fingerprint = self._event_identity(event)
@@ -441,6 +446,30 @@ class QuoteArchive:
         names = [x[1] for x in self._con.execute("PRAGMA table_info(market_events)").fetchall()]
         return [dict(zip(names, row, strict=True)) for row in self._con.execute(
             "SELECT * FROM market_events ORDER BY received_at, event_id").fetchall()]
+
+    def instrument_day_quality_report(
+        self,
+        *,
+        venue: str,
+        instrument_id: str,
+        session_day: date,
+        as_of: datetime,
+        expected_event_count: int | None,
+        max_lateness_ms: int = 1_000,
+        max_quote_age_ms: int = 5_000,
+        strike_selection_evidence: Sequence[dict[str, Any]] = (),
+        require_strike_selection: bool = False,
+    ) -> dict[str, Any]:
+        """Build a point-in-time data-quality report over this archive's sourced events."""
+        from financial_brain.forward_edge.market_quality import build_instrument_day_quality_report
+
+        events = self.events_for_session(session_day, venue=venue)
+        return build_instrument_day_quality_report(
+            events, venue=venue, instrument_id=instrument_id, session_day=session_day, as_of=as_of,
+            expected_event_count=expected_event_count, max_lateness_ms=max_lateness_ms,
+            max_quote_age_ms=max_quote_age_ms, strike_selection_evidence=strike_selection_evidence,
+            require_strike_selection=require_strike_selection,
+        )
 
     def coverage(self, *, expected_sessions: set[str],
                  intents: dict[tuple[str, str], float], as_of: datetime) -> CoverageReport:
