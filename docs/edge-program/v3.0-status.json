@@ -8699,15 +8699,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Repository audit found no automated stop-research family registry before this change.",
-        "Added research.family_registry: append-only SQLite hash-chain family/attempt events, pre-outcome preregistration, one active attempt, terminal result identity, and closure after FAIL/NO_EDGE. Reopening requires new information or a post-verdict preregistered mechanism, with the basis recorded before first outcome access.",
-        "Focused tests cover closure, stale and late reopening bases, repeated failure, active attempt/result identity, restart integrity and tamper detection. Local hash chaining is tamper-evident only and does not provide independent custody; existing research runners are not yet required to use this registry."
+        "research.family_registry provides an append-only local hash-chained family/attempt registry, closes FAIL/NO_EDGE families, permits reopening only with new post-verdict information or a newly preregistered mechanism, and binds every result to its active attempt ID and result hash.",
+        "Active-attempt registration and result closure now run under SQLite BEGIN IMMEDIATE transactions with a unique active-family row; simultaneous registrars cannot open two active attempts, and startup reconstructs active rows from the durable event tail.",
+        "Six focused tests pass, including two concurrent registry instances racing to register the same family; exactly one succeeds. Ruff and mypy pass.",
+        "Registration/access clocks are still caller-supplied, hashes are local rather than independently custodied, and existing research runners are not forced through this registry; those broader governance integrations remain open."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T17:09:42+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:12:30+00:00",
+      "commit": "82b16e1f",
       "test_evidence": [
-        "python -m pytest tests/test_family_registry.py -q --basetemp .pytest-pa0617: 5 passed.",
+        "python -m pytest tests/test_family_registry.py -q --basetemp .pytest-pa0617-concurrency2: 6 passed.",
         "python -m ruff check src/financial_brain/research/family_registry.py tests/test_family_registry.py: passed.",
         "python -m mypy src/financial_brain/research/family_registry.py --follow-imports=silent: passed."
       ]
@@ -19960,7 +19961,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:08:45Z",
+    "as_of_utc": "2026-11-26T21:12:30Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

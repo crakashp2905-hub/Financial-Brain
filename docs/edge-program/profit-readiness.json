@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:08:45Z",
+  "as_of_utc": "2026-11-26T21:12:30Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "94f3df99b590338f2aa8a6ab1bc6720d1dd7dc7c4a3d78e3ffc6f994bdfa2a59",
-  "audit_export_sha256": "cf1ebd269e1bb8dd9d0cf1d624d7af88266942f28c3d9a971adc927e53a0a00e",
+  "status_ledger_sha256": "e2a7e2677ecb74e01a9646ecbc779fb44ce14689146184971204c2844f4cb806",
+  "audit_export_sha256": "74bb7693195cf67220794db86cab3437f38910f717db4cfe3188f6bb38afb685",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 103,
@@ -2502,15 +2502,16 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add automated 'stop researching this family' registry: clearly failed hypotheses stay closed unless new information or a preregistered mechanism warrants reconsideration."
           },
-          "commit": null,
+          "commit": "82b16e1f",
           "blocker": null,
           "evidence": [
-            "Repository audit found no automated stop-research family registry before this change.",
-            "Added research.family_registry: append-only SQLite hash-chain family/attempt events, pre-outcome preregistration, one active attempt, terminal result identity, and closure after FAIL/NO_EDGE. Reopening requires new information or a post-verdict preregistered mechanism, with the basis recorded before first outcome access.",
-            "Focused tests cover closure, stale and late reopening bases, repeated failure, active attempt/result identity, restart integrity and tamper detection. Local hash chaining is tamper-evident only and does not provide independent custody; existing research runners are not yet required to use this registry."
+            "research.family_registry provides an append-only local hash-chained family/attempt registry, closes FAIL/NO_EDGE families, permits reopening only with new post-verdict information or a newly preregistered mechanism, and binds every result to its active attempt ID and result hash.",
+            "Active-attempt registration and result closure now run under SQLite BEGIN IMMEDIATE transactions with a unique active-family row; simultaneous registrars cannot open two active attempts, and startup reconstructs active rows from the durable event tail.",
+            "Six focused tests pass, including two concurrent registry instances racing to register the same family; exactly one succeeds. Ruff and mypy pass.",
+            "Registration/access clocks are still caller-supplied, hashes are local rather than independently custodied, and existing research runners are not forced through this registry; those broader governance integrations remain open."
           ],
           "tests": [
-            "python -m pytest tests/test_family_registry.py -q --basetemp .pytest-pa0617: 5 passed.",
+            "python -m pytest tests/test_family_registry.py -q --basetemp .pytest-pa0617-concurrency2: 6 passed.",
             "python -m ruff check src/financial_brain/research/family_registry.py tests/test_family_registry.py: passed.",
             "python -m mypy src/financial_brain/research/family_registry.py --follow-imports=silent: passed."
           ]
@@ -2994,5 +2995,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "26fec8b6c3dd10c1d3f8c202431341ae645a2aa6fe5da4a8245053f6538a8f60"
+  "report_sha256": "40fafdbe982ce9acd018896acd7a595c42d18837a14877b6d36b634a53e0734b"
 }
