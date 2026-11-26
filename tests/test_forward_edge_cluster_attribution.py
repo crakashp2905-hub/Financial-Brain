@@ -7,6 +7,7 @@ from financial_brain.forward_edge.cluster_attribution import (
     AttributionObservation,
     ClusterAttributionError,
     TradeSessionObservation,
+    trade_session_block_bootstrap,
     two_way_cluster_mean,
     two_way_trade_session_mean,
 )
@@ -79,3 +80,32 @@ def test_trade_session_cluster_rejects_duplicate_cells_and_one_cluster_dimension
                  for i in range(4))
     with pytest.raises(ClusterAttributionError, match="two session and two trade"):
         two_way_trade_session_mean(rows)
+
+
+def test_trade_session_block_bootstrap_is_reproducible_and_counts_clusters() -> None:
+    start = date(2026, 3, 1)
+    rows = tuple(TradeSessionObservation(start + timedelta(days=session), f"T{trade}",
+                                         0.002 * ((session % 3) - trade))
+                 for session in range(12) for trade in range(6))
+    first = trade_session_block_bootstrap(rows, block_length_sessions=3, replicates=300, seed=91)
+    repeated = trade_session_block_bootstrap(tuple(reversed(rows)), block_length_sessions=3,
+                                             replicates=300, seed=91)
+    assert first == repeated
+    assert first.observations == 72
+    assert first.session_clusters == 12
+    assert first.trade_clusters == 6
+    assert first.effective_independent_observations == pytest.approx(6.0)
+    assert first.ci_lower <= first.mean_attribution <= first.ci_upper
+    assert first.method == "TWO_WAY_STATIONARY_SESSION_BLOCK_X_TRADE_CLUSTER_PERCENTILE"
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"block_length_sessions": 0, "replicates": 300, "seed": 1},
+    {"block_length_sessions": 2, "replicates": 199, "seed": 1},
+    {"block_length_sessions": 2, "replicates": 300, "seed": -1},
+])
+def test_trade_session_bootstrap_requires_frozen_valid_parameters(kwargs) -> None:
+    rows = tuple(TradeSessionObservation(date(2026, 4, 1) + timedelta(days=session), f"T{trade}", 0.01)
+                 for session in range(4) for trade in range(3))
+    with pytest.raises(ClusterAttributionError):
+        trade_session_block_bootstrap(rows, **kwargs)

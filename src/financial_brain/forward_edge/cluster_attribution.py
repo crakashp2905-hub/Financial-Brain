@@ -10,6 +10,8 @@ from datetime import date
 from statistics import NormalDist
 from typing import TypeVar
 
+import numpy as np
+
 _ClusterKey = TypeVar("_ClusterKey")
 
 
@@ -66,6 +68,23 @@ class TradeSessionClusterReport:
     mean_attribution: float
     standard_error: float
     confidence_level: float
+    ci_lower: float
+    ci_upper: float
+    method: str
+    report_hash: str
+
+
+@dataclass(frozen=True)
+class TradeSessionBootstrapReport:
+    observations: int
+    session_clusters: int
+    trade_clusters: int
+    effective_independent_observations: float
+    block_length_sessions: int
+    replicates: int
+    seed: int
+    confidence_level: float
+    mean_attribution: float
     ci_lower: float
     ci_upper: float
     method: str
@@ -173,3 +192,92 @@ def two_way_trade_session_mean(observations: tuple[TradeSessionObservation, ...]
                                       allow_nan=False).encode()).hexdigest()
     return TradeSessionClusterReport(n, gs, gt, effective_n, mean, standard_error, confidence_level,
                                      lower, upper, "TWO_WAY_CLUSTER_TRADE_SESSION_KISH_MIN_DIAGNOSTIC", digest)
+
+
+def trade_session_block_bootstrap(
+    observations: tuple[TradeSessionObservation, ...], *,
+    block_length_sessions: int,
+    replicates: int = 2_000,
+    seed: int = 20261126,
+    confidence_level: float = 0.95,
+) -> TradeSessionBootstrapReport:
+    """Bootstrap sessions in stationary blocks and trades as whole clusters.
+
+    Each replicate multiplies the sampled session and trade cluster counts for every
+    observed trade-session cell. This preserves within-trade dependence and short-range
+    chronological session dependence without treating marks as independent rows. It is a
+    sensitivity interval; promotion still requires a preregistered family-specific plan.
+    """
+    if len(observations) < 4:
+        raise ClusterAttributionError("at least four trade-session observations are required")
+    if type(block_length_sessions) is not int or block_length_sessions < 1:
+        raise ClusterAttributionError("session block length must be a positive integer")
+    if type(replicates) is not int or replicates < 200:
+        raise ClusterAttributionError("at least 200 bootstrap replicates are required")
+    if type(seed) is not int or seed < 0:
+        raise ClusterAttributionError("bootstrap seed must be a nonnegative integer")
+    if not math.isfinite(confidence_level) or not 0.5 < confidence_level < 1:
+        raise ClusterAttributionError("confidence_level must be in (0.5, 1)")
+    cells = [(row.session, row.trade_id) for row in observations]
+    if len(set(cells)) != len(cells):
+        raise ClusterAttributionError("one attribution value per session/trade cell is required")
+    sessions = sorted({row.session for row in observations})
+    trades = sorted({row.trade_id for row in observations})
+    if len(sessions) < 2 or len(trades) < 2:
+        raise ClusterAttributionError("at least two session and two trade clusters are required")
+    if len(observations) < 2 * min(len(sessions), len(trades)):
+        raise ClusterAttributionError("too few observed cells for two-way cluster resampling")
+
+    by_session = {session: index for index, session in enumerate(sessions)}
+    by_trade = {trade: index for index, trade in enumerate(trades)}
+    rows = sorted(observations, key=lambda row: (row.session, row.trade_id))
+    session_index = np.asarray([by_session[row.session] for row in rows], dtype=np.int64)
+    trade_index = np.asarray([by_trade[row.trade_id] for row in rows], dtype=np.int64)
+    values = np.asarray([row.net_attribution for row in rows], dtype=np.float64)
+    rng = np.random.default_rng(seed)
+    bootstrap_means = np.empty(replicates, dtype=np.float64)
+    session_count = len(sessions)
+    trade_count = len(trades)
+    restart_probability = min(1.0, 1.0 / block_length_sessions)
+    for replicate in range(replicates):
+        sampled_sessions = np.empty(session_count, dtype=np.int64)
+        sampled_sessions[0] = rng.integers(session_count)
+        for position in range(1, session_count):
+            if rng.random() < restart_probability:
+                sampled_sessions[position] = rng.integers(session_count)
+            else:
+                sampled_sessions[position] = (sampled_sessions[position - 1] + 1) % session_count
+        session_weights = np.bincount(sampled_sessions, minlength=session_count)
+        sampled_trades = rng.integers(trade_count, size=trade_count)
+        trade_weights = np.bincount(sampled_trades, minlength=trade_count)
+        weights = session_weights[session_index] * trade_weights[trade_index]
+        denominator = int(weights.sum())
+        if denominator <= 0:
+            raise ClusterAttributionError("two-way bootstrap produced an empty resample")
+        bootstrap_means[replicate] = float(np.dot(weights, values) / denominator)
+
+    session_sizes = np.bincount(session_index, minlength=session_count)
+    trade_sizes = np.bincount(trade_index, minlength=trade_count)
+    effective_n = min(float(session_sizes.sum() ** 2 / np.dot(session_sizes, session_sizes)),
+                      float(trade_sizes.sum() ** 2 / np.dot(trade_sizes, trade_sizes)))
+    alpha = (1 - confidence_level) / 2
+    lower, upper = np.quantile(bootstrap_means, [alpha, 1 - alpha], method="linear")
+    mean = float(values.mean())
+    fields = {
+        "observations": len(rows), "session_clusters": session_count, "trade_clusters": trade_count,
+        "effective_independent_observations": effective_n,
+        "block_length_sessions": block_length_sessions, "replicates": replicates,
+        "seed": seed, "confidence_level": confidence_level, "mean_attribution": mean,
+        "ci_lower": float(lower), "ci_upper": float(upper),
+        "method": "TWO_WAY_STATIONARY_SESSION_BLOCK_X_TRADE_CLUSTER_PERCENTILE",
+        "observation_hash": hashlib.sha256(json.dumps(
+            [[row.session.isoformat(), row.trade_id, row.net_attribution] for row in rows],
+            separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest(),
+    }
+    digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
+                                      allow_nan=False).encode()).hexdigest()
+    return TradeSessionBootstrapReport(
+        len(rows), session_count, trade_count, effective_n, block_length_sessions,
+        replicates, seed, confidence_level, mean, float(lower), float(upper),
+        str(fields["method"]), digest,
+    )

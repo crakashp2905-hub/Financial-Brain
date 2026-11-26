@@ -3967,6 +3967,7 @@
         "hashlib",
         "json",
         "math",
+        "numpy",
         "statistics",
         "typing"
       ],
@@ -3974,7 +3975,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/cluster_attribution.py",
-      "source_sha256": "4a91b5b3830e40a990b636a9d55e11b6f17978e61ac0280d16c4c3357d68cdd6",
+      "source_sha256": "f1612862f501ad2c966424f863801557b744b9dc9f9d5455ccb98f3f35162e4a",
       "test_paths": []
     },
     {
