@@ -7489,12 +7489,20 @@
     {
       "id": "PA-02-11",
       "text": "Probe suspected ex-dividend artifacts in H056/H068 without treating a repaired dataset as a valid new holdout; log changed labels and original trial verdicts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "A repository-wide tracked-source search found no H056/H068 price panels, ex-dividend labels, changed-label report, or trial-specific probe inputs; no raw artifact exists in the current worktree to run without inventing data.",
+        "The research outcome freeze and protected trial-preservation controls remain separate; this checklist item explicitly forbids using repaired data to create a new holdout or rewriting the original trial verdict.",
+        "PA-02-10 fixed the generic dividend adjustment math using prior close, but that implementation does not supply the missing H056/H068 observations or prove those historical labels changed."
+      ],
+      "blocker": "Requires the original H056/H068 datasets, action/label history, and original trial outcome references. They are absent from the repository, so the artifact probe and changed-label log cannot be truthfully produced from current evidence.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": null,
+      "test_evidence": [
+        "Tracked-source search for H056/H068, corporate-action label artifacts, and research data files returned no matching input datasets or probe outputs."
+      ],
+      "test_result": "External inputs are missing. No repaired data was used, no new holdout was inferred, and no protected trial verdict was altered."
     },
     {
       "id": "PA-02-12",
@@ -7603,12 +7611,21 @@
     {
       "id": "PA-03-01",
       "text": "Build one deterministic event loop for session open, completed bars, quotes, corporate actions, margin changes, decisions, protective exits and closeout.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop sorts normalized events by availability/event/sequence/ID, durably ingests each before dispatch, runs a strategy handler and protective-exit evaluation for every event, and acknowledges a durable consumer cursor only after both handlers return; a restart replays the unacknowledged event.",
+        "tests/test_forward_edge_session_runner.py::test_deterministic_event_loop_orders_events_and_checks_exits_after_each and ::test_event_loop_replays_unacknowledged_event_after_restart."
+      ],
+      "blocker": "PARTIAL: deterministic lifecycle orchestration is now available, but existing strategy adapters, corporate-action and margin handlers, and session-close business logic have not all been wired through this event loop as the repository-wide canonical path.",
+      "last_audited_at_utc": "2026-11-26T23:52:03Z",
+      "commit": "71918c52",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_runner.py -q: 75 passed in 146.38s.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+        "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+      ],
+      "test_result": "The session runner now provides a deterministic, durable event-loop API with per-event protective-exit checks and restart replay. PA-03-01 remains PARTIAL until this orchestration is the wired path for all strategy, corporate-action, margin and closeout handlers."
     },
     {
       "id": "PA-03-02",
@@ -20097,7 +20114,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T23:13:56Z",
+    "as_of_utc": "2026-11-26T23:52:03Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20542,11 +20559,13 @@
       "PA-02-08",
       "PA-02-09",
       "PA-02-10",
+      "PA-02-11",
       "PA-02-12",
       "PA-02-13",
       "PA-02-14",
       "PA-02-15",
       "PA-02-16",
+      "PA-03-01",
       "PA-03-03",
       "PA-03-04",
       "PA-03-09",
@@ -21026,13 +21045,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 926,
+    "audited_count": 928,
     "status_counts": {
       "COMPLETE": 107,
-      "EXTERNAL_BLOCKED": 5,
+      "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 797,
-      "UNASSESSED": 452
+      "PARTIAL": 798,
+      "UNASSESSED": 450
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21175,13 +21194,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers."
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "EXTERNAL_BLOCKED": 5,
+    "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 797,
-    "UNASSESSED": 452
+    "PARTIAL": 798,
+    "UNASSESSED": 450
   }
 }

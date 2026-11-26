@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T23:13:56Z",
+  "as_of_utc": "2026-11-26T23:52:03Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "24625efa69638b7d992f45abdb10f46767ab296e976a76baaf00ce56debfc231",
-  "audit_export_sha256": "c4aed9bc961e4135d3c86458cea5f468985ff4eb3d0c8726bd0cb68ffc754eb2",
+  "status_ledger_sha256": "f93534607acbeec723e43b84689f1f99e9af73203b36c883b4d2cd85966d7237",
+  "audit_export_sha256": "12c99d10a890edb17557ab77910062a1f5de9ffe6795976f8499bfdef420fab6",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
-    "EXTERNAL_BLOCKED": 5,
+    "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 797,
-    "UNASSESSED": 452
+    "PARTIAL": 798,
+    "UNASSESSED": 450
   },
-  "assessed_count": 926,
-  "unassessed_count": 452,
+  "assessed_count": 928,
+  "unassessed_count": 450,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -569,14 +569,14 @@
     },
     {
       "id": "market_data_and_rights",
-      "status": "AMBER",
+      "status": "RED",
       "item_count": 32,
       "counts_by_status": {
         "COMPLETE": 3,
-        "EXTERNAL_BLOCKED": 0,
+        "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 17,
-        "UNASSESSED": 12
+        "PARTIAL": 18,
+        "UNASSESSED": 10
       },
       "evidence": [
         {
@@ -770,16 +770,22 @@
         },
         {
           "item_id": "PA-02-11",
-          "status": "UNASSESSED",
+          "status": "EXTERNAL_BLOCKED",
           "source": {
             "line": 943,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Probe suspected ex-dividend artifacts in H056/H068 without treating a repaired dataset as a valid new holdout; log changed labels and original trial verdicts."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Requires the original H056/H068 datasets, action/label history, and original trial outcome references. They are absent from the repository, so the artifact probe and changed-label log cannot be truthfully produced from current evidence.",
+          "evidence": [
+            "A repository-wide tracked-source search found no H056/H068 price panels, ex-dividend labels, changed-label report, or trial-specific probe inputs; no raw artifact exists in the current worktree to run without inventing data.",
+            "The research outcome freeze and protected trial-preservation controls remain separate; this checklist item explicitly forbids using repaired data to create a new holdout or rewriting the original trial verdict.",
+            "PA-02-10 fixed the generic dividend adjustment math using prior close, but that implementation does not supply the missing H056/H068 observations or prove those historical labels changed."
+          ],
+          "tests": [
+            "Tracked-source search for H056/H068, corporate-action label artifacts, and research data files returned no matching input datasets or probe outputs."
+          ]
         },
         {
           "item_id": "PA-02-12",
@@ -892,16 +898,23 @@
         },
         {
           "item_id": "PA-03-01",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 958,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build one deterministic event loop for session open, completed bars, quotes, corporate actions, margin changes, decisions, protective exits and closeout."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "71918c52",
+          "blocker": "PARTIAL: deterministic lifecycle orchestration is now available, but existing strategy adapters, corporate-action and margin handlers, and session-close business logic have not all been wired through this event loop as the repository-wide canonical path.",
+          "evidence": [
+            "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop sorts normalized events by availability/event/sequence/ID, durably ingests each before dispatch, runs a strategy handler and protective-exit evaluation for every event, and acknowledges a durable consumer cursor only after both handlers return; a restart replays the unacknowledged event.",
+            "tests/test_forward_edge_session_runner.py::test_deterministic_event_loop_orders_events_and_checks_exits_after_each and ::test_event_loop_replays_unacknowledged_event_after_restart."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_session_runner.py -q: 75 passed in 146.38s.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+            "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+          ]
         },
         {
           "item_id": "PA-03-02",
@@ -3115,5 +3128,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "b2265d6937c1f6b38a15b78898aa82a126277a585c0e11e315cf07db8abd121d"
+  "report_sha256": "409b514dfb891488dc638876e2b71cb7b68d813bd15e54c5ab650db5eee7499f"
 }
