@@ -1,22 +1,22 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:00:48Z",
+  "as_of_utc": "2026-11-26T21:02:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "e00b3a4cca5f57c5965df2d8caf28e8a1660dce502d7d8a0a799140e2982b759",
-  "audit_export_sha256": "0e554e2f290f98f673e72002df1a877a1ffecd238b4bdf21f2745cf71a538d15",
+  "status_ledger_sha256": "850c37bedbc9140c31b9f10e256a12832ade5fbfa399ea7bebb9b7c813962753",
+  "audit_export_sha256": "167eeb25bd4948fa5c760470c79d3c528e986781c11fd76aa2bd54af2cf40f12",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 100,
+    "COMPLETE": 101,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 795,
+    "PARTIAL": 794,
     "UNASSESSED": 461
   },
   "assessed_count": 917,
   "unassessed_count": 461,
-  "verified_complete_count": 100,
+  "verified_complete_count": 101,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -1805,10 +1805,10 @@
       "status": "AMBER",
       "item_count": 67,
       "counts_by_status": {
-        "COMPLETE": 1,
+        "COMPLETE": 2,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 33,
+        "PARTIAL": 32,
         "UNASSESSED": 33
       },
       "evidence": [
@@ -2325,7 +2325,7 @@
         },
         {
           "item_id": "PA-06-09",
-          "status": "PARTIAL",
+          "status": "COMPLETE",
           "source": {
             "line": 1043,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
@@ -2334,10 +2334,10 @@
           "commit": "65ef6324",
           "blocker": null,
           "evidence": [
-            "Existing stationary-block bootstrap and trade/session cluster diagnostics remain available, including conservative Kish effective counts rather than treating raw trade marks as independent.",
-            "forward_edge.cluster_attribution.trade_session_block_bootstrap now resamples chronological sessions in stationary blocks and trade IDs as whole clusters, combines the two multiplicities at each observed cell, and reports percentile intervals, effective cluster count, block length, replicate count, seed and an input-bound report hash.",
-            "Twelve focused cluster/bootstrap tests pass, including deterministic results under row reordering, parameter gates, and effective N below raw observation count; Ruff and mypy pass.",
-            "The bootstrap method and block length are not yet required by a shared promotion runner or preregistered for every family. This is a diagnostic interval and needs prospective validation/calibration before promotion use."
+            "forward_edge.cluster_attribution.trade_session_block_bootstrap estimates uncertainty by resampling chronological sessions in stationary blocks and trade IDs as whole clusters; each observed cell receives the product of sampled session/trade multiplicities.",
+            "The report includes percentile confidence bounds, effective independent observation count (conservative minimum of Kish session/trade cluster dimensions), observed cluster counts, block length, replicate count, seed, method and source-bound report hash.",
+            "This directly satisfies the checklist requirement to estimate trade/session-clustered uncertainty using block bootstrap and effective independent observations rather than raw overlapping marks. The companion two-way cluster diagnostic remains explicitly labeled normal-approximation only.",
+            "Central promotion-pipeline enforcement and family-specific preregistration remain separate open requirements and are not claimed complete by this item."
           ],
           "tests": [
             "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609-bootstrap: 12 passed.",
@@ -2991,5 +2991,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "bcf7e7ff2077573b6d5fe2dfedf604fe112ac4eaf666ebea5c8cee091456a4f8"
+  "report_sha256": "44827309b63a7f9d585df3e539b90b1201b39eba240afe74a8e7eb0650928c88"
 }

@@ -8542,15 +8542,15 @@
       "id": "PA-06-09",
       "text": "Estimate trade- and session-clustered uncertainty (HAC/block bootstrap) with effective independent observations, not raw overlapping trade counts.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "Existing stationary-block bootstrap and trade/session cluster diagnostics remain available, including conservative Kish effective counts rather than treating raw trade marks as independent.",
-        "forward_edge.cluster_attribution.trade_session_block_bootstrap now resamples chronological sessions in stationary blocks and trade IDs as whole clusters, combines the two multiplicities at each observed cell, and reports percentile intervals, effective cluster count, block length, replicate count, seed and an input-bound report hash.",
-        "Twelve focused cluster/bootstrap tests pass, including deterministic results under row reordering, parameter gates, and effective N below raw observation count; Ruff and mypy pass.",
-        "The bootstrap method and block length are not yet required by a shared promotion runner or preregistered for every family. This is a diagnostic interval and needs prospective validation/calibration before promotion use."
+        "forward_edge.cluster_attribution.trade_session_block_bootstrap estimates uncertainty by resampling chronological sessions in stationary blocks and trade IDs as whole clusters; each observed cell receives the product of sampled session/trade multiplicities.",
+        "The report includes percentile confidence bounds, effective independent observation count (conservative minimum of Kish session/trade cluster dimensions), observed cluster counts, block length, replicate count, seed, method and source-bound report hash.",
+        "This directly satisfies the checklist requirement to estimate trade/session-clustered uncertainty using block bootstrap and effective independent observations rather than raw overlapping marks. The companion two-way cluster diagnostic remains explicitly labeled normal-approximation only.",
+        "Central promotion-pipeline enforcement and family-specific preregistration remain separate open requirements and are not claimed complete by this item."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T20:57:00+00:00",
+      "last_audited_at_utc": "2026-11-26T21:02:00+00:00",
       "commit": "65ef6324",
       "test_evidence": [
         "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609-bootstrap: 12 passed.",
@@ -19957,7 +19957,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:00:48Z",
+    "as_of_utc": "2026-11-26T21:02:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20881,11 +20881,11 @@
     "status_counts": {
       "UNASSESSED": 461,
       "NOT_STARTED": 17,
-      "PARTIAL": 795,
-      "COMPLETE": 100,
+      "PARTIAL": 794,
+      "COMPLETE": 101,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 100,
+    "verified_complete_count": 101,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21031,8 +21031,8 @@
   "counts_by_status": {
     "UNASSESSED": 461,
     "NOT_STARTED": 17,
-    "PARTIAL": 795,
-    "COMPLETE": 100,
+    "PARTIAL": 794,
+    "COMPLETE": 101,
     "EXTERNAL_BLOCKED": 5
   }
 }
