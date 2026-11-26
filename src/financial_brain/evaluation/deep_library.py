@@ -8,6 +8,7 @@ the forward returns ``fwd5`` / ``fwd20`` as outcomes only.
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -15,8 +16,8 @@ import pandas as pd
 TIERS = (("large", 1, 50), ("next", 51, 100), ("mid", 101, 250), ("small", 251, 500))
 SPLIT = date(2022, 1, 1)
 ROUND_TRIP = 0.003
-GBM_PARAMS = dict(n_estimators=500, learning_rate=0.03, num_leaves=31, min_child_samples=200,
-                  colsample_bytree=0.7, subsample=0.7, subsample_freq=1, verbose=-1)
+GBM_PARAMS: dict[str, Any] = dict(n_estimators=500, learning_rate=0.03, num_leaves=31, min_child_samples=200,
+                                  colsample_bytree=0.7, subsample=0.7, subsample_freq=1, verbose=-1)
 
 
 def bh(pvals: np.ndarray, q: float = 0.05) -> np.ndarray:
@@ -41,6 +42,32 @@ def universe(panel: pd.DataFrame, names: int = 500) -> pd.DataFrame:
     p = panel[panel["adv20"] > 0].copy()
     p["liq_rank"] = p.groupby("d")["adv20"].rank(ascending=False, method="first")
     return p[p["liq_rank"] <= names]
+
+
+def purged_training_mask(panel: pd.DataFrame, *, test_start: date, embargo_days: int = 30,
+                         label_end_col: str = "label_end_20", outcome_col: str = "fwd20") -> pd.Series:
+    """Select training rows whose labels matured before the chronological test cutoff.
+
+    Every row in a shared decision-date cross-section must carry the same label end. Rows with
+    missing outcomes are not training rows; a matured outcome with a missing label end is rejected.
+    """
+    if label_end_col not in panel or "d" not in panel:
+        raise ValueError(f"panel requires decision date and explicit {label_end_col} fields")
+    if type(embargo_days) is not int or embargo_days < 0:
+        raise ValueError("embargo_days must be a nonnegative integer")
+    decisions = pd.to_datetime(panel["d"], errors="coerce").dt.normalize()
+    ends = pd.to_datetime(panel[label_end_col], errors="coerce").dt.normalize()
+    if decisions.isna().any():
+        raise ValueError("decision dates must be valid")
+    if (ends.notna() & (ends < decisions)).any():
+        raise ValueError("label end cannot precede decision date")
+    if outcome_col in panel and (panel[outcome_col].notna() & ends.isna()).any():
+        raise ValueError("matured outcomes require explicit label-end timestamps")
+    grouped = pd.DataFrame({"decision": decisions, "end": ends}).groupby("decision", sort=False)["end"]
+    if (grouped.nunique(dropna=True) > 1).any():
+        raise ValueError("shared decision cross-section cannot carry different label ends")
+    cutoff = pd.Timestamp(test_start) - timedelta(days=embargo_days)
+    return ends.notna() & (ends < cutoff)
 
 
 def sweep(panel: pd.DataFrame, features: list[str], *, step20: int = 4) -> pd.DataFrame:
@@ -120,7 +147,7 @@ def walk_forward(panel: pd.DataFrame, features: list[str], *, years=range(2019, 
     preds = []
     for yr in years:
         start = date(yr, 1, 1)
-        train = (p["d"] < start - timedelta(days=embargo_days)) & p["_y"].notna()
+        train = purged_training_mask(p, test_start=start, embargo_days=embargo_days) & p["_y"].notna()
         test = (p["d"] >= start) & (p["d"] < date(yr + 1, 1, 1))
         if train.sum() < 10_000 or test.sum() == 0:
             continue
@@ -135,7 +162,8 @@ def books(p: pd.DataFrame, scorers: dict, *, ns=(20, 50), step: int = 4, cost_co
     """Monthly (every ``step``-th sampled date) equal-weight top-n books by each scorer, 20-session forward excess over
     the universe, charged ``cost_col`` round trips on the names that enter."""
     dates = sorted(p["d"].unique())[::step]
-    rows, prev = [], {}
+    rows: list[dict[str, object]] = []
+    prev: dict[tuple[str, int], set[object]] = {}
     for d in dates:
         x = p[(p["d"] == d)].dropna(subset=["fwd20"])
         if len(x) < 100:

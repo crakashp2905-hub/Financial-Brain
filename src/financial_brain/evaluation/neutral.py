@@ -123,6 +123,8 @@ def build_panel(con, *, start, end, names: int = 500, step: int = 20, sector_eve
         cs["composite"] = E.composite(cs).to_numpy()
         cs["fwd20"] = fwd20.iloc[i][cs["lineage"]].to_numpy()
         cs["fwd60"] = fwd60.iloc[i][cs["lineage"]].to_numpy()
+        cs["label_end_20"] = close.index[i + 20].date() if i + 20 < len(close.index) else pd.NaT
+        cs["label_end_60"] = close.index[i + 60].date() if i + 60 < len(close.index) else pd.NaT
         cs["session"] = d
         out.append(cs)
     if not out:
