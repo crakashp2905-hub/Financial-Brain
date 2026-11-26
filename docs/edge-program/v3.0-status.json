@@ -7520,12 +7520,23 @@
     {
       "id": "PA-02-14",
       "text": "Use a timezone-aware NSE calendar, effective-dated expiry and settlement tables, session halts, special sessions and instrument-specific cutoffs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/venue_calendar.py provides a source-hashed NSE/BSE session calendar with IST open/close conversion, special-session types, explicit source_as_of coverage, and fail-closed missing/future-horizon behavior; ForwardSessionRunner.plan_session journals the calendar snapshot and rejects unsupported sessions.",
+        "src/financial_brain/forward_edge/instrument_rules.py resolves effective-dated per-instrument contract expiry, tradability status, session phases, tick, lot, and freeze quantity before paper execution.",
+        "EventKind.HALT now requires an explicit HALTED/RESUMED state. ForwardSessionRunner checks the latest available instrument-specific halt state at simulated execution time and blocks fills through ambiguous same-time halt/resumption conflicts; a later resumption permits execution.",
+        "Expiry accounting is represented in the canonical derivatives subledger and import adapter (PA-04-02 evidence); tests/test_forward_edge_session_runner.py and tests/test_forward_edge_venue_calendar.py cover session, special-session, coverage, and halt/resumption behavior."
+      ],
+      "blocker": "PARTIAL: no current official NSE calendar/contract-master dataset is bundled, and effective-dated expiry/settlement schedules plus instrument-specific entry/flatten cutoffs are not yet provided and enforced as one sourced runner contract. The instrument rule expiry field alone does not satisfy those settlement/cutoff requirements.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": "02aea72a",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_venue_calendar.py -q: 74 passed.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/market_events.py tests/test_forward_edge_session_runner.py: passed.",
+        "mypy src/financial_brain/forward_edge/session_runner.py src/financial_brain/forward_edge/market_events.py: Success, no issues found."
+      ],
+      "test_result": "Sourced venue sessions, effective-dated instrument rules, and halt/resumption enforcement are verified. PA-02-14 remains PARTIAL pending official sourced schedule data, settlement schedules, and instrument-specific cutoff enforcement."
     },
     {
       "id": "PA-02-15",
@@ -20499,6 +20510,7 @@
       "PA-02-08",
       "PA-02-09",
       "PA-02-13",
+      "PA-02-14",
       "PA-02-15",
       "PA-03-03",
       "PA-03-04",
@@ -20979,13 +20991,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 922,
+    "audited_count": 923,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 793,
-      "UNASSESSED": 456
+      "PARTIAL": 794,
+      "UNASSESSED": 455
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21128,13 +21140,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired."
   },
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 793,
-    "UNASSESSED": 456
+    "PARTIAL": 794,
+    "UNASSESSED": 455
   }
 }
