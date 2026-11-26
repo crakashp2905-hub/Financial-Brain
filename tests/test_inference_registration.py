@@ -37,6 +37,24 @@ def test_family_level_method_rejects_single_candidate() -> None:
         InferencePlan("p", InferenceMethod.HANSEN_SPA, ("A",), 0.05,
                       datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64,
                       block_length=3.0, bootstrap_resamples=200)
+    with pytest.raises(InferenceRegistrationError, match="at least two"):
+        InferencePlan("p", InferenceMethod.DEFLATED_SHARPE, ("A",), 0.05,
+                      datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64,
+                      sharpe_variance=0.01)
+
+
+def test_deflated_sharpe_requires_frozen_positive_null_variance() -> None:
+    with pytest.raises(InferenceRegistrationError, match="frozen positive Sharpe variance"):
+        InferencePlan("p", InferenceMethod.DEFLATED_SHARPE, ("A", "B"), 0.05,
+                      datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64)
+    with pytest.raises(InferenceRegistrationError, match="frozen positive Sharpe variance"):
+        InferencePlan("p", InferenceMethod.DEFLATED_SHARPE, ("A", "B"), 0.05,
+                      datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64,
+                      sharpe_variance=float("nan"))
+    with pytest.raises(InferenceRegistrationError, match="not applicable"):
+        InferencePlan("p", InferenceMethod.HOLM, ("A", "B"), 0.05,
+                      datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64,
+                      sharpe_variance=0.01)
 
 
 def test_bootstrap_parameters_must_be_frozen_and_method_consistent() -> None:

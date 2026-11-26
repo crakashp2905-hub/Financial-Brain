@@ -112,7 +112,8 @@ def _registered_inference(tmp_path, *, method=None,
                              preregistration_sha256="c" * 64,
                              hac_lags=lags if method in {
                                  InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM
-                             } else None)
+                             } else None,
+            sharpe_variance=0.01 if method is InferenceMethod.DEFLATED_SHARPE else None)
     dataset_sha256 = "d" * 64
     registry.record_outcome_access(
         plan.plan_id, dataset_sha256=dataset_sha256,
@@ -262,6 +263,35 @@ def test_holm_adjustment_blocks_candidate_that_only_passes_unadjusted_hac(tmp_pa
     assert report["verdict"] != "PROMOTION_GRADE"
     assert "FAMILYWISE_ADJUSTED_PVALUE_FAILED" in report["reasons"]
     assert report["familywise_adjusted_pvalues"][candidates[0]] > 0.05
+    context["inference_registry"].close()
+
+
+def test_registered_deflated_sharpe_corrects_for_complete_candidate_family(tmp_path) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    candidates = ("mean-reversion-v1", "momentum-v1")
+    context = _registered_inference(tmp_path, method=InferenceMethod.DEFLATED_SHARPE,
+                                    candidates=candidates)
+    context["inference_method"] = InferenceMethod.DEFLATED_SHARPE
+    context["inference_candidate_returns"] = {candidates[0]: _ar1(250, 0.2, seed=17),
+                                               candidates[1]: x}
+    context["inference_selected_candidate"] = candidates[1]
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert report["verdict"] == "PROMOTION_GRADE"
+    assert report["deflated_sharpe_probabilities"][candidates[1]] >= 0.95
+    context["inference_registry"].close()
+
+
+def test_registered_deflated_sharpe_rejects_noise_family(tmp_path) -> None:
+    x = _ar1(250, 0.0, seed=31)
+    candidates = ("mean-reversion-v1", "momentum-v1")
+    context = _registered_inference(tmp_path, method=InferenceMethod.DEFLATED_SHARPE,
+                                    candidates=candidates)
+    context["inference_method"] = InferenceMethod.DEFLATED_SHARPE
+    context["inference_candidate_returns"] = {candidate: x for candidate in candidates}
+    context["inference_selected_candidate"] = candidates[0]
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert report["verdict"] != "PROMOTION_GRADE"
+    assert "DEFLATED_SHARPE_PROBABILITY_FAILED" in report["reasons"]
     context["inference_registry"].close()
 
 

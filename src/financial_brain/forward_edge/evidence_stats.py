@@ -15,6 +15,7 @@ from statistics import NormalDist
 import numpy as np
 
 from financial_brain.forward_edge.evidence_labels import EvidenceLabelError, classify
+from financial_brain.evaluation.firewall import deflated_sharpe
 from financial_brain.research.inference_registration import (
     InferenceDisposition,
     InferenceMethod,
@@ -246,7 +247,8 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                       inference_candidate_ids: tuple[str, ...] | None = None,
                       inference_dataset_sha256: str | None = None,
                       inference_candidate_returns: dict[str, list[float]] | None = None,
-                      inference_selected_candidate: str | None = None) -> dict:
+                      inference_selected_candidate: str | None = None,
+                      inference_method: InferenceMethod | None = None) -> dict:
     if not isinstance(tier, ClaimTier):
         raise StatsError("promotion verdict requires a typed ClaimTier")
     if not isinstance(daily_net_alpha, list) or any(
@@ -256,6 +258,8 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         raise StatsError("daily net alpha must be a list of finite numeric observations")
     if type(eligible_independent_sessions) is not int or eligible_independent_sessions < 0:
         raise StatsError("eligible independent session count must be a nonnegative integer")
+    if inference_method is not None and not isinstance(inference_method, InferenceMethod):
+        raise StatsError("inference method must be a typed preregistered method")
     if type(min_sessions) is not int or min_sessions < 1:
         raise StatsError("minimum session requirement must be a positive integer")
     if type(lags) is not int or lags < 0:
@@ -285,6 +289,7 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     inference_pass = False
     inference_result_sha256: str | None = None
     adjusted_candidate_pvalues: dict[str, float] | None = None
+    deflated_sharpe_probabilities: dict[str, float] | None = None
     if (not isinstance(inference_registry, InferencePlanRegistry)
             or not isinstance(inference_plan_id, str) or not inference_plan_id.strip()
             or inference_candidate_ids is None or inference_dataset_sha256 is None):
@@ -327,6 +332,9 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                 "z": z, "max_block_share": max_block_share,
                 "candidate_returns": [[candidate, family[candidate]] for candidate in inference_candidate_ids],
                 "selected_candidate": inference_selected_candidate,
+                "inference_method": (inference_method or
+                                     (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                      else InferenceMethod.HAC_NEWEY_WEST_HOLM)).value,
             }
             inference_result_sha256 = hashlib.sha256(json.dumps(
                 result_body, sort_keys=True, separators=(",", ":"), allow_nan=False
@@ -336,9 +344,14 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                     inference_plan_id, result_sha256=inference_result_sha256,
                     expected_dataset_sha256=inference_dataset_sha256,
                     expected_candidate_ids=inference_candidate_ids,
-                    expected_method=(InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
-                                     else InferenceMethod.HAC_NEWEY_WEST_HOLM),
-                    expected_hac_lags=lags,
+                    expected_method=(inference_method or
+                                     (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                      else InferenceMethod.HAC_NEWEY_WEST_HOLM)),
+                    expected_hac_lags=(lags if (inference_method or
+                                       (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                        else InferenceMethod.HAC_NEWEY_WEST_HOLM)) in
+                                       {InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM}
+                                       else None),
                 )
                 expected_alpha = 2 * (1 - NormalDist().cdf(z))
                 if abs(use.plan.alpha - expected_alpha) > 0.001:
@@ -346,7 +359,20 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                 elif use.disposition is not InferenceDisposition.PRE_REGISTERED:
                     reasons.append("INFERENCE_PLAN_NOT_PRE_REGISTERED")
                 else:
-                    if len(use.plan.candidate_ids) > 1:
+                    if use.plan.method is InferenceMethod.DEFLATED_SHARPE:
+                        if use.plan.sharpe_variance is None:
+                            reasons.append("INFERENCE_REGISTRATION_INVALID")
+                        else:
+                            deflated_sharpe_probabilities = {
+                                candidate: deflated_sharpe(values, len(use.plan.candidate_ids),
+                                                           use.plan.sharpe_variance)[1]
+                                for candidate, values in family.items()
+                            }
+                            if deflated_sharpe_probabilities[inference_selected_candidate] < 1 - use.plan.alpha:
+                                reasons.append("DEFLATED_SHARPE_PROBABILITY_FAILED")
+                            else:
+                                inference_pass = True
+                    elif use.plan.method is InferenceMethod.HAC_NEWEY_WEST_HOLM and len(use.plan.candidate_ids) > 1:
                         candidate_pvalues: dict[str, float] = {}
                         for candidate, values in family.items():
                             candidate_se = newey_west_se(values, min(lags, len(values) - 1)) \
@@ -358,8 +384,10 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                             reasons.append("FAMILYWISE_ADJUSTED_PVALUE_FAILED")
                         else:
                             inference_pass = True
-                    else:
+                    elif use.plan.method is InferenceMethod.HAC_NEWEY_WEST and len(use.plan.candidate_ids) == 1:
                         inference_pass = True
+                    else:
+                        reasons.append("INFERENCE_METHOD_NOT_IMPLEMENTED_IN_PROMOTION_GATE")
             except InferenceRegistrationError:
                 reasons.append("INFERENCE_REGISTRATION_INVALID")
     n = len(daily_net_alpha)
@@ -404,6 +432,7 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
                 "inference_result_sha256": inference_result_sha256,
                 "familywise_adjusted_pvalues": adjusted_candidate_pvalues,
+                "deflated_sharpe_probabilities": deflated_sharpe_probabilities,
                 "gates": {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
                           "drawdown": "PASS", "fidelity": "PASS"}}
     hard_fail = (mean <= 0 and n >= 3 or not cost_ok or null_pass is False or not drawdown_ok
@@ -423,4 +452,5 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     }
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
             "reasons": reasons, "gates": gates, "inference_result_sha256": inference_result_sha256,
-            "familywise_adjusted_pvalues": adjusted_candidate_pvalues}
+            "familywise_adjusted_pvalues": adjusted_candidate_pvalues,
+            "deflated_sharpe_probabilities": deflated_sharpe_probabilities}

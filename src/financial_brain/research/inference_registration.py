@@ -53,6 +53,7 @@ class InferencePlan:
     block_length: float | None = None
     bootstrap_resamples: int | None = None
     hac_lags: int | None = None
+    sharpe_variance: float | None = None
 
     def __post_init__(self) -> None:
         if not self.plan_id.strip() or not isinstance(self.method, InferenceMethod):
@@ -62,7 +63,7 @@ class InferencePlan:
         if len(set(self.candidate_ids)) != len(self.candidate_ids) or tuple(sorted(self.candidate_ids)) != self.candidate_ids:
             raise InferenceRegistrationError("candidate IDs must be unique and frozen in sorted order")
         if self.method in {InferenceMethod.PBO_CSCV, InferenceMethod.WHITE_REALITY_CHECK, InferenceMethod.HANSEN_SPA,
-                           InferenceMethod.HAC_NEWEY_WEST_HOLM} \
+                           InferenceMethod.HAC_NEWEY_WEST_HOLM, InferenceMethod.DEFLATED_SHARPE} \
                 and len(self.candidate_ids) < 2:
             raise InferenceRegistrationError("family-level inference requires at least two candidates")
         if self.method is InferenceMethod.HAC_NEWEY_WEST and len(self.candidate_ids) != 1:
@@ -91,13 +92,21 @@ class InferencePlan:
                 raise InferenceRegistrationError("Newey-West inference needs a fixed nonnegative lag count")
         elif self.hac_lags is not None:
             raise InferenceRegistrationError("HAC lag count is not applicable to the selected method")
+        if self.method is InferenceMethod.DEFLATED_SHARPE:
+            if (isinstance(self.sharpe_variance, bool) or self.sharpe_variance is None
+                    or not math.isfinite(self.sharpe_variance)
+                    or self.sharpe_variance <= 0):
+                raise InferenceRegistrationError("Deflated Sharpe inference needs a frozen positive Sharpe variance")
+        elif self.sharpe_variance is not None:
+            raise InferenceRegistrationError("Sharpe variance is not applicable to the selected method")
 
     def sha256(self) -> str:
         payload = {"plan_id": self.plan_id, "method": self.method.value,
                    "candidate_ids": list(self.candidate_ids), "alpha": self.alpha,
                    "registered_at": _utc(self.registered_at, "registration timestamp").isoformat(),
                    "preregistration_sha256": self.preregistration_sha256,
-                   "block_length": self.block_length, "bootstrap_resamples": self.bootstrap_resamples}
+                   "block_length": self.block_length, "bootstrap_resamples": self.bootstrap_resamples,
+                   "sharpe_variance": self.sharpe_variance}
         if self.hac_lags is not None:
             payload["hac_lags"] = self.hac_lags
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -184,10 +193,12 @@ class InferencePlanRegistry:
 
     def register(self, *, method: InferenceMethod, candidate_ids: tuple[str, ...], alpha: float,
                  preregistration_sha256: str, block_length: float | None = None,
-                 bootstrap_resamples: int | None = None, hac_lags: int | None = None) -> InferencePlan:
+                 bootstrap_resamples: int | None = None, hac_lags: int | None = None,
+                 sharpe_variance: float | None = None) -> InferencePlan:
         """Freeze the inference family/method with a locally assigned registration clock."""
         plan = InferencePlan(uuid.uuid4().hex, method, candidate_ids, alpha, self._now(),
-                             preregistration_sha256, block_length, bootstrap_resamples, hac_lags)
+                             preregistration_sha256, block_length, bootstrap_resamples, hac_lags,
+                             sharpe_variance)
         self._con.execute("BEGIN IMMEDIATE")
         try:
             if self._con.execute("SELECT 1 FROM inference_plan_events WHERE plan_id=? LIMIT 1",
@@ -199,7 +210,7 @@ class InferencePlanRegistry:
                 "registered_at": _utc(plan.registered_at, "registration timestamp").isoformat(),
                 "preregistration_sha256": plan.preregistration_sha256,
                 "block_length": plan.block_length, "bootstrap_resamples": plan.bootstrap_resamples,
-                "hac_lags": plan.hac_lags,
+                "hac_lags": plan.hac_lags, "sharpe_variance": plan.sharpe_variance,
             })
             self._con.execute("COMMIT")
         except Exception:
@@ -343,11 +354,17 @@ def _plan_from_record(record: dict[str, object]) -> InferencePlan:
         hac_lags = record.get("hac_lags")
         if hac_lags is not None and type(hac_lags) is not int:
             raise InferenceRegistrationError("malformed HAC lag count in stored inference plan")
+        sharpe_variance = record.get("sharpe_variance")
+        if sharpe_variance is not None and (
+            isinstance(sharpe_variance, bool) or not isinstance(sharpe_variance, (int, float))
+        ):
+            raise InferenceRegistrationError("malformed Sharpe variance in stored inference plan")
         return InferencePlan(str(record["plan_id"]), InferenceMethod(str(record["method"])),
                              tuple(candidates), float(alpha),
                              datetime.fromisoformat(str(record["registered_at"])),
                              str(record["preregistration_sha256"]),
-                             float(block) if block is not None else None, resamples, hac_lags)
+                             float(block) if block is not None else None, resamples, hac_lags,
+                             float(sharpe_variance) if sharpe_variance is not None else None)
     except (KeyError, TypeError, ValueError) as exc:
         raise InferenceRegistrationError("malformed stored inference plan") from exc
 
