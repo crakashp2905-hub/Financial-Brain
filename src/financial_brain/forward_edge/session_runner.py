@@ -771,14 +771,14 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("decisions are accepted only in an OPEN session")
         if not all(value.strip() for value in (strategy_id, decision_id)):
             raise ForwardSessionRunnerError("strategy and decision IDs are required")
-        if outcome not in {"TRADE", "NO_TRADE", "WITHHELD", "NO_SIGNAL"}:
+        if outcome not in {"TRADE", "NO_TRADE", "WITHHELD", "NO_SIGNAL", "DATA_UNUSABLE"}:
             raise ForwardSessionRunnerError("unsupported forward decision outcome")
         decided_at = decided_at or capture_local_time(self.clock, label="decision timestamp")
         if decided_at.tzinfo is None or decided_at.utcoffset() is None:
             raise ForwardSessionRunnerError("decision time must be timezone aware")
         if outcome != "TRADE" and not reason_codes:
             raise ForwardSessionRunnerError("non-trade decision requires a reason code")
-        if not input_event_ids:
+        if not input_event_ids and outcome != "DATA_UNUSABLE":
             raise ForwardSessionRunnerError("decision must reference at least one source event")
         unique_ids = tuple(sorted(set(input_event_ids)))
         if len(unique_ids) != len(input_event_ids):
@@ -786,7 +786,7 @@ class ForwardSessionRunner:
         rows = self._con.execute(
             f"SELECT event_id, kind, available_at, event_json FROM runner_events WHERE session_id=? "
             f"AND kind NOT IN ('preflight','calendar_plan') AND event_id IN ({','.join('?' for _ in unique_ids)})",
-            [session_id, *unique_ids]).fetchall()
+            [session_id, *unique_ids]).fetchall() if unique_ids else []
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
         clock = decided_at.astimezone(timezone.utc)
@@ -804,7 +804,11 @@ class ForwardSessionRunner:
             if value is not None and (value.tzinfo is None or value.utcoffset() is None):
                 raise ForwardSessionRunnerError(f"{name.replace('_', ' ')} must be timezone-aware")
             normalized_clocks[name] = value.astimezone(timezone.utc) if value is not None else None
+        if not rows and any(value is not None for value in normalized_clocks.values()):
+            raise ForwardSessionRunnerError("feature and inference clocks cannot be attested without source inputs")
         if feature_ready_at is not None:
+            if not rows:
+                raise ForwardSessionRunnerError("feature-ready time cannot be attested without source inputs")
             feature_clock = normalized_clocks["feature_ready_at"]
             latest_input = max(datetime.fromisoformat(available).astimezone(timezone.utc)
                                for _, _, available, _ in rows)
@@ -816,6 +820,8 @@ class ForwardSessionRunner:
         inference_start_clock = normalized_clocks["model_inference_started_at"]
         inference_end_clock = normalized_clocks["model_inference_completed_at"]
         if feature_start_clock is not None:
+            if not rows:
+                raise ForwardSessionRunnerError("feature computation cannot be attested without source inputs")
             earliest_input = min(datetime.fromisoformat(available).astimezone(timezone.utc)
                                  for _, _, available, _ in rows)
             if feature_start_clock < earliest_input or feature_start_clock > clock:
@@ -836,7 +842,7 @@ class ForwardSessionRunner:
             source_time = MarketEvent.from_dict(json.loads(event_json)).event_time.astimezone(timezone.utc)
             if source_time > clock or clock - source_time > timedelta(milliseconds=max_quote_age):
                 stale.append(event_id)
-        if stale:
+        if stale and outcome != "DATA_UNUSABLE":
             raise ForwardSessionRunnerError(
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,

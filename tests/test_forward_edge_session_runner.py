@@ -206,6 +206,40 @@ def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_pat
     runner.close()
 
 
+def test_missing_or_stale_market_data_is_journaled_as_data_unusable_not_tradable(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    assert runner.decide(
+        session_id="s", strategy_id="momentum", decision_id="missing-source",
+        outcome="DATA_UNUSABLE", input_event_ids=(), decided_at=NOW + timedelta(seconds=1),
+        reason_codes=("MISSING_REQUIRED_SOURCE",),
+    )
+
+    stale = make_event(event_id="stale-quality-source", available_at=NOW, event_time=NOW)
+    runner.ingest("s", config, [stale])
+    assert runner.decide(
+        session_id="s", strategy_id="momentum", decision_id="stale-source",
+        outcome="DATA_UNUSABLE", input_event_ids=(stale.event_id,),
+        decided_at=NOW + timedelta(seconds=10), reason_codes=("STALE_SOURCE_DATA",),
+    )
+    decisions = {row["decision_id"]: row for row in runner.records("s")["decisions"]}
+    assert decisions["missing-source"]["outcome"] == "DATA_UNUSABLE"
+    assert decisions["stale-source"]["outcome"] == "DATA_UNUSABLE"
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_data_unusable_without_source_cannot_claim_computed_features(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    with pytest.raises(ForwardSessionRunnerError, match="without source inputs"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="unverifiable-data-failure",
+                      outcome="DATA_UNUSABLE", input_event_ids=(), decided_at=NOW,
+                      reason_codes=("MISSING_REQUIRED_SOURCE",), feature_ready_at=NOW)
+    runner.close()
+
+
 def test_session_records_publish_per_signal_timing_telemetry_and_missing_stages(tmp_path):
     runner = make_runner(tmp_path)
     config = make_config()
