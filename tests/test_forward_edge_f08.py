@@ -278,6 +278,7 @@ def test_registered_deflated_sharpe_corrects_for_complete_candidate_family(tmp_p
     report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert report["verdict"] == "PROMOTION_GRADE"
     assert report["deflated_sharpe_probabilities"][candidates[1]] >= 0.95
+    assert context["inference_registry"].audit()["integrity"] == "VALID"
     context["inference_registry"].close()
 
 
