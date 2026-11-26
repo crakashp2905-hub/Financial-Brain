@@ -8678,18 +8678,18 @@
       "id": "PA-06-16",
       "text": "Produce machine-readable pass/fail decision with exactly which confidence, cost, null, robustness, drawdown or fidelity gate failed.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "forward_edge.evidence_stats.promotion_verdict reports machine-readable confidence, cost, null, robustness, drawdown and fidelity gate states with exact reason codes; missing null/fidelity/drawdown evidence blocks promotion.",
-        "The verdict now rejects malformed or non-finite return observations, NaN regime concentration, invalid session counts/limits, truthy non-boolean null/fidelity values, unknown falsification states and non-finite cost-stress inputs before computing a decision.",
-        "Forty focused F08/falsification/claim-tier tests pass, including six malformed-evidence cases; Ruff and mypy pass.",
-        "Gate evidence is still caller supplied and not recomputed from a canonical source-hashed evidence package; therefore source measurement integrity and universal evaluator wiring remain open."
+        "forward_edge.evidence_stats.promotion_verdict returns a machine-readable overall disposition, exact reason codes, and named confidence, cost, null, robustness, drawdown and fidelity gate states.",
+        "Each gate distinguishes PASS, FAIL and UNASSESSED; missing null/fidelity/drawdown facts cannot silently pass. Invalid non-finite returns, malformed cost arrays, invalid cluster shares and truthy non-boolean gate values are rejected before verdict generation.",
+        "Forty focused F08/falsification/claim-tier tests pass, including independent failures for each named gate and malformed-evidence cases; Ruff and mypy pass.",
+        "The decision-contract requirement is implemented. Gate inputs remain caller-supplied rather than recomputed from a canonical evidence package; measurement provenance and universal evaluator wiring remain separate requirements."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T21:08:45+00:00",
+      "last_audited_at_utc": "2026-11-26T21:16:05+00:00",
       "commit": "30bf6813",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_f08.py tests/test_forward_edge_falsification.py tests/test_forward_edge_claim_tier.py -q --basetemp .pytest-pa0616-hardening: 40 passed.",
+        "python -m pytest tests/test_forward_edge_f08.py tests/test_forward_edge_falsification.py tests/test_forward_edge_claim_tier.py -q --basetemp .pytest-pa0616-final: 40 passed.",
         "python -m ruff check src/financial_brain/forward_edge/evidence_stats.py tests/test_forward_edge_f08.py: passed.",
         "python -m mypy src/financial_brain/forward_edge/evidence_stats.py --follow-imports=silent: passed."
       ]
@@ -19962,7 +19962,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:14:50Z",
+    "as_of_utc": "2026-11-26T21:16:05Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20886,11 +20886,11 @@
     "status_counts": {
       "UNASSESSED": 461,
       "NOT_STARTED": 17,
-      "PARTIAL": 791,
-      "COMPLETE": 104,
+      "PARTIAL": 790,
+      "COMPLETE": 105,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 104,
+    "verified_complete_count": 105,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21036,8 +21036,8 @@
   "counts_by_status": {
     "UNASSESSED": 461,
     "NOT_STARTED": 17,
-    "PARTIAL": 791,
-    "COMPLETE": 104,
+    "PARTIAL": 790,
+    "COMPLETE": 105,
     "EXTERNAL_BLOCKED": 5
   }
 }
