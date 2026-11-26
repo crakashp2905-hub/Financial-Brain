@@ -1210,6 +1210,7 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
         "dataclasses",
         "enum",
         "hashlib",
@@ -1220,7 +1221,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/baseline_controls.py",
-      "source_sha256": "0ab095d8fdce56f5857dd5c484e132d2da4d0876b64e9ee0beaf4da5eac89e31",
+      "source_sha256": "f2b95bc35fdd44ab69978a79861d215f3fdebd81f3254c5fdce5355704363b81",
       "test_paths": []
     },
     {

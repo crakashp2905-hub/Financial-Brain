@@ -10,6 +10,7 @@ import json
 import math
 from dataclasses import dataclass
 from enum import StrEnum
+from collections.abc import Mapping
 
 
 class BaselineControlError(ValueError):
@@ -84,6 +85,41 @@ class BaselineControl:
 
 
 @dataclass(frozen=True)
+class BaselineReturnSeries:
+    """Period-indexed net returns plus the frozen source and construction identities."""
+
+    kind: BaselineKind
+    series_id: str
+    net_returns: tuple[tuple[str, float], ...]
+    source_sha256: str
+    construction_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.kind, BaselineKind) or not self.series_id.strip():
+            raise BaselineControlError("baseline return series requires a typed kind and series ID")
+        _sha(self.source_sha256, "baseline return source")
+        _sha(self.construction_sha256, "baseline construction")
+        labels = [label for label, _ in self.net_returns]
+        if not labels or any(not isinstance(label, str) or not label.strip() for label in labels):
+            raise BaselineControlError("baseline net returns require nonempty period labels")
+        if labels != sorted(set(labels)):
+            raise BaselineControlError("baseline return periods must be unique and chronological")
+        if any(not math.isfinite(value) or value <= -1 for _, value in self.net_returns):
+            raise BaselineControlError("baseline net returns must be finite and above -100%")
+
+    def sha256(self) -> str:
+        payload = {
+            "kind": self.kind.value,
+            "series_id": self.series_id,
+            "net_returns": [[label, value] for label, value in self.net_returns],
+            "source_sha256": self.source_sha256,
+            "construction_sha256": self.construction_sha256,
+        }
+        raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+@dataclass(frozen=True)
 class FrozenBaselineSet:
     experiment: StrategyEvaluationIdentity
     controls: tuple[BaselineControl, ...]
@@ -121,6 +157,80 @@ class FrozenBaselineSet:
         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
                                          allow_nan=False).encode()).hexdigest()
 
+    def compare(self, *, strategy_net_returns: tuple[tuple[str, float], ...],
+                strategy_source_sha256: str,
+                series: Mapping[BaselineKind, BaselineReturnSeries]) -> dict[str, object]:
+        """Compare one frozen strategy result with all six identity-matched net controls.
 
-__all__ = ["BaselineControl", "BaselineControlError", "BaselineKind", "FrozenBaselineSet",
+        This validates and reports supplied return series; it does not calculate index,
+        exposure, random-book, or transaction-cost returns from market data.
+        """
+        _sha(strategy_source_sha256, "strategy result source")
+        strategy = _validate_points(strategy_net_returns, "strategy")
+        if set(series) != REQUIRED_CONTROLS:
+            missing = sorted(kind.value for kind in REQUIRED_CONTROLS - set(series))
+            extra = sorted(kind.value for kind in set(series) - REQUIRED_CONTROLS)
+            raise BaselineControlError(f"comparison requires all six controls; missing={missing}, extra={extra}")
+        strategy_labels = tuple(label for label, _ in strategy)
+        strategy_values = tuple(value for _, value in strategy)
+        controls_by_kind = {control.kind: control for control in self.controls}
+        strategy_summary = _return_summary(strategy_values)
+        comparisons: dict[str, object] = {}
+        for kind in sorted(REQUIRED_CONTROLS, key=lambda item: item.value):
+            observed = series[kind]
+            frozen = controls_by_kind[kind]
+            if observed.kind is not kind or observed.series_id != frozen.series_id:
+                raise BaselineControlError(f"{kind.value} series identity differs from its frozen control")
+            if observed.source_sha256 != frozen.evidence_sha256:
+                raise BaselineControlError(f"{kind.value} source hash differs from its frozen evidence")
+            if observed.construction_sha256 != frozen.construction_sha256:
+                raise BaselineControlError(f"{kind.value} construction differs from its frozen control")
+            points = _validate_points(observed.net_returns, kind.value)
+            if tuple(label for label, _ in points) != strategy_labels:
+                raise BaselineControlError(f"{kind.value} periods do not exactly match the strategy")
+            summary = _return_summary(tuple(value for _, value in points))
+            comparisons[kind.value] = {
+                "series_sha256": observed.sha256(),
+                **summary,
+                "mean_net_excess": strategy_summary["mean_net_return"] - summary["mean_net_return"],
+                "cumulative_net_excess": strategy_summary["cumulative_net_return"] - summary["cumulative_net_return"],
+            }
+        return {
+            "schema": "fb.frozen_baseline_comparison.v1",
+            "experiment_id": self.experiment.experiment_id,
+            "baseline_set_sha256": self.sha256(),
+            "strategy_source_sha256": strategy_source_sha256,
+            "periods": list(strategy_labels),
+            "strategy": {"net_series_sha256": _points_sha256(strategy), **strategy_summary},
+            "controls": comparisons,
+            "interpretation": "Descriptive aligned net-return comparison; not an alpha certification or profitability claim.",
+        }
+
+
+def _validate_points(points: tuple[tuple[str, float], ...], label: str) -> tuple[tuple[str, float], ...]:
+    if not points:
+        raise BaselineControlError(f"{label} return series is empty")
+    labels = [period for period, _ in points]
+    if any(not isinstance(period, str) or not period.strip() for period in labels):
+        raise BaselineControlError(f"{label} return periods require nonempty labels")
+    if labels != sorted(set(labels)):
+        raise BaselineControlError(f"{label} return periods must be unique and chronological")
+    if any(not math.isfinite(value) or value <= -1 for _, value in points):
+        raise BaselineControlError(f"{label} net returns must be finite and above -100%")
+    return points
+
+
+def _points_sha256(points: tuple[tuple[str, float], ...]) -> str:
+    raw = json.dumps([[period, value] for period, value in points], separators=(",", ":"),
+                     allow_nan=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _return_summary(values: tuple[float, ...]) -> dict[str, float | int]:
+    cumulative = math.prod(1.0 + value for value in values) - 1.0
+    return {"period_count": len(values), "mean_net_return": sum(values) / len(values),
+            "cumulative_net_return": cumulative}
+
+
+__all__ = ["BaselineControl", "BaselineControlError", "BaselineKind", "BaselineReturnSeries", "FrozenBaselineSet",
            "StrategyEvaluationIdentity"]
