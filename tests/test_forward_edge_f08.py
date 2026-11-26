@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import random
+from datetime import datetime, timezone
 
 import pytest
 
 from financial_brain.forward_edge import evidence_stats as E
 from financial_brain.forward_edge.evidence_stats import ClaimTier
+from financial_brain.research.inference_registration import InferenceMethod, InferencePlanRegistry
 
 
 def _ar1(n: int, phi: float, seed: int, mu: float = 0.0) -> list[float]:
@@ -98,10 +100,31 @@ GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FOR
                null_pass=True, max_drawdown=0.12, max_drawdown_limit=0.30, fidelity_pass=True)
 
 
-def test_a_clear_effect_with_everything_in_order_is_promotion_grade() -> None:
+def _registered_inference(tmp_path, *, method=InferenceMethod.HAC_NEWEY_WEST,
+                          candidates=("momentum-v1",), lags=5, available_at=None):
+    times = iter((datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
+                  datetime(2026, 11, 1, 10, tzinfo=timezone.utc),
+                  datetime(2026, 11, 1, 11, tzinfo=timezone.utc)))
+    registry = InferencePlanRegistry(tmp_path / "inference.sqlite", clock=lambda: next(times))
+    plan = registry.register(method=method, candidate_ids=candidates, alpha=0.05,
+                             preregistration_sha256="c" * 64,
+                             hac_lags=lags if method is InferenceMethod.HAC_NEWEY_WEST else None)
+    dataset_sha256 = "d" * 64
+    registry.record_outcome_access(
+        plan.plan_id, dataset_sha256=dataset_sha256,
+        outcome_available_at=available_at or datetime(2026, 11, 1, 9, tzinfo=timezone.utc),
+    )
+    return {"inference_registry": registry, "inference_plan_id": plan.plan_id,
+            "inference_candidate_ids": candidates, "inference_dataset_sha256": dataset_sha256}
+
+
+def test_a_clear_effect_with_registered_inference_is_promotion_grade(tmp_path) -> None:
     x = _ar1(250, 0.1, seed=11, mu=0.004)
-    v = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    context = _registered_inference(tmp_path)
+    v = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert v["verdict"] == "PROMOTION_GRADE" and v["lower_bound"] > 0
+    assert v["gates"]["inference"] == "PASS" and v["inference_result_sha256"]
+    context["inference_registry"].close()
 
 
 def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
@@ -172,12 +195,64 @@ def test_missing_falsification_evidence_is_insufficient_not_a_pass_or_a_fail() -
     assert E.falsification_report({**full, "lookahead": False})["status"] == "FAIL"
 
 
-def test_verdict_exposes_exact_gate_dispositions() -> None:
+def test_verdict_exposes_exact_gate_dispositions(tmp_path) -> None:
     x = _ar1(250, 0.1, seed=11, mu=0.004)
-    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    context = _registered_inference(tmp_path)
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert report["verdict"] == "PROMOTION_GRADE"
-    assert report["gates"] == {"confidence": "PASS", "cost": "PASS", "null": "PASS",
+    assert report["gates"] == {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS",
                                 "robustness": "PASS", "drawdown": "PASS", "fidelity": "PASS"}
+    context["inference_registry"].close()
+
+
+def test_promotion_requires_exact_pre_registered_inference_plan(tmp_path) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    missing = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW)
+    assert missing["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_PREREGISTRATION_REQUIRED" in missing["reasons"]
+    assert missing["gates"]["inference"] == "UNASSESSED"
+
+    context = _registered_inference(tmp_path, candidates=("different-strategy",))
+    context["inference_candidate_ids"] = ("momentum-v1",)
+    rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert rejected["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_REGISTRATION_INVALID" in rejected["reasons"]
+    context["inference_registry"].close()
+
+
+def test_promotion_rejects_retrospective_inference_registration(tmp_path) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    context = _registered_inference(
+        tmp_path, available_at=datetime(2026, 11, 1, 7, tzinfo=timezone.utc))
+    rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert rejected["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_PLAN_NOT_PRE_REGISTERED" in rejected["reasons"]
+    context["inference_registry"].close()
+
+
+def test_hac_only_verdict_cannot_ignore_a_multi_candidate_family(tmp_path) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    context = _registered_inference(tmp_path, candidates=("mean-reversion-v1", "momentum-v1"))
+    rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert rejected["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_MULTIPLICITY_NOT_ADJUSTED" in rejected["reasons"]
+    context["inference_registry"].close()
+
+
+@pytest.mark.parametrize("mismatch", ["dataset", "method", "lags"])
+def test_promotion_requires_registered_dataset_method_and_lags(tmp_path, mismatch) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    context = _registered_inference(
+        tmp_path,
+        method=InferenceMethod.HOLM if mismatch == "method" else InferenceMethod.HAC_NEWEY_WEST,
+        lags=4 if mismatch == "lags" else 5,
+    )
+    if mismatch == "dataset":
+        context["inference_dataset_sha256"] = "e" * 64
+    rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert rejected["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_REGISTRATION_INVALID" in rejected["reasons"]
+    context["inference_registry"].close()
 
 
 @pytest.mark.parametrize("returns, override", [

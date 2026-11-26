@@ -4377,14 +4377,18 @@
         "__future__",
         "enum",
         "financial_brain.forward_edge.evidence_labels",
+        "financial_brain.research.inference_registration",
+        "hashlib",
+        "json",
         "math",
-        "numpy"
+        "numpy",
+        "statistics"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/evidence_stats.py",
-      "source_sha256": "a9cfaee2da7abc42893d6baab444f906ec9c8da09446f208c425ed64e58f0059",
+      "source_sha256": "4cd175aa6886cdff45cdd52f7b90f0890bf6180e9a9968ecf93f7a245ad938ef",
       "test_paths": []
     },
     {
@@ -12524,7 +12528,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/inference_registration.py",
-      "source_sha256": "7a57d23c141cec4c0c0918820b908b28c983a6662577feda8ff7abb2e2a0d67a",
+      "source_sha256": "2192282500d4a328b3a022856c028c45acae334414b78dc04e02fcabedf7fdd8",
       "test_paths": []
     },
     {

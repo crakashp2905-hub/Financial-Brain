@@ -27,6 +27,7 @@ class InferenceMethod(StrEnum):
     HOLM = "HOLM"
     SIDAK = "SIDAK"
     HAC_BLOCK_BOOTSTRAP = "HAC_BLOCK_BOOTSTRAP"
+    HAC_NEWEY_WEST = "HAC_NEWEY_WEST"
 
 
 class InferenceDisposition(StrEnum):
@@ -50,6 +51,7 @@ class InferencePlan:
     preregistration_sha256: str
     block_length: float | None = None
     bootstrap_resamples: int | None = None
+    hac_lags: int | None = None
 
     def __post_init__(self) -> None:
         if not self.plan_id.strip() or not isinstance(self.method, InferenceMethod):
@@ -80,6 +82,11 @@ class InferencePlan:
             raise InferenceRegistrationError("bootstrap resamples must be at least 200")
         if needs_block and self.bootstrap_resamples is None:
             raise InferenceRegistrationError("bootstrap replicate count must be fixed before outcome access")
+        if self.method is InferenceMethod.HAC_NEWEY_WEST:
+            if type(self.hac_lags) is not int or self.hac_lags < 0:
+                raise InferenceRegistrationError("Newey-West inference needs a fixed nonnegative lag count")
+        elif self.hac_lags is not None:
+            raise InferenceRegistrationError("HAC lag count is not applicable to the selected method")
 
     def sha256(self) -> str:
         payload = {"plan_id": self.plan_id, "method": self.method.value,
@@ -87,6 +94,8 @@ class InferencePlan:
                    "registered_at": _utc(self.registered_at, "registration timestamp").isoformat(),
                    "preregistration_sha256": self.preregistration_sha256,
                    "block_length": self.block_length, "bootstrap_resamples": self.bootstrap_resamples}
+        if self.hac_lags is not None:
+            payload["hac_lags"] = self.hac_lags
         raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return hashlib.sha256(raw.encode()).hexdigest()
 
@@ -171,10 +180,10 @@ class InferencePlanRegistry:
 
     def register(self, *, method: InferenceMethod, candidate_ids: tuple[str, ...], alpha: float,
                  preregistration_sha256: str, block_length: float | None = None,
-                 bootstrap_resamples: int | None = None) -> InferencePlan:
+                 bootstrap_resamples: int | None = None, hac_lags: int | None = None) -> InferencePlan:
         """Freeze the inference family/method with a locally assigned registration clock."""
         plan = InferencePlan(uuid.uuid4().hex, method, candidate_ids, alpha, self._now(),
-                             preregistration_sha256, block_length, bootstrap_resamples)
+                             preregistration_sha256, block_length, bootstrap_resamples, hac_lags)
         self._con.execute("BEGIN IMMEDIATE")
         try:
             if self._con.execute("SELECT 1 FROM inference_plan_events WHERE plan_id=? LIMIT 1",
@@ -186,6 +195,7 @@ class InferencePlanRegistry:
                 "registered_at": _utc(plan.registered_at, "registration timestamp").isoformat(),
                 "preregistration_sha256": plan.preregistration_sha256,
                 "block_length": plan.block_length, "bootstrap_resamples": plan.bootstrap_resamples,
+                "hac_lags": plan.hac_lags,
             })
             self._con.execute("COMMIT")
         except Exception:
@@ -202,6 +212,7 @@ class InferencePlanRegistry:
         accessed = self._now()
         if available > accessed:
             raise InferenceRegistrationError("outcome availability cannot follow first access")
+        self.audit()
         self._con.execute("BEGIN IMMEDIATE")
         try:
             events = self._events(plan_id)
@@ -220,11 +231,16 @@ class InferencePlanRegistry:
             raise
         return accessed
 
-    def record_result(self, plan_id: str, *, result_sha256: str) -> InferenceUse:
+    def record_result(self, plan_id: str, *, result_sha256: str,
+                      expected_dataset_sha256: str | None = None,
+                      expected_candidate_ids: tuple[str, ...] | None = None,
+                      expected_method: InferenceMethod | None = None,
+                      expected_hac_lags: int | None = None) -> InferenceUse:
         if (not isinstance(result_sha256, str) or len(result_sha256) != 64
                 or any(c not in "0123456789abcdef" for c in result_sha256)):
             raise InferenceRegistrationError("result identity must be lowercase SHA-256")
         scored = self._now()
+        self.audit()
         self._con.execute("BEGIN IMMEDIATE")
         try:
             events = self._events(plan_id)
@@ -236,6 +252,14 @@ class InferencePlanRegistry:
             if access is None:
                 raise InferenceRegistrationError("result cannot be recorded before outcome access")
             plan = _plan_from_record(events[0][1])
+            if expected_dataset_sha256 is not None and access["dataset_sha256"] != expected_dataset_sha256:
+                raise InferenceRegistrationError("accessed outcome dataset differs from the expected frozen source")
+            if expected_candidate_ids is not None and plan.candidate_ids != expected_candidate_ids:
+                raise InferenceRegistrationError("registered candidate family differs from the evaluated family")
+            if expected_method is not None and plan.method is not expected_method:
+                raise InferenceRegistrationError("registered inference method differs from the evaluator")
+            if expected_hac_lags is not None and plan.hac_lags != expected_hac_lags:
+                raise InferenceRegistrationError("registered HAC lags differ from the evaluator")
             use = InferenceUse(plan, datetime.fromisoformat(str(access["first_outcome_access_at"])),
                                scored, datetime.fromisoformat(str(access["outcome_available_at"])))
             body: dict[str, object] = {"result_sha256": result_sha256,
@@ -312,11 +336,14 @@ def _plan_from_record(record: dict[str, object]) -> InferencePlan:
         resamples = record["bootstrap_resamples"]
         if resamples is not None and type(resamples) is not int:
             raise InferenceRegistrationError("malformed resample count in stored inference plan")
+        hac_lags = record.get("hac_lags")
+        if hac_lags is not None and type(hac_lags) is not int:
+            raise InferenceRegistrationError("malformed HAC lag count in stored inference plan")
         return InferencePlan(str(record["plan_id"]), InferenceMethod(str(record["method"])),
                              tuple(candidates), float(alpha),
                              datetime.fromisoformat(str(record["registered_at"])),
                              str(record["preregistration_sha256"]),
-                             float(block) if block is not None else None, resamples)
+                             float(block) if block is not None else None, resamples, hac_lags)
     except (KeyError, TypeError, ValueError) as exc:
         raise InferenceRegistrationError("malformed stored inference plan") from exc
 

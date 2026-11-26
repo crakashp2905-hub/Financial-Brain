@@ -6,12 +6,21 @@ no single-regime concentration, an adequate predeclared sample design, and an IN
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from enum import Enum
 from math import isfinite, sqrt
+from statistics import NormalDist
 
 import numpy as np
 
 from financial_brain.forward_edge.evidence_labels import EvidenceLabelError, classify
+from financial_brain.research.inference_registration import (
+    InferenceDisposition,
+    InferenceMethod,
+    InferencePlanRegistry,
+    InferenceRegistrationError,
+)
 
 
 class StatsError(ValueError):
@@ -231,7 +240,11 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                       max_drawdown: float | None = None, max_drawdown_limit: float | None = None,
                       fidelity_pass: bool | None = None,
                       min_sessions: int = 60, lags: int = 5, z: float = 1.96,
-                      max_block_share: float = 0.6) -> dict:
+                      max_block_share: float = 0.6,
+                      inference_registry: InferencePlanRegistry | None = None,
+                      inference_plan_id: str | None = None,
+                      inference_candidate_ids: tuple[str, ...] | None = None,
+                      inference_dataset_sha256: str | None = None) -> dict:
     if not isinstance(tier, ClaimTier):
         raise StatsError("promotion verdict requires a typed ClaimTier")
     if not isinstance(daily_net_alpha, list) or any(
@@ -267,6 +280,56 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     ):
         raise StatsError("cost-stress multipliers and net returns must be finite numeric values")
     reasons: list[str] = []
+    inference_pass = False
+    inference_result_sha256: str | None = None
+    if (not isinstance(inference_registry, InferencePlanRegistry)
+            or not isinstance(inference_plan_id, str) or not inference_plan_id.strip()
+            or inference_candidate_ids is None or inference_dataset_sha256 is None):
+        reasons.append("INFERENCE_PREREGISTRATION_REQUIRED")
+    else:
+        if (not isinstance(inference_candidate_ids, tuple)
+                or any(not isinstance(candidate, str) or not candidate.strip()
+                       for candidate in inference_candidate_ids)
+                or tuple(sorted(set(inference_candidate_ids))) != inference_candidate_ids
+                or not isinstance(inference_dataset_sha256, str)
+                or len(inference_dataset_sha256) != 64
+                or any(c not in "0123456789abcdef" for c in inference_dataset_sha256)):
+            reasons.append("INFERENCE_REGISTRATION_INPUT_INVALID")
+        else:
+            result_body = {
+                "daily_net_alpha": daily_net_alpha,
+                "eligible_independent_sessions": eligible_independent_sessions,
+                "tier": tier.value,
+                "net_by_cost_multiplier": [[float(multiplier), float(value)]
+                                            for multiplier, value in sorted(net_by_cost_multiplier.items())],
+                "best_block": best_block, "sample_design_predeclared": sample_design_predeclared,
+                "falsification_status": falsification_status, "null_pass": null_pass,
+                "max_drawdown": max_drawdown, "max_drawdown_limit": max_drawdown_limit,
+                "fidelity_pass": fidelity_pass, "min_sessions": min_sessions, "lags": lags,
+                "z": z, "max_block_share": max_block_share,
+            }
+            inference_result_sha256 = hashlib.sha256(json.dumps(
+                result_body, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode("utf-8")).hexdigest()
+            try:
+                use = inference_registry.record_result(
+                    inference_plan_id, result_sha256=inference_result_sha256,
+                    expected_dataset_sha256=inference_dataset_sha256,
+                    expected_candidate_ids=inference_candidate_ids,
+                    expected_method=InferenceMethod.HAC_NEWEY_WEST,
+                    expected_hac_lags=lags,
+                )
+                expected_alpha = 2 * (1 - NormalDist().cdf(z))
+                if len(use.plan.candidate_ids) > 1:
+                    reasons.append("INFERENCE_MULTIPLICITY_NOT_ADJUSTED")
+                elif abs(use.plan.alpha - expected_alpha) > 0.001:
+                    reasons.append("INFERENCE_ALPHA_MISMATCH")
+                elif use.disposition is not InferenceDisposition.PRE_REGISTERED:
+                    reasons.append("INFERENCE_PLAN_NOT_PRE_REGISTERED")
+                else:
+                    inference_pass = True
+            except InferenceRegistrationError:
+                reasons.append("INFERENCE_REGISTRATION_INVALID")
     n = len(daily_net_alpha)
     mean = float(np.mean(daily_net_alpha)) if n else 0.0
     lcb = None
@@ -307,12 +370,16 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
         return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
-                "gates": {"confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
+                "inference_result_sha256": inference_result_sha256,
+                "gates": {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
                           "drawdown": "PASS", "fidelity": "PASS"}}
     hard_fail = (mean <= 0 and n >= 3 or not cost_ok or null_pass is False or not drawdown_ok
                  or (max_drawdown is not None and max_drawdown_limit is not None
                      and max_drawdown > max_drawdown_limit) or "FALSIFICATION_FAIL" in reasons)
     gates = {
+        "inference": "PASS" if inference_pass else "FAIL" if any(
+            reason.startswith("INFERENCE_") and reason != "INFERENCE_PREREGISTRATION_REQUIRED"
+            for reason in reasons) else "UNASSESSED",
         "confidence": "UNASSESSED" if lcb is None else ("PASS" if lcb > 0 else "FAIL"),
         "cost": "PASS" if cost_ok else "FAIL",
         "null": "UNASSESSED" if null_pass is None else ("PASS" if null_pass else "FAIL"),
@@ -322,4 +389,4 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         "fidelity": "UNASSESSED" if fidelity_pass is None else ("PASS" if fidelity_pass else "FAIL"),
     }
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons, "gates": gates}
+            "reasons": reasons, "gates": gates, "inference_result_sha256": inference_result_sha256}
