@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 
 import pytest
+import sqlite3
 
 from financial_brain.forward_edge.abstention import (
     AbstentionError,
@@ -98,6 +99,35 @@ def test_manifest_must_be_frozen_before_first_session_and_match_exact_universe(t
     with pytest.raises(AbstentionError, match="pre-frozen opportunity manifest"):
         evaluate_abstentions(policy, manifest, (outcome,), manifest_ledger=ledger)
     ledger.close()
+
+
+def test_manifest_receipt_survives_restart_and_duplicate_freeze_is_rejected(tmp_path) -> None:
+    policy = _policy()
+    manifest, ledger = _manifest(("o1", "o2"), policy, tmp_path)
+    ledger.close()
+
+    reopened = OpportunityManifestLedger(
+        tmp_path / "manifest.sqlite",
+        clock=lambda: datetime(2026, 11, 15, 11, tzinfo=timezone.utc),
+    )
+    reopened.verify(policy, manifest)
+    assert reopened.audit()["manifests"] == 1
+    with pytest.raises(AbstentionError, match="already frozen"):
+        reopened.freeze(policy, opportunity_ids=("o1", "o2"), source_sha256="d" * 64)
+    reopened.close()
+
+
+def test_manifest_ledger_detects_record_tampering_after_restart(tmp_path) -> None:
+    policy = _policy()
+    manifest, ledger = _manifest(("o1",), policy, tmp_path)
+    ledger.close()
+    with sqlite3.connect(tmp_path / "manifest.sqlite") as connection:
+        connection.execute("UPDATE opportunity_manifest_events SET body_json='{}'")
+
+    reopened = OpportunityManifestLedger(tmp_path / "manifest.sqlite")
+    with pytest.raises(AbstentionError, match="hash chain is corrupt"):
+        reopened.verify(policy, manifest)
+    reopened.close()
 
 
 @pytest.mark.parametrize("state,fill", [
