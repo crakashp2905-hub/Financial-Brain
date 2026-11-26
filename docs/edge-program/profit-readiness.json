@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T22:04:53Z",
+  "as_of_utc": "2026-11-26T22:14:20Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "27e788f566f3a3ea15e5dd7c342ac7408a45ae23fed6fe20de8f940460a193ae",
-  "audit_export_sha256": "53c326be12c5750352026e6be0938364a64032f90a4dfce9e915c2293fc60b39",
+  "status_ledger_sha256": "9375a7690000f71cdb8291f1be1af4b44f3f4718ab3fa42f649fe0d9f1614194",
+  "audit_export_sha256": "25991f5480daba04ae974635ed267b125d65bba6c197f6a2d6da5768c94a039a",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 105,
@@ -2362,20 +2362,26 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Use PBO / Deflated Sharpe / familywise procedures or equivalent justified correction; record chosen inference method before any result is read."
           },
-          "commit": "65f8ecc5",
-          "blocker": null,
+          "commit": "42982225",
+          "blocker": "PBO/CSCV, White Reality Check, and Hansen SPA are still not wired into the central promotion gate; complete search-family capture remains dependent on preregistration inputs, and data availability timestamps are locally asserted rather than independently attested.",
           "evidence": [
             "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available.",
             "InferencePlanRegistry freezes method, exact sorted candidate family, alpha, HAC lag count/bootstrap parameters, preregistration hash and source-data hash/availability/access; it appends a one-time result hash to its durable event chain.",
             "Commits `de64bc7e` and `65f8ecc5` wire the central promotion_verdict to registered HAC and HAC-Holm inference. Promotion requires a matching dataset hash, exact candidate family, selected candidate series, registered method/lags/alpha, and pre-outcome chronology. The scored-input digest is bound in the registry.",
             "For a multi-candidate family, the gate calculates candidate-specific Newey-West p-values and Holm-adjusts across every registered candidate; the selected candidate must pass the adjusted alpha. It refuses to use single-candidate HAC as a substitute for multiplicity control.",
             "Fifty-nine focused registry/statistics/CLI tests pass with Ruff and mypy. Tests include a positive unadjusted result rejected after a ten-candidate Holm correction.",
-            "This remains PARTIAL: PBO/CSCV, Deflated Sharpe, White Reality Check and SPA are not wired into this central gate; exact trial-family completeness still depends on the preregistration source, and availability timestamps are locally asserted rather than independently attested."
+            "This remains PARTIAL: PBO/CSCV, Deflated Sharpe, White Reality Check and SPA are not wired into this central gate; exact trial-family completeness still depends on the preregistration source, and availability timestamps are locally asserted rather than independently attested.",
+            "Commit `42982225` adds central-gate support for preregistered Deflated Sharpe inference using the existing firewall implementation. Plans freeze a positive Sharpe-ratio variance and require the full registered family to contain at least two candidates.",
+            "Promotion calculates the Deflated Sharpe probability for every candidate using the registered family size and frozen Sharpe variance; the selected candidate must clear 1-alpha. The method identity and resulting candidate returns are bound into the one-time result receipt.",
+            "Positive-effect and noise-family cases exercise the gate, including method/variance freeze, family size, and promotion refusal when DSR is below threshold. Sixty-two focused registration/statistics/CLI tests pass with Ruff and mypy."
           ],
           "tests": [
             "python -m pytest tests/test_inference_registration.py tests/test_forward_edge_f08.py tests/test_forward_edge_cli.py -q --basetemp .pytest-pa0610-familywise-final: 59 passed in 12.91s.",
             "python -m ruff check src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py tests/test_inference_registration.py tests/test_forward_edge_f08.py: passed.",
-            "python -m mypy src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py: Success: no issues found in 2 source files."
+            "python -m mypy src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py: Success: no issues found in 2 source files.",
+            "python -m pytest tests/test_inference_registration.py tests/test_forward_edge_f08.py tests/test_forward_edge_cli.py -q --basetemp .pytest-pa0610-dsr-full: 62 passed.",
+            "python -m ruff check src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py tests/test_inference_registration.py tests/test_forward_edge_f08.py: passed.",
+            "python -m mypy src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -3014,5 +3020,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "3f148beb7d577be154579969eb5bf925abf5d5d66fb965a543424696afd6973a"
+  "report_sha256": "f8f3c1d83895c436619dac31ab0162b507d210de88d301082ebf1df2ad60f933"
 }
