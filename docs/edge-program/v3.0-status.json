@@ -8668,15 +8668,20 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "forward_edge.claim_tier requires evidence for each promoted label; evidence_labels derives mode from execution and rejects unsupported forward claims for fixture/replay/local modes rather than trusting caller labels.",
-        "evaluation.executable.resolve_executable penalizes missing outcomes instead of manufacturing a fill/return; decision_outcome and outage gates explicitly record fallback_fill=false for NO_TRADE decisions.",
-        "The protections live in separate APIs and are not enforced by every output renderer. No universal claim-language/lint gate or complete audit of all existing prose prevents unsupported guarantee/zero-loss/accuracy-as-alpha statements."
+        "Existing evidence-tier gates reject unsupported forward claims from fixture/replay/local modes; resolve_executable penalizes missing outcomes rather than inventing fills, and decision/outage gates record fallback_fill=false.",
+        "Commit `697c01ad` adds scripts/audit/claim_safety.py and runs it in CI. It scans repository Markdown and financial-brain Python for unqualified guarantees, zero-loss promises, accuracy-as-alpha, synthetic-forward results, and fallback-close realized P&L; explicit prohibitions remain allowed.",
+        "Focused adversarial tests cover each prohibited-claim family and safe disclaimers; the current repository prose scan passes. CI matrix validation, Ruff and mypy pass.",
+        "This remains PARTIAL: dynamic text produced from external model/provider content is not intercepted by a universal runtime output gateway, and all generated or exported artifacts are not yet scanned."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T17:01:22+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:43:21Z",
+      "commit": "697c01ad",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_claim_tier.py tests/test_evidence_labels.py tests/test_executable_outcomes.py tests/test_forward_edge_decision_outcome.py tests/test_forward_edge_outage_gate.py -q --basetemp .pytest-pa0615: 35 passed."
+        "python -m pytest tests/test_claim_safety.py -q --basetemp .pytest-pa0615-claim-safety2: 3 passed in 2.16s.",
+        "python scripts/audit/claim_safety.py: Claim-safety scan passed.",
+        "python scripts/validate_ci_check_matrix.py: CI check matrix matches workflow; chart-pattern steps are unique.",
+        "python -m ruff check scripts/audit/claim_safety.py scripts/audit/__init__.py scripts/__init__.py tests/test_claim_safety.py: passed.",
+        "python -m mypy scripts/audit/claim_safety.py tests/test_claim_safety.py: Success: no issues found in 2 source files."
       ]
     },
     {

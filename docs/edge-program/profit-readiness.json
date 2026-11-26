@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-26T21:16:05Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "b3bb5db89395c273fbc532b3cdfd891e417b05fb7d067f6d693dd10d90e0a17c",
-  "audit_export_sha256": "20964a2a34afb059a7f209e1f1383efde280fa5cd70a52b7b060ccf00e2ce352",
+  "status_ledger_sha256": "49b649eb18319c9ea6d4271a64da2a3e530a9b6c277d3ea61b482212ca659449",
+  "audit_export_sha256": "8697e774b6d0acc401c6b024b3525dc196d770707f035d1871dd3ff3a074274b",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 105,
@@ -2467,15 +2467,20 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Prohibit claims of 'zero loss', guaranteed profitable trades, high accuracy = alpha, synthetic forward results or realized return manufactured from a fallback close."
           },
-          "commit": null,
+          "commit": "697c01ad",
           "blocker": null,
           "evidence": [
-            "forward_edge.claim_tier requires evidence for each promoted label; evidence_labels derives mode from execution and rejects unsupported forward claims for fixture/replay/local modes rather than trusting caller labels.",
-            "evaluation.executable.resolve_executable penalizes missing outcomes instead of manufacturing a fill/return; decision_outcome and outage gates explicitly record fallback_fill=false for NO_TRADE decisions.",
-            "The protections live in separate APIs and are not enforced by every output renderer. No universal claim-language/lint gate or complete audit of all existing prose prevents unsupported guarantee/zero-loss/accuracy-as-alpha statements."
+            "Existing evidence-tier gates reject unsupported forward claims from fixture/replay/local modes; resolve_executable penalizes missing outcomes rather than inventing fills, and decision/outage gates record fallback_fill=false.",
+            "Commit `697c01ad` adds scripts/audit/claim_safety.py and runs it in CI. It scans repository Markdown and financial-brain Python for unqualified guarantees, zero-loss promises, accuracy-as-alpha, synthetic-forward results, and fallback-close realized P&L; explicit prohibitions remain allowed.",
+            "Focused adversarial tests cover each prohibited-claim family and safe disclaimers; the current repository prose scan passes. CI matrix validation, Ruff and mypy pass.",
+            "This remains PARTIAL: dynamic text produced from external model/provider content is not intercepted by a universal runtime output gateway, and all generated or exported artifacts are not yet scanned."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_claim_tier.py tests/test_evidence_labels.py tests/test_executable_outcomes.py tests/test_forward_edge_decision_outcome.py tests/test_forward_edge_outage_gate.py -q --basetemp .pytest-pa0615: 35 passed."
+            "python -m pytest tests/test_claim_safety.py -q --basetemp .pytest-pa0615-claim-safety2: 3 passed in 2.16s.",
+            "python scripts/audit/claim_safety.py: Claim-safety scan passed.",
+            "python scripts/validate_ci_check_matrix.py: CI check matrix matches workflow; chart-pattern steps are unique.",
+            "python -m ruff check scripts/audit/claim_safety.py scripts/audit/__init__.py scripts/__init__.py tests/test_claim_safety.py: passed.",
+            "python -m mypy scripts/audit/claim_safety.py tests/test_claim_safety.py: Success: no issues found in 2 source files."
           ]
         },
         {
@@ -3001,5 +3006,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "7977bdd4422cb00bb6d400dd0ed740947b78a55bd89651cc45b3f67664c75f6f"
+  "report_sha256": "eff08bef15afced1d2a58cbe6da3842c1f2c865943d08c105ecba16933ce3e75"
 }
