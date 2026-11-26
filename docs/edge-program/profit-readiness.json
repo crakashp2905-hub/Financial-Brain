@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:16:05Z",
+  "as_of_utc": "2026-11-26T22:04:53Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "4f4a087f637a9d3b3cd0732468c3975179f87baf75572f235a0e1731202d8e39",
-  "audit_export_sha256": "ac940713f97ddc1c5c29b4516a464749ba79f899f00d9afc59985bd04797e247",
+  "status_ledger_sha256": "27e788f566f3a3ea15e5dd7c342ac7408a45ae23fed6fe20de8f940460a193ae",
+  "audit_export_sha256": "53c326be12c5750352026e6be0938364a64032f90a4dfce9e915c2293fc60b39",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 105,
@@ -2309,21 +2309,27 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Include all failed and delayed/no-fill signals in scoring; a system cannot discard losing signals after future prices become known."
           },
-          "commit": "2e0bdcbb",
-          "blocker": null,
+          "commit": "722acae3",
+          "blocker": "Real strategy signals, delayed orders, canonical fills, costs, and matured counterfactuals are not yet joined to one mandatory production scoring path. Outcome availability is caller-declared; independent timestamp/data custody and legacy evaluation-path enforcement remain open.",
           "evidence": [
             "The opportunity universe is now an immutable FrozenOpportunityManifest with sorted unique IDs, a source SHA-256, policy SHA-256, and pre-cohort freeze timestamp.",
             "OpportunityManifestLedger persists one-time freeze receipts in SQLite with FULL synchronous writes and a hash-chained audit; evaluation requires the exact manifest to exist in that ledger and rejects post-policy or post-cohort freezes.",
             "The manifest receipt survives process restart; repeated freeze of the same manifest is rejected, and direct record tampering is detected by verify() through the chained digest audit.",
             "evaluate_abstentions requires outcome IDs to exactly match the pre-frozen universe, checks frozen policy lineage before set completeness, and includes unresolved outcomes in the denominator without inventing returns.",
             "Outcomes distinguish NO_ORDER, REJECTED, DELAYED, NO_FILL, PARTIAL_FILL, FILLED and UNKNOWN; reports hash execution-state counts, opportunity-manifest identity, counterfactual opportunity cost, missed winners and avoided losses.",
-            "The score remains a standalone API: real strategy signals, delayed orders, canonical fills, costs, and matured counterfactuals are not yet joined into a single production scoring path; local timestamps also lack independent attestation."
+            "The score remains a standalone API: real strategy signals, delayed orders, canonical fills, costs, and matured counterfactuals are not yet joined into a single production scoring path; local timestamps also lack independent attestation.",
+            "src/financial_brain/evaluation/executable_ledger.py adds a durable SQLite hash-chain freeze for the exact selected signals and session schedule; a run cannot be registered twice or scored twice.",
+            "Scoring requires the frozen selection time to precede the declared outcome-availability time, persists the one-time score across restarts, and delegates each frozen row to resolve_executable; absent outcome rows receive the configured worst-case penalty, partial fills apply the penalty only to filled exposure, and no-fill capital receives declared cash carry.",
+            "The durable ledger rejects hash-chain tampering. Eight focused tests across the frozen executable ledger and executable outcome resolver pass; Ruff and mypy pass."
           ],
           "tests": [
             "python -m pytest tests/test_forward_edge_abstention.py tests/test_executable_outcomes.py tests/test_forward_edge_pipeline_compat.py -q --basetemp .pytest-pa0608-final: 30 passed in 26.62s.",
             "python -m pytest tests/test_forward_edge_abstention.py -q --basetemp .pytest-pa0608-ledger-hardening2: 10 passed in 2.42s.",
             "python -m ruff check src/financial_brain/forward_edge/abstention.py tests/test_forward_edge_abstention.py: passed.",
-            "python -m mypy src/financial_brain/forward_edge/abstention.py: Success: no issues found in 1 source file."
+            "python -m mypy src/financial_brain/forward_edge/abstention.py: Success: no issues found in 1 source file.",
+            "python -m pytest tests/test_executable_selection_ledger.py tests/test_executable_outcomes.py -q --basetemp .pytest-pa0608-durable-freeze: 8 passed.",
+            "python -m ruff check src/financial_brain/evaluation/executable_ledger.py tests/test_executable_selection_ledger.py: passed.",
+            "python -m mypy src/financial_brain/evaluation/executable_ledger.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -3008,5 +3014,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "44525a9c8aabb2ea63e46b1e3101b1c778566c1eddbbe5ae6607f7fe8dd6fbb9"
+  "report_sha256": "3f148beb7d577be154579969eb5bf925abf5d5d66fb965a543424696afd6973a"
 }
