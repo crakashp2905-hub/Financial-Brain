@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 763,
+  "source_count": 764,
   "sources": [
     {
       "capability_ids": [],
@@ -5598,7 +5598,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "ca52f91534ad5abbb86c0cfbfaaf81012d3440795d2222b577fa0ccfadcee124",
+      "source_sha256": "2651010da2d4c6f30ec87fad158080b8e56ce0b93f38906910c3449b937feb3c",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -12740,6 +12740,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "financial_brain.forward_edge.approvals",
+        "financial_brain.research.holdout_access",
+        "hashlib",
+        "pathlib"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/sealed_dataset.py",
+      "source_sha256": "c294cf1872135b384e2471b36077c117da2dc68d8237d3a7746676e97cb23308",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "numpy"
@@ -13728,6 +13746,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 733,
+  "unassessed_count": 734,
   "unassigned_role_count": 450
 }
