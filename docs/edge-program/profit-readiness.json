@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-26T22:26:47Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "119f1e996210632655be9ded11bbae5a65c79ad0f7f7241cd48e59e663f4301f",
-  "audit_export_sha256": "95e8b9d1fd3a934480144ffef43b8c2f7f5dc700590581011298fed000530beb",
+  "status_ledger_sha256": "14ed0c77a4711b0ca66413146821f87199284d1e36be029c8be447dfc7fb34ba",
+  "audit_export_sha256": "1479a83ee5a7d08ed9a6c10a19b6efa4ba9e36620bfd5e0a5f4ce84db4df38b8",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 790,
-    "UNASSESSED": 460
+    "PARTIAL": 791,
+    "UNASSESSED": 459
   },
-  "assessed_count": 918,
-  "unassessed_count": 460,
+  "assessed_count": 919,
+  "unassessed_count": 459,
   "verified_complete_count": 106,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -1096,8 +1096,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 30,
-        "UNASSESSED": 2
+        "PARTIAL": 31,
+        "UNASSESSED": 1
       },
       "evidence": [
         {
@@ -1123,16 +1123,25 @@
         },
         {
           "item_id": "PA-04-02",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 984,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Unify buy/close/sell-short/buy-to-cover, options premium and spreads, ETF shares, corporate cash actions and mutual-fund NAV-order events without losing asset-specific semantics."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "e3af557c",
+          "blocker": "Partial: the canonical ledger supports common signed fills, marks, cash flows, fees and unresolved-position records across its supported asset classes, and the derivatives adapter now imports sourced option fills and expiry semantics. The complete lifecycle is not unified across all desk books: ETF/corporate actions, mutual-fund NAV order/allotment/redemption events, settlement/margin and universal runner import/reconciliation remain open.",
+          "evidence": [
+            "CanonicalPortfolioLedger provides one append-only consolidated paper event projection with asset-class-specific fills, marks, cash flows, fees and unresolved positions; it does not infer executions.",
+            "The new derivatives adapter maps the verified option subledger event chain into canonical events. Cash settlement closes each option at intrinsic value. Physical settlement closes the option at zero and records sourced strike delivery plus an underlying mark; premium fills remain the original per-leg events.",
+            "Canonical expiry events are explicitly limited to option positions and allow a zero price only for expiry closure, avoiding invented positive-price exits or synthetic cash flows.",
+            "This is a partial multi-asset integration: all desks do not import through one transactional OMS/accounting boundary; ETF corporate actions, MF NAV/order lifecycle reconciliation, margin/settlement calendars, current account opening balances and universal OMS integration remain open."
+          ],
+          "tests": [
+            "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-options-accounting-final: 27 passed.",
+            "Focused regressions cover cash-settled call spreads, physically settled call and put spreads, inventory closure/delivery/marks, realized P&L and cash reconciliation, idempotent re-import, source-chain corruption refusal, option-only zero-value expiry, and capital-efficiency handling of expiry close events.",
+            "Ruff check and targeted mypy passed for seven changed source/test modules."
+          ]
         },
         {
           "item_id": "PA-04-03",
@@ -1365,17 +1374,20 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add option contract expiry, index settlement and multi-leg partial fill handling in a dedicated derivatives subledger; do not silently book an unhedged spread as defined-risk."
           },
-          "commit": null,
+          "commit": "e3af557c",
           "blocker": "The new derivatives subledger is not yet connected to options paper runners, ForwardSessionRunner OMS, account cash/margin or a canonical underlying-inventory ledger. Contract terms, exchange calendars and settlement publication are caller-supplied and not independently authenticated; charges and prospective settlement validation are not integrated.",
           "evidence": [
             "Existing forward_edge.options_spread.evaluate_executable_spread reports bid/ask spread outcomes and cash/physical expiry scenarios, but explicitly labels settlement SCENARIO_ONLY; those analyses did not persist per-leg fills or settlement obligations.",
             "src/financial_brain/paper/derivatives_subledger.py adds a durable SQLite, hash-chained package journal with source-hashed option terms, per-leg observed fills and quote evidence, fill-lot caps, restart-safe replay and expiry settlement per contract.",
             "An unmatched or unequally filled debit vertical is UNHEDGED_PARTIAL and capital_deployment_allowed=false; only balanced long/short quantities with a net debit qualify as defined risk. Calls and puts can settle to cash or record physical strike cash and underlying-unit delivery/receipt.",
-            "Expiry settlement is per contract, requires the contract expiry date, a source-hashed exchange cutoff, and published source-hashed settlement-price evidence; reports are explicitly paper evidence, not exchange confirmation. Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside this subledger."
+            "Expiry settlement is per contract, requires the contract expiry date, a source-hashed exchange cutoff, and published source-hashed settlement-price evidence; reports are explicitly paper evidence, not exchange confirmation. Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside this subledger.",
+            "Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside the subledger. A source-hash-verified package adapter now maps the subledger into canonical option and underlying events, preserving cash/physical expiry; automatic runner scheduling, independently authenticated settlement facts, and full broker/accounting integration remain open."
           ],
           "tests": [
             "python -m pytest tests/test_derivatives_subledger.py -q: 8 passed, including restart replay, unhedged partial-fill capital block, cash-settled calls, physical calls/puts, expiry evidence, idempotency, overfill and inverted vertical rejection.",
-            "Ruff and targeted mypy passed."
+            "Ruff and targeted mypy passed.",
+            "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py -q --basetemp .pytest-pa0402-options-accounting: 22 passed across option, adapter and canonical-ledger scope; the broader 26-test run also included capital-efficiency regressions.",
+            "The combined derivative subledger, canonical ledger, adapter and capital-efficiency regression command passed all 27 tests; Ruff and targeted mypy passed for the changed modules."
           ]
         },
         {
@@ -3043,5 +3055,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "024e56dd3f8925d3429515666dac36d771b5c895f0f51278add625776d295ca1"
+  "report_sha256": "2ca222afabaa1e4cc965c0b622ba4c6926ea9c28e0f4c6224a2a1673e39285ee"
 }

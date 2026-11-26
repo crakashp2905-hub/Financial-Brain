@@ -7769,11 +7769,21 @@
       "id": "PA-04-02",
       "text": "Unify buy/close/sell-short/buy-to-cover, options premium and spreads, ETF shares, corporate cash actions and mutual-fund NAV-order events without losing asset-specific semantics.",
       "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "status": "PARTIAL",
+      "evidence": [
+        "CanonicalPortfolioLedger provides one append-only consolidated paper event projection with asset-class-specific fills, marks, cash flows, fees and unresolved positions; it does not infer executions.",
+        "The new derivatives adapter maps the verified option subledger event chain into canonical events. Cash settlement closes each option at intrinsic value. Physical settlement closes the option at zero and records sourced strike delivery plus an underlying mark; premium fills remain the original per-leg events.",
+        "Canonical expiry events are explicitly limited to option positions and allow a zero price only for expiry closure, avoiding invented positive-price exits or synthetic cash flows.",
+        "This is a partial multi-asset integration: all desks do not import through one transactional OMS/accounting boundary; ETF corporate actions, MF NAV/order lifecycle reconciliation, margin/settlement calendars, current account opening balances and universal OMS integration remain open."
+      ],
+      "blocker": "Partial: the canonical ledger supports common signed fills, marks, cash flows, fees and unresolved-position records across its supported asset classes, and the derivatives adapter now imports sourced option fills and expiry semantics. The complete lifecycle is not unified across all desk books: ETF/corporate actions, mutual-fund NAV order/allotment/redemption events, settlement/margin and universal runner import/reconciliation remain open.",
+      "last_audited_at_utc": "2026-11-26T23:07:11Z",
+      "commit": "e3af557c",
+      "test_evidence": [
+        "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-options-accounting-final: 27 passed.",
+        "Focused regressions cover cash-settled call spreads, physically settled call and put spreads, inventory closure/delivery/marks, realized P&L and cash reconciliation, idempotent re-import, source-chain corruption refusal, option-only zero-value expiry, and capital-efficiency handling of expiry close events.",
+        "Ruff check and targeted mypy passed for seven changed source/test modules."
+      ]
     },
     {
       "id": "PA-04-03",
@@ -7992,14 +8002,17 @@
         "Existing forward_edge.options_spread.evaluate_executable_spread reports bid/ask spread outcomes and cash/physical expiry scenarios, but explicitly labels settlement SCENARIO_ONLY; those analyses did not persist per-leg fills or settlement obligations.",
         "src/financial_brain/paper/derivatives_subledger.py adds a durable SQLite, hash-chained package journal with source-hashed option terms, per-leg observed fills and quote evidence, fill-lot caps, restart-safe replay and expiry settlement per contract.",
         "An unmatched or unequally filled debit vertical is UNHEDGED_PARTIAL and capital_deployment_allowed=false; only balanced long/short quantities with a net debit qualify as defined risk. Calls and puts can settle to cash or record physical strike cash and underlying-unit delivery/receipt.",
-        "Expiry settlement is per contract, requires the contract expiry date, a source-hashed exchange cutoff, and published source-hashed settlement-price evidence; reports are explicitly paper evidence, not exchange confirmation. Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside this subledger."
+        "Expiry settlement is per contract, requires the contract expiry date, a source-hashed exchange cutoff, and published source-hashed settlement-price evidence; reports are explicitly paper evidence, not exchange confirmation. Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside this subledger.",
+        "Fees, broker margin, underlying inventory booking and runner/OMS integration remain outside the subledger. A source-hash-verified package adapter now maps the subledger into canonical option and underlying events, preserving cash/physical expiry; automatic runner scheduling, independently authenticated settlement facts, and full broker/accounting integration remain open."
       ],
       "blocker": "The new derivatives subledger is not yet connected to options paper runners, ForwardSessionRunner OMS, account cash/margin or a canonical underlying-inventory ledger. Contract terms, exchange calendars and settlement publication are caller-supplied and not independently authenticated; charges and prospective settlement validation are not integrated.",
-      "last_audited_at_utc": "2026-11-26T14:46:31Z",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T23:07:11Z",
+      "commit": "e3af557c",
       "test_evidence": [
         "python -m pytest tests/test_derivatives_subledger.py -q: 8 passed, including restart replay, unhedged partial-fill capital block, cash-settled calls, physical calls/puts, expiry evidence, idempotency, overfill and inverted vertical rejection.",
-        "Ruff and targeted mypy passed."
+        "Ruff and targeted mypy passed.",
+        "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py -q --basetemp .pytest-pa0402-options-accounting: 22 passed across option, adapter and canonical-ledger scope; the broader 26-test run also included capital-efficiency regressions.",
+        "The combined derivative subledger, canonical ledger, adapter and capital-efficiency regression command passed all 27 tests; Ruff and targeted mypy passed for the changed modules."
       ],
       "test_result": "A durable paper derivatives subledger now records partial option-leg fills and per-contract cash or physical expiry flows; source-hashed expiry cutoffs gate settlement, and unmatched legs cannot be represented as defined-risk. PA-04-14 remains PARTIAL pending OMS/accounting integration, sourced market evidence and prospective end-to-end validation."
     },
@@ -20460,6 +20473,7 @@
       "PA-03-10",
       "PA-03-15",
       "PA-04-01",
+      "PA-04-02",
       "PA-04-04",
       "PA-04-05",
       "PA-04-06",
@@ -20931,13 +20945,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 918,
+    "audited_count": 919,
     "status_counts": {
       "COMPLETE": 106,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 790,
-      "UNASSESSED": 460
+      "PARTIAL": 791,
+      "UNASSESSED": 459
     },
     "verified_complete_count": 106,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21086,7 +21100,7 @@
     "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 790,
-    "UNASSESSED": 460
+    "PARTIAL": 791,
+    "UNASSESSED": 459
   }
 }
