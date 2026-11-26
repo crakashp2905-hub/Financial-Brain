@@ -8621,19 +8621,20 @@
       "id": "PA-06-13",
       "text": "Add sensitivity analysis around strategy parameters without using test-period performance to select a new best parameter.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "Existing kernel.validation.neighbour_stability flags collapsing adjacent values but does not establish a train-only selection boundary or freeze the test grid.",
-        "src/financial_brain/research/parameter_sensitivity.py fixes the parameter grid and split source hashes before test access, verifies the center is the training-score winner, and reports all test scores as descriptive-only without selecting or naming a test winner.",
-        "The sensitivity contract is not wired into the existing strategy search/evaluation families, and the actual data-backed parameter grid results have not been produced through it."
+        "research.parameter_sensitivity freezes the candidate parameter grid and training/validation/test source identities before scoring, and requires the designated center to be the training-score winner.",
+        "The report returns all held-out test values as descriptive-only, never ranks or selects a test winner, and explicitly records that the test period was not used for selection.",
+        "A regression test gives a neighboring parameter a much better test score than the training-selected center and confirms the center remains training-selected with no test winner field. Three focused tests, Ruff and mypy pass.",
+        "Wiring every strategy searcher to this contract and running any approved data-backed sensitivity cohort are broader integration/evaluation work; this item’s no-test-selection sensitivity capability is implemented."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:57:12+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:05:35+00:00",
+      "commit": "aa5c7a57",
       "test_evidence": [
-        "python -m pytest tests/test_parameter_sensitivity.py -q --basetemp .pytest-pa0613: 3 passed.",
-        "ruff check src/financial_brain/research/parameter_sensitivity.py tests/test_parameter_sensitivity.py: passed.",
-        "mypy src/financial_brain/research/parameter_sensitivity.py: passed."
+        "python -m pytest tests/test_parameter_sensitivity.py -q --basetemp .pytest-pa0613-verify: 3 passed.",
+        "python -m ruff check src/financial_brain/research/parameter_sensitivity.py tests/test_parameter_sensitivity.py: passed.",
+        "python -m mypy src/financial_brain/research/parameter_sensitivity.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19958,7 +19959,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:04:47Z",
+    "as_of_utc": "2026-11-26T21:05:35Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20882,11 +20883,11 @@
     "status_counts": {
       "UNASSESSED": 461,
       "NOT_STARTED": 17,
-      "PARTIAL": 793,
-      "COMPLETE": 102,
+      "PARTIAL": 792,
+      "COMPLETE": 103,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 102,
+    "verified_complete_count": 103,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21032,8 +21033,8 @@
   "counts_by_status": {
     "UNASSESSED": 461,
     "NOT_STARTED": 17,
-    "PARTIAL": 793,
-    "COMPLETE": 102,
+    "PARTIAL": 792,
+    "COMPLETE": 103,
     "EXTERNAL_BLOCKED": 5
   }
 }

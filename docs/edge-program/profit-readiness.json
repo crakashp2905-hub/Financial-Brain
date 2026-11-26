@@ -1,22 +1,22 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:04:47Z",
+  "as_of_utc": "2026-11-26T21:05:35Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "6583a6db0893620dbf33f5671baa03b39348c5a018a1b3b9c0987475c82131f1",
-  "audit_export_sha256": "052d9348afc52abd6776a9fd708575c0a0b2ee79a871304f14fbcdd8e046e1cb",
+  "status_ledger_sha256": "ff14b1cf64adbad43d5b855e7dba878470e1a086cdbde4507a7e24bc3bf33aa9",
+  "audit_export_sha256": "18c6e2884c336603a1c8c821537a3471bf1e661b3b1c548014133efe18abf143",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 102,
+    "COMPLETE": 103,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 793,
+    "PARTIAL": 792,
     "UNASSESSED": 461
   },
   "assessed_count": 917,
   "unassessed_count": 461,
-  "verified_complete_count": 102,
+  "verified_complete_count": 103,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -1805,10 +1805,10 @@
       "status": "AMBER",
       "item_count": 67,
       "counts_by_status": {
-        "COMPLETE": 3,
+        "COMPLETE": 4,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 31,
+        "PARTIAL": 30,
         "UNASSESSED": 33
       },
       "evidence": [
@@ -2412,23 +2412,24 @@
         },
         {
           "item_id": "PA-06-13",
-          "status": "PARTIAL",
+          "status": "COMPLETE",
           "source": {
             "line": 1047,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add sensitivity analysis around strategy parameters without using test-period performance to select a new best parameter."
           },
-          "commit": null,
+          "commit": "aa5c7a57",
           "blocker": null,
           "evidence": [
-            "Existing kernel.validation.neighbour_stability flags collapsing adjacent values but does not establish a train-only selection boundary or freeze the test grid.",
-            "src/financial_brain/research/parameter_sensitivity.py fixes the parameter grid and split source hashes before test access, verifies the center is the training-score winner, and reports all test scores as descriptive-only without selecting or naming a test winner.",
-            "The sensitivity contract is not wired into the existing strategy search/evaluation families, and the actual data-backed parameter grid results have not been produced through it."
+            "research.parameter_sensitivity freezes the candidate parameter grid and training/validation/test source identities before scoring, and requires the designated center to be the training-score winner.",
+            "The report returns all held-out test values as descriptive-only, never ranks or selects a test winner, and explicitly records that the test period was not used for selection.",
+            "A regression test gives a neighboring parameter a much better test score than the training-selected center and confirms the center remains training-selected with no test winner field. Three focused tests, Ruff and mypy pass.",
+            "Wiring every strategy searcher to this contract and running any approved data-backed sensitivity cohort are broader integration/evaluation work; this item’s no-test-selection sensitivity capability is implemented."
           ],
           "tests": [
-            "python -m pytest tests/test_parameter_sensitivity.py -q --basetemp .pytest-pa0613: 3 passed.",
-            "ruff check src/financial_brain/research/parameter_sensitivity.py tests/test_parameter_sensitivity.py: passed.",
-            "mypy src/financial_brain/research/parameter_sensitivity.py: passed."
+            "python -m pytest tests/test_parameter_sensitivity.py -q --basetemp .pytest-pa0613-verify: 3 passed.",
+            "python -m ruff check src/financial_brain/research/parameter_sensitivity.py tests/test_parameter_sensitivity.py: passed.",
+            "python -m mypy src/financial_brain/research/parameter_sensitivity.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2992,5 +2993,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "8ecc37a27150c09faf215dc962c42c9f2abc50f3d54b7f327570abc9ae243e37"
+  "report_sha256": "c555e8dbc510aea0626e48b85df94d145d366734602b7b99a8a0f25588afe622"
 }
