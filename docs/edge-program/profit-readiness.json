@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-26T23:13:56Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "b68a66cb95392a6ce5d7e90d68ef33b762f926e032e1a3abd4af9c387ddd6ef2",
-  "audit_export_sha256": "f18199109f9b63ac6330590604052cf628e04233aa161048641a60eb8a69fcef",
+  "status_ledger_sha256": "70515cf4c113eef6dafc253a76bacecb0b30cb90c194f77b28c6b7cc275a6394",
+  "audit_export_sha256": "fbdf58f9e10cfcacd36e0c7f6bb8ee70ba4f971316735b47954b1ac11f36e3df",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 792,
-    "UNASSESSED": 458
+    "PARTIAL": 793,
+    "UNASSESSED": 457
   },
-  "assessed_count": 920,
-  "unassessed_count": 458,
+  "assessed_count": 921,
+  "unassessed_count": 457,
   "verified_complete_count": 106,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 2,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 12,
-        "UNASSESSED": 18
+        "PARTIAL": 13,
+        "UNASSESSED": 17
       },
       "evidence": [
         {
@@ -814,16 +814,24 @@
         },
         {
           "item_id": "PA-02-15",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 947,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Prove no look-ahead by mutating all source rows published after the decision and requiring byte-identical features and intended orders."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "26802a54",
+          "blocker": "PARTIAL: this provides a reusable mutation-invariance acceptance primitive, but research/strategy adapters do not yet invoke it for all feature and order pipelines or every source-data publication boundary.",
+          "evidence": [
+            "src/financial_brain/forward_edge/lookahead.py::assert_prefix_invariant reruns a caller-supplied evaluator after changing only rows after the split and compares canonical finite JSON bytes for the complete output prefix.",
+            "The verifier supports aligned sequences, pandas outputs, dataclass/numpy-like values, and combined mappings such as features plus intended orders; malformed output shapes and non-finite values fail closed.",
+            "tests/test_forward_edge_lookahead.py verifies future mutations preserve causal feature/order prefixes, detect future-dependent leakage, and reject NaN outputs."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_lookahead.py -q: 5 passed.",
+            "ruff check src/financial_brain/forward_edge/lookahead.py tests/test_forward_edge_lookahead.py: passed.",
+            "mypy src/financial_brain/forward_edge/lookahead.py: Success, no issues found."
+          ]
         },
         {
           "item_id": "PA-02-16",
@@ -3063,5 +3071,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "3ab92cdbe2aeccc7a8e5a2145b03e781f31042493ccf5887a2c0402eb531093c"
+  "report_sha256": "5b544bb478e2a0b7de0357fcbd99fcde8324520ff699bfe8ba78d74f622abb18"
 }

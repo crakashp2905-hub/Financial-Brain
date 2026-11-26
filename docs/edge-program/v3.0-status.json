@@ -7519,12 +7519,22 @@
     {
       "id": "PA-02-15",
       "text": "Prove no look-ahead by mutating all source rows published after the decision and requiring byte-identical features and intended orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/lookahead.py::assert_prefix_invariant reruns a caller-supplied evaluator after changing only rows after the split and compares canonical finite JSON bytes for the complete output prefix.",
+        "The verifier supports aligned sequences, pandas outputs, dataclass/numpy-like values, and combined mappings such as features plus intended orders; malformed output shapes and non-finite values fail closed.",
+        "tests/test_forward_edge_lookahead.py verifies future mutations preserve causal feature/order prefixes, detect future-dependent leakage, and reject NaN outputs."
+      ],
+      "blocker": "PARTIAL: this provides a reusable mutation-invariance acceptance primitive, but research/strategy adapters do not yet invoke it for all feature and order pipelines or every source-data publication boundary.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": "26802a54",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_lookahead.py -q: 5 passed.",
+        "ruff check src/financial_brain/forward_edge/lookahead.py tests/test_forward_edge_lookahead.py: passed.",
+        "mypy src/financial_brain/forward_edge/lookahead.py: Success, no issues found."
+      ],
+      "test_result": "Future-row mutation now checks the exact canonical prefix bytes across combined features and intended orders, with leakage and non-finite output regressions. PA-02-15 remains PARTIAL until research runners apply this verification across all strategy/source pipelines."
     },
     {
       "id": "PA-02-16",
@@ -20477,6 +20487,7 @@
       "PA-02-07",
       "PA-02-08",
       "PA-02-09",
+      "PA-02-15",
       "PA-03-03",
       "PA-03-04",
       "PA-03-09",
@@ -20956,13 +20967,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 920,
+    "audited_count": 921,
     "status_counts": {
       "COMPLETE": 106,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 792,
-      "UNASSESSED": 458
+      "PARTIAL": 793,
+      "UNASSESSED": 457
     },
     "verified_complete_count": 106,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21105,13 +21116,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption)."
   },
   "counts_by_status": {
     "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 792,
-    "UNASSESSED": 458
+    "PARTIAL": 793,
+    "UNASSESSED": 457
   }
 }
