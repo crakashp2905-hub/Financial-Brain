@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from financial_brain.research.inference_registration import (
-    InferenceDisposition, InferenceMethod, InferencePlan, InferenceRegistrationError, InferenceUse,
+    InferenceDisposition, InferenceMethod, InferencePlan, InferencePlanRegistry,
+    InferenceRegistrationError, InferenceUse,
 )
 
 
@@ -51,3 +52,65 @@ def test_candidate_family_order_and_identity_are_frozen() -> None:
     with pytest.raises(InferenceRegistrationError, match="sorted"):
         InferencePlan("p", InferenceMethod.HOLM, ("B", "A"), 0.05,
                       datetime(2026, 1, 1, tzinfo=timezone.utc), "b" * 64)
+
+
+class FrozenClock:
+    def __init__(self, value: datetime) -> None:
+        self.value = value
+
+    def __call__(self) -> datetime:
+        return self.value
+
+
+def test_registry_timestamps_plan_and_binds_one_forward_result(tmp_path) -> None:
+    clock = FrozenClock(datetime(2026, 6, 1, tzinfo=timezone.utc))
+    path = tmp_path / "inference.sqlite"
+    registry = InferencePlanRegistry(path, clock=clock)
+    plan = registry.register(method=InferenceMethod.WHITE_REALITY_CHECK, candidate_ids=("A", "B"),
+                             alpha=0.05, preregistration_sha256="a" * 64,
+                             block_length=5, bootstrap_resamples=500)
+    clock.value += timedelta(days=1)
+    registry.record_outcome_access(plan.plan_id, dataset_sha256="b" * 64,
+                                   outcome_available_at=clock.value)
+    clock.value += timedelta(days=1)
+    use = registry.record_result(plan.plan_id, result_sha256="c" * 64)
+    assert use.may_certify_forward
+    with pytest.raises(InferenceRegistrationError, match="only one"):
+        registry.record_result(plan.plan_id, result_sha256="d" * 64)
+    assert registry.audit()["integrity"] == "VALID"
+    registry.close()
+    reopened = InferencePlanRegistry(path, clock=clock)
+    assert reopened.audit()["events"] == 3
+    reopened.close()
+
+
+def test_registry_does_not_certify_historical_data_registered_today(tmp_path) -> None:
+    clock = FrozenClock(datetime(2026, 7, 1, tzinfo=timezone.utc))
+    registry = InferencePlanRegistry(tmp_path / "inference.sqlite", clock=clock)
+    plan = registry.register(method=InferenceMethod.HOLM, candidate_ids=("A", "B"), alpha=0.05,
+                             preregistration_sha256="a" * 64)
+    clock.value += timedelta(days=1)
+    registry.record_outcome_access(plan.plan_id, dataset_sha256="b" * 64,
+                                   outcome_available_at=datetime(2020, 1, 1, tzinfo=timezone.utc))
+    clock.value += timedelta(days=1)
+    use = registry.record_result(plan.plan_id, result_sha256="c" * 64)
+    assert use.disposition is InferenceDisposition.RETROSPECTIVE_DIAGNOSTIC_ONLY
+    assert not use.may_certify_forward
+    assert registry.audit()["integrity"] == "VALID"
+    registry.close()
+
+
+def test_registry_requires_access_before_scoring_and_rejects_repeat_access(tmp_path) -> None:
+    clock = FrozenClock(datetime(2026, 8, 1, tzinfo=timezone.utc))
+    registry = InferencePlanRegistry(tmp_path / "inference.sqlite", clock=clock)
+    plan = registry.register(method=InferenceMethod.HOLM, candidate_ids=("A", "B"), alpha=0.05,
+                             preregistration_sha256="a" * 64)
+    with pytest.raises(InferenceRegistrationError, match="before outcome access"):
+        registry.record_result(plan.plan_id, result_sha256="c" * 64)
+    clock.value += timedelta(days=1)
+    registry.record_outcome_access(plan.plan_id, dataset_sha256="b" * 64,
+                                   outcome_available_at=clock.value)
+    with pytest.raises(InferenceRegistrationError, match="already recorded"):
+        registry.record_outcome_access(plan.plan_id, dataset_sha256="b" * 64,
+                                       outcome_available_at=clock.value)
+    registry.close()

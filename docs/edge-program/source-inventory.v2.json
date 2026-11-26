@@ -12508,13 +12508,17 @@
         "enum",
         "hashlib",
         "json",
-        "math"
+        "math",
+        "pathlib",
+        "sqlite3",
+        "typing",
+        "uuid"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/inference_registration.py",
-      "source_sha256": "ddf9c0c07152c450bfe40981c7d02cc3c6621dee535eac36a39e158549729465",
+      "source_sha256": "7a57d23c141cec4c0c0918820b908b28c983a6662577feda8ff7abb2e2a0d67a",
       "test_paths": []
     },
     {
