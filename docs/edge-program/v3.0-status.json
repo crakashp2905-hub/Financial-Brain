@@ -8544,17 +8544,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing dependence controls include stationary-block bootstrap over unique chronological sessions and two-way date/instrument clustered attribution. Neither the raw row count nor test count alone is treated as independent evidence, but the prior report did not expose effective independent cluster count.",
-        "src/financial_brain/forward_edge/cluster_attribution.py adds `two_way_trade_session_mean` for repeated marks per trade/session, a two-way cluster-robust diagnostic interval, and a conservative Kish effective independent observation count equal to the smaller effective session/trade cluster dimension.",
-        "The interval explicitly remains a diagnostic normal approximation. No central promotion pipeline currently requires this report, and block length selection and dependence-aware inference are not yet frozen for every strategy family."
+        "Existing stationary-block bootstrap and trade/session cluster diagnostics remain available, including conservative Kish effective counts rather than treating raw trade marks as independent.",
+        "forward_edge.cluster_attribution.trade_session_block_bootstrap now resamples chronological sessions in stationary blocks and trade IDs as whole clusters, combines the two multiplicities at each observed cell, and reports percentile intervals, effective cluster count, block length, replicate count, seed and an input-bound report hash.",
+        "Twelve focused cluster/bootstrap tests pass, including deterministic results under row reordering, parameter gates, and effective N below raw observation count; Ruff and mypy pass.",
+        "The bootstrap method and block length are not yet required by a shared promotion runner or preregistered for every family. This is a diagnostic interval and needs prospective validation/calibration before promotion use."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:48:59+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T20:57:00+00:00",
+      "commit": "65ef6324",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609: 8 passed.",
-        "ruff check src/financial_brain/forward_edge/cluster_attribution.py tests/test_forward_edge_cluster_attribution.py: passed.",
-        "mypy src/financial_brain/forward_edge/cluster_attribution.py: passed."
+        "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609-bootstrap: 12 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/cluster_attribution.py tests/test_forward_edge_cluster_attribution.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/cluster_attribution.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19955,7 +19956,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:53:05Z",
+    "as_of_utc": "2026-11-26T20:57:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

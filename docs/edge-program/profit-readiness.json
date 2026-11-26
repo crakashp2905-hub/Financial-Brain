@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:53:05Z",
+  "as_of_utc": "2026-11-26T20:57:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "4d71be7a6fc0a19e3a129ed5c0dfdbd9bc4a94ca9e368972d1736c07bfa5d265",
-  "audit_export_sha256": "bf4215c56057c1a70063051b3fff197cef9b313ec6b5bc51725f0a3be78e3744",
+  "status_ledger_sha256": "8420fc66683a9ee71a94981b649391c88ada4793e531e0bb29d74a4b5cb5d816",
+  "audit_export_sha256": "241a0db880117e5b07d8ea8bfab9fce09b80f1ab13a58078759ecbd8409f9a47",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
@@ -2331,17 +2331,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Estimate trade- and session-clustered uncertainty (HAC/block bootstrap) with effective independent observations, not raw overlapping trade counts."
           },
-          "commit": null,
+          "commit": "65ef6324",
           "blocker": null,
           "evidence": [
-            "Existing dependence controls include stationary-block bootstrap over unique chronological sessions and two-way date/instrument clustered attribution. Neither the raw row count nor test count alone is treated as independent evidence, but the prior report did not expose effective independent cluster count.",
-            "src/financial_brain/forward_edge/cluster_attribution.py adds `two_way_trade_session_mean` for repeated marks per trade/session, a two-way cluster-robust diagnostic interval, and a conservative Kish effective independent observation count equal to the smaller effective session/trade cluster dimension.",
-            "The interval explicitly remains a diagnostic normal approximation. No central promotion pipeline currently requires this report, and block length selection and dependence-aware inference are not yet frozen for every strategy family."
+            "Existing stationary-block bootstrap and trade/session cluster diagnostics remain available, including conservative Kish effective counts rather than treating raw trade marks as independent.",
+            "forward_edge.cluster_attribution.trade_session_block_bootstrap now resamples chronological sessions in stationary blocks and trade IDs as whole clusters, combines the two multiplicities at each observed cell, and reports percentile intervals, effective cluster count, block length, replicate count, seed and an input-bound report hash.",
+            "Twelve focused cluster/bootstrap tests pass, including deterministic results under row reordering, parameter gates, and effective N below raw observation count; Ruff and mypy pass.",
+            "The bootstrap method and block length are not yet required by a shared promotion runner or preregistered for every family. This is a diagnostic interval and needs prospective validation/calibration before promotion use."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609: 8 passed.",
-            "ruff check src/financial_brain/forward_edge/cluster_attribution.py tests/test_forward_edge_cluster_attribution.py: passed.",
-            "mypy src/financial_brain/forward_edge/cluster_attribution.py: passed."
+            "python -m pytest tests/test_forward_edge_cluster_attribution.py tests/test_forward_edge_bootstrap.py -q --basetemp .pytest-pa0609-bootstrap: 12 passed.",
+            "python -m ruff check src/financial_brain/forward_edge/cluster_attribution.py tests/test_forward_edge_cluster_attribution.py: passed.",
+            "python -m mypy src/financial_brain/forward_edge/cluster_attribution.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2989,5 +2990,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "2234b37eab64d1407e9c7ab67dc6ab49478f3ad4f64ccb2c6b3f292d6725d480"
+  "report_sha256": "58a63a4390c74318a0f51cd48cfbe7dcf88bae1662f035fee55c8f1c9b43a0d4"
 }
