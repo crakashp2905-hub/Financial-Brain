@@ -16,6 +16,7 @@ from financial_brain.forecasting.index_15m import (
     leak_check,
     noise_threshold,
     purged_splits,
+    purged_time_splits,
 )
 from financial_brain.forecasting.index_market import IndexMinute, build_15m_bars, forward_return
 
@@ -73,6 +74,34 @@ def test_horizon_purge_baseline_and_brier_contracts():
 def test_purged_splits_reject_invalid_parameters(args):
     with pytest.raises(SeriesError):
         purged_splits(*args)
+
+
+def test_timestamp_purge_uses_actual_label_ends_and_keeps_cross_sections_together():
+    decisions = [OPEN + timedelta(minutes=15 * i) for i in range(16) for _ in range(2)]
+    ends = [decision + timedelta(minutes=(30 if int((decision - OPEN).total_seconds() // 900) % 2 else 15))
+            for decision in decisions]
+    folds = purged_time_splits(decisions, ends, folds=4, embargo=timedelta(minutes=15))
+    assert folds
+    for train, test in folds:
+        test_start = decisions[test[0]]
+        assert test
+        assert len(test) % 2 == 0
+        assert all(decisions[index] < test_start and ends[index] < test_start - timedelta(minutes=15)
+                   for index in train)
+        assert len({decisions[index] for index in test}) * 2 == len(test)
+
+
+def test_timestamp_purge_rejects_invalid_clocks_and_shared_label_mismatch():
+    decisions = [OPEN, OPEN, OPEN + timedelta(minutes=15), OPEN + timedelta(minutes=30)]
+    ends = [OPEN + timedelta(minutes=15), OPEN + timedelta(minutes=30),
+            OPEN + timedelta(minutes=30), OPEN + timedelta(minutes=45)]
+    with pytest.raises(SeriesError, match="common label end"):
+        purged_time_splits(decisions, ends, folds=2)
+    with pytest.raises(SeriesError, match="timezone-aware"):
+        purged_time_splits([OPEN.replace(tzinfo=None)] * 2, [OPEN] * 2, folds=2)
+    with pytest.raises(SeriesError, match="precede"):
+        purged_time_splits([OPEN, OPEN + timedelta(minutes=15)], [OPEN - timedelta(minutes=1),
+                           OPEN + timedelta(minutes=30)], folds=2)
 
 
 def test_training_noise_threshold_and_probabilities_fail_closed():

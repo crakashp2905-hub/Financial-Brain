@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from math import isfinite
 
 from financial_brain.forecasting.index_market import (
@@ -129,6 +129,58 @@ def purged_splits(n: int, folds: int, label_steps: int, embargo: int = 1
     return result
 
 
+def purged_time_splits(decision_times: list[datetime], label_end_times: list[datetime], *,
+                       folds: int, embargo: timedelta = timedelta(0)
+                       ) -> list[tuple[list[int], list[int]]]:
+    """Build expanding folds using actual outcome-end clocks, keeping cross-sections intact.
+
+    ``label_end_times[i]`` is the last source clock used to compute row ``i``'s target.
+    Training labels must end strictly before the test decision boundary minus embargo.
+    Repeated decision times form one indivisible test group, including for intraday bars.
+    """
+    if (type(folds) is not int or folds < 2 or len(decision_times) != len(label_end_times)
+            or not isinstance(embargo, timedelta) or embargo < timedelta(0)):
+        raise SeriesError("need aligned decision/label clocks, at least two folds and nonnegative embargo")
+    if not decision_times:
+        raise SeriesError("decision and label clocks cannot be empty")
+
+    def to_utc(value: datetime, name: str) -> datetime:
+        if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+            raise SeriesError(f"{name} timestamps must be timezone-aware")
+        return value.astimezone(timezone.utc)
+
+    decisions = [to_utc(value, "decision") for value in decision_times]
+    ends = [to_utc(value, "label end") for value in label_end_times]
+    if decisions != sorted(decisions):
+        raise SeriesError("decision timestamps must be chronological")
+    if any(end < decision for decision, end in zip(decisions, ends)):
+        raise SeriesError("label end cannot precede its decision timestamp")
+    shared_ends: dict[datetime, set[datetime]] = {}
+    for decision, end in zip(decisions, ends):
+        shared_ends.setdefault(decision, set()).add(end)
+    if any(len(values) != 1 for values in shared_ends.values()):
+        raise SeriesError("shared decision cross-section must use one common label end")
+
+    unique_decisions = list(dict.fromkeys(decisions))
+    if len(unique_decisions) < folds:
+        raise SeriesError("fold count cannot exceed unique decision timestamps")
+    group_size = len(unique_decisions) // folds
+    result: list[tuple[list[int], list[int]]] = []
+    for fold in range(1, folds):
+        test_start_index = fold * group_size
+        test_end_index = min(len(unique_decisions), (fold + 1) * group_size)
+        test_decisions = set(unique_decisions[test_start_index:test_end_index])
+        if not test_decisions:
+            continue
+        cutoff = unique_decisions[test_start_index] - embargo
+        test = [index for index, decision in enumerate(decisions) if decision in test_decisions]
+        train = [index for index, (decision, end) in enumerate(zip(decisions, ends))
+                 if decision < unique_decisions[test_start_index] and end < cutoff]
+        if train and test:
+            result.append((train, test))
+    return result
+
+
 def frequency_baseline(train_labels: list[str]) -> Callable[[], dict[str, float]]:
     """Return a deterministic UP/DOWN/FLAT class-frequency baseline."""
     counts = Counter(value for value in train_labels if value in {"UP", "DOWN", "FLAT"})
@@ -157,5 +209,5 @@ def brier(probabilities: dict[str, float], actual: str) -> float:
 __all__ = [
     "Bar", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
     "features_at", "forward_return", "frequency_baseline", "label", "leak_check",
-    "noise_threshold", "purged_splits",
+    "noise_threshold", "purged_splits", "purged_time_splits",
 ]
