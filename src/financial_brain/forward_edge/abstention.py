@@ -6,10 +6,25 @@ import json
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from enum import StrEnum
 
 
 class AbstentionError(ValueError):
     """Invalid frozen policy or incomplete abstention evaluation."""
+
+
+class ExecutionDisposition(StrEnum):
+    NO_ORDER = "NO_ORDER"
+    REJECTED = "REJECTED"
+    DELAYED = "DELAYED"
+    NO_FILL = "NO_FILL"
+    PARTIAL_FILL = "PARTIAL_FILL"
+    FILLED = "FILLED"
+    UNKNOWN = "UNKNOWN"
+
+
+NO_EXECUTION = frozenset({ExecutionDisposition.NO_ORDER, ExecutionDisposition.REJECTED,
+                          ExecutionDisposition.DELAYED, ExecutionDisposition.NO_FILL})
 
 
 @dataclass(frozen=True)
@@ -47,12 +62,39 @@ class AbstentionOutcome:
     policy_realized_net_return: float | None
     counterfactual_net_return: float | None
     abstain_reason: str | None = None
+    execution_disposition: ExecutionDisposition = ExecutionDisposition.UNKNOWN
+    fill_fraction: float | None = None
 
     def __post_init__(self) -> None:
         if not all(x.strip() for x in (self.opportunity_id, self.policy_id, self.policy_hash)):
             raise AbstentionError("opportunity and policy lineage are required")
         if self.action not in {"TRADE", "ABSTAIN"} or self.outcome_status not in {"RESOLVED", "UNRESOLVED"}:
             raise AbstentionError("invalid policy action or outcome status")
+        if not isinstance(self.execution_disposition, ExecutionDisposition):
+            raise AbstentionError("execution disposition must use the closed status enum")
+        if self.fill_fraction is not None and (
+            not math.isfinite(self.fill_fraction) or not 0 <= self.fill_fraction <= 1
+        ):
+            raise AbstentionError("fill fraction must be finite and in [0, 1]")
+        if self.execution_disposition is ExecutionDisposition.UNKNOWN:
+            if self.fill_fraction is not None:
+                raise AbstentionError("unknown execution cannot claim a fill fraction")
+            if self.outcome_status != "UNRESOLVED":
+                raise AbstentionError("unknown execution must remain unresolved")
+        elif self.execution_disposition is ExecutionDisposition.FILLED:
+            if self.fill_fraction != 1:
+                raise AbstentionError("filled execution requires a 100% fill fraction")
+        elif self.execution_disposition is ExecutionDisposition.PARTIAL_FILL:
+            if self.fill_fraction is None or not 0 < self.fill_fraction < 1:
+                raise AbstentionError("partial fill requires a fill fraction strictly between 0 and 1")
+        elif self.fill_fraction not in (None, 0):
+            raise AbstentionError("no-fill execution states cannot claim filled quantity")
+        if self.action == "ABSTAIN" and self.execution_disposition not in {
+            ExecutionDisposition.NO_ORDER, ExecutionDisposition.REJECTED,
+        }:
+            raise AbstentionError("abstention must have no order or a recorded rejection")
+        if self.action == "TRADE" and self.execution_disposition is ExecutionDisposition.NO_ORDER:
+            raise AbstentionError("trade decision must preserve its order attempt disposition")
         for name, value in (("policy_realized_net_return", self.policy_realized_net_return),
                             ("counterfactual_net_return", self.counterfactual_net_return)):
             if value is not None and not math.isfinite(float(value)):
@@ -81,6 +123,9 @@ class AbstentionReport:
     missed_winners: int
     abstention_avoided_losses: int
     unresolved_abstentions: int
+    execution_counts: tuple[tuple[str, int], ...]
+    missed_execution_winners: int
+    execution_avoided_losses: int
     report_hash: str
 
 
@@ -112,13 +157,31 @@ def evaluate_abstentions(policy: FrozenAbstentionPolicy, expected_opportunity_id
                   for item in resolved)
     unresolved_abstentions = sum(item.action == "ABSTAIN" and item.outcome_status == "UNRESOLVED"
                                  for item in ordered)
+    execution_counts = tuple((state.value, sum(item.execution_disposition is state for item in ordered))
+                             for state in ExecutionDisposition)
+    missed_execution_winners = sum(
+        item.outcome_status == "RESOLVED" and item.execution_disposition in NO_EXECUTION
+        and float(item.counterfactual_net_return or 0.0) > 0 for item in ordered
+    )
+    execution_avoided_losses = sum(
+        item.outcome_status == "RESOLVED" and item.execution_disposition in NO_EXECUTION
+        and float(item.counterfactual_net_return or 0.0) < 0 for item in ordered
+    )
     fields = {"policy_id": policy.policy_id, "policy_hash": policy_hash,
               "total_opportunities": len(ordered), "traded": traded, "abstained": abstained,
               "resolved": len(resolved), "unresolved": unresolved,
               "realized_policy_net_return_sum": realized, "missed_winners": missed,
-              "abstention_avoided_losses": avoided, "unresolved_abstentions": unresolved_abstentions}
+              "abstention_avoided_losses": avoided, "unresolved_abstentions": unresolved_abstentions,
+              "execution_counts": execution_counts,
+              "missed_execution_winners": missed_execution_winners,
+              "execution_avoided_losses": execution_avoided_losses}
     digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
                                       allow_nan=False).encode()).hexdigest()
     return AbstentionReport(policy.policy_id, policy_hash, len(ordered), traded, abstained,
                             len(resolved), unresolved, realized, missed, avoided,
-                            unresolved_abstentions, digest)
+                            unresolved_abstentions, execution_counts, missed_execution_winners,
+                            execution_avoided_losses, digest)
+
+
+__all__ = ["AbstentionError", "AbstentionOutcome", "AbstentionReport", "ExecutionDisposition",
+           "FrozenAbstentionPolicy", "evaluate_abstentions"]
