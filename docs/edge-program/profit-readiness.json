@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:49:18Z",
+  "as_of_utc": "2026-11-26T20:53:05Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "75b294584eefb551025b89b438bff0eeac132b40643b6d7c12c516f2dc4708eb",
-  "audit_export_sha256": "aa2bc3335be060fbf8d6610163836284210e871754e9d24eef41806cdcde3fd0",
+  "status_ledger_sha256": "4d71be7a6fc0a19e3a129ed5c0dfdbd9bc4a94ca9e368972d1736c07bfa5d265",
+  "audit_export_sha256": "bf4215c56057c1a70063051b3fff197cef9b313ec6b5bc51725f0a3be78e3744",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
@@ -2309,15 +2309,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Include all failed and delayed/no-fill signals in scoring; a system cannot discard losing signals after future prices become known."
           },
-          "commit": null,
+          "commit": "df3d91f6",
           "blocker": null,
           "evidence": [
-            "forward_edge.abstention.evaluate_abstentions requires the outcome IDs to exactly equal the frozen expected-opportunity universe; resolved abstentions preserve counterfactual net outcome and report missed winners/avoided losses; unresolved outcomes remain in the denominator without invented returns.",
-            "evaluation.executable.resolve_executable requires an exact schedule; missing outcomes receive a worst-case penalty, partial fills are charged on filled notional, unfilled capital earns only the declared cash rate, and unknown returns are penalized.",
-            "The controls are separate APIs: there is no single session-scoring adapter that joins signal, rejection/delay, order state, actual fill, and as-of counterfactual outcome for every eligible opportunity. Session-level prospective reconciliation remains open."
+            "forward_edge.abstention.evaluate_abstentions still requires the result IDs to exactly match the frozen expected-opportunity universe, and unresolved outcomes remain in its denominator without invented returns.",
+            "AbstentionOutcome now requires a closed execution disposition: NO_ORDER, REJECTED, DELAYED, NO_FILL, PARTIAL_FILL, FILLED or UNKNOWN, with fill fractions validated against the state. The report hashes per-state counts and flags missed winners/avoided losses from rejected, delayed and no-fill opportunities.",
+            "Seven focused tests cover full fills, execution-state/fill contradictions, unresolved outcomes, missed winners and avoided losses; Ruff and mypy pass.",
+            "This remains separate from executable next-session outcome resolution and the canonical session/order ledger; strategy signals, delayed orders, fills, costs and matured counterfactuals are not yet joined in one production scoring path."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_abstention.py tests/test_executable_outcomes.py tests/test_forward_edge_pipeline_compat.py -q --basetemp .pytest-pa0608: 23 passed."
+            "python -m pytest tests/test_forward_edge_abstention.py -q --basetemp .pytest-pa0608-execution: 7 passed.",
+            "python -m ruff check src/financial_brain/forward_edge/abstention.py tests/test_forward_edge_abstention.py: passed.",
+            "python -m mypy src/financial_brain/forward_edge/abstention.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2986,5 +2989,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "83d12aa211a42af3ed08abdabbccc854c9f2b75050534cea3830e252fac0a93d"
+  "report_sha256": "2234b37eab64d1407e9c7ab67dc6ab49478f3ad4f64ccb2c6b3f292d6725d480"
 }

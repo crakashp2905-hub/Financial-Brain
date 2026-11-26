@@ -8524,15 +8524,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "forward_edge.abstention.evaluate_abstentions requires the outcome IDs to exactly equal the frozen expected-opportunity universe; resolved abstentions preserve counterfactual net outcome and report missed winners/avoided losses; unresolved outcomes remain in the denominator without invented returns.",
-        "evaluation.executable.resolve_executable requires an exact schedule; missing outcomes receive a worst-case penalty, partial fills are charged on filled notional, unfilled capital earns only the declared cash rate, and unknown returns are penalized.",
-        "The controls are separate APIs: there is no single session-scoring adapter that joins signal, rejection/delay, order state, actual fill, and as-of counterfactual outcome for every eligible opportunity. Session-level prospective reconciliation remains open."
+        "forward_edge.abstention.evaluate_abstentions still requires the result IDs to exactly match the frozen expected-opportunity universe, and unresolved outcomes remain in its denominator without invented returns.",
+        "AbstentionOutcome now requires a closed execution disposition: NO_ORDER, REJECTED, DELAYED, NO_FILL, PARTIAL_FILL, FILLED or UNKNOWN, with fill fractions validated against the state. The report hashes per-state counts and flags missed winners/avoided losses from rejected, delayed and no-fill opportunities.",
+        "Seven focused tests cover full fills, execution-state/fill contradictions, unresolved outcomes, missed winners and avoided losses; Ruff and mypy pass.",
+        "This remains separate from executable next-session outcome resolution and the canonical session/order ledger; strategy signals, delayed orders, fills, costs and matured counterfactuals are not yet joined in one production scoring path."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:46:28+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T20:53:05+00:00",
+      "commit": "df3d91f6",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_abstention.py tests/test_executable_outcomes.py tests/test_forward_edge_pipeline_compat.py -q --basetemp .pytest-pa0608: 23 passed."
+        "python -m pytest tests/test_forward_edge_abstention.py -q --basetemp .pytest-pa0608-execution: 7 passed.",
+        "python -m ruff check src/financial_brain/forward_edge/abstention.py tests/test_forward_edge_abstention.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/abstention.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19952,7 +19955,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:49:18Z",
+    "as_of_utc": "2026-11-26T20:53:05Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
