@@ -68,6 +68,20 @@ class FamilyResearchRegistry:
             body_json TEXT NOT NULL,
             previous_hash TEXT NOT NULL,
             event_hash TEXT NOT NULL UNIQUE)""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS active_family_attempts (
+            family_id TEXT PRIMARY KEY,
+            attempt_id TEXT UNIQUE NOT NULL)""")
+        # Recover active registrations written before the transactional guard was added.
+        families = self._con.execute("SELECT DISTINCT family_id FROM family_events").fetchall()
+        for (family_id,) in families:
+            latest = self._con.execute(
+                "SELECT event_type,body_json FROM family_events WHERE family_id=? ORDER BY sequence DESC LIMIT 1",
+                (family_id,),
+            ).fetchone()
+            if latest and latest[0] == "ATTEMPT_REGISTERED":
+                body = json.loads(latest[1])
+                self._con.execute("INSERT OR IGNORE INTO active_family_attempts VALUES (?,?)",
+                                  (family_id, body["attempt_id"]))
 
     def close(self) -> None:
         self._con.close()
@@ -109,27 +123,33 @@ class FamilyResearchRegistry:
         access = _utc(first_outcome_access_at, "first outcome access timestamp")
         if registered >= access:
             raise FamilyRegistryError("attempt must be preregistered before its outcome is accessed")
-        events = self._events(family_id)
-        if events and self.state(family_id) == "ATTEMPT_ACTIVE":
-            raise FamilyRegistryError("family already has an active registered attempt")
-        if events:
-            if basis is None:
-                raise FamilyRegistryError("closed family requires new information or a preregistered mechanism")
-            basis_registered = _utc(basis.registered_at, "basis registration timestamp")
-            available = _utc(basis.became_available_at, "basis availability timestamp")
-            last_result = next((json.loads(row[2]) for row in reversed(events) if row[1] == "RESULT_RECORDED"), None)
-            if last_result is None:
-                raise FamilyRegistryError("reopening basis requires a prior recorded family verdict")
-            closed_at = datetime.fromisoformat(last_result["recorded_at_utc"])
-            if available <= _utc(closed_at, "prior verdict timestamp"):
-                raise FamilyRegistryError("reopening basis must be new since the prior family verdict")
-            if basis_registered >= access:
-                raise FamilyRegistryError("reopening basis must be preregistered before outcome access")
-            if basis.kind is ReopenBasisKind.NEW_PREREGISTERED_MECHANISM and basis_registered <= _utc(
-                    closed_at, "prior verdict timestamp"):
-                raise FamilyRegistryError("new mechanism must be registered after the prior failure")
         self._con.execute("BEGIN IMMEDIATE")
         try:
+            events = self._events(family_id)
+            if events and self.state(family_id) == "ATTEMPT_ACTIVE":
+                raise FamilyRegistryError("family already has an active registered attempt")
+            if events:
+                if basis is None:
+                    raise FamilyRegistryError("closed family requires new information or a preregistered mechanism")
+                basis_registered = _utc(basis.registered_at, "basis registration timestamp")
+                available = _utc(basis.became_available_at, "basis availability timestamp")
+                last_result = next((json.loads(row[2]) for row in reversed(events)
+                                    if row[1] == "RESULT_RECORDED"), None)
+                if last_result is None:
+                    raise FamilyRegistryError("reopening basis requires a prior recorded family verdict")
+                closed_at = datetime.fromisoformat(last_result["recorded_at_utc"])
+                if available <= _utc(closed_at, "prior verdict timestamp"):
+                    raise FamilyRegistryError("reopening basis must be new since the prior family verdict")
+                if basis_registered >= access:
+                    raise FamilyRegistryError("reopening basis must be preregistered before outcome access")
+                if basis.kind is ReopenBasisKind.NEW_PREREGISTERED_MECHANISM and basis_registered <= _utc(
+                        closed_at, "prior verdict timestamp"):
+                    raise FamilyRegistryError("new mechanism must be registered after the prior failure")
+            try:
+                self._con.execute("INSERT INTO active_family_attempts (family_id,attempt_id) VALUES (?,?)",
+                                  (family_id, attempt_id))
+            except sqlite3.IntegrityError as exc:
+                raise FamilyRegistryError("family already has an active registered attempt") from exc
             body = {"family_id": family_id, "attempt_id": attempt_id,
                     "preregistration_sha256": preregistration_sha256,
                     "registered_at_utc": registered.isoformat(), "first_outcome_access_at_utc": access.isoformat(),
@@ -152,19 +172,24 @@ class FamilyResearchRegistry:
             raise FamilyRegistryError("unsupported terminal research verdict")
         _sha(result_sha256, "result")
         at = _utc(recorded_at, "result timestamp")
-        events = self._events(family_id)
-        if not events or events[-1][1] != "ATTEMPT_REGISTERED":
-            raise FamilyRegistryError("a registered active attempt is required before recording its result")
-        attempt = json.loads(events[-1][2])
-        if attempt["attempt_id"] != attempt_id:
-            raise FamilyRegistryError("result attempt ID differs from the active registration")
-        if at < datetime.fromisoformat(attempt["first_outcome_access_at_utc"]):
-            raise FamilyRegistryError("result cannot precede first outcome access")
         self._con.execute("BEGIN IMMEDIATE")
         try:
+            events = self._events(family_id)
+            active = self._con.execute(
+                "SELECT attempt_id FROM active_family_attempts WHERE family_id=?", (family_id,)
+            ).fetchone()
+            if not events or events[-1][1] != "ATTEMPT_REGISTERED" or active is None:
+                raise FamilyRegistryError("a registered active attempt is required before recording its result")
+            attempt = json.loads(events[-1][2])
+            if attempt["attempt_id"] != attempt_id or active[0] != attempt_id:
+                raise FamilyRegistryError("result attempt ID differs from the active registration")
+            if at < datetime.fromisoformat(attempt["first_outcome_access_at_utc"]):
+                raise FamilyRegistryError("result cannot precede first outcome access")
             digest = self._append(f"result:{attempt_id}", family_id, "RESULT_RECORDED",
                                   {"family_id": family_id, "attempt_id": attempt_id, "verdict": verdict,
                                    "result_sha256": result_sha256, "recorded_at_utc": at.isoformat()})
+            self._con.execute("DELETE FROM active_family_attempts WHERE family_id=? AND attempt_id=?",
+                              (family_id, attempt_id))
             self._con.execute("COMMIT")
             return digest
         except Exception:

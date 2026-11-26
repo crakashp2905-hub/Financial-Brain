@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 
@@ -97,3 +99,32 @@ def test_registry_hash_chain_survives_reopen_and_detects_tampering(tmp_path):
     with pytest.raises(FamilyRegistryError, match="hash chain"):
         registry.audit()
     registry.close()
+
+
+def test_concurrent_registration_cannot_create_two_active_attempts(tmp_path):
+    path = tmp_path / "concurrent.sqlite"
+    setup = FamilyResearchRegistry(path)
+    setup.close()
+    barrier = Barrier(2)
+
+    def register(attempt):
+        registry = FamilyResearchRegistry(path)
+        try:
+            barrier.wait()
+            return registry.register_attempt(
+                family_id="same-family", attempt_id=attempt, preregistration_sha256="b" * 64,
+                registered_at=T0, first_outcome_access_at=T0 + timedelta(hours=1),
+            )
+        except FamilyRegistryError as exc:
+            return str(exc)
+        finally:
+            registry.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(register, ("a1", "a2")))
+    assert sum(isinstance(result, str) and len(result) == 64 for result in results) == 1
+    assert sum(result == "family already has an active registered attempt" for result in results) == 1
+    resumed = FamilyResearchRegistry(path)
+    assert resumed.state("same-family") == "ATTEMPT_ACTIVE"
+    assert resumed.audit()["events"] == 1
+    resumed.close()
