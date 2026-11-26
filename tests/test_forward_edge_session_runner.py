@@ -769,6 +769,31 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     runner.close()
 
 
+def test_sourced_instrument_halt_blocks_fills_until_a_later_resumption(tmp_path):
+    runner, quote, decided = trade_setup(tmp_path)
+    halted_at = decided + timedelta(milliseconds=50)
+    halt = MarketEvent(
+        "instrument-halt", EventKind.HALT, "NSE", quote.instrument_id,
+        halted_at, halted_at, halted_at, {"status": "HALTED"},
+        "KITE_CONNECT_READ_ONLY", evidence_id="d" * 64,
+    )
+    runner.ingest("s", make_config(), [halt])
+    with pytest.raises(ForwardSessionRunnerError, match="instrument is halted"):
+        execute(runner, quote, decided)
+    assert runner.records("s")["execution_receipts"] == []
+
+    resumed_at = decided + timedelta(milliseconds=125)
+    resumed = MarketEvent(
+        "instrument-resumed", EventKind.HALT, "NSE", quote.instrument_id,
+        resumed_at, resumed_at, resumed_at, {"status": "RESUMED"},
+        "KITE_CONNECT_READ_ONLY", evidence_id="e" * 64,
+    )
+    runner.ingest("s", make_config(), [resumed])
+    receipt = execute(runner, quote, decided, execution_offset_ms=150)
+    assert receipt["status"] == "FILLED"
+    runner.close()
+
+
 def test_paper_order_refuses_quantity_that_violates_effective_instrument_lot(tmp_path):
     config = make_config_with_constraints({
         "instrument_rules": fixture_rule_book("NSE:INFY", lot_size=5),

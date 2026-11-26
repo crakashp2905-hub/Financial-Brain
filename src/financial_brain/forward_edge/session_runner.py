@@ -1437,6 +1437,20 @@ class ForwardSessionRunner:
         canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
+    def _instrument_halted(self, session_id: str, instrument_id: str, at: datetime) -> bool:
+        """Fail closed when the latest available halt state is HALTED."""
+        cutoff = at.astimezone(timezone.utc).isoformat()
+        rows = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind=? AND available_at<=? "
+            "ORDER BY available_at, event_id", [session_id, EventKind.HALT.value, cutoff]).fetchall()
+        relevant = [MarketEvent.from_dict(json.loads(row[0])) for row in rows]
+        relevant = [event for event in relevant if event.instrument_id == instrument_id]
+        if not relevant:
+            return False
+        latest_at = max(event.available_at for event in relevant)
+        latest_states = {str(event.payload["status"]) for event in relevant if event.available_at == latest_at}
+        return "HALTED" in latest_states
+
     def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
                              event_id: str, side: str, quantity: int | WholeUnits,
                              limit_price: Decimal | Price, tick_size: Decimal | Price,
@@ -1552,6 +1566,8 @@ class ForwardSessionRunner:
         event = MarketEvent.from_dict(json.loads(event_row[0]))
         if candidate_intent is not None and candidate_intent.get("symbol") != event.instrument_id:
             raise ForwardSessionRunnerError("paper quote instrument differs from the canonical candidate intent")
+        if self._instrument_halted(session_id, event.instrument_id, simulated_at):
+            raise ForwardSessionRunnerError("market instrument is halted at simulated execution time")
         if event_id in decision["input_event_ids"]:
             signal_event = event
         else:
