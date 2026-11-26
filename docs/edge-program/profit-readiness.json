@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-26T21:16:05Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "49b649eb18319c9ea6d4271a64da2a3e530a9b6c277d3ea61b482212ca659449",
-  "audit_export_sha256": "8697e774b6d0acc401c6b024b3525dc196d770707f035d1871dd3ff3a074274b",
+  "status_ledger_sha256": "ac45a1b6ac7f5f0f4ec284c343263dc8e522fa12c4a95aed2f733f9ae33d7c4b",
+  "audit_export_sha256": "e2a6559e4ea102d77c948f765e84b782423ff81ddd5cf4bea1be95346e0a3403",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 105,
@@ -2356,18 +2356,19 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Use PBO / Deflated Sharpe / familywise procedures or equivalent justified correction; record chosen inference method before any result is read."
           },
-          "commit": "64b16d5e",
+          "commit": "de64bc7e",
           "blocker": null,
           "evidence": [
-            "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available in evaluation and forward-edge modules.",
-            "InferencePlanRegistry now assigns registration timestamps itself, persists the chosen method, exact sorted candidate family, alpha, bootstrap block length/replicate count and preregistration hash, records first outcome availability/access, and binds a one-time result hash in an append-only event chain.",
-            "Historical outcomes whose availability predates the plan remain RETROSPECTIVE_DIAGNOSTIC_ONLY even if accessed after registration. Nine focused tests pass across pure validation and durable chronology; Ruff and mypy pass.",
-            "The central research/promotion evaluators do not yet require this registry, and availability timestamps remain locally asserted rather than independently sourced or attested."
+            "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available.",
+            "InferencePlanRegistry records a frozen method, exact sorted candidate family, alpha, Newey-West HAC lag count or bootstrap parameters, preregistration hash, outcome-data hash/availability/access, and a one-time result hash in a durable event chain.",
+            "Commit `de64bc7e` wires the central promotion_verdict to the registry: PROMOTION_GRADE requires a matching persisted inference result, exact outcome hash and family, HAC_NEWEY_WEST method and lag count, matching alpha, and pre-outcome chronology. The verdict hash binds all evaluated return and gate inputs.",
+            "The promotion evaluator explicitly rejects a multi-candidate family under the single-candidate HAC path rather than treating autocorrelation correction as a multiple-testing correction. Fifty-eight focused registry/statistics/CLI tests pass with Ruff and mypy.",
+            "This remains PARTIAL: familywise/PBO/Deflated-Sharpe methods are not yet wired into the central promotion evaluator, so multi-candidate families cannot pass it; outcome availability and registration clocks are local assertions without independent timestamp attestation."
           ],
           "tests": [
-            "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610-registry3: 9 passed.",
-            "python -m ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
-            "python -m mypy src/financial_brain/research/inference_registration.py --follow-imports=silent: passed."
+            "python -m pytest tests/test_inference_registration.py tests/test_forward_edge_f08.py tests/test_forward_edge_cli.py -q --basetemp .pytest-pa0610-promotion-final: 58 passed in 11.44s.",
+            "python -m ruff check src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py tests/test_inference_registration.py tests/test_forward_edge_f08.py: passed.",
+            "python -m mypy src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py: Success: no issues found in 2 source files."
           ]
         },
         {
@@ -3006,5 +3007,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "eff08bef15afced1d2a58cbe6da3842c1f2c865943d08c105ecba16933ce3e75"
+  "report_sha256": "eb83cabfb3f36aeb665c72a810ae9a80af594593d8958531022559646a7305b9"
 }

@@ -8567,18 +8567,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available in evaluation and forward-edge modules.",
-        "InferencePlanRegistry now assigns registration timestamps itself, persists the chosen method, exact sorted candidate family, alpha, bootstrap block length/replicate count and preregistration hash, records first outcome availability/access, and binds a one-time result hash in an append-only event chain.",
-        "Historical outcomes whose availability predates the plan remain RETROSPECTIVE_DIAGNOSTIC_ONLY even if accessed after registration. Nine focused tests pass across pure validation and durable chronology; Ruff and mypy pass.",
-        "The central research/promotion evaluators do not yet require this registry, and availability timestamps remain locally asserted rather than independently sourced or attested."
+        "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available.",
+        "InferencePlanRegistry records a frozen method, exact sorted candidate family, alpha, Newey-West HAC lag count or bootstrap parameters, preregistration hash, outcome-data hash/availability/access, and a one-time result hash in a durable event chain.",
+        "Commit `de64bc7e` wires the central promotion_verdict to the registry: PROMOTION_GRADE requires a matching persisted inference result, exact outcome hash and family, HAC_NEWEY_WEST method and lag count, matching alpha, and pre-outcome chronology. The verdict hash binds all evaluated return and gate inputs.",
+        "The promotion evaluator explicitly rejects a multi-candidate family under the single-candidate HAC path rather than treating autocorrelation correction as a multiple-testing correction. Fifty-eight focused registry/statistics/CLI tests pass with Ruff and mypy.",
+        "This remains PARTIAL: familywise/PBO/Deflated-Sharpe methods are not yet wired into the central promotion evaluator, so multi-candidate families cannot pass it; outcome availability and registration clocks are local assertions without independent timestamp attestation."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T21:00:48+00:00",
-      "commit": "64b16d5e",
+      "last_audited_at_utc": "2026-11-26T21:53:47Z",
+      "commit": "de64bc7e",
       "test_evidence": [
-        "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610-registry3: 9 passed.",
-        "python -m ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
-        "python -m mypy src/financial_brain/research/inference_registration.py --follow-imports=silent: passed."
+        "python -m pytest tests/test_inference_registration.py tests/test_forward_edge_f08.py tests/test_forward_edge_cli.py -q --basetemp .pytest-pa0610-promotion-final: 58 passed in 11.44s.",
+        "python -m ruff check src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py tests/test_inference_registration.py tests/test_forward_edge_f08.py: passed.",
+        "python -m mypy src/financial_brain/research/inference_registration.py src/financial_brain/forward_edge/evidence_stats.py: Success: no issues found in 2 source files."
       ]
     },
     {
