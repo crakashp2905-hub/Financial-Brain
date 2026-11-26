@@ -1,22 +1,22 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:12:30Z",
+  "as_of_utc": "2026-11-26T21:14:50Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "e2a7e2677ecb74e01a9646ecbc779fb44ce14689146184971204c2844f4cb806",
-  "audit_export_sha256": "74bb7693195cf67220794db86cab3437f38910f717db4cfe3188f6bb38afb685",
+  "status_ledger_sha256": "5ab7f351d9079cf90446c17615f48c3f5ac7996614b38c443b2981b96f71875f",
+  "audit_export_sha256": "a17e0e6d810361bb26bf7e98590a9fa403580b0748d2c7bab27eaa3cd0ba548b",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 103,
+    "COMPLETE": 104,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 792,
+    "PARTIAL": 791,
     "UNASSESSED": 461
   },
   "assessed_count": 917,
   "unassessed_count": 461,
-  "verified_complete_count": 103,
+  "verified_complete_count": 104,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -1805,10 +1805,10 @@
       "status": "AMBER",
       "item_count": 67,
       "counts_by_status": {
-        "COMPLETE": 4,
+        "COMPLETE": 5,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 30,
+        "PARTIAL": 29,
         "UNASSESSED": 33
       },
       "evidence": [
@@ -2369,23 +2369,24 @@
         },
         {
           "item_id": "PA-06-11",
-          "status": "PARTIAL",
+          "status": "COMPLETE",
           "source": {
             "line": 1045,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Report two independent scientific outcomes: forecasting skill vs an honest null, and executable after-cost economic skill vs benchmark."
           },
-          "commit": null,
+          "commit": "aa5c7a57",
           "blocker": null,
           "evidence": [
-            "Forecasting diagnostics already exist in forecasting.calibration/forecast store and decision track-record scoring; after-cost benchmark reporting separately exists in forward_edge.pnl_dashboard and portfolio alpha attribution.",
-            "src/financial_brain/research/dual_skill_report.py adds independent typed forecast and economic panels. It reports Brier skill against an explicit null and compounded strategy net return/excess against a same-session benchmark, with separate source hashes and no combined success score.",
-            "The new report is not yet connected to a single frozen prospective strategy cohort, and forecast observations are not automatically joined to quote-backed fills and reconciled ledger outcomes."
+            "research.dual_skill_report.build_dual_skill_report computes forecast Brier loss and skill against an explicit null as one scientific outcome, and compounded strategy net return/excess versus a same-session benchmark as a separate economic outcome.",
+            "The panels retain distinct forecast/economic source-hash sets and the report defines no combined score; it explicitly labels the economic comparison descriptive and not alpha certification.",
+            "Tests verify both panel calculations, the case where positive forecast skill accompanies worse economic performance, and fail-closed missing/duplicate inputs. Three focused tests, Ruff and mypy pass.",
+            "Automatically joining forecasts to one prospective quote-backed and reconciled paper cohort is a separate end-to-end data integration requirement; this checklist item’s two-outcome report is implemented."
           ],
           "tests": [
-            "python -m pytest tests/test_dual_skill_report.py -q --basetemp .pytest-pa0611: 3 passed.",
-            "ruff check src/financial_brain/research/dual_skill_report.py tests/test_dual_skill_report.py: passed.",
-            "mypy src/financial_brain/research/dual_skill_report.py: passed."
+            "python -m pytest tests/test_dual_skill_report.py -q --basetemp .pytest-pa0611-verify: 3 passed.",
+            "python -m ruff check src/financial_brain/research/dual_skill_report.py tests/test_dual_skill_report.py: passed.",
+            "python -m mypy src/financial_brain/research/dual_skill_report.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2995,5 +2996,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "40fafdbe982ce9acd018896acd7a595c42d18837a14877b6d36b634a53e0734b"
+  "report_sha256": "56b7c4da870a4835a18b989b04a323786ba9c23d4bfb438d63f67e7501149ac4"
 }

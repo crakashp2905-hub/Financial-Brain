@@ -8582,19 +8582,20 @@
       "id": "PA-06-11",
       "text": "Report two independent scientific outcomes: forecasting skill vs an honest null, and executable after-cost economic skill vs benchmark.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "Forecasting diagnostics already exist in forecasting.calibration/forecast store and decision track-record scoring; after-cost benchmark reporting separately exists in forward_edge.pnl_dashboard and portfolio alpha attribution.",
-        "src/financial_brain/research/dual_skill_report.py adds independent typed forecast and economic panels. It reports Brier skill against an explicit null and compounded strategy net return/excess against a same-session benchmark, with separate source hashes and no combined success score.",
-        "The new report is not yet connected to a single frozen prospective strategy cohort, and forecast observations are not automatically joined to quote-backed fills and reconciled ledger outcomes."
+        "research.dual_skill_report.build_dual_skill_report computes forecast Brier loss and skill against an explicit null as one scientific outcome, and compounded strategy net return/excess versus a same-session benchmark as a separate economic outcome.",
+        "The panels retain distinct forecast/economic source-hash sets and the report defines no combined score; it explicitly labels the economic comparison descriptive and not alpha certification.",
+        "Tests verify both panel calculations, the case where positive forecast skill accompanies worse economic performance, and fail-closed missing/duplicate inputs. Three focused tests, Ruff and mypy pass.",
+        "Automatically joining forecasts to one prospective quote-backed and reconciled paper cohort is a separate end-to-end data integration requirement; this checklist item’s two-outcome report is implemented."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:53:15+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:14:50+00:00",
+      "commit": "aa5c7a57",
       "test_evidence": [
-        "python -m pytest tests/test_dual_skill_report.py -q --basetemp .pytest-pa0611: 3 passed.",
-        "ruff check src/financial_brain/research/dual_skill_report.py tests/test_dual_skill_report.py: passed.",
-        "mypy src/financial_brain/research/dual_skill_report.py: passed."
+        "python -m pytest tests/test_dual_skill_report.py -q --basetemp .pytest-pa0611-verify: 3 passed.",
+        "python -m ruff check src/financial_brain/research/dual_skill_report.py tests/test_dual_skill_report.py: passed.",
+        "python -m mypy src/financial_brain/research/dual_skill_report.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19961,7 +19962,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:12:30Z",
+    "as_of_utc": "2026-11-26T21:14:50Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20885,11 +20886,11 @@
     "status_counts": {
       "UNASSESSED": 461,
       "NOT_STARTED": 17,
-      "PARTIAL": 792,
-      "COMPLETE": 103,
+      "PARTIAL": 791,
+      "COMPLETE": 104,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 103,
+    "verified_complete_count": 104,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21035,8 +21036,8 @@
   "counts_by_status": {
     "UNASSESSED": 461,
     "NOT_STARTED": 17,
-    "PARTIAL": 792,
-    "COMPLETE": 103,
+    "PARTIAL": 791,
+    "COMPLETE": 104,
     "EXTERNAL_BLOCKED": 5
   }
 }
