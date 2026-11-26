@@ -4388,7 +4388,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/evidence_stats.py",
-      "source_sha256": "4cd175aa6886cdff45cdd52f7b90f0890bf6180e9a9968ecf93f7a245ad938ef",
+      "source_sha256": "ae6666fb2d450fad2814e0a716d0609199754e5051368727875883d4343089dd",
       "test_paths": []
     },
     {
@@ -12528,7 +12528,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/inference_registration.py",
-      "source_sha256": "2192282500d4a328b3a022856c028c45acae334414b78dc04e02fcabedf7fdd8",
+      "source_sha256": "0834dbd64d7274e721328f1e64ca5b36829a0bbda989a4f8963601fe5d8eafbc",
       "test_paths": []
     },
     {

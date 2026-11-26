@@ -100,15 +100,19 @@ GOOD_KW = dict(eligible_independent_sessions=120, tier=ClaimTier.INDEPENDENT_FOR
                null_pass=True, max_drawdown=0.12, max_drawdown_limit=0.30, fidelity_pass=True)
 
 
-def _registered_inference(tmp_path, *, method=InferenceMethod.HAC_NEWEY_WEST,
+def _registered_inference(tmp_path, *, method=None,
                           candidates=("momentum-v1",), lags=5, available_at=None):
+    method = method or (InferenceMethod.HAC_NEWEY_WEST_HOLM if len(candidates) > 1
+                        else InferenceMethod.HAC_NEWEY_WEST)
     times = iter((datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
                   datetime(2026, 11, 1, 10, tzinfo=timezone.utc),
                   datetime(2026, 11, 1, 11, tzinfo=timezone.utc)))
     registry = InferencePlanRegistry(tmp_path / "inference.sqlite", clock=lambda: next(times))
     plan = registry.register(method=method, candidate_ids=candidates, alpha=0.05,
                              preregistration_sha256="c" * 64,
-                             hac_lags=lags if method is InferenceMethod.HAC_NEWEY_WEST else None)
+                             hac_lags=lags if method in {
+                                 InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM
+                             } else None)
     dataset_sha256 = "d" * 64
     registry.record_outcome_access(
         plan.plan_id, dataset_sha256=dataset_sha256,
@@ -230,12 +234,34 @@ def test_promotion_rejects_retrospective_inference_registration(tmp_path) -> Non
     context["inference_registry"].close()
 
 
-def test_hac_only_verdict_cannot_ignore_a_multi_candidate_family(tmp_path) -> None:
+def test_multi_candidate_family_uses_registered_holm_adjustment(tmp_path) -> None:
     x = _ar1(250, 0.1, seed=11, mu=0.004)
     context = _registered_inference(tmp_path, candidates=("mean-reversion-v1", "momentum-v1"))
-    rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
-    assert rejected["verdict"] != "PROMOTION_GRADE"
-    assert "INFERENCE_MULTIPLICITY_NOT_ADJUSTED" in rejected["reasons"]
+    candidate_returns = {"mean-reversion-v1": x, "momentum-v1": x}
+    context["inference_candidate_returns"] = candidate_returns
+    context["inference_selected_candidate"] = "momentum-v1"
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert report["verdict"] == "PROMOTION_GRADE"
+    assert set(report["familywise_adjusted_pvalues"]) == set(candidate_returns)
+    context["inference_registry"].close()
+
+
+def test_holm_adjustment_blocks_candidate_that_only_passes_unadjusted_hac(tmp_path) -> None:
+    noise = _ar1(250, 0.1, seed=31, mu=0.0)
+    centre = sum(noise) / len(noise)
+    centred = [value - centre for value in noise]
+    shift = 2.1 * E.newey_west_se(centred, 5)
+    selected_returns = [value + shift for value in centred]
+    assert sum(selected_returns) / len(selected_returns) - 1.96 * E.newey_west_se(selected_returns, 5) > 0
+    candidates = tuple(f"candidate-{index:02d}" for index in range(10))
+    context = _registered_inference(tmp_path, candidates=candidates)
+    family = {candidate: selected_returns for candidate in candidates}
+    context["inference_candidate_returns"] = family
+    context["inference_selected_candidate"] = candidates[0]
+    report = E.promotion_verdict(daily_net_alpha=selected_returns, **GOOD_KW, **context)
+    assert report["verdict"] != "PROMOTION_GRADE"
+    assert "FAMILYWISE_ADJUSTED_PVALUE_FAILED" in report["reasons"]
+    assert report["familywise_adjusted_pvalues"][candidates[0]] > 0.05
     context["inference_registry"].close()
 
 

@@ -28,6 +28,7 @@ class InferenceMethod(StrEnum):
     SIDAK = "SIDAK"
     HAC_BLOCK_BOOTSTRAP = "HAC_BLOCK_BOOTSTRAP"
     HAC_NEWEY_WEST = "HAC_NEWEY_WEST"
+    HAC_NEWEY_WEST_HOLM = "HAC_NEWEY_WEST_HOLM"
 
 
 class InferenceDisposition(StrEnum):
@@ -60,9 +61,12 @@ class InferencePlan:
             raise InferenceRegistrationError("candidate family must be explicit and nonempty")
         if len(set(self.candidate_ids)) != len(self.candidate_ids) or tuple(sorted(self.candidate_ids)) != self.candidate_ids:
             raise InferenceRegistrationError("candidate IDs must be unique and frozen in sorted order")
-        if self.method in {InferenceMethod.PBO_CSCV, InferenceMethod.WHITE_REALITY_CHECK, InferenceMethod.HANSEN_SPA} \
+        if self.method in {InferenceMethod.PBO_CSCV, InferenceMethod.WHITE_REALITY_CHECK, InferenceMethod.HANSEN_SPA,
+                           InferenceMethod.HAC_NEWEY_WEST_HOLM} \
                 and len(self.candidate_ids) < 2:
             raise InferenceRegistrationError("family-level inference requires at least two candidates")
+        if self.method is InferenceMethod.HAC_NEWEY_WEST and len(self.candidate_ids) != 1:
+            raise InferenceRegistrationError("single-candidate HAC method requires exactly one candidate")
         if not math.isfinite(self.alpha) or not 0 < self.alpha < 0.5:
             raise InferenceRegistrationError("alpha must be fixed in (0, 0.5)")
         _utc(self.registered_at, "registration timestamp")
@@ -82,7 +86,7 @@ class InferencePlan:
             raise InferenceRegistrationError("bootstrap resamples must be at least 200")
         if needs_block and self.bootstrap_resamples is None:
             raise InferenceRegistrationError("bootstrap replicate count must be fixed before outcome access")
-        if self.method is InferenceMethod.HAC_NEWEY_WEST:
+        if self.method in {InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM}:
             if type(self.hac_lags) is not int or self.hac_lags < 0:
                 raise InferenceRegistrationError("Newey-West inference needs a fixed nonnegative lag count")
         elif self.hac_lags is not None:

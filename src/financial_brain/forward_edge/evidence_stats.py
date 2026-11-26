@@ -244,7 +244,9 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                       inference_registry: InferencePlanRegistry | None = None,
                       inference_plan_id: str | None = None,
                       inference_candidate_ids: tuple[str, ...] | None = None,
-                      inference_dataset_sha256: str | None = None) -> dict:
+                      inference_dataset_sha256: str | None = None,
+                      inference_candidate_returns: dict[str, list[float]] | None = None,
+                      inference_selected_candidate: str | None = None) -> dict:
     if not isinstance(tier, ClaimTier):
         raise StatsError("promotion verdict requires a typed ClaimTier")
     if not isinstance(daily_net_alpha, list) or any(
@@ -282,18 +284,34 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     reasons: list[str] = []
     inference_pass = False
     inference_result_sha256: str | None = None
+    adjusted_candidate_pvalues: dict[str, float] | None = None
     if (not isinstance(inference_registry, InferencePlanRegistry)
             or not isinstance(inference_plan_id, str) or not inference_plan_id.strip()
             or inference_candidate_ids is None or inference_dataset_sha256 is None):
         reasons.append("INFERENCE_PREREGISTRATION_REQUIRED")
     else:
+        family = inference_candidate_returns
+        if (isinstance(inference_candidate_ids, tuple) and len(inference_candidate_ids) == 1
+                and family is None):
+            family = {inference_candidate_ids[0]: daily_net_alpha}
+        if inference_selected_candidate is None and isinstance(inference_candidate_ids, tuple) \
+                and len(inference_candidate_ids) == 1:
+            inference_selected_candidate = inference_candidate_ids[0]
         if (not isinstance(inference_candidate_ids, tuple)
                 or any(not isinstance(candidate, str) or not candidate.strip()
                        for candidate in inference_candidate_ids)
                 or tuple(sorted(set(inference_candidate_ids))) != inference_candidate_ids
                 or not isinstance(inference_dataset_sha256, str)
                 or len(inference_dataset_sha256) != 64
-                or any(c not in "0123456789abcdef" for c in inference_dataset_sha256)):
+                or any(c not in "0123456789abcdef" for c in inference_dataset_sha256)
+                or not isinstance(inference_selected_candidate, str)
+                or inference_selected_candidate not in inference_candidate_ids
+                or not isinstance(family, dict) or set(family) != set(inference_candidate_ids)
+                or any(not isinstance(values, list) or len(values) != len(daily_net_alpha)
+                       or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                              or not isfinite(value) for value in values)
+                       for values in family.values())
+                or family.get(inference_selected_candidate) != daily_net_alpha):
             reasons.append("INFERENCE_REGISTRATION_INPUT_INVALID")
         else:
             result_body = {
@@ -307,6 +325,8 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                 "max_drawdown": max_drawdown, "max_drawdown_limit": max_drawdown_limit,
                 "fidelity_pass": fidelity_pass, "min_sessions": min_sessions, "lags": lags,
                 "z": z, "max_block_share": max_block_share,
+                "candidate_returns": [[candidate, family[candidate]] for candidate in inference_candidate_ids],
+                "selected_candidate": inference_selected_candidate,
             }
             inference_result_sha256 = hashlib.sha256(json.dumps(
                 result_body, sort_keys=True, separators=(",", ":"), allow_nan=False
@@ -316,18 +336,30 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                     inference_plan_id, result_sha256=inference_result_sha256,
                     expected_dataset_sha256=inference_dataset_sha256,
                     expected_candidate_ids=inference_candidate_ids,
-                    expected_method=InferenceMethod.HAC_NEWEY_WEST,
+                    expected_method=(InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                     else InferenceMethod.HAC_NEWEY_WEST_HOLM),
                     expected_hac_lags=lags,
                 )
                 expected_alpha = 2 * (1 - NormalDist().cdf(z))
-                if len(use.plan.candidate_ids) > 1:
-                    reasons.append("INFERENCE_MULTIPLICITY_NOT_ADJUSTED")
-                elif abs(use.plan.alpha - expected_alpha) > 0.001:
+                if abs(use.plan.alpha - expected_alpha) > 0.001:
                     reasons.append("INFERENCE_ALPHA_MISMATCH")
                 elif use.disposition is not InferenceDisposition.PRE_REGISTERED:
                     reasons.append("INFERENCE_PLAN_NOT_PRE_REGISTERED")
                 else:
-                    inference_pass = True
+                    if len(use.plan.candidate_ids) > 1:
+                        candidate_pvalues: dict[str, float] = {}
+                        for candidate, values in family.items():
+                            candidate_se = newey_west_se(values, min(lags, len(values) - 1)) \
+                                if len(values) >= 3 else 0.0
+                            statistic = float(np.mean(values)) / candidate_se if candidate_se > 0 else 0.0
+                            candidate_pvalues[candidate] = 1 - NormalDist().cdf(statistic)
+                        adjusted_candidate_pvalues = holm_adjust(candidate_pvalues)
+                        if adjusted_candidate_pvalues[inference_selected_candidate] > use.plan.alpha:
+                            reasons.append("FAMILYWISE_ADJUSTED_PVALUE_FAILED")
+                        else:
+                            inference_pass = True
+                    else:
+                        inference_pass = True
             except InferenceRegistrationError:
                 reasons.append("INFERENCE_REGISTRATION_INVALID")
     n = len(daily_net_alpha)
@@ -371,6 +403,7 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     if not reasons:
         return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
                 "inference_result_sha256": inference_result_sha256,
+                "familywise_adjusted_pvalues": adjusted_candidate_pvalues,
                 "gates": {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
                           "drawdown": "PASS", "fidelity": "PASS"}}
     hard_fail = (mean <= 0 and n >= 3 or not cost_ok or null_pass is False or not drawdown_ok
@@ -389,4 +422,5 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         "fidelity": "UNASSESSED" if fidelity_pass is None else ("PASS" if fidelity_pass else "FAIL"),
     }
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons, "gates": gates, "inference_result_sha256": inference_result_sha256}
+            "reasons": reasons, "gates": gates, "inference_result_sha256": inference_result_sha256,
+            "familywise_adjusted_pvalues": adjusted_candidate_pvalues}
