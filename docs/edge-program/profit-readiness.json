@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:57:00Z",
+  "as_of_utc": "2026-11-26T21:00:48Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "8420fc66683a9ee71a94981b649391c88ada4793e531e0bb29d74a4b5cb5d816",
-  "audit_export_sha256": "241a0db880117e5b07d8ea8bfab9fce09b80f1ab13a58078759ecbd8409f9a47",
+  "status_ledger_sha256": "e00b3a4cca5f57c5965df2d8caf28e8a1660dce502d7d8a0a799140e2982b759",
+  "audit_export_sha256": "0e554e2f290f98f673e72002df1a877a1ffecd238b4bdf21f2745cf71a538d15",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
@@ -2353,17 +2353,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Use PBO / Deflated Sharpe / familywise procedures or equivalent justified correction; record chosen inference method before any result is read."
           },
-          "commit": null,
+          "commit": "64b16d5e",
           "blocker": null,
           "evidence": [
-            "Repository implements PBO/CSCV, stationary-block White Reality Check, Holm adjustment, HAC, and stationary bootstrap diagnostics in evaluation.family_validation, forward_edge.familywise, and forward_edge.evidence_stats.",
-            "src/financial_brain/research/inference_registration.py adds a frozen method/family/alpha registration and requires block length and replicate count to be fixed for bootstrap methods. Result-use chronology labels same-time or post-result method choice RETROSPECTIVE_DIAGNOSTIC_ONLY.",
-            "No shared inference runner currently requires the plan before reading outcomes; some evaluation APIs still select methods and parameters at call time. Family coverage and method-specific validation remain distributed."
+            "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available in evaluation and forward-edge modules.",
+            "InferencePlanRegistry now assigns registration timestamps itself, persists the chosen method, exact sorted candidate family, alpha, bootstrap block length/replicate count and preregistration hash, records first outcome availability/access, and binds a one-time result hash in an append-only event chain.",
+            "Historical outcomes whose availability predates the plan remain RETROSPECTIVE_DIAGNOSTIC_ONLY even if accessed after registration. Nine focused tests pass across pure validation and durable chronology; Ruff and mypy pass.",
+            "The central research/promotion evaluators do not yet require this registry, and availability timestamps remain locally asserted rather than independently sourced or attested."
           ],
           "tests": [
-            "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610: 6 passed.",
-            "ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
-            "mypy src/financial_brain/research/inference_registration.py: passed."
+            "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610-registry3: 9 passed.",
+            "python -m ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
+            "python -m mypy src/financial_brain/research/inference_registration.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2990,5 +2991,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "58a63a4390c74318a0f51cd48cfbe7dcf88bae1662f035fee55c8f1c9b43a0d4"
+  "report_sha256": "bcf7e7ff2077573b6d5fe2dfedf604fe112ac4eaf666ebea5c8cee091456a4f8"
 }

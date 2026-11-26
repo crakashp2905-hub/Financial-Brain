@@ -8564,17 +8564,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "Repository implements PBO/CSCV, stationary-block White Reality Check, Holm adjustment, HAC, and stationary bootstrap diagnostics in evaluation.family_validation, forward_edge.familywise, and forward_edge.evidence_stats.",
-        "src/financial_brain/research/inference_registration.py adds a frozen method/family/alpha registration and requires block length and replicate count to be fixed for bootstrap methods. Result-use chronology labels same-time or post-result method choice RETROSPECTIVE_DIAGNOSTIC_ONLY.",
-        "No shared inference runner currently requires the plan before reading outcomes; some evaluation APIs still select methods and parameters at call time. Family coverage and method-specific validation remain distributed."
+        "Existing PBO/CSCV, White Reality Check, Hansen SPA, Holm/Sidak, HAC and stationary-bootstrap implementations remain available in evaluation and forward-edge modules.",
+        "InferencePlanRegistry now assigns registration timestamps itself, persists the chosen method, exact sorted candidate family, alpha, bootstrap block length/replicate count and preregistration hash, records first outcome availability/access, and binds a one-time result hash in an append-only event chain.",
+        "Historical outcomes whose availability predates the plan remain RETROSPECTIVE_DIAGNOSTIC_ONLY even if accessed after registration. Nine focused tests pass across pure validation and durable chronology; Ruff and mypy pass.",
+        "The central research/promotion evaluators do not yet require this registry, and availability timestamps remain locally asserted rather than independently sourced or attested."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:50:51+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:00:48+00:00",
+      "commit": "64b16d5e",
       "test_evidence": [
-        "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610: 6 passed.",
-        "ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
-        "mypy src/financial_brain/research/inference_registration.py: passed."
+        "python -m pytest tests/test_inference_registration.py -q --basetemp .pytest-pa0610-registry3: 9 passed.",
+        "python -m ruff check src/financial_brain/research/inference_registration.py tests/test_inference_registration.py: passed.",
+        "python -m mypy src/financial_brain/research/inference_registration.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19956,7 +19957,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:57:00Z",
+    "as_of_utc": "2026-11-26T21:00:48Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
