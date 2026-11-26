@@ -8675,15 +8675,20 @@
         "SealedDatasetReader.open_session consumes approval before reading, verifies the frozen byte hash, and exposes only that one dataset through an in-memory SealedDatasetSession during the evaluation run.",
         "Legacy evaluation.labels.score(holdout) and evaluation.models holdout tasks now require the authorized session; event_type training no longer mixes in held-out labels. Repeated scoring in the authorized process uses the same verified bytes.",
         "Twenty-four focused holdout access/consumer/label/news tests pass; Ruff and targeted mypy pass.",
-        "This remains PARTIAL: the gateway is an application boundary, not filesystem isolation. Other local code can still open data files directly, and owner identity/clock custody are not cryptographically independent."
+        "This remains PARTIAL: the gateway is an application boundary, not filesystem isolation. Other local code can still open data files directly, and owner identity/clock custody are not cryptographically independent.",
+        "Holdout authorization now requires a 32-byte Ed25519 public key pinned in HoldoutAccessLedger configuration and a valid owner signature over canonical approval kind, subject, exact dataset/run/preregistration scope, owner identity, actor type, approval/expiry clocks and ADR reference. Missing trust root, absent signature, changed approval fields or a different signer fail closed before rows are returned.",
+        "The signature proves the configured key authorized the exact approval payload; it does not independently attest the wall clock, provide OS filesystem isolation, or restore secrecy for holdout files already committed in repository history. Key provisioning, protected storage and deployment isolation remain open; item remains PARTIAL."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T21:39:10Z",
-      "commit": "6a8c7e40",
+      "last_audited_at_utc": "2026-11-26T22:49:06Z",
+      "commit": "9ca711d0",
       "test_evidence": [
         "python -m pytest tests/test_holdout_access.py tests/test_sealed_holdout_consumers.py tests/test_evidence_labels.py tests/test_phase5_news_model.py -q --basetemp .pytest-pa0614-integration: 24 passed in 5.07s.",
         "python -m ruff check src/financial_brain/research/sealed_dataset.py src/financial_brain/evaluation/labels.py src/financial_brain/evaluation/models.py tests/test_sealed_holdout_consumers.py: passed.",
-        "python -m mypy src/financial_brain/research/sealed_dataset.py src/financial_brain/evaluation/labels.py src/financial_brain/evaluation/models.py: Success: no issues found in 3 source files."
+        "python -m mypy src/financial_brain/research/sealed_dataset.py src/financial_brain/evaluation/labels.py src/financial_brain/evaluation/models.py: Success: no issues found in 3 source files.",
+        "python -m pytest tests/test_holdout_access.py tests/test_sealed_holdout_consumers.py tests/test_evidence_labels.py tests/test_phase5_news_model.py -q --basetemp .pytest-pa0614-signed-rerun: 25 passed.",
+        "ruff check src/financial_brain/forward_edge/approvals.py src/financial_brain/research/holdout_access.py tests/test_holdout_access.py tests/test_sealed_holdout_consumers.py: passed.",
+        "python -m mypy src/financial_brain/forward_edge/approvals.py src/financial_brain/research/holdout_access.py tests/test_holdout_access.py tests/test_sealed_holdout_consumers.py --follow-imports=silent: passed."
       ]
     },
     {
