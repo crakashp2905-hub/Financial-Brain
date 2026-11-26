@@ -7788,12 +7788,22 @@
     {
       "id": "PA-04-03",
       "text": "Build immutable entry, fill, partial fill, amend, stop policy, stop trigger, target trigger, cancel, expire and exit events; link to strategy and decision hashes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/kernel/exit_protection_ledger.py computes decision_sha256 over canonical frozen entry identity, strategy/version, instrument, side, quote source/evidence hash, decision time, and entry snapshot hash.",
+        "The append-only hash-chained position journal carries the same decision_sha256 through entry intent and fills, armed stop/target policy, stop/target trigger, unresolved exit, paper execution, partial/full exit fills, and position closure; conflicting replay remains rejected.",
+        "tests/test_exit_protection_ledger.py verifies every recorded position lifecycle event retains one decision hash, changing the frozen setup changes that hash, and restart/idempotency behavior remains valid."
+      ],
+      "blocker": "PARTIAL: the decision hash and existing immutable journal cover the kernel position/protection lifecycle, but the requirement also needs a unified strategy-linked amend, cancel, and expire event contract across OMS, legacy paper books, options, and the forward runner. These order paths remain separate.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": "b2e4ae3d",
+      "test_evidence": [
+        "python -m pytest tests/test_exit_protection_ledger.py -q: 15 passed.",
+        "ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py: passed.",
+        "mypy src/financial_brain/kernel/exit_protection_ledger.py: Success, no issues found."
+      ],
+      "test_result": "The kernel journal now ties each immutable position lifecycle event to the original strategy decision and frozen entry snapshot. PA-04-03 remains PARTIAL because amend/cancel/expire are not yet represented by a unified lifecycle across all execution and paper-book domains."
     },
     {
       "id": "PA-04-04",
@@ -20023,7 +20033,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T22:26:47Z",
+    "as_of_utc": "2026-11-26T23:13:56Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20474,6 +20484,7 @@
       "PA-03-15",
       "PA-04-01",
       "PA-04-02",
+      "PA-04-03",
       "PA-04-04",
       "PA-04-05",
       "PA-04-06",
@@ -20945,13 +20956,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 919,
+    "audited_count": 920,
     "status_counts": {
       "COMPLETE": 106,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 791,
-      "UNASSESSED": 459
+      "PARTIAL": 792,
+      "UNASSESSED": 458
     },
     "verified_complete_count": 106,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21094,13 +21105,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "Current snapshot: 917 of 1378 items assessed; 105 COMPLETE, 790 PARTIAL, 17 NOT_STARTED, 5 EXTERNAL_BLOCKED, 461 UNASSESSED. PA-06-10 central promotion inference supports preregistered HAC/Holm and Deflated Sharpe and now binds candidate IDs to a chain-verified research-look-family snapshot. PBO/CSCV, White Reality Check, SPA, universal look capture, and independent timestamp attestation remain open."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent."
   },
   "counts_by_status": {
     "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 791,
-    "UNASSESSED": 459
+    "PARTIAL": 792,
+    "UNASSESSED": 458
   }
 }
