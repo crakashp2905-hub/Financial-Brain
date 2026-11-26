@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:31:25Z",
+  "as_of_utc": "2026-11-26T20:39:30Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "9861fcf9e82b0f5863d13ae0a18922ae339dbf8109a79ce91fac8a7d3bd98f4f",
-  "audit_export_sha256": "870848e15f7325b83f4931953700929274954e965c8d906111a6d322614380ab",
+  "status_ledger_sha256": "2f939d7240d2fcfc29a92d84d53a17969173cef8c12a9a3390c1511564f79cca",
+  "audit_export_sha256": "3af5b5865b7abd999cc1400f94be76681aa8aed2fe5901284c9bac25e11582f1",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
@@ -2222,17 +2222,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Separate exploratory screening, preregistered validation, single-use holdout and future observation; hard-code access restrictions per tier."
           },
-          "commit": null,
+          "commit": "b5607f25",
           "blocker": null,
           "evidence": [
-            "src/financial_brain/research/evaluation_tiers.py defines closed tier/action enums and a fail-closed operation map: exploratory may inspect/tune; preregistered validation may only validate frozen runs; single-use holdout may only request a holdout open; future observation may only be scored; none can promote.",
-            "Validation/holdout requests require a preregistration SHA-256 and stable run ID. src/financial_brain/research/holdout_access.py now adds a persistent, hash-chained one-use dataset/run ledger and exact-scope HOLDOUT_ACCESS owner approval; agent and non-owner actors are rejected.",
-            "The access policy is not wired before every evaluator/data adapter; ledger custody is local and is not independent identity authentication."
+            "src/financial_brain/research/evaluation_tiers.py defines closed tier/action enums and a fail-closed operation map; no tier permits promotion.",
+            "src/financial_brain/research/holdout_access.py records exact-scope owner approvals in a persistent one-use hash chain.",
+            "src/financial_brain/research/sealed_dataset.py consumes the approval before opening a root-confined dataset, enforces a byte cap, and verifies content against the frozen manifest SHA-256. Five focused holdout tests pass.",
+            "Direct evaluator/data-adapter bypass is still possible, and owner identity/custody is not independently authenticated."
           ],
           "tests": [
             "python -m pytest tests/test_research_evaluation_tiers.py -q --basetemp .pytest-pa0604: 11 passed.",
-            "python -m pytest tests/test_holdout_access.py -q --basetemp .pytest-pa0614: 3 passed.",
-            "Ruff and targeted mypy passed for the tier and holdout access modules."
+            "python -m pytest tests/test_holdout_access.py -q --basetemp .pytest-pa0604-reader: 5 passed.",
+            "Ruff and targeted mypy passed for the tier, holdout ledger, sealed reader, and tests."
           ]
         },
         {
@@ -2983,5 +2984,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c328ce5a1e598647aef1a9bfa50f2864e2653a2d0fd50574a5605fce59d49c7b"
+  "report_sha256": "be9c978e5c43ad669b671a7b5dd61c4e8046d1fa56f9232e97c3363c5ee34073"
 }

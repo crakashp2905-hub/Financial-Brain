@@ -8445,17 +8445,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/research/evaluation_tiers.py defines closed tier/action enums and a fail-closed operation map: exploratory may inspect/tune; preregistered validation may only validate frozen runs; single-use holdout may only request a holdout open; future observation may only be scored; none can promote.",
-        "Validation/holdout requests require a preregistration SHA-256 and stable run ID. src/financial_brain/research/holdout_access.py now adds a persistent, hash-chained one-use dataset/run ledger and exact-scope HOLDOUT_ACCESS owner approval; agent and non-owner actors are rejected.",
-        "The access policy is not wired before every evaluator/data adapter; ledger custody is local and is not independent identity authentication."
+        "src/financial_brain/research/evaluation_tiers.py defines closed tier/action enums and a fail-closed operation map; no tier permits promotion.",
+        "src/financial_brain/research/holdout_access.py records exact-scope owner approvals in a persistent one-use hash chain.",
+        "src/financial_brain/research/sealed_dataset.py consumes the approval before opening a root-confined dataset, enforces a byte cap, and verifies content against the frozen manifest SHA-256. Five focused holdout tests pass.",
+        "Direct evaluator/data-adapter bypass is still possible, and owner identity/custody is not independently authenticated."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:59:47+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T20:39:30+00:00",
+      "commit": "b5607f25",
       "test_evidence": [
         "python -m pytest tests/test_research_evaluation_tiers.py -q --basetemp .pytest-pa0604: 11 passed.",
-        "python -m pytest tests/test_holdout_access.py -q --basetemp .pytest-pa0614: 3 passed.",
-        "Ruff and targeted mypy passed for the tier and holdout access modules."
+        "python -m pytest tests/test_holdout_access.py -q --basetemp .pytest-pa0604-reader: 5 passed.",
+        "Ruff and targeted mypy passed for the tier, holdout ledger, sealed reader, and tests."
       ]
     },
     {
@@ -19949,7 +19950,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:31:25Z",
+    "as_of_utc": "2026-11-26T20:39:30Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
