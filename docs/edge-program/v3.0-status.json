@@ -7750,11 +7750,20 @@
       "id": "PA-04-01",
       "text": "Enumerate existing OMS, paper books, legacy intraday runner, option spread runner and forward-edge pipeline; document one authoritative account/position ownership contract.",
       "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "status": "COMPLETE",
+      "evidence": [
+        "docs/edge-program/paper-account-position-ownership.v1.json enumerates the broker OMS, legacy intraday and swing books, decision candidate paper book, mutual-fund books, option execution subledger, ForwardSessionRunner, kernel EventKernel and CanonicalPortfolioLedger with source paths and explicit authoritative/not-authoritative scopes.",
+        "The contract makes CanonicalPortfolioLedger the single consolidated paper-accounting/position projection, while the external broker remains authoritative for actual holdings. Operational OMS and desk ledgers own only their local order/event lifecycles until source-bound events are imported once; missing/conflicting fills remain unresolved and no synthetic close is allowed.",
+        "ETF-specific source books were not identified in the audited local databases. Forward, kernel and derivatives subledger imports, broker reconciliation, and multi-asset accounting integrations remain explicit unresolved domains tracked by other checklist items; this item is limited to the requested ownership inventory and contract."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-26T22:56:15Z",
+      "commit": "a6cea56f",
+      "test_evidence": [
+        "python scripts/validate_paper_account_position_ownership.py: validated; all listed owners and supporting source paths resolve, exact system inventory and single canonical owner pass.",
+        "python -m pytest tests/test_paper_account_position_ownership.py tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py -q --basetemp .pytest-pa0401-owner-map: 17 passed.",
+        "Ruff and targeted mypy passed for validator and tests; CI check-matrix validation passed."
+      ]
     },
     {
       "id": "PA-04-02",
@@ -20450,6 +20459,7 @@
       "PA-03-09",
       "PA-03-10",
       "PA-03-15",
+      "PA-04-01",
       "PA-04-04",
       "PA-04-05",
       "PA-04-06",
@@ -20921,15 +20931,15 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 917,
+    "audited_count": 918,
     "status_counts": {
-      "COMPLETE": 105,
-      "PARTIAL": 790,
-      "NOT_STARTED": 17,
+      "COMPLETE": 106,
       "EXTERNAL_BLOCKED": 5,
-      "UNASSESSED": 461
+      "NOT_STARTED": 17,
+      "PARTIAL": 790,
+      "UNASSESSED": 460
     },
-    "verified_complete_count": 105,
+    "verified_complete_count": 106,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21073,10 +21083,10 @@
     "evidence_update": "Current snapshot: 917 of 1378 items assessed; 105 COMPLETE, 790 PARTIAL, 17 NOT_STARTED, 5 EXTERNAL_BLOCKED, 461 UNASSESSED. PA-06-10 central promotion inference supports preregistered HAC/Holm and Deflated Sharpe and now binds candidate IDs to a chain-verified research-look-family snapshot. PBO/CSCV, White Reality Check, SPA, universal look capture, and independent timestamp attestation remain open."
   },
   "counts_by_status": {
-    "COMPLETE": 105,
-    "PARTIAL": 790,
-    "NOT_STARTED": 17,
+    "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
-    "UNASSESSED": 461
+    "NOT_STARTED": 17,
+    "PARTIAL": 790,
+    "UNASSESSED": 460
   }
 }

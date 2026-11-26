@@ -4,19 +4,19 @@
   "as_of_utc": "2026-11-26T22:26:47Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "9d5f4cea9c5226dd970a56dc74f221c5d12ba8050ffb04427879740ffc7c6d97",
-  "audit_export_sha256": "6e1cf6838331929b957d3c343fc7dda34911bcc4669278f28ecf4de2c5c5d287",
+  "status_ledger_sha256": "119f1e996210632655be9ded11bbae5a65c79ad0f7f7241cd48e59e663f4301f",
+  "audit_export_sha256": "95e8b9d1fd3a934480144ffef43b8c2f7f5dc700590581011298fed000530beb",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 105,
+    "COMPLETE": 106,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
     "PARTIAL": 790,
-    "UNASSESSED": 461
+    "UNASSESSED": 460
   },
-  "assessed_count": 917,
-  "unassessed_count": 461,
-  "verified_complete_count": 105,
+  "assessed_count": 918,
+  "unassessed_count": 460,
+  "verified_complete_count": 106,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -1093,25 +1093,33 @@
       "status": "AMBER",
       "item_count": 35,
       "counts_by_status": {
-        "COMPLETE": 2,
+        "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
         "PARTIAL": 30,
-        "UNASSESSED": 3
+        "UNASSESSED": 2
       },
       "evidence": [
         {
           "item_id": "PA-04-01",
-          "status": "UNASSESSED",
+          "status": "COMPLETE",
           "source": {
             "line": 983,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Enumerate existing OMS, paper books, legacy intraday runner, option spread runner and forward-edge pipeline; document one authoritative account/position ownership contract."
           },
-          "commit": null,
+          "commit": "a6cea56f",
           "blocker": null,
-          "evidence": [],
-          "tests": []
+          "evidence": [
+            "docs/edge-program/paper-account-position-ownership.v1.json enumerates the broker OMS, legacy intraday and swing books, decision candidate paper book, mutual-fund books, option execution subledger, ForwardSessionRunner, kernel EventKernel and CanonicalPortfolioLedger with source paths and explicit authoritative/not-authoritative scopes.",
+            "The contract makes CanonicalPortfolioLedger the single consolidated paper-accounting/position projection, while the external broker remains authoritative for actual holdings. Operational OMS and desk ledgers own only their local order/event lifecycles until source-bound events are imported once; missing/conflicting fills remain unresolved and no synthetic close is allowed.",
+            "ETF-specific source books were not identified in the audited local databases. Forward, kernel and derivatives subledger imports, broker reconciliation, and multi-asset accounting integrations remain explicit unresolved domains tracked by other checklist items; this item is limited to the requested ownership inventory and contract."
+          ],
+          "tests": [
+            "python scripts/validate_paper_account_position_ownership.py: validated; all listed owners and supporting source paths resolve, exact system inventory and single canonical owner pass.",
+            "python -m pytest tests/test_paper_account_position_ownership.py tests/test_canonical_portfolio_ledger.py tests/test_legacy_portfolio_migration.py -q --basetemp .pytest-pa0401-owner-map: 17 passed.",
+            "Ruff and targeted mypy passed for validator and tests; CI check-matrix validation passed."
+          ]
         },
         {
           "item_id": "PA-04-02",
@@ -3035,5 +3043,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "03bf6732239bfa1787b422a37ddacc142a9ad1e89e54562045893187ce5e0f7a"
+  "report_sha256": "024e56dd3f8925d3429515666dac36d771b5c895f0f51278add625776d295ca1"
 }
