@@ -4,19 +4,19 @@
   "as_of_utc": "2026-11-26T23:13:56Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "70515cf4c113eef6dafc253a76bacecb0b30cb90c194f77b28c6b7cc275a6394",
-  "audit_export_sha256": "fbdf58f9e10cfcacd36e0c7f6bb8ee70ba4f971316735b47954b1ac11f36e3df",
+  "status_ledger_sha256": "d2d402a8d9d8a386ab2090fc892586df52abc14b53a3ff0fec7ecab9b3a1eac0",
+  "audit_export_sha256": "f854ca3f7e7731b87a0075c6fcb1766f7b5d01fd508d3886fa569db55be1fd46",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 106,
+    "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
     "PARTIAL": 793,
-    "UNASSESSED": 457
+    "UNASSESSED": 456
   },
-  "assessed_count": 921,
-  "unassessed_count": 457,
-  "verified_complete_count": 106,
+  "assessed_count": 922,
+  "unassessed_count": 456,
+  "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -572,11 +572,11 @@
       "status": "AMBER",
       "item_count": 32,
       "counts_by_status": {
-        "COMPLETE": 2,
+        "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
         "PARTIAL": 13,
-        "UNASSESSED": 17
+        "UNASSESSED": 16
       },
       "evidence": [
         {
@@ -788,16 +788,25 @@
         },
         {
           "item_id": "PA-02-13",
-          "status": "UNASSESSED",
+          "status": "COMPLETE",
           "source": {
             "line": 945,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add deterministic, low-cost synthetic fixture and delayed/replay feed modes for engineering tests; visually and cryptographically distinguish fixture rows from true market observations."
           },
-          "commit": null,
+          "commit": "e8c2981b",
           "blocker": null,
-          "evidence": [],
-          "tests": []
+          "evidence": [
+            "src/financial_brain/forward_edge/fixtures.py::fixture_pack provides deterministic synthetic sessions for win, loss, no-trade, rejection, late quote, unknown order, adverse fill, and missed fill; tests/test_forward_edge_pipeline_compat.py checks all golden signatures and repeat-run determinism.",
+            "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote supports an explicit non-negative availability_delay while preserving the KITE_CONNECT_READ_ONLY source and separate exchange, receipt, and availability clocks.",
+            "src/financial_brain/forward_edge/market_events.py hashes source identity in the canonical event; QuoteArchive coverage displays LIVE_OBSERVED only for recognized Kite/exchange source classes and FIXTURE_OR_MIXED for synthetic fixture classes. The coverage label does not authenticate vendor origin, as documented in quote_archive.py.",
+            "tests/test_forward_edge_quote_archive.py::test_kite_delayed_feed_and_synthetic_fixture_have_distinct_hashed_source_classes proves delay clocks, different event hashes, and separate live/fixture coverage labels; CLI and fixture compatibility tests cover historical replay mode and deterministic fixture outcomes."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_quote_archive.py tests/test_forward_edge_kite_market_data.py tests/test_forward_edge_pipeline_compat.py -q: 48 passed.",
+            "ruff check src/financial_brain/forward_edge/quote_archive.py tests/test_forward_edge_quote_archive.py: passed.",
+            "mypy src/financial_brain/forward_edge/quote_archive.py: Success, no issues found."
+          ]
         },
         {
           "item_id": "PA-02-14",
@@ -3071,5 +3080,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "5b544bb478e2a0b7de0357fcbd99fcde8324520ff699bfe8ba78d74f622abb18"
+  "report_sha256": "1c2011949c0e317035822bcf7fa63d192ef5ed8719277b860443b8949d44097a"
 }
