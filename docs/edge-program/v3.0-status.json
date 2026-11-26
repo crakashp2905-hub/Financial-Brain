@@ -7469,12 +7469,22 @@
     {
       "id": "PA-02-10",
       "text": "Audit price-return versus total-return fields; verify dividends, splits, rights, bonus and corporate actions do not create false momentum or false reversal alpha.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The repository separates unadjusted observations from corporate-action-derived adjusted prices in src/financial_brain/corpactions/actions.py; action kinds include splits, bonuses, rights, and dividends, and suspicious unexplained overnight gaps can be flagged.",
+        "src/financial_brain/kernel/closures_p.py::adjust_for_dividends now computes ex-date adjustment factors from the prior session close, validates positive finite prices/dividends, and rejects dividend amounts at or above the prior close.",
+        "tests/test_kernel_closures_p.py verifies a five-unit dividend against a 100 prior close and 95 ex-date close leaves a flat adjusted series rather than inventing a return; 25 focused tests pass."
+      ],
+      "blocker": "PARTIAL: a dividend-adjustment calculation bug is fixed, but price-return/total-return field semantics and point-in-time corporate-action treatment are not audited across every research feature, momentum/reversal strategy, and data source. Rights/bonus/action coverage and real-history artifact probes remain incomplete.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": "497cc65f",
+      "test_evidence": [
+        "python -m pytest tests/test_kernel_closures_p.py -q: 25 passed.",
+        "ruff check src/financial_brain/kernel/closures_p.py tests/test_kernel_closures_p.py: passed.",
+        "mypy src/financial_brain/kernel/closures_p.py: Success, no issues found."
+      ],
+      "test_result": "The ex-dividend adjustment now uses the pre-ex-date close and has a regression proving the dividend event does not manufacture a gain. PA-02-10 remains PARTIAL until all strategies and historical data paths are audited for price-versus-total-return semantics and corporate-action leakage."
     },
     {
       "id": "PA-02-11",
@@ -20531,6 +20541,7 @@
       "PA-02-07",
       "PA-02-08",
       "PA-02-09",
+      "PA-02-10",
       "PA-02-12",
       "PA-02-13",
       "PA-02-14",
@@ -21015,13 +21026,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 925,
+    "audited_count": 926,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 796,
-      "UNASSESSED": 453
+      "PARTIAL": 797,
+      "UNASSESSED": 452
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21164,13 +21175,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial."
   },
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 796,
-    "UNASSESSED": 453
+    "PARTIAL": 797,
+    "UNASSESSED": 452
   }
 }

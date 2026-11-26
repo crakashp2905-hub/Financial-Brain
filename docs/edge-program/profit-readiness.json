@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-26T23:13:56Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "a842d9d808e397049f7dfb331d593d02cbc1380b4c2fb66db4f3b2aa17f55c2f",
-  "audit_export_sha256": "8edbf1cdd703a4c306e986becce72777e294f75366460c21db7d5ac839c89ae6",
+  "status_ledger_sha256": "24625efa69638b7d992f45abdb10f46767ab296e976a76baaf00ce56debfc231",
+  "audit_export_sha256": "c4aed9bc961e4135d3c86458cea5f468985ff4eb3d0c8726bd0cb68ffc754eb2",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 796,
-    "UNASSESSED": 453
+    "PARTIAL": 797,
+    "UNASSESSED": 452
   },
-  "assessed_count": 925,
-  "unassessed_count": 453,
+  "assessed_count": 926,
+  "unassessed_count": 452,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 16,
-        "UNASSESSED": 13
+        "PARTIAL": 17,
+        "UNASSESSED": 12
       },
       "evidence": [
         {
@@ -749,16 +749,24 @@
         },
         {
           "item_id": "PA-02-10",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 942,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Audit price-return versus total-return fields; verify dividends, splits, rights, bonus and corporate actions do not create false momentum or false reversal alpha."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "497cc65f",
+          "blocker": "PARTIAL: a dividend-adjustment calculation bug is fixed, but price-return/total-return field semantics and point-in-time corporate-action treatment are not audited across every research feature, momentum/reversal strategy, and data source. Rights/bonus/action coverage and real-history artifact probes remain incomplete.",
+          "evidence": [
+            "The repository separates unadjusted observations from corporate-action-derived adjusted prices in src/financial_brain/corpactions/actions.py; action kinds include splits, bonuses, rights, and dividends, and suspicious unexplained overnight gaps can be flagged.",
+            "src/financial_brain/kernel/closures_p.py::adjust_for_dividends now computes ex-date adjustment factors from the prior session close, validates positive finite prices/dividends, and rejects dividend amounts at or above the prior close.",
+            "tests/test_kernel_closures_p.py verifies a five-unit dividend against a 100 prior close and 95 ex-date close leaves a flat adjusted series rather than inventing a return; 25 focused tests pass."
+          ],
+          "tests": [
+            "python -m pytest tests/test_kernel_closures_p.py -q: 25 passed.",
+            "ruff check src/financial_brain/kernel/closures_p.py tests/test_kernel_closures_p.py: passed.",
+            "mypy src/financial_brain/kernel/closures_p.py: Success, no issues found."
+          ]
         },
         {
           "item_id": "PA-02-11",
@@ -3107,5 +3115,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "2af42e466d210cee869653f64a568ad78fdccd045f6c33c1165d20e5be362669"
+  "report_sha256": "b2265d6937c1f6b38a15b78898aa82a126277a585c0e11e315cf07db8abd121d"
 }
