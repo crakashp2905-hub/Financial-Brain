@@ -8465,17 +8465,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "ADR-0007 and the dynamic-standard implementation/results exist on the separate feature/dynamic-evidence-standard git ref (ADR blob and reports are not in the current branch). The ADR states prior class and family size are fixed before a series is scored and that retrospective rescoring only ranks hypotheses for forward observation.",
-        "The separate dynamic scorer accepts Spec(prior, family) directly and does not validate registration time against first outcome access; historical outputs contain post-hoc regrades (e.g., P3) alongside forward-registered candidates.",
-        "src/financial_brain/research/family_registration.py adds content-hashed prior/family registration and temporal evaluation evidence. Equal-time or later registration is RETROSPECTIVE_ONLY and cannot certify forward evidence; family size and timestamps are validated."
+        "src/financial_brain/research/family_registration.py freezes prior class and full family size in a durable SQLite event chain; the ledger assigns registration time and does not accept a caller-supplied timestamp.",
+        "Outcome access records the data-availability timestamp and dataset hash. A historical outcome available before registration is RETROSPECTIVE_ONLY even when opened after registration; scoring is bound once to the prior, family, access, and result hashes.",
+        "Restart, one-time access/scoring, historical availability, event chronology and hash integrity are covered by 14 focused tests; Ruff and mypy pass.",
+        "The ADR-0007 dynamic scorer and historical result artifacts remain on a separate unmerged ref and are not wired to require this ledger. Availability timestamps/data hashes are not independently attested, so this is a local fail-closed research boundary rather than independent custody."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:39:30+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T20:46:26+00:00",
+      "commit": "1f89d292",
       "test_evidence": [
-        "python -m pytest tests/test_family_registration.py -q --basetemp .pytest-pa0605: 9 passed.",
-        "ruff check src/financial_brain/research/family_registration.py tests/test_family_registration.py: passed.",
-        "mypy src/financial_brain/research/family_registration.py: passed."
+        "python -m pytest tests/test_family_registration.py tests/test_family_registration_ledger.py -q --basetemp .pytest-family-registration-ledger2: 14 passed.",
+        "python -m ruff check src/financial_brain/research/family_registration.py tests/test_family_registration.py tests/test_family_registration_ledger.py: passed.",
+        "python -m mypy src/financial_brain/research/family_registration.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19950,7 +19951,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T20:39:30Z",
+    "as_of_utc": "2026-11-26T20:46:26Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
