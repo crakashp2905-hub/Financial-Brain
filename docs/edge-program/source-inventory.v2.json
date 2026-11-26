@@ -12409,13 +12409,17 @@
         "datetime",
         "enum",
         "hashlib",
-        "json"
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing",
+        "uuid"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/research/family_registration.py",
-      "source_sha256": "039faf8238e9af8f6035a4dfa70fd9d102d3f1dab473b23f3a1a490053c5fdaf",
+      "source_sha256": "4e6c665bcb996f916a3e6cb58a46d6c6da24dac7542b361e403b7ba3e141eb63",
       "test_paths": []
     },
     {
