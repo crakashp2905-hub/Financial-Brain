@@ -8524,18 +8524,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "forward_edge.abstention.evaluate_abstentions still requires the result IDs to exactly match the frozen expected-opportunity universe, and unresolved outcomes remain in its denominator without invented returns.",
-        "AbstentionOutcome now requires a closed execution disposition: NO_ORDER, REJECTED, DELAYED, NO_FILL, PARTIAL_FILL, FILLED or UNKNOWN, with fill fractions validated against the state. The report hashes per-state counts and flags missed winners/avoided losses from rejected, delayed and no-fill opportunities.",
-        "Seven focused tests cover full fills, execution-state/fill contradictions, unresolved outcomes, missed winners and avoided losses; Ruff and mypy pass.",
-        "This remains separate from executable next-session outcome resolution and the canonical session/order ledger; strategy signals, delayed orders, fills, costs and matured counterfactuals are not yet joined in one production scoring path."
+        "The opportunity universe is now an immutable FrozenOpportunityManifest with sorted unique IDs, a source SHA-256, policy SHA-256, and pre-cohort freeze timestamp.",
+        "OpportunityManifestLedger persists one-time freeze receipts in SQLite with FULL synchronous writes and a hash-chained audit; evaluation requires the exact manifest to exist in that ledger and rejects post-policy or post-cohort freezes.",
+        "evaluate_abstentions requires outcome IDs to exactly match the pre-frozen universe, checks frozen policy lineage before set completeness, and includes unresolved outcomes in the denominator without inventing returns.",
+        "Outcomes distinguish NO_ORDER, REJECTED, DELAYED, NO_FILL, PARTIAL_FILL, FILLED and UNKNOWN; reports hash execution-state counts, opportunity-manifest identity, counterfactual opportunity cost, missed winners and avoided losses.",
+        "The score remains a standalone API: real strategy signals, delayed orders, canonical fills, costs, and matured counterfactuals are not yet joined into a single production scoring path; local timestamps also lack independent attestation."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T20:53:05+00:00",
-      "commit": "df3d91f6",
+      "last_audited_at_utc": "2026-11-26T21:26:55Z",
+      "commit": "1b7fc43f",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_abstention.py -q --basetemp .pytest-pa0608-execution: 7 passed.",
+        "python -m pytest tests/test_forward_edge_abstention.py tests/test_executable_outcomes.py tests/test_forward_edge_pipeline_compat.py -q --basetemp .pytest-pa0608-verify2: 28 passed in 25.17s.",
         "python -m ruff check src/financial_brain/forward_edge/abstention.py tests/test_forward_edge_abstention.py: passed.",
-        "python -m mypy src/financial_brain/forward_edge/abstention.py --follow-imports=silent: passed."
+        "python -m mypy src/financial_brain/forward_edge/abstention.py: Success: no issues found in 1 source file."
       ]
     },
     {
