@@ -274,3 +274,23 @@ def test_events_refuse_missing_provenance_naive_time_and_bad_trade_fields(tmp_pa
     with pytest.raises(CanonicalLedgerError, match="fill needs"):
         ledger.append(event("not-fill", EventKind.FILL, side="BUY", quantity="1", price="10"))
 
+
+def test_zero_value_expiry_is_option_only_and_closes_without_synthetic_cashflow(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("option-open", EventKind.FILL, asset_class=AssetClass.OPTION,
+              instrument_id="NIFTY-100-CE", side="BUY", quantity="50", price="10"),
+        event("option-expiry", EventKind.EXPIRY_SETTLEMENT, asset_class=AssetClass.OPTION,
+              instrument_id="NIFTY-100-CE", side="SELL", quantity="50", price="0"),
+    ])
+    state = ledger.snapshot("paper-main")
+    option = next(row for row in state["positions"] if row["instrument_id"] == "NIFTY-100-CE")
+    assert option["quantity"] == 0
+    assert option["realized_pnl"] == Decimal("-500")
+    assert state["cash"] == {"INR": Decimal("-500")}
+
+    with pytest.raises(CanonicalLedgerError, match="expiry settlement events must close an option"):
+        ledger.append(event("equity-expiry", EventKind.EXPIRY_SETTLEMENT,
+                            asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                            side="SELL", quantity="1", price="0"))
+

@@ -12,7 +12,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from financial_brain.portfolio.canonical_ledger import PortfolioEvent
 
 
 class DerivativesLedgerError(ValueError):
@@ -298,6 +301,102 @@ class DerivativesSubledger:
                 "settlement_status": "SETTLED" if settled else "PARTIALLY_SETTLED" if settlement_events else "NOT_SETTLED",
                 "settlements": settlement_events, "event_count": len(events),
                 "event_chain_sha256": previous}
+
+    def to_portfolio_events(self, package_id: str) -> list[PortfolioEvent]:
+        """Project verified option fills and settlements into canonical portfolio events.
+
+        Cash-settled expiry closes the option at intrinsic value. Physical expiry closes the
+        option at zero, then records assignment/delivery at strike and a source-time
+        underlying mark. The source hash is the verified derivative event-chain digest.
+        """
+        from financial_brain.portfolio.canonical_ledger import (
+            AssetClass, EventKind, PortfolioEvent,
+        )
+
+        self.snapshot(package_id)  # verifies package definition and every hash-chain link
+        _, definition = self._definition(package_id)
+        rows = self._con.execute(
+            "SELECT event_id,event_type,payload_json,event_sha256 FROM derivative_events "
+            "WHERE package_id=? ORDER BY sequence", [package_id]).fetchall()
+        contracts = {leg["leg_id"]: leg for leg in definition["legs"]}
+        source_system = "paper.derivatives_subledger"
+        account_id = definition["account_id"]
+        events: list[PortfolioEvent] = []
+        for event_id, event_type, payload_text, source_hash in rows:
+            payload = json.loads(payload_text)
+            if event_type == "LEG_FILL":
+                leg = contracts[payload["leg_id"]]
+                events.append(PortfolioEvent(
+                    account_id=account_id, sleeve_id=package_id, source_system=source_system,
+                    source_event_id=event_id, source_sha256=source_hash, event_kind=EventKind.FILL,
+                    occurred_at=payload["occurred_at"], currency="INR", asset_class=AssetClass.OPTION,
+                    instrument_id=leg["contract"]["contract_id"], side=payload["side"],
+                    quantity=payload["quantity"], price=payload["price"],
+                    evidence_class="LOCAL_PAPER", metadata={
+                        "package_id": package_id, "derivative_event_id": event_id,
+                        "derivative_event_sha256": source_hash, "leg_id": payload["leg_id"],
+                        "quote_event_id": payload["quote_event_id"],
+                        "quote_observed_at": payload["quote_observed_at"],
+                        "quote_available_at": payload["quote_available_at"],
+                        "quote_evidence_sha256": payload["quote_evidence_sha256"],
+                    }))
+                continue
+            if event_type != "EXPIRY_SETTLEMENT":
+                continue
+            settlement_at = payload["settlement_at"]
+            for settled_leg in payload["legs"]:
+                leg = contracts[settled_leg["leg_id"]]
+                contract = leg["contract"]
+                close_side = "SELL" if leg["side"] == "BUY" else "BUY"
+                expiry_price = (Decimal(settled_leg["intrinsic_per_unit"])
+                                if contract["settlement"] == "CASH" else Decimal(0))
+                close_id = f"{event_id}:{contract['contract_id']}:option-expiry"
+                events.append(PortfolioEvent(
+                    account_id=account_id, sleeve_id=package_id, source_system=source_system,
+                    source_event_id=close_id, source_sha256=source_hash,
+                    event_kind=EventKind.EXPIRY_SETTLEMENT, occurred_at=settlement_at,
+                    currency="INR", asset_class=AssetClass.OPTION,
+                    instrument_id=contract["contract_id"], side=close_side,
+                    quantity=settled_leg["filled_quantity"], price=expiry_price,
+                    evidence_class="LOCAL_PAPER", metadata={
+                        "package_id": package_id, "settlement_event_id": event_id,
+                        "settlement_event_sha256": source_hash,
+                        "settlement_source_id": payload["source_id"],
+                        "settlement_source_sha256": payload["source_sha256"],
+                        "expiry_calendar_sha256": payload["expiry_calendar_sha256"],
+                        "settlement_style": contract["settlement"],
+                        "intrinsic_per_unit": settled_leg["intrinsic_per_unit"],
+                    }))
+                underlying_units = int(settled_leg["underlying_units"])
+                if contract["settlement"] == "PHYSICAL" and underlying_units:
+                    underlying_side = "BUY" if underlying_units > 0 else "SELL"
+                    events.append(PortfolioEvent(
+                        account_id=account_id, sleeve_id=package_id, source_system=source_system,
+                        source_event_id=f"{event_id}:{contract['contract_id']}:underlying-delivery",
+                        source_sha256=source_hash, event_kind=EventKind.FILL,
+                        occurred_at=settlement_at, currency="INR", asset_class=AssetClass.EQUITY,
+                        instrument_id=contract["underlying"], side=underlying_side,
+                        quantity=abs(underlying_units), price=contract["strike"],
+                        evidence_class="LOCAL_PAPER", metadata={
+                            "package_id": package_id, "settlement_event_id": event_id,
+                            "settlement_event_sha256": source_hash,
+                            "settlement_source_id": payload["source_id"],
+                            "settlement_source_sha256": payload["source_sha256"],
+                            "delivery_contract_id": contract["contract_id"],
+                        }))
+                    events.append(PortfolioEvent(
+                        account_id=account_id, sleeve_id=package_id, source_system=source_system,
+                        source_event_id=f"{event_id}:{contract['contract_id']}:underlying-mark",
+                        source_sha256=source_hash, event_kind=EventKind.MARK,
+                        occurred_at=settlement_at, currency="INR", asset_class=AssetClass.EQUITY,
+                        instrument_id=contract["underlying"], price=payload["underlying_price"],
+                        evidence_class="LOCAL_PAPER", metadata={
+                            "package_id": package_id, "settlement_event_id": event_id,
+                            "settlement_event_sha256": source_hash,
+                            "settlement_source_id": payload["source_id"],
+                            "settlement_source_sha256": payload["source_sha256"],
+                        }))
+        return events
 
     def settle_expiry(self, *, package_id: str, contract_id: str, event_id: str, settlement_date: date,
                       expiry_cutoff_at: datetime, expiry_calendar_sha256: str,

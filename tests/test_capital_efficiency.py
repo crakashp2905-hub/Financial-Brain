@@ -79,3 +79,22 @@ def test_report_refuses_unmarked_open_inventory(tmp_path):
     with pytest.raises(CapitalEfficiencyError, match="lacks an interval-end mark"):
         report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
                                   risk_budget_inr=100)
+
+
+def test_capital_efficiency_treats_zero_value_expiry_as_option_close(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "expiry.sqlite3")
+    ledger.import_events([
+        event("total", EventKind.CASH_FLOW, START, cash_delta="100000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "TOTAL"}),
+        event("deployed", EventKind.CASH_FLOW, START, cash_delta="50000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "DEPLOYED"}),
+        event("option-buy", EventKind.FILL, START.replace(day=10), asset_class=AssetClass.OPTION,
+              instrument_id="NIFTY-100-CE", side="BUY", quantity="1", price="10"),
+        event("option-expiry", EventKind.EXPIRY_SETTLEMENT, START.replace(day=20),
+              asset_class=AssetClass.OPTION, instrument_id="NIFTY-100-CE",
+              side="SELL", quantity="1", price="0"),
+    ])
+    report = report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
+                                       risk_budget_inr=Decimal("1000"))
+    assert report.net_pnl_inr == Decimal("-10")
+    assert report.annualized_turnover_inr == Decimal(10) * Decimal(365) / Decimal(181)

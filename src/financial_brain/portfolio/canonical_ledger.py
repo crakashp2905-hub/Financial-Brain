@@ -33,6 +33,7 @@ class AssetClass(StrEnum):
 class EventKind(StrEnum):
     CASH_FLOW = "CASH_FLOW"
     FILL = "FILL"
+    EXPIRY_SETTLEMENT = "EXPIRY_SETTLEMENT"
     FEE = "FEE"
     MARK = "MARK"
     UNRESOLVED_POSITION = "UNRESOLVED_POSITION"
@@ -116,14 +117,18 @@ class PortfolioEvent:
             raise CanonicalLedgerError("metadata must be an object")
 
         kind = EventKind(str(row["event_kind"]))
-        if kind is EventKind.FILL:
+        if kind in {EventKind.FILL, EventKind.EXPIRY_SETTLEMENT}:
             if not row["asset_class"] or not row["instrument_id"] or row["side"] not in {"BUY", "SELL"}:
                 raise CanonicalLedgerError("a fill needs asset class, instrument id and BUY/SELL side")
             quantity = _required_decimal(self.quantity, "quantity")
             price = _required_decimal(self.price, "price")
             multiplier = _decimal(self.multiplier, "multiplier")
-            if quantity <= 0 or price <= 0 or multiplier <= 0 or self.cash_delta is not None:
-                raise CanonicalLedgerError("fill quantity, price and multiplier must be positive; omit cash_delta")
+            price_invalid = price < 0 if kind is EventKind.EXPIRY_SETTLEMENT else price <= 0
+            if quantity <= 0 or price_invalid or multiplier <= 0 or self.cash_delta is not None:
+                raise CanonicalLedgerError("fill quantity and multiplier must be positive; price must be positive "
+                                           "except for zero-value expiry settlement; omit cash_delta")
+            if kind is EventKind.EXPIRY_SETTLEMENT and AssetClass(str(row["asset_class"])) is not AssetClass.OPTION:
+                raise CanonicalLedgerError("expiry settlement events must close an option position")
         elif kind is EventKind.MARK:
             if not row["asset_class"] or not row["instrument_id"] or _required_decimal(self.price, "price") <= 0:
                 raise CanonicalLedgerError("a mark needs asset class, instrument id and positive price")
@@ -403,7 +408,7 @@ class CanonicalPortfolioLedger:
                                                        Decimal(0), None, None, currency, multiplier_value, {sleeve}))
             if pos.currency != currency:
                 raise CanonicalLedgerError("one instrument position cannot mix currencies")
-            if kind is EventKind.FILL and pos.multiplier != multiplier_value:
+            if kind in {EventKind.FILL, EventKind.EXPIRY_SETTLEMENT} and pos.multiplier != multiplier_value:
                 raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
             pos.sleeves.add(sleeve)
             quantity = Decimal(str(event["quantity"]))

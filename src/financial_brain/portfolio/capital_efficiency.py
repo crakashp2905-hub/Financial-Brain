@@ -95,7 +95,7 @@ def report_capital_efficiency(*, ledger: CanonicalPortfolioLedger, account_id: s
         kind = row["event_kind"]
         if kind == EventKind.UNRESOLVED_POSITION.value:
             unresolved = True
-        elif kind == EventKind.FILL.value:
+        elif kind in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
             fills += 1
             key = (str(row["asset_class"]), str(row["instrument_id"]))
             qty, price, mult = (_money(row[name], name) for name in ("quantity", "price", "multiplier"))

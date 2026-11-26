@@ -85,7 +85,7 @@
     }
   ],
   "unresolved_domains": [
-    "Source-bound import and reconciliation from forward sessions, kernel scenarios and option subledger into the canonical paper portfolio are not universal.",
+    "A source-bound derivatives package adapter exists, but automatic package-wide scheduling/account aggregation is not implemented; forward sessions and kernel scenarios still have no universal import adapter.",
     "ETF-specific and mutual-fund order/fund-unit source books were not identified in the audited local databases; absence is not proof that no external book exists.",
     "Current broker holdings and the 51 legacy intraday exits require fresh source snapshots and authenticated broker execution receipts; unresolved records stay outside promoted P&L."
   ]
