@@ -79,6 +79,69 @@ def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
                        available_at, available_at, {"bid": 100.0, "ask": 100.1}, "FIXTURE")
 
 
+def test_deterministic_event_loop_orders_events_and_checks_exits_after_each(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    later = make_event(event_id="later", available_at=NOW + timedelta(seconds=2),
+                       event_time=NOW + timedelta(seconds=2))
+    earlier = make_event(event_id="earlier", available_at=NOW + timedelta(seconds=1),
+                         event_time=NOW + timedelta(seconds=1))
+    callbacks = []
+    result = runner.run_event_loop(
+        session_id="deterministic", config=config, events=[later, earlier],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:all-events",
+        on_market_event=lambda event, _: callbacks.append(("market", event.event_id)),
+        evaluate_protective_exits=lambda event, _: callbacks.append(("exit", event.event_id)),
+        on_close=lambda _: callbacks.append(("close", "session")),
+        session_close_at=NOW + timedelta(seconds=3), close_complete=True)
+
+    assert callbacks == [("market", "earlier"), ("exit", "earlier"),
+                         ("market", "later"), ("exit", "later"), ("close", "session")]
+    assert result["persisted_event_ids"] == ["earlier", "later"]
+    assert result["processed_event_ids"] == ["earlier", "later"]
+    assert result["status"] == "CLOSED"
+    runner.close()
+
+
+def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
+    config = make_config()
+    events = [make_event(event_id=f"restart-{index}",
+                         available_at=NOW + timedelta(seconds=index),
+                         event_time=NOW + timedelta(seconds=index)) for index in range(2)]
+    runner = make_runner(tmp_path)
+    attempted = []
+
+    def fail_on_second(event, _):
+        attempted.append(event.event_id)
+        if event.event_id == "restart-1":
+            raise RuntimeError("simulated crash before cursor acknowledgement")
+
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        runner.run_event_loop(
+            session_id="restartable", config=config, events=events,
+            session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+            consumer_id="strategy:restartable", on_market_event=fail_on_second,
+            evaluate_protective_exits=lambda *_: None)
+    assert runner.state_store.state("restartable") is SessionState.OPEN
+    assert runner.event_cursor("restartable", "strategy:restartable")["event_id"] == "restart-0"
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    replayed = []
+    result = resumed.run_event_loop(
+        session_id="restartable", config=config, events=[],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:restartable",
+        on_market_event=lambda event, _: replayed.append(("market", event.event_id)),
+        evaluate_protective_exits=lambda event, _: replayed.append(("exit", event.event_id)),
+        session_close_at=NOW + timedelta(seconds=3), close_complete=True)
+    assert attempted == ["restart-0", "restart-1"]
+    assert replayed == [("market", "restart-1"), ("exit", "restart-1")]
+    assert result["status"] == "CLOSED"
+    resumed.close()
+
+
 def make_runner(tmp_path):
     return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
 

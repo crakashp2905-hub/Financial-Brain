@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import InvalidOperation, ROUND_HALF_EVEN, Decimal
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
@@ -341,6 +341,94 @@ class ForwardSessionRunner:
             return SessionState.REJECTED
         self.state_store.transition(session_id, SessionState.OPEN, now=now)
         return SessionState.OPEN
+
+    def run_event_loop(self, *, session_id: str, config: ForwardRunConfig,
+                       events: Iterable[MarketEvent], session_open_at: datetime,
+                       preflight: dict[str, bool], consumer_id: str,
+                       on_market_event: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                       evaluate_protective_exits: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                       on_close: Callable[["ForwardSessionRunner"], None] | None = None,
+                       session_close_at: datetime | None = None,
+                       close_complete: bool = False) -> dict[str, Any]:
+        """Run one restartable, deterministic session event loop.
+
+        Events are made available one at a time in canonical time/sequence/ID order. The
+        market handler runs after durable ingestion; the protective-exit evaluator then
+        runs for every event (including quotes between strategy bars). A durable consumer
+        cursor advances only after both handlers return. Handlers must therefore use
+        idempotent decision/order IDs: a crash after a handler side effect but before its
+        cursor acknowledgement intentionally replays that event.
+
+        Passing ``close_complete=True`` requests closeout after all pending events have
+        been handled. Otherwise the session stays open for a later call or supervised
+        closeout. A failed handler leaves the session open and the event unacknowledged,
+        so a restart can retry it without losing the event.
+        """
+        if not session_id.strip() or not consumer_id.strip():
+            raise ForwardSessionRunnerError("session and event consumer IDs are required")
+        if session_open_at.tzinfo is None or session_open_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("session open clock must be timezone aware")
+        if not callable(on_market_event) or not callable(evaluate_protective_exits):
+            raise ForwardSessionRunnerError("market and protective-exit handlers are required")
+        if on_close is not None and not callable(on_close):
+            raise ForwardSessionRunnerError("session close handler must be callable")
+        if type(close_complete) is not bool:
+            raise ForwardSessionRunnerError("close_complete must be boolean")
+        if close_complete and (session_close_at is None or session_close_at.tzinfo is None or
+                               session_close_at.utcoffset() is None):
+            raise ForwardSessionRunnerError("complete closeout requires an aware session close clock")
+
+        event_batch = list(events)
+        if any(not isinstance(event, MarketEvent) for event in event_batch):
+            raise ForwardSessionRunnerError("event loop accepts normalized MarketEvent values only")
+        ordered = sorted(event_batch, key=lambda event: (
+            event.available_at, event.event_time,
+            -1 if event.sequence is None else event.sequence, event.event_id))
+        self.state_store.create(session_id, config, now=session_open_at)
+        state = self.state_store.state(session_id)
+        if state is SessionState.PLANNED:
+            state = self.begin(session_id, config, now=session_open_at, preflight=preflight)
+        if state is not SessionState.OPEN:
+            return {"session_id": session_id, "status": state.value, "processed_event_ids": [],
+                    "persisted_event_ids": [], "close_report": None}
+
+        persisted_event_ids: list[str] = []
+        processed_event_ids: list[str] = []
+
+        def drain_consumer() -> None:
+            while pending := self.read_events_after(session_id, consumer_id, limit=1):
+                row = pending[0]
+                event = MarketEvent.from_dict(row["event"])
+                on_market_event(event, self)
+                # This is deliberately independent of forecast cadence: every source
+                # event gives the position monitor a chance to evaluate protective exits.
+                evaluate_protective_exits(event, self)
+                cursor = self.event_cursor(session_id, consumer_id)
+                self.acknowledge_event_offset(
+                    session_id, consumer_id, expected_offset=(cursor or {}).get("event_offset", 0),
+                    through_offset=row["offset"], event_ids=(row["event_id"],),
+                    now=datetime.fromisoformat(row["ingested_at"]))
+                processed_event_ids.append(row["event_id"])
+
+        # Retry the durable unacknowledged prefix before admitting newer events. This
+        # prevents callbacks from seeing later events in the session ledger.
+        drain_consumer()
+        for event in ordered:
+            result = self.ingest(session_id, config, [event])
+            if result["persisted"]:
+                persisted_event_ids.append(event.event_id)
+            drain_consumer()
+
+        close_report = None
+        if close_complete:
+            if on_close is not None:
+                on_close(self)
+            close_report = self.close_session(session_id, complete=True, now=session_close_at)
+        return {"session_id": session_id,
+                "status": close_report["status"] if close_report else SessionState.OPEN.value,
+                "persisted_event_ids": persisted_event_ids,
+                "processed_event_ids": processed_event_ids,
+                "close_report": close_report}
 
     def plan_calendar_day(self, session_id: str, config: ForwardRunConfig, *, venue: str,
                           calendar: VenueCalendar, now: datetime, preflight: dict[str, bool],
