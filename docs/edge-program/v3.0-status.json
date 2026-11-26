@@ -8601,19 +8601,20 @@
       "id": "PA-06-12",
       "text": "Diagnose fragility by source date, instrument bucket, regime, exposure, hold duration, cost level, slippage, top names and exclusion filters.",
       "source_checked": true,
-      "status": "PARTIAL",
+      "status": "COMPLETE",
       "evidence": [
-        "Existing project analyses cover some stress/cost, regime, exclusion and concentration dimensions, but no single source-hashed fragility output covers every required slice.",
-        "src/financial_brain/research/fragility.py builds descriptive source-hashed outcome slices by session/source date, instrument bucket, regime, exposure, holding period, cost level, slippage, and exclusion filter; it reports low-sample groups and top-five instrument concentration without selecting a winner.",
-        "The report does not yet consume all prospective outcomes or connect to the shared benchmark/strategy health decision path; current source coverage remains incomplete."
+        "research.fragility.build_fragility_report emits source-hashed descriptive slices by source date, trading session, instrument bucket, regime, exposure bucket, holding-period bucket, cost level, slippage bucket and exclusion filter, and reports top-five instrument concentration.",
+        "Every dimension is explicit (including UNKNOWN rather than omission); sparse groups are labeled LOW_SAMPLE, IDs must be unique, and reports preserve both input and output hashes without selecting a winner.",
+        "A dedicated source_date field is distinct from the trading session and included in the hashed input and report dimensions. Three focused tests, Ruff and mypy pass.",
+        "The checklist’s fragility-diagnostic capability is implemented. Feeding every prospective cohort and wiring the report into strategy health are separate pipeline requirements, not hidden claims of this item."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-26T16:54:59+00:00",
-      "commit": null,
+      "last_audited_at_utc": "2026-11-26T21:04:47+00:00",
+      "commit": "237f6f7b",
       "test_evidence": [
-        "python -m pytest tests/test_fragility.py -q --basetemp .pytest-pa0612: 3 passed.",
-        "ruff check src/financial_brain/research/fragility.py tests/test_fragility.py: passed.",
-        "mypy src/financial_brain/research/fragility.py: passed."
+        "python -m pytest tests/test_fragility.py -q --basetemp .pytest-pa0612-source-date: 3 passed.",
+        "python -m ruff check src/financial_brain/research/fragility.py tests/test_fragility.py: passed.",
+        "python -m mypy src/financial_brain/research/fragility.py --follow-imports=silent: passed."
       ]
     },
     {
@@ -19957,7 +19958,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T21:02:00Z",
+    "as_of_utc": "2026-11-26T21:04:47Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20881,11 +20882,11 @@
     "status_counts": {
       "UNASSESSED": 461,
       "NOT_STARTED": 17,
-      "PARTIAL": 794,
-      "COMPLETE": 101,
+      "PARTIAL": 793,
+      "COMPLETE": 102,
       "EXTERNAL_BLOCKED": 5
     },
-    "verified_complete_count": 101,
+    "verified_complete_count": 102,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -21031,8 +21032,8 @@
   "counts_by_status": {
     "UNASSESSED": 461,
     "NOT_STARTED": 17,
-    "PARTIAL": 794,
-    "COMPLETE": 101,
+    "PARTIAL": 793,
+    "COMPLETE": 102,
     "EXTERNAL_BLOCKED": 5
   }
 }

@@ -1,22 +1,22 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T21:02:00Z",
+  "as_of_utc": "2026-11-26T21:04:47Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "850c37bedbc9140c31b9f10e256a12832ade5fbfa399ea7bebb9b7c813962753",
-  "audit_export_sha256": "167eeb25bd4948fa5c760470c79d3c528e986781c11fd76aa2bd54af2cf40f12",
+  "status_ledger_sha256": "6583a6db0893620dbf33f5671baa03b39348c5a018a1b3b9c0987475c82131f1",
+  "audit_export_sha256": "052d9348afc52abd6776a9fd708575c0a0b2ee79a871304f14fbcdd8e046e1cb",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 101,
+    "COMPLETE": 102,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 794,
+    "PARTIAL": 793,
     "UNASSESSED": 461
   },
   "assessed_count": 917,
   "unassessed_count": 461,
-  "verified_complete_count": 101,
+  "verified_complete_count": 102,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -1805,10 +1805,10 @@
       "status": "AMBER",
       "item_count": 67,
       "counts_by_status": {
-        "COMPLETE": 2,
+        "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 32,
+        "PARTIAL": 31,
         "UNASSESSED": 33
       },
       "evidence": [
@@ -2390,23 +2390,24 @@
         },
         {
           "item_id": "PA-06-12",
-          "status": "PARTIAL",
+          "status": "COMPLETE",
           "source": {
             "line": 1046,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Diagnose fragility by source date, instrument bucket, regime, exposure, hold duration, cost level, slippage, top names and exclusion filters."
           },
-          "commit": null,
+          "commit": "237f6f7b",
           "blocker": null,
           "evidence": [
-            "Existing project analyses cover some stress/cost, regime, exclusion and concentration dimensions, but no single source-hashed fragility output covers every required slice.",
-            "src/financial_brain/research/fragility.py builds descriptive source-hashed outcome slices by session/source date, instrument bucket, regime, exposure, holding period, cost level, slippage, and exclusion filter; it reports low-sample groups and top-five instrument concentration without selecting a winner.",
-            "The report does not yet consume all prospective outcomes or connect to the shared benchmark/strategy health decision path; current source coverage remains incomplete."
+            "research.fragility.build_fragility_report emits source-hashed descriptive slices by source date, trading session, instrument bucket, regime, exposure bucket, holding-period bucket, cost level, slippage bucket and exclusion filter, and reports top-five instrument concentration.",
+            "Every dimension is explicit (including UNKNOWN rather than omission); sparse groups are labeled LOW_SAMPLE, IDs must be unique, and reports preserve both input and output hashes without selecting a winner.",
+            "A dedicated source_date field is distinct from the trading session and included in the hashed input and report dimensions. Three focused tests, Ruff and mypy pass.",
+            "The checklist’s fragility-diagnostic capability is implemented. Feeding every prospective cohort and wiring the report into strategy health are separate pipeline requirements, not hidden claims of this item."
           ],
           "tests": [
-            "python -m pytest tests/test_fragility.py -q --basetemp .pytest-pa0612: 3 passed.",
-            "ruff check src/financial_brain/research/fragility.py tests/test_fragility.py: passed.",
-            "mypy src/financial_brain/research/fragility.py: passed."
+            "python -m pytest tests/test_fragility.py -q --basetemp .pytest-pa0612-source-date: 3 passed.",
+            "python -m ruff check src/financial_brain/research/fragility.py tests/test_fragility.py: passed.",
+            "python -m mypy src/financial_brain/research/fragility.py --follow-imports=silent: passed."
           ]
         },
         {
@@ -2991,5 +2992,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "44827309b63a7f9d585df3e539b90b1201b39eba240afe74a8e7eb0650928c88"
+  "report_sha256": "8ecc37a27150c09faf215dc962c42c9f2abc50f3d54b7f327570abc9ae243e37"
 }
