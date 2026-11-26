@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from enum import Enum
 from math import isfinite, sqrt
 from statistics import NormalDist
@@ -22,6 +23,7 @@ from financial_brain.research.inference_registration import (
     InferencePlanRegistry,
     InferenceRegistrationError,
 )
+from financial_brain.research.look_ledger import ResearchLookError, ResearchLookLedger
 
 
 class StatsError(ValueError):
@@ -248,7 +250,9 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                       inference_dataset_sha256: str | None = None,
                       inference_candidate_returns: dict[str, list[float]] | None = None,
                       inference_selected_candidate: str | None = None,
-                      inference_method: InferenceMethod | None = None) -> dict:
+                      inference_method: InferenceMethod | None = None,
+                      research_look_ledger: ResearchLookLedger | None = None,
+                      inference_experiment_id: str | None = None) -> dict:
     if not isinstance(tier, ClaimTier):
         raise StatsError("promotion verdict requires a typed ClaimTier")
     if not isinstance(daily_net_alpha, list) or any(
@@ -290,11 +294,28 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
     inference_result_sha256: str | None = None
     adjusted_candidate_pvalues: dict[str, float] | None = None
     deflated_sharpe_probabilities: dict[str, float] | None = None
+    look_family_sha256: str | None = None
+    look_family_valid = False
     if (not isinstance(inference_registry, InferencePlanRegistry)
             or not isinstance(inference_plan_id, str) or not inference_plan_id.strip()
             or inference_candidate_ids is None or inference_dataset_sha256 is None):
         reasons.append("INFERENCE_PREREGISTRATION_REQUIRED")
     else:
+        if (isinstance(research_look_ledger, ResearchLookLedger)
+                and isinstance(inference_experiment_id, str) and inference_experiment_id.strip()):
+            try:
+                look_family = research_look_ledger.family_snapshot(inference_experiment_id)
+                registered_plan = inference_registry.get_plan(inference_plan_id)
+                look_family_sha256 = str(look_family["source_sha256"])
+                look_family_valid = (
+                    look_family["look_ids"] == inference_candidate_ids
+                    and registered_plan.candidate_ids == inference_candidate_ids
+                    and registered_plan.preregistration_sha256 == look_family_sha256
+                )
+            except (ResearchLookError, InferenceRegistrationError, sqlite3.Error, json.JSONDecodeError):
+                look_family_valid = False
+        if not look_family_valid:
+            reasons.append("INFERENCE_RESEARCH_FAMILY_UNVERIFIED")
         family = inference_candidate_returns
         if (isinstance(inference_candidate_ids, tuple) and len(inference_candidate_ids) == 1
                 and family is None):
@@ -312,6 +333,7 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                 or not isinstance(inference_selected_candidate, str)
                 or inference_selected_candidate not in inference_candidate_ids
                 or not isinstance(family, dict) or set(family) != set(inference_candidate_ids)
+                or not look_family_valid
                 or any(not isinstance(values, list) or len(values) != len(daily_net_alpha)
                        or any(isinstance(value, bool) or not isinstance(value, (int, float))
                               or not isfinite(value) for value in values)
@@ -332,6 +354,8 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                 "z": z, "max_block_share": max_block_share,
                 "candidate_returns": [[candidate, family[candidate]] for candidate in inference_candidate_ids],
                 "selected_candidate": inference_selected_candidate,
+                "research_experiment_id": inference_experiment_id,
+                "research_look_family_sha256": look_family_sha256,
                 "inference_method": (inference_method or
                                      (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
                                       else InferenceMethod.HAC_NEWEY_WEST_HOLM)).value,

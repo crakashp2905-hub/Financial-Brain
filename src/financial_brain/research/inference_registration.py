@@ -191,6 +191,16 @@ class InferencePlanRegistry:
         ).fetchall()
         return [(kind, json.loads(body)) for kind, body in rows]
 
+    def get_plan(self, plan_id: str) -> InferencePlan:
+        """Read the immutable registered plan after verifying the complete event chain."""
+        if not isinstance(plan_id, str) or not plan_id.strip():
+            raise InferenceRegistrationError("plan ID is required")
+        self.audit()
+        events = self._events(plan_id)
+        if not events or events[0][0] != "REGISTERED":
+            raise InferenceRegistrationError("inference plan is not registered")
+        return _plan_from_record(events[0][1])
+
     def register(self, *, method: InferenceMethod, candidate_ids: tuple[str, ...], alpha: float,
                  preregistration_sha256: str, block_length: float | None = None,
                  bootstrap_resamples: int | None = None, hac_lags: int | None = None,

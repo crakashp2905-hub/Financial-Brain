@@ -45,3 +45,19 @@ def test_changed_assumptions_require_new_look_and_hash_chain_detects_tampering(t
             corrupt.audit()
     finally:
         corrupt.close()
+
+
+def test_family_snapshot_is_complete_content_hashed_and_changes_with_new_looks(tmp_path):
+    ledger = ResearchLookLedger(tmp_path / "looks.sqlite3")
+    try:
+        ledger.append(look("candidate-a", "TRADING_RULE", {"rule": "momentum"}))
+        ledger.append(look("candidate-b", "STOP_RULE", {"stop": 2.0}))
+        first = ledger.family_snapshot("experiment-1")
+        assert first["look_ids"] == ("candidate-a", "candidate-b")
+        assert first["look_count"] == 2
+        ledger.append(look("candidate-c", "COST_ASSUMPTION", {"fee": 0.001}))
+        second = ledger.family_snapshot("experiment-1")
+        assert second["look_ids"] == ("candidate-a", "candidate-b", "candidate-c")
+        assert second["source_sha256"] != first["source_sha256"]
+    finally:
+        ledger.close()

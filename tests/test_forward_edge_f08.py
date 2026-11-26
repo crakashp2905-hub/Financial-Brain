@@ -9,6 +9,7 @@ import pytest
 from financial_brain.forward_edge import evidence_stats as E
 from financial_brain.forward_edge.evidence_stats import ClaimTier
 from financial_brain.research.inference_registration import InferenceMethod, InferencePlanRegistry
+from financial_brain.research.look_ledger import ResearchLook, ResearchLookLedger
 
 
 def _ar1(n: int, phi: float, seed: int, mu: float = 0.0) -> list[float]:
@@ -107,9 +108,15 @@ def _registered_inference(tmp_path, *, method=None,
     times = iter((datetime(2026, 11, 1, 8, tzinfo=timezone.utc),
                   datetime(2026, 11, 1, 10, tzinfo=timezone.utc),
                   datetime(2026, 11, 1, 11, tzinfo=timezone.utc)))
+    look_ledger = ResearchLookLedger(tmp_path / "looks.sqlite")
+    for candidate in candidates:
+        look_ledger.append(ResearchLook(candidate, "experiment-v1", "TRADING_RULE", candidate,
+                                        {"candidate_id": candidate},
+                                        datetime(2026, 11, 1, 7, tzinfo=timezone.utc)))
+    look_family = look_ledger.family_snapshot("experiment-v1")
     registry = InferencePlanRegistry(tmp_path / "inference.sqlite", clock=lambda: next(times))
     plan = registry.register(method=method, candidate_ids=candidates, alpha=0.05,
-                             preregistration_sha256="c" * 64,
+                             preregistration_sha256=look_family["source_sha256"],
                              hac_lags=lags if method in {
                                  InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM
                              } else None,
@@ -120,7 +127,13 @@ def _registered_inference(tmp_path, *, method=None,
         outcome_available_at=available_at or datetime(2026, 11, 1, 9, tzinfo=timezone.utc),
     )
     return {"inference_registry": registry, "inference_plan_id": plan.plan_id,
-            "inference_candidate_ids": candidates, "inference_dataset_sha256": dataset_sha256}
+            "inference_candidate_ids": candidates, "inference_dataset_sha256": dataset_sha256,
+            "research_look_ledger": look_ledger, "inference_experiment_id": "experiment-v1"}
+
+
+def _close_inference(context) -> None:
+    context["inference_registry"].close()
+    context["research_look_ledger"].close()
 
 
 def test_a_clear_effect_with_registered_inference_is_promotion_grade(tmp_path) -> None:
@@ -129,7 +142,7 @@ def test_a_clear_effect_with_registered_inference_is_promotion_grade(tmp_path) -
     v = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert v["verdict"] == "PROMOTION_GRADE" and v["lower_bound"] > 0
     assert v["gates"]["inference"] == "PASS" and v["inference_result_sha256"]
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_positive_mean_with_interval_including_zero_is_not_promoted() -> None:
@@ -207,7 +220,7 @@ def test_verdict_exposes_exact_gate_dispositions(tmp_path) -> None:
     assert report["verdict"] == "PROMOTION_GRADE"
     assert report["gates"] == {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS",
                                 "robustness": "PASS", "drawdown": "PASS", "fidelity": "PASS"}
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_promotion_requires_exact_pre_registered_inference_plan(tmp_path) -> None:
@@ -221,8 +234,22 @@ def test_promotion_requires_exact_pre_registered_inference_plan(tmp_path) -> Non
     context["inference_candidate_ids"] = ("momentum-v1",)
     rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert rejected["verdict"] != "PROMOTION_GRADE"
-    assert "INFERENCE_REGISTRATION_INVALID" in rejected["reasons"]
-    context["inference_registry"].close()
+    assert "INFERENCE_RESEARCH_FAMILY_UNVERIFIED" in rejected["reasons"]
+    assert "INFERENCE_REGISTRATION_INPUT_INVALID" in rejected["reasons"]
+    _close_inference(context)
+
+
+def test_promotion_refuses_a_research_look_omitted_from_registered_family(tmp_path) -> None:
+    x = _ar1(250, 0.1, seed=11, mu=0.004)
+    context = _registered_inference(tmp_path)
+    context["research_look_ledger"].append(
+        ResearchLook("late-variant", "experiment-v1", "PARAMETER_VARIANT", "late parameter variant",
+                     {"stop_multiple": 2.0}, datetime(2026, 11, 1, 10, 30, tzinfo=timezone.utc)))
+    report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
+    assert report["verdict"] != "PROMOTION_GRADE"
+    assert "INFERENCE_RESEARCH_FAMILY_UNVERIFIED" in report["reasons"]
+    assert context["inference_registry"].audit()["events"] == 2
+    _close_inference(context)
 
 
 def test_promotion_rejects_retrospective_inference_registration(tmp_path) -> None:
@@ -232,7 +259,7 @@ def test_promotion_rejects_retrospective_inference_registration(tmp_path) -> Non
     rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert rejected["verdict"] != "PROMOTION_GRADE"
     assert "INFERENCE_PLAN_NOT_PRE_REGISTERED" in rejected["reasons"]
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_multi_candidate_family_uses_registered_holm_adjustment(tmp_path) -> None:
@@ -244,7 +271,7 @@ def test_multi_candidate_family_uses_registered_holm_adjustment(tmp_path) -> Non
     report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert report["verdict"] == "PROMOTION_GRADE"
     assert set(report["familywise_adjusted_pvalues"]) == set(candidate_returns)
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_holm_adjustment_blocks_candidate_that_only_passes_unadjusted_hac(tmp_path) -> None:
@@ -263,7 +290,7 @@ def test_holm_adjustment_blocks_candidate_that_only_passes_unadjusted_hac(tmp_pa
     assert report["verdict"] != "PROMOTION_GRADE"
     assert "FAMILYWISE_ADJUSTED_PVALUE_FAILED" in report["reasons"]
     assert report["familywise_adjusted_pvalues"][candidates[0]] > 0.05
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_registered_deflated_sharpe_corrects_for_complete_candidate_family(tmp_path) -> None:
@@ -279,7 +306,7 @@ def test_registered_deflated_sharpe_corrects_for_complete_candidate_family(tmp_p
     assert report["verdict"] == "PROMOTION_GRADE"
     assert report["deflated_sharpe_probabilities"][candidates[1]] >= 0.95
     assert context["inference_registry"].audit()["integrity"] == "VALID"
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 def test_registered_deflated_sharpe_rejects_noise_family(tmp_path) -> None:
@@ -293,7 +320,7 @@ def test_registered_deflated_sharpe_rejects_noise_family(tmp_path) -> None:
     report = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert report["verdict"] != "PROMOTION_GRADE"
     assert "DEFLATED_SHARPE_PROBABILITY_FAILED" in report["reasons"]
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 @pytest.mark.parametrize("mismatch", ["dataset", "method", "lags"])
@@ -309,7 +336,7 @@ def test_promotion_requires_registered_dataset_method_and_lags(tmp_path, mismatc
     rejected = E.promotion_verdict(daily_net_alpha=x, **GOOD_KW, **context)
     assert rejected["verdict"] != "PROMOTION_GRADE"
     assert "INFERENCE_REGISTRATION_INVALID" in rejected["reasons"]
-    context["inference_registry"].close()
+    _close_inference(context)
 
 
 @pytest.mark.parametrize("returns, override", [

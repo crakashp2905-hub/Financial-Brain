@@ -95,5 +95,21 @@ class ResearchLookLedger:
             kind: sum(1 for row in rows if row[2] == kind) for kind in sorted(LOOK_TYPES)},
             "head_sha256": previous, "integrity": "VALID"}
 
+    def family_snapshot(self, experiment_id: str) -> dict[str, Any]:
+        """Return the full, hashed look family for an experiment after chain verification."""
+        if not isinstance(experiment_id, str) or not experiment_id.strip():
+            raise ResearchLookError("experiment ID is required for a family snapshot")
+        self.audit()
+        rows = self._con.execute(
+            "SELECT look_id,body_json FROM research_looks WHERE experiment_id=? ORDER BY look_id",
+            (experiment_id,),
+        ).fetchall()
+        if not rows:
+            raise ResearchLookError("experiment has no recorded research looks")
+        body = [{"look_id": look_id, "look": json.loads(encoded)} for look_id, encoded in rows]
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return {"experiment_id": experiment_id, "look_ids": tuple(row[0] for row in rows),
+                "look_count": len(rows), "source_sha256": hashlib.sha256(canonical.encode()).hexdigest()}
+
 
 __all__ = ["LOOK_TYPES", "ResearchLook", "ResearchLookError", "ResearchLookLedger"]
