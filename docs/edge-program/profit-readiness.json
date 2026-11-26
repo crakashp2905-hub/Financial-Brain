@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T20:20:10Z",
+  "as_of_utc": "2026-11-26T20:31:25Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "c4b85cdf6f9df508e7e48dbafdb705f0ee809491a4b0cd545cde73410cabecca",
-  "audit_export_sha256": "25aef01e4a36838b5de593d9fd8e611cdfd74c50fedf249e3371ce52471e60a8",
+  "status_ledger_sha256": "9861fcf9e82b0f5863d13ae0a18922ae339dbf8109a79ce91fac8a7d3bd98f4f",
+  "audit_export_sha256": "870848e15f7325b83f4931953700929274954e965c8d906111a6d322614380ab",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 100,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 794,
-    "UNASSESSED": 462
+    "PARTIAL": 795,
+    "UNASSESSED": 461
   },
-  "assessed_count": 916,
-  "unassessed_count": 462,
+  "assessed_count": 917,
+  "unassessed_count": 461,
   "verified_complete_count": 100,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 2,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 11,
-        "UNASSESSED": 19
+        "PARTIAL": 12,
+        "UNASSESSED": 18
       },
       "evidence": [
         {
@@ -967,30 +967,38 @@
             "text": "Create data/event offsets and checkpointing so a restart resumes without duplicate signals, fills or allocations."
           },
           "commit": null,
-          "blocker": "The production session loop is not wired to consume/ack offsets in the same atomic boundary as signal, allocation, and paper-order persistence; the API provides restart-safe cursor primitives, not end-to-end exactly-once processing.",
+          "blocker": "The production session loop is not wired to consume/ack offsets in the same atomic boundary as signal, allocation, and paper-order persistence; cursor primitives do not provide end-to-end exactly-once processing.",
           "evidence": [
-            "ForwardSessionRunner now provides per-session/per-consumer durable insertion-order event offsets. read_events_after() resumes after the acknowledged offset and preserves late arrivals; acknowledge_event_offset() uses an immediate transaction, compare-and-swap, and exact-prefix ID validation. Cursor state survives process/database reopen and retries are idempotent.",
-            "Runner decision, order-intent, receipt, and accounting persistence already use stable IDs and durable journal/outbox recovery, but no production strategy scheduler consumes these offsets and acknowledges them atomically with strategy outputs. Cross-system allocation replay safety is therefore not yet established."
+            "ForwardSessionRunner provides per-session/per-consumer durable insertion-order event offsets. read_events_after() resumes after the acknowledged offset and preserves late arrivals; acknowledge_event_offset() uses an immediate transaction, compare-and-swap, and exact-prefix ID validation. Cursor state survives process/database reopen and acknowledgement retry is idempotent.",
+            "END checkpoints now hash all event consumer cursors, and verification detects cursor mutation. Legacy checkpoints without cursor hashes remain verifiable. Decision, order-intent, receipt, and accounting persistence use stable IDs and durable journal/outbox recovery.",
+            "The production strategy scheduler does not yet consume and acknowledge offsets atomically with signal, allocation, and paper-order output. Cross-system allocation replay safety is not yet established."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_session_runner.py -q: 67 passed, including event offset exact-prefix rejection, idempotent ack retry, and cursor recovery after closing/reopening the SQLite journal.",
+            "python -m pytest tests/test_forward_edge_session_runner.py -q: 70 passed, including exact-prefix offset replay after reopen and END-checkpoint detection of cursor tampering.",
             "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-            "mypy src/financial_brain/forward_edge/session_runner.py: passed.",
-            "Complete Windows test selection, rerun after correcting sandbox temp-root configuration: python -m pytest --last-failed -q --tb=short --basetemp <short writable external temp>; 4,755 passed, 1 skipped. This includes the full collected suite, not only the offset module."
+            "mypy src/financial_brain/forward_edge/session_runner.py: passed."
           ]
         },
         {
           "item_id": "PA-03-10",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 967,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Time every stage: event receipt, feature computation, model inference, risk evaluation, intended order, simulated arrival and ledger record."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Feature/inference timestamps are optional caller inputs and are not yet populated/enforced by all strategy adapters; cross-process clock synchronization and prospective latency coverage remain unverified.",
+          "evidence": [
+            "ForwardSessionRunner timing telemetry now records event source/receipt/availability/ingest clocks; feature computation start and ready; optional model inference start/completion; signal decision and durable decision record; OMS risk assessment and durable risk record; intent audit time; simulated arrival earliest/submission/fill times; and execution-receipt ledger time.",
+            "Decision clock validation rejects naive clocks, feature stages outside source/decision bounds, inference before feature readiness, completion before inference start, or inference completion after the decision. Missing clock stages remain explicit in missing_stages rather than being inferred.",
+            "The timestamps are caller-supplied for feature/inference stages and no production strategy adapter is wired to populate them; they are not independent clock attestation or prospectively measured latency."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_session_runner.py -q: 70 passed; new tests cover feature/inference/ledger timestamps, causal ordering and cursor checkpoint integrity.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+            "mypy src/financial_brain/forward_edge/session_runner.py: passed."
+          ]
         },
         {
           "item_id": "PA-03-11",
@@ -2975,5 +2983,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "d4ee982127873046698a473fc3a51d076db7b8638d57e52aceae5a74835e4255"
+  "report_sha256": "c328ce5a1e598647aef1a9bfa50f2864e2653a2d0fd50574a5605fce59d49c7b"
 }

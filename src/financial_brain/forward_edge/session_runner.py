@@ -54,6 +54,7 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
     order_events: dict[str, list[dict[str, Any]]] = {}
     for row in records["order_events"]:
         order_events.setdefault(row["paper_order_id"], []).append(row)
+    audit_times = {(row["kind"], row["record_id"]): row["occurred_at"] for row in records["audit_log"]}
 
     signals = []
     for decision in records["decisions"]:
@@ -79,10 +80,16 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             order_timing.append({
                 "order_id": order_id,
                 "intent_at": intent.get("simulated_at"),
+                "intent_ledger_recorded_at": audit_times.get(("paper_intent", f"paper_intent:{order_id}")),
+                "simulated_arrival_earliest_at": intent.get("earliest_fill_time"),
                 "oms_states": [{"state": event["state"], "occurred_at": event["occurred_at"]}
                                for event in history],
+                "simulated_arrival_submitted_at": next(
+                    (event["occurred_at"] for event in history if event["state"] == "SUBMITTED"), None),
                 "execution_status": receipt.get("status") if receipt else "NO_RECEIPT",
                 "simulated_fill_at": fills[0]["occurred_at"] if fills else None,
+                "execution_ledger_recorded_at": audit_times.get(
+                    ("execution_receipt", f"execution_receipt:{order_id}")),
                 "fills": fills,
             })
         payload = decision.get("payload") or {}
@@ -102,12 +109,20 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             missing.append("LOCAL_RECEIPT_TIMESTAMP")
         if not decision.get("feature_ready_at"):
             missing.append("FEATURE_READY_TIMESTAMP")
+        if not decision.get("feature_started_at"):
+            missing.append("FEATURE_COMPUTATION_START_TIMESTAMP")
+        if not decision.get("model_inference_started_at") or not decision.get("model_inference_completed_at"):
+            missing.append("MODEL_INFERENCE_TIMESTAMPS")
         if decision["outcome"] == "TRADE" and not risk_record:
             missing.append("OMS_RISK_ASSESSMENT_TIMESTAMP")
         if decision["outcome"] == "TRADE" and not order_timing:
             missing.append("SIMULATED_ORDER_OR_FILL")
         if decision["outcome"] == "TRADE" and not any(row["fills"] for row in order_timing):
             missing.append("SIMULATED_FILL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not any(row["simulated_arrival_submitted_at"] for row in order_timing):
+            missing.append("SIMULATED_ORDER_ARRIVAL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not any(row["execution_ledger_recorded_at"] for row in order_timing):
+            missing.append("EXECUTION_LEDGER_RECORD_TIMESTAMP")
         if decision["outcome"] == "TRADE":
             missing.append("RISK_STOP_TRIGGER_TIMESTAMP")
         if decision["outcome"] == "TRADE":
@@ -115,9 +130,15 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
         signals.append({
             "decision_id": decision_id, "strategy_id": decision["strategy_id"],
             "outcome": decision["outcome"], "source_clocks": source_clocks,
+            "feature_computation_started_at": decision.get("feature_started_at"),
             "feature_ready_at": decision.get("feature_ready_at"),
+            "model_inference_started_at": decision.get("model_inference_started_at"),
+            "model_inference_completed_at": decision.get("model_inference_completed_at"),
             "signal_decision_at": decision["decided_at"],
+            "decision_ledger_recorded_at": audit_times.get(("decision", f"decision:{decision_id}")),
             "oms_risk_assessed_at": risk_record.get("assessed_at"),
+            "risk_ledger_recorded_at": audit_times.get(
+                ("risk_verdict", f"risk_verdict:{risk_record['verdict_id']}")) if risk_record else None,
             "oms_risk_allowed": risk_record.get("allowed"),
             "orders": order_timing, "risk_stop_triggered_at": None,
             "caller_declared_risk_stop_at_unverified": declared_risk_stop,
@@ -742,7 +763,9 @@ class ForwardSessionRunner:
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,
                reason_codes: tuple[str, ...] = (), payload: dict[str, Any] | None = None,
-               feature_ready_at: datetime | None = None) -> bool:
+               feature_ready_at: datetime | None = None, feature_started_at: datetime | None = None,
+               model_inference_started_at: datetime | None = None,
+               model_inference_completed_at: datetime | None = None) -> bool:
         """Record a decision only when every referenced source event was already available."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("decisions are accepted only in an OPEN session")
@@ -770,15 +793,41 @@ class ForwardSessionRunner:
         if any(datetime.fromisoformat(available) > clock for _, _, available, _ in rows):
             raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
         feature_clock = None
+        optional_clocks = {
+            "feature_started_at": feature_started_at,
+            "feature_ready_at": feature_ready_at,
+            "model_inference_started_at": model_inference_started_at,
+            "model_inference_completed_at": model_inference_completed_at,
+        }
+        normalized_clocks: dict[str, datetime | None] = {}
+        for name, value in optional_clocks.items():
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ForwardSessionRunnerError(f"{name.replace('_', ' ')} must be timezone-aware")
+            normalized_clocks[name] = value.astimezone(timezone.utc) if value is not None else None
         if feature_ready_at is not None:
-            if feature_ready_at.tzinfo is None or feature_ready_at.utcoffset() is None:
-                raise ForwardSessionRunnerError("feature-ready time must be timezone-aware")
-            feature_clock = feature_ready_at.astimezone(timezone.utc)
+            feature_clock = normalized_clocks["feature_ready_at"]
             latest_input = max(datetime.fromisoformat(available).astimezone(timezone.utc)
                                for _, _, available, _ in rows)
+            assert feature_clock is not None
             if feature_clock < latest_input or feature_clock > clock:
                 raise ForwardSessionRunnerError(
                     "feature-ready time must follow all input availability and precede the signal decision")
+        feature_start_clock = normalized_clocks["feature_started_at"]
+        inference_start_clock = normalized_clocks["model_inference_started_at"]
+        inference_end_clock = normalized_clocks["model_inference_completed_at"]
+        if feature_start_clock is not None:
+            earliest_input = min(datetime.fromisoformat(available).astimezone(timezone.utc)
+                                 for _, _, available, _ in rows)
+            if feature_start_clock < earliest_input or feature_start_clock > clock:
+                raise ForwardSessionRunnerError("feature computation start must follow inputs and precede decision")
+        if feature_start_clock and feature_clock and feature_start_clock > feature_clock:
+            raise ForwardSessionRunnerError("feature computation start cannot follow feature-ready time")
+        if inference_start_clock and feature_clock and inference_start_clock < feature_clock:
+            raise ForwardSessionRunnerError("model inference cannot start before features are ready")
+        if inference_start_clock and inference_end_clock and inference_end_clock < inference_start_clock:
+            raise ForwardSessionRunnerError("model inference completion cannot precede its start")
+        if inference_end_clock and inference_end_clock > clock:
+            raise ForwardSessionRunnerError("model inference cannot complete after the signal decision")
         max_quote_age = self._max_quote_age(session_id)
         stale = []
         for event_id, kind, _, event_json in rows:
@@ -793,6 +842,9 @@ class ForwardSessionRunner:
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
                 "feature_ready_at": feature_clock.isoformat() if feature_clock else None,
+                "feature_started_at": feature_start_clock.isoformat() if feature_start_clock else None,
+                "model_inference_started_at": inference_start_clock.isoformat() if inference_start_clock else None,
+                "model_inference_completed_at": inference_end_clock.isoformat() if inference_end_clock else None,
                 "reason_codes": sorted(set(reason_codes)), "payload": payload or {}}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -801,8 +853,10 @@ class ForwardSessionRunner:
         if existing:
             if existing[0] != digest:
                 prior_body = json.loads(existing[1])
-                legacy_body = {key: value for key, value in body.items() if key != "feature_ready_at"}
-                if "feature_ready_at" not in prior_body and prior_body == legacy_body:
+                legacy_keys = {"feature_ready_at", "feature_started_at", "model_inference_started_at",
+                               "model_inference_completed_at"}
+                legacy_body = {key: value for key, value in body.items() if key not in legacy_keys}
+                if not any(key in prior_body for key in legacy_keys) and prior_body == legacy_body:
                     return False
                 raise ForwardSessionRunnerError("decision ID reused with conflicting content")
             return False
@@ -1295,9 +1349,13 @@ class ForwardSessionRunner:
             hashes["accounting"] = self._sha256(records["accounting"])
             hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
             hashes["outbox"] = self._sha256(outbox_rows)
+            hashes["event_cursors"] = self._event_cursors_hash(session_id)
             if existing:
                 prior = json.loads(existing[1])
-                if prior.get("session_state") != state.value or prior.get("record_hashes") != hashes:
+                prior_hashes = prior.get("record_hashes", {})
+                legacy_hashes = {key: value for key, value in hashes.items() if key != "event_cursors"}
+                if (prior.get("session_state") != state.value or
+                        prior_hashes not in (hashes, legacy_hashes)):
                     raise ForwardSessionRunnerError(
                         "END checkpoint ID already contains different immutable evidence")
                 self._con.commit()
@@ -1341,6 +1399,8 @@ class ForwardSessionRunner:
         current_ok: bool | None = None
         if phase == "END" and immutable_ok:
             current = self._checkpoint_hashes(session_id)
+            if "event_cursors" not in body.get("record_hashes", {}):
+                current.pop("event_cursors", None)
             current_ok = current == body["record_hashes"]
         return {"session_id": session_id, "checkpoint_id": checkpoint_id,
                 "immutable_evidence_valid": immutable_ok, "current_records_match": current_ok,
@@ -1360,7 +1420,17 @@ class ForwardSessionRunner:
                            "SELECT key, state, reconciled_by FROM outbox "
                            "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
         hashes["outbox"] = self._sha256(outbox_rows)
+        hashes["event_cursors"] = self._event_cursors_hash(session_id)
         return hashes
+
+    def _event_cursors_hash(self, session_id: str) -> str:
+        cursors = [{"consumer_id": row[0], "event_offset": int(row[1]), "event_id": row[2],
+                    "updated_at": row[3], "cursor_sha256": row[4]}
+                   for row in self._con.execute(
+                       "SELECT consumer_id,event_offset,event_id,updated_at,cursor_sha256 "
+                       "FROM runner_event_cursors WHERE session_id=? ORDER BY consumer_id",
+                       [session_id]).fetchall()]
+        return self._sha256(cursors)
 
     @staticmethod
     def _sha256(value: Any) -> str:

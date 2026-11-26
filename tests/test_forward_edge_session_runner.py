@@ -153,6 +153,26 @@ def test_event_offsets_resume_after_restart_without_replaying_acknowledged_prefi
     resumed.close()
 
 
+def test_end_checkpoint_hashes_event_consumer_offsets(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="checkpoint-offset")
+    runner.ingest("s", config, [event])
+    [record] = runner.read_events_after("s", "strategy:momentum")
+    runner.acknowledge_event_offset("s", "strategy:momentum", expected_offset=0,
+                                    through_offset=record["offset"], event_ids=(event.event_id,))
+    runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+
+    checkpoint = runner.checkpoint("s", phase="END", now=NOW + timedelta(seconds=2))
+    assert "event_cursors" in checkpoint["record_hashes"]
+    assert runner.verify_checkpoint("s", checkpoint["checkpoint_id"])["current_records_match"] is True
+    runner._con.execute("UPDATE runner_event_cursors SET event_id='tampered' WHERE session_id='s'")
+    runner._con.commit()
+    assert runner.verify_checkpoint("s", checkpoint["checkpoint_id"])["current_records_match"] is False
+    runner.close()
+
+
 def test_session_heartbeat_snapshot_tracks_live_producers_and_missing_components(tmp_path):
     runner = make_runner(tmp_path)
     config = make_config()
@@ -231,6 +251,48 @@ def test_feature_ready_clock_must_follow_inputs_and_precede_decision(tmp_path):
         runner.decide(session_id="s", strategy_id="momentum", decision_id="late-feature-clock",
                       outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
                       reason_codes=("NO_EDGE",), feature_ready_at=decided + timedelta(milliseconds=1))
+    runner.close()
+
+
+def test_decision_timing_records_feature_inference_and_durable_ledger_clocks(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="stage-clock-input")
+    runner.ingest("s", config, [event])
+    feature_started = NOW + timedelta(milliseconds=1)
+    feature_ready = NOW + timedelta(milliseconds=2)
+    inference_started = NOW + timedelta(milliseconds=3)
+    inference_completed = NOW + timedelta(milliseconds=4)
+    decided = NOW + timedelta(milliseconds=5)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="stage-clock-decision",
+                  outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
+                  reason_codes=("NO_EDGE",), feature_started_at=feature_started,
+                  feature_ready_at=feature_ready, model_inference_started_at=inference_started,
+                  model_inference_completed_at=inference_completed)
+
+    signal = runner.records("s")["timing_telemetry"]["signals"][0]
+    assert signal["feature_computation_started_at"] == feature_started.isoformat()
+    assert signal["feature_ready_at"] == feature_ready.isoformat()
+    assert signal["model_inference_started_at"] == inference_started.isoformat()
+    assert signal["model_inference_completed_at"] == inference_completed.isoformat()
+    assert signal["signal_decision_at"] == decided.isoformat()
+    assert signal["decision_ledger_recorded_at"] == decided.isoformat()
+    assert "MODEL_INFERENCE_TIMESTAMPS" not in signal["missing_stages"]
+    runner.close()
+
+
+def test_decide_rejects_model_inference_clock_regression(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="invalid-inference-clock-input")
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="completion cannot precede its start"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="invalid-inference-clock",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1),
+                      reason_codes=("NO_EDGE",), model_inference_started_at=NOW + timedelta(milliseconds=5),
+                      model_inference_completed_at=NOW + timedelta(milliseconds=4))
     runner.close()
 
 
