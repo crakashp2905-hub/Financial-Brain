@@ -178,3 +178,16 @@ def test_verdict_exposes_exact_gate_dispositions() -> None:
     assert report["verdict"] == "PROMOTION_GRADE"
     assert report["gates"] == {"confidence": "PASS", "cost": "PASS", "null": "PASS",
                                 "robustness": "PASS", "drawdown": "PASS", "fidelity": "PASS"}
+
+
+@pytest.mark.parametrize("returns, override", [
+    ([float("nan"), 0.1, 0.2], {}),
+    ([0.1, 0.2, 0.3], {"best_block": float("nan")}),
+    ([0.1, 0.2, 0.3], {"null_pass": 1}),
+    ([0.1, 0.2, 0.3], {"fidelity_pass": "yes"}),
+    ([0.1, 0.2, 0.3], {"max_block_share": 1.5}),
+    ([0.1, 0.2, 0.3], {"net_by_cost_multiplier": {1.0: 0.1, 1.5: float("inf"), 2.0: 0.1}}),
+])
+def test_promotion_verdict_rejects_malformed_or_nonfinite_gate_inputs(returns, override) -> None:
+    with pytest.raises(E.StatsError):
+        E.promotion_verdict(daily_net_alpha=returns, **{**GOOD_KW, **override})

@@ -232,6 +232,40 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
                       fidelity_pass: bool | None = None,
                       min_sessions: int = 60, lags: int = 5, z: float = 1.96,
                       max_block_share: float = 0.6) -> dict:
+    if not isinstance(tier, ClaimTier):
+        raise StatsError("promotion verdict requires a typed ClaimTier")
+    if not isinstance(daily_net_alpha, list) or any(
+        isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value)
+        for value in daily_net_alpha
+    ):
+        raise StatsError("daily net alpha must be a list of finite numeric observations")
+    if type(eligible_independent_sessions) is not int or eligible_independent_sessions < 0:
+        raise StatsError("eligible independent session count must be a nonnegative integer")
+    if type(min_sessions) is not int or min_sessions < 1:
+        raise StatsError("minimum session requirement must be a positive integer")
+    if type(lags) is not int or lags < 0:
+        raise StatsError("HAC lags must be a nonnegative integer")
+    if not isfinite(z) or z <= 0:
+        raise StatsError("confidence critical value must be finite and positive")
+    if not isfinite(best_block) or not 0 <= best_block <= 1:
+        raise StatsError("best-block concentration must be finite and in [0,1]")
+    if not isfinite(max_block_share) or not 0 < max_block_share <= 1:
+        raise StatsError("maximum block share must be finite and in (0,1]")
+    if type(sample_design_predeclared) is not bool:
+        raise StatsError("sample-design declaration must be an explicit boolean")
+    if falsification_status not in {"NO_FALSIFICATION_FOUND", "FAIL", "INSUFFICIENT_EVIDENCE"}:
+        raise StatsError("falsification status is not a recognized machine-readable disposition")
+    if null_pass is not None and type(null_pass) is not bool:
+        raise StatsError("null gate must be true, false, or explicitly unassessed")
+    if fidelity_pass is not None and type(fidelity_pass) is not bool:
+        raise StatsError("fidelity gate must be true, false, or explicitly unassessed")
+    if not isinstance(net_by_cost_multiplier, dict) or any(
+        isinstance(multiplier, bool) or not isinstance(multiplier, (int, float))
+        or not isfinite(multiplier) or multiplier <= 0
+        or isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value)
+        for multiplier, value in net_by_cost_multiplier.items()
+    ):
+        raise StatsError("cost-stress multipliers and net returns must be finite numeric values")
     reasons: list[str] = []
     n = len(daily_net_alpha)
     mean = float(np.mean(daily_net_alpha)) if n else 0.0
