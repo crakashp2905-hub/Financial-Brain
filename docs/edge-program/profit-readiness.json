@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-26T23:13:56Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "26dca59ce5f2f729f5b0708c5fc062e54f118bd0a8a39b3fe84700992c48e4d6",
-  "audit_export_sha256": "614c0fc353a9e42eebdd583109110a50e5f11d6a3b90f6364d45ebd1f6daba39",
+  "status_ledger_sha256": "05ad8329fd121deed930ef468795c05dc22e0e688f58d4c2156a22de9fce355e",
+  "audit_export_sha256": "d233cf607dbb01c6d6142d7e267a8c5030b19fc023f23793da9e9b28a5b70a09",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 794,
-    "UNASSESSED": 455
+    "PARTIAL": 795,
+    "UNASSESSED": 454
   },
-  "assessed_count": 923,
-  "unassessed_count": 455,
+  "assessed_count": 924,
+  "unassessed_count": 454,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 14,
-        "UNASSESSED": 15
+        "PARTIAL": 15,
+        "UNASSESSED": 14
       },
       "evidence": [
         {
@@ -853,16 +853,25 @@
         },
         {
           "item_id": "PA-02-16",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 948,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Introduce `DATA_UNUSABLE` and fail-closed trade rejection for a missing source or quality violation; no forward-fill that pretends a quote was tradable."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "e77b7c18",
+          "blocker": "PARTIAL: the forward runner now fails closed, but existing research, legacy paper, options, and mutual-fund strategy adapters do not yet share a single DATA_UNUSABLE contract or universally derive it from every source/quality gate.",
+          "evidence": [
+            "ForwardSessionRunner.decide now journals an explicit DATA_UNUSABLE outcome for missing required source inputs or quality failures, including stale quotes, while preserving reason codes and source-rejection linkage where available.",
+            "A DATA_UNUSABLE decision may not claim feature/inference clocks without inputs; stale input data cannot be relabeled as a trade decision. Risk verdict and paper-intent creation remain restricted to TRADE decisions, so unusable-data outcomes cannot generate fills.",
+            "Ingestion rejects unauthorized non-fixture data and persists a data-rejection record; paper execution separately rejects stale quotes and non-executable quotes without forward-filling.",
+            "tests/test_forward_edge_session_runner.py verifies missing-source and stale-source decisions remain DATA_UNUSABLE with no paper intents, and that no feature clock can be claimed without sources."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_session_runner.py -k \"missing_or_stale_market_data or data_unusable_without_source or nonfixture_kite_data_requires_current\" -q: 3 passed, 70 deselected.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+            "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found."
+          ]
         },
         {
           "item_id": "PA-03-01",
@@ -3089,5 +3098,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "5365c0de87b9523d710d07eaede841cd974f40e72434b32eaa710b3a91073b3e"
+  "report_sha256": "b783ef7823c508c1b4e5770f81a13b18bc501a682ad927205c91699426d53edc"
 }

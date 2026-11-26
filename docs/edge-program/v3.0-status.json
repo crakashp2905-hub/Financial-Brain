@@ -7561,12 +7561,23 @@
     {
       "id": "PA-02-16",
       "text": "Introduce `DATA_UNUSABLE` and fail-closed trade rejection for a missing source or quality violation; no forward-fill that pretends a quote was tradable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForwardSessionRunner.decide now journals an explicit DATA_UNUSABLE outcome for missing required source inputs or quality failures, including stale quotes, while preserving reason codes and source-rejection linkage where available.",
+        "A DATA_UNUSABLE decision may not claim feature/inference clocks without inputs; stale input data cannot be relabeled as a trade decision. Risk verdict and paper-intent creation remain restricted to TRADE decisions, so unusable-data outcomes cannot generate fills.",
+        "Ingestion rejects unauthorized non-fixture data and persists a data-rejection record; paper execution separately rejects stale quotes and non-executable quotes without forward-filling.",
+        "tests/test_forward_edge_session_runner.py verifies missing-source and stale-source decisions remain DATA_UNUSABLE with no paper intents, and that no feature clock can be claimed without sources."
+      ],
+      "blocker": "PARTIAL: the forward runner now fails closed, but existing research, legacy paper, options, and mutual-fund strategy adapters do not yet share a single DATA_UNUSABLE contract or universally derive it from every source/quality gate.",
+      "last_audited_at_utc": "2026-11-26T23:13:56Z",
+      "commit": "e77b7c18",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"missing_or_stale_market_data or data_unusable_without_source or nonfixture_kite_data_requires_current\" -q: 3 passed, 70 deselected.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
+        "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found."
+      ],
+      "test_result": "The forward paper runner now records explicit unusable-data abstentions for missing or stale inputs and prevents those decisions from reaching the paper order path. PA-02-16 remains PARTIAL pending adoption across all trading desks and adapters."
     },
     {
       "id": "PA-03-01",
@@ -20512,6 +20523,7 @@
       "PA-02-13",
       "PA-02-14",
       "PA-02-15",
+      "PA-02-16",
       "PA-03-03",
       "PA-03-04",
       "PA-03-09",
@@ -20991,13 +21003,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 923,
+    "audited_count": 924,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 794,
-      "UNASSESSED": 455
+      "PARTIAL": 795,
+      "UNASSESSED": 454
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21140,13 +21152,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open."
   },
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 794,
-    "UNASSESSED": 455
+    "PARTIAL": 795,
+    "UNASSESSED": 454
   }
 }
