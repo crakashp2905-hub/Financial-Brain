@@ -447,8 +447,8 @@ class QuoteArchive:
         """Measure session/name/notional quote and depth coverage against explicit denominators.
 
         `intents` keys are `(session_id, instrument_id)` and values are requested INR notional.
-        Source values equal to `kite` or `exchange` are treated as live labels; this report does
-        not authenticate them, so independent evidence is still required for formal claims.
+        Kite Connect and exchange source labels are treated as observed-feed classes; this report
+        does not authenticate them, so independent evidence is still required for formal claims.
         """
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("as_of must be timezone aware")
@@ -482,7 +482,9 @@ class QuoteArchive:
                 missing.append(f"{session_id}:{instrument_id}:QUOTE")
             if not depth_ok:
                 missing.append(f"{session_id}:{instrument_id}:DEPTH")
-            sources.update("live" if source.lower() in {"kite", "exchange", "zerodha_kite"} else "fixture"
+            sources.update("live" if source.lower() in {
+                "kite", "kite_connect_read_only", "exchange", "zerodha_kite"
+            } else "fixture"
                            for _, _, _, source in quote)
         expected_name_keys = [(s, name) for s in expected_sessions
                               for session, name in intents if session == s]

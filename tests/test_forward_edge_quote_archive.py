@@ -12,6 +12,7 @@ import pytest
 
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.clock import FixedClock
+from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiveError
 from financial_brain.forward_edge.data_distribution import PriceWindow, DistributionThresholds, compare_windows
 
@@ -338,6 +339,39 @@ def test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources(t
         assert report.depth_coverage_fraction == 0
         assert report.claim_scope == "FIXTURE_OR_MIXED"
         assert "2026-11-16:NSE:RELIANCE:QUOTE" in report.missing_keys
+    finally:
+        archive.close()
+
+
+def test_kite_delayed_feed_and_synthetic_fixture_have_distinct_hashed_source_classes(tmp_path) -> None:
+    received = T0 + timedelta(seconds=2)
+    quote = {
+        "timestamp": "2026-11-15 09:30:00", "last_price": 101.0, "volume": 100,
+        "depth": {"buy": [{"price": 100.9, "quantity": 12}],
+                  "sell": [{"price": 101.1, "quantity": 10}]},
+    }
+    live = normalize_kite_quote("NSE:INFY", quote, received_at=received,
+                                availability_delay=timedelta(milliseconds=250))
+    synthetic = replace(live, event_id="fixture-copy", source="SYNTHETIC_FIXTURE")
+    assert live.source == "KITE_CONNECT_READ_ONLY"
+    assert live.available_at == received + timedelta(milliseconds=250)
+    assert synthetic.sha256() != live.sha256()
+
+    archive = QuoteArchive(tmp_path / "source-classes.sqlite3")
+    try:
+        archive.append(live)
+        live_report = archive.coverage(expected_sessions={"s1"},
+                                       intents={("s1", "NSE:INFY"): 10_000},
+                                       as_of=received + timedelta(seconds=1))
+        assert live_report.claim_scope == "LIVE_OBSERVED"
+        assert live_report.source_classes == ("live",)
+
+        archive.append(replace(synthetic, instrument_id="NSE:RELIANCE"))
+        fixture_report = archive.coverage(expected_sessions={"s1"},
+                                          intents={("s1", "NSE:RELIANCE"): 10_000},
+                                          as_of=received + timedelta(seconds=1))
+        assert fixture_report.claim_scope == "FIXTURE_OR_MIXED"
+        assert fixture_report.source_classes == ("fixture",)
     finally:
         archive.close()
 
