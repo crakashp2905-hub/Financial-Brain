@@ -35,6 +35,7 @@ class Approval:
     approved_at_utc: datetime
     expires_at_utc: datetime
     adr_ref: str | None = None
+    signature_b64: str | None = None
 
 
 def is_agent_actor(actor_id: str, actor_type: str) -> bool:

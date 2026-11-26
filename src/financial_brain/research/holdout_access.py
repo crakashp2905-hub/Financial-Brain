@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import base64
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,26 @@ GENESIS = "0" * 64
 
 class HoldoutAccessError(PermissionError):
     """Holdout access is invalid, unauthorized, already consumed, or ledger-corrupt."""
+
+
+def holdout_approval_message(approval: Approval) -> bytes:
+    """Canonical bytes the configured human owner signs for a single holdout approval."""
+    if any(stamp.tzinfo is None or stamp.utcoffset() is None
+           for stamp in (approval.approved_at_utc, approval.expires_at_utc)):
+        raise HoldoutAccessError("approval timestamps must be timezone-aware")
+    body = {
+        "kind": approval.kind,
+        "subject": approval.subject,
+        "scope_sha256": approval.scope_sha256,
+        "actor_id": approval.actor_id,
+        "actor_type": approval.actor_type,
+        "approved_at_utc": approval.approved_at_utc.astimezone(timezone.utc).isoformat(),
+        "expires_at_utc": approval.expires_at_utc.astimezone(timezone.utc).isoformat(),
+        "adr_ref": approval.adr_ref,
+    }
+    return b"FB-HOLDOUT-APPROVAL-V1|" + json.dumps(
+        body, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
 
 
 def _sha(value: str, label: str) -> None:
@@ -56,9 +77,12 @@ class HoldoutAccessLedger:
     be protected by the deployment's filesystem and backup policy.
     """
 
-    def __init__(self, path: Path | str) -> None:
+    def __init__(self, path: Path | str, *, owner_public_key: bytes | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if owner_public_key is not None and (not isinstance(owner_public_key, bytes) or len(owner_public_key) != 32):
+            raise HoldoutAccessError("pinned owner Ed25519 public key must be 32 raw bytes")
+        self.owner_public_key = owner_public_key
         self._con = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
@@ -100,6 +124,7 @@ class HoldoutAccessLedger:
             raise HoldoutAccessError("configured owner identity is required")
         if approval.actor_id != authorized_owner_id:
             raise HoldoutAccessError("holdout access must be approved by the configured owner")
+        self._verify_owner_signature(approval)
         try:
             validate_approval(approval, kind="HOLDOUT_ACCESS", subject=run_id,
                               scope_sha256=scope, now=now)
@@ -135,5 +160,23 @@ class HoldoutAccessLedger:
             self._con.execute("ROLLBACK")
             raise
 
+    def _verify_owner_signature(self, approval: Approval) -> None:
+        if self.owner_public_key is None:
+            raise HoldoutAccessError("pinned owner signing key is required for holdout access")
+        if not approval.signature_b64:
+            raise HoldoutAccessError("cryptographic owner signature is required for holdout access")
+        try:
+            from cryptography.exceptions import InvalidSignature
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+        except ImportError as exc:
+            raise HoldoutAccessError("cryptography package is required to verify holdout owner approval") from exc
+        try:
+            signature = base64.b64decode(approval.signature_b64, validate=True)
+            Ed25519PublicKey.from_public_bytes(self.owner_public_key).verify(
+                signature, holdout_approval_message(approval))
+        except (InvalidSignature, ValueError, TypeError) as exc:
+            raise HoldoutAccessError("holdout owner signature is invalid") from exc
 
-__all__ = ["HoldoutAccessError", "HoldoutAccessLedger", "HoldoutReceipt", "holdout_scope_sha256"]
+
+__all__ = ["HoldoutAccessError", "HoldoutAccessLedger", "HoldoutReceipt",
+           "holdout_approval_message", "holdout_scope_sha256"]

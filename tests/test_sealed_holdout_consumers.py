@@ -1,18 +1,25 @@
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
+import base64
 import hashlib
 import shutil
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from financial_brain.evaluation import labels, models
 from financial_brain.forward_edge.approvals import Approval
-from financial_brain.research.holdout_access import HoldoutAccessLedger, holdout_scope_sha256
+from financial_brain.research.holdout_access import (
+    HoldoutAccessLedger, holdout_approval_message, holdout_scope_sha256,
+)
 from financial_brain.research.sealed_dataset import SealedDatasetError, SealedDatasetReader
 
 NOW = datetime(2026, 11, 26, 10, tzinfo=timezone.utc)
 OWNER = "owner:ramesh"
 PREREG = "b" * 64
+OWNER_PRIVATE_KEY = Ed25519PrivateKey.from_private_bytes(bytes(range(32)))
+OWNER_PUBLIC_KEY = OWNER_PRIVATE_KEY.public_key().public_bytes_raw()
 
 
 def _session(tmp_path, filename: str, dataset_id: str):
@@ -35,7 +42,9 @@ def _session(tmp_path, filename: str, dataset_id: str):
                                  run_id=run_id, preregistration_sha256=PREREG)
     approval = Approval("HOLDOUT_ACCESS", run_id, scope, OWNER, "human",
                         NOW - timedelta(minutes=1), NOW + timedelta(hours=1), "ADR-0007")
-    ledger = HoldoutAccessLedger(tmp_path / "holdout-access.sqlite")
+    approval = replace(approval, signature_b64=base64.b64encode(
+        OWNER_PRIVATE_KEY.sign(holdout_approval_message(approval))).decode("ascii"))
+    ledger = HoldoutAccessLedger(tmp_path / "holdout-access.sqlite", owner_public_key=OWNER_PUBLIC_KEY)
     reader = SealedDatasetReader(root, ledger, owner_id=OWNER)
     session = reader.open_session(
         relative_path=filename, dataset_id=dataset_id, dataset_sha256=digest,
