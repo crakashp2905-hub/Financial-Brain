@@ -61,7 +61,17 @@ class ExitProtectionLedger:
         return [r for r in self.journal.records() if r.get("position_id") == self.position_id]
 
     @staticmethod
+    def _decision_sha256(records: list[dict]) -> str:
+        decisions = {row["decision_sha256"] for row in records
+                     if row.get("type") == "ENTRY_SIGNAL" and row.get("decision_sha256")}
+        if len(decisions) != 1:
+            raise ExitLedgerError("position event requires exactly one immutable entry decision hash")
+        return next(iter(decisions))
+
+    @staticmethod
     def _append_idempotent(journal: DurableJournal, records: list[dict], record: dict, key: str) -> bool:
+        if record.get("type") != "ENTRY_SIGNAL":
+            record["decision_sha256"] = ExitProtectionLedger._decision_sha256(records)
         previous = next((r for r in records if r.get("idempotency_key") == key), None)
         if previous is not None:
             if previous != record:
@@ -145,6 +155,20 @@ class ExitProtectionLedger:
                   "snapshot": json.loads(snapshot_json),
                   "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
                   "idempotency_key": idempotency_key}
+        decision_manifest = {
+            "signal_id": entry.signal_id,
+            "position_id": self.position_id,
+            "strategy_id": entry.strategy_id,
+            "strategy_version": entry.strategy_version,
+            "instrument_id": entry.instrument_id,
+            "side": entry.side.value,
+            "occurred_at": entry.occurred_at.isoformat(),
+            "quote_source_id": entry.quote_source_id,
+            "source_hash": entry.source_hash,
+            "snapshot_sha256": record["snapshot_sha256"],
+        }
+        manifest_json = json.dumps(decision_manifest, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        record["decision_sha256"] = hashlib.sha256(manifest_json.encode("utf-8")).hexdigest()
         records = self._position_records()
         if any(r.get("type") == "ENTRY_INTENT" and r.get("entry_signal_id") == entry.signal_id for r in records):
             raise ExitLedgerError("entry signal must be journaled before its intent")
@@ -284,6 +308,7 @@ class ExitProtectionLedger:
                   "source_hash": event.exit_signal.source_hash, "oco_group_id": event.oco_group_id,
                   "resolves_unresolved_intent_id": resolves_unresolved_intent_id,
                   "idempotency_key": key}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior = next((r for r in records if r.get("idempotency_key") == key), None)
         if prior is not None:
             if prior != record:
@@ -370,6 +395,7 @@ class ExitProtectionLedger:
                   "intent_id": intent_id, "protection_id": protection_id, "trigger": trigger,
                   "quantity": str(qty), "observed_at": observed_at.isoformat(), "reason": reason,
                   "evidence_hash": evidence_hash, "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior = [r for r in records if r.get("intent_id") == intent_id]
         if prior:
             if prior[0] != record:
@@ -409,6 +435,7 @@ class ExitProtectionLedger:
                   "quote_available_at": quote_available_at.isoformat(),
                   "quote_evidence_sha256": quote_evidence_sha256,
                   "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior_id = next((row for row in records if row.get("type") == "EXIT_EXECUTION"
                          and row.get("execution_id") == execution_id), None)
         if prior_id is not None:
@@ -439,6 +466,7 @@ class ExitProtectionLedger:
                                      "price": str(fill_price), "occurred_at": occurred_at.isoformat(),
                                      "idempotency_key": idempotency_key,
                                      "oco_cancelled_siblings": []}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior_fill = next((r for r in records if r.get("type") == "EXIT_FILL" and r.get("fill_id") == fill_id), None)
         if prior_fill is not None:
             # OCO sibling reductions are derived atomically from the winning fill and
@@ -488,6 +516,7 @@ class ExitProtectionLedger:
         # One hash-chained journal record makes the winner fill and OCO sibling
         # reductions inseparable during crash recovery.
         record["oco_cancelled_siblings"] = sibling_cancellations
+        record["decision_sha256"] = self._decision_sha256(records)
         self.journal.append(record)
         _ = self.state
         return True
@@ -519,7 +548,8 @@ class ExitProtectionLedger:
                          "event_id": event_id, "occurred_at": occurred_at.isoformat(), "reason": reason,
                          "entry_filled_quantity": str(state.entry_filled_quantity),
                          "exit_filled_quantity": str(state.exit_filled_quantity),
-                         "idempotency_key": idempotency_key}
+                         "idempotency_key": idempotency_key,
+                         "decision_sha256": self._decision_sha256(records)}
             if existing == candidate:
                 return False
             raise ExitLedgerError("position already has a different close event")

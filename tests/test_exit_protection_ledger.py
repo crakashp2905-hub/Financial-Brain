@@ -332,6 +332,11 @@ def test_entry_signal_intent_snapshots_precede_fill_and_replay_with_hashes(tmp_p
     assert event_types.index("ENTRY_SIGNAL") < event_types.index("ENTRY_INTENT") < event_types.index("ENTRY_FILL")
     assert all(len(record["snapshot_sha256"]) == 64 for record in records
                if record.get("type") in {"ENTRY_SIGNAL", "ENTRY_INTENT"})
+    position_records = [record for record in records if record.get("position_id") == POSITION_ID]
+    decision_hashes = {record.get("decision_sha256") for record in position_records}
+    assert len(decision_hashes) == 1
+    assert len(next(iter(decision_hashes))) == 64
+    assert all(record.get("decision_sha256") for record in position_records)
     assert all(record["exit_policy_hash"] == _exit_policy().policy_hash for record in records
                if record.get("type") == "PROTECTION_ARMED")
     assert recovered.state.entry_filled_quantity == Decimal("10")
@@ -383,3 +388,20 @@ def test_position_close_requires_all_recorded_exit_fills_and_survives_restart(tm
     assert not _record_exit_fill(recovered, exit_key="full-exit", fill_id="close-fill-2",
                                  quantity=Decimal("5"), idempotency_key="exit:close:2")
     assert not recovered.record_position_closed(**close)
+
+
+def test_entry_decision_hash_binds_strategy_and_snapshot(tmp_path):
+    hashes = []
+    for index, snapshot in enumerate(({"setup": "breakout"}, {"setup": "reversal"})):
+        position_id = f"550e8400-e29b-41d4-a716-44665544000{index + 1}"
+        signal_id = f"550e8400-e29b-41d4-a716-44665544000{index + 4}"
+        entry = EntrySignal(
+            signal_id=signal_id, opens_position_id=position_id, strategy_id="breakout",
+            strategy_version="1", instrument_id="NSE:INFY", side=EntrySide.BUY,
+            quote_source_id="kite:NSE", source_hash="a" * 64, occurred_at=NOW,
+        )
+        ledger = ExitProtectionLedger(DurableJournal(tmp_path / f"decision-{index}.journal"),
+                                      position_id=position_id)
+        ledger.record_entry_signal(entry, snapshot=snapshot, idempotency_key=f"entry:{index}")
+        hashes.append(ledger.journal.records()[0]["decision_sha256"])
+    assert hashes[0] != hashes[1]
