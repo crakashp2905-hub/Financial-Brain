@@ -142,6 +142,36 @@ def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
     resumed.close()
 
 
+def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks(tmp_path):
+    runner = make_runner(tmp_path)
+    completed = MarketEvent(
+        "completed-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=2),
+        NOW + timedelta(seconds=2), NOW + timedelta(seconds=2),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "is_complete": True}, "FIXTURE")
+    partial = MarketEvent(
+        "partial-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=1),
+        NOW + timedelta(seconds=1), NOW + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 10,
+         "is_complete": False}, "FIXTURE")
+    quote = make_event(event_id="interbar-quote", available_at=NOW, event_time=NOW)
+    market_events = []
+    forecast_bars = []
+    exit_checks = []
+    runner.run_event_loop(
+        session_id="cadence", config=make_config(), events=[completed, partial, quote],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:cadence",
+        on_market_event=lambda event, _: market_events.append(event.event_id),
+        on_completed_bar=lambda event, _: forecast_bars.append(event.event_id),
+        evaluate_protective_exits=lambda event, _: exit_checks.append(event.event_id))
+
+    assert market_events == ["interbar-quote", "partial-bar", "completed-bar"]
+    assert forecast_bars == ["completed-bar"]
+    assert exit_checks == market_events
+    runner.close()
+
+
 def make_runner(tmp_path):
     return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
 

@@ -347,14 +347,17 @@ class ForwardSessionRunner:
                        preflight: dict[str, bool], consumer_id: str,
                        on_market_event: Callable[[MarketEvent, "ForwardSessionRunner"], None],
                        evaluate_protective_exits: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                       on_completed_bar: Callable[[MarketEvent, "ForwardSessionRunner"], None] | None = None,
                        on_close: Callable[["ForwardSessionRunner"], None] | None = None,
                        session_close_at: datetime | None = None,
                        close_complete: bool = False) -> dict[str, Any]:
         """Run one restartable, deterministic session event loop.
 
         Events are made available one at a time in canonical time/sequence/ID order. The
-        market handler runs after durable ingestion; the protective-exit evaluator then
-        runs for every event (including quotes between strategy bars). A durable consumer
+        market handler runs after durable ingestion; the optional completed-bar handler
+        runs only for BAR events explicitly tagged ``is_complete=True``; the protective-
+        exit evaluator then runs for every event (including quotes between strategy bars).
+        A durable consumer
         cursor advances only after both handlers return. Handlers must therefore use
         idempotent decision/order IDs: a crash after a handler side effect but before its
         cursor acknowledgement intentionally replays that event.
@@ -372,6 +375,8 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("market and protective-exit handlers are required")
         if on_close is not None and not callable(on_close):
             raise ForwardSessionRunnerError("session close handler must be callable")
+        if on_completed_bar is not None and not callable(on_completed_bar):
+            raise ForwardSessionRunnerError("completed-bar handler must be callable")
         if type(close_complete) is not bool:
             raise ForwardSessionRunnerError("close_complete must be boolean")
         if close_complete and (session_close_at is None or session_close_at.tzinfo is None or
@@ -381,6 +386,9 @@ class ForwardSessionRunner:
         event_batch = list(events)
         if any(not isinstance(event, MarketEvent) for event in event_batch):
             raise ForwardSessionRunnerError("event loop accepts normalized MarketEvent values only")
+        if any(event.kind is EventKind.BAR and "is_complete" in event.payload and
+               type(event.payload["is_complete"]) is not bool for event in event_batch):
+            raise ForwardSessionRunnerError("bar is_complete marker must be boolean")
         ordered = sorted(event_batch, key=lambda event: (
             event.available_at, event.event_time,
             -1 if event.sequence is None else event.sequence, event.event_id))
@@ -400,6 +408,11 @@ class ForwardSessionRunner:
                 row = pending[0]
                 event = MarketEvent.from_dict(row["event"])
                 on_market_event(event, self)
+                # Forecast cadence is bar-driven and separate from the position monitor.
+                # Missing or false completion evidence fails closed for forecasting.
+                if (event.kind is EventKind.BAR and event.payload.get("is_complete") is True and
+                        on_completed_bar is not None):
+                    on_completed_bar(event, self)
                 # This is deliberately independent of forecast cadence: every source
                 # event gives the position monitor a chance to evaluate protective exits.
                 evaluate_protective_exits(event, self)
