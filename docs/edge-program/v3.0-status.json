@@ -7618,12 +7618,12 @@
         "tests/test_forward_edge_session_runner.py::test_deterministic_event_loop_orders_events_and_checks_exits_after_each and ::test_event_loop_replays_unacknowledged_event_after_restart."
       ],
       "blocker": "PARTIAL: deterministic lifecycle orchestration is available, but existing strategy adapters, corporate-action and margin handlers, and session-close business logic have not all been wired through this event loop as the repository-wide canonical path.",
-      "last_audited_at_utc": "2026-11-26T23:58:24Z",
-      "commit": "a37881ef",
+      "last_audited_at_utc": "2026-11-27T00:01:12Z",
+      "commit": "e5248c7d",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_session_runner.py -q: 76 passed in 189.98s.",
-        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-        "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+        "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
+        "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
       ],
       "test_result": "The session runner provides deterministic, durable event-loop orchestration with per-event protective-exit checks and restart replay. PA-03-01 remains PARTIAL until this is the wired path for all strategy, corporate-action, margin and closeout handlers."
     },
@@ -7633,16 +7633,16 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop has a separate on_completed_bar callback gated on BAR payload is_complete is exactly true; absent or false markers do not trigger forecasting, while protective-exit evaluation still runs for every event.",
+        "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop has a separate on_completed_bar callback gated on BAR payload complete being exactly true (aligned with intent_timing.py); absent or false markers do not trigger forecasting, while protective-exit evaluation still runs for every event.",
         "tests/test_forward_edge_session_runner.py::test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks proves inter-bar quote exit evaluation and that partial bars do not invoke the forecast callback."
       ],
       "blocker": "PARTIAL: callback cadence is separated in the runner, but producers do not yet attest bar completion from exchange-aligned interval boundaries and existing forecasting strategies are not universally wired through on_completed_bar.",
-      "last_audited_at_utc": "2026-11-26T23:58:24Z",
-      "commit": "a37881ef",
+      "last_audited_at_utc": "2026-11-27T00:01:12Z",
+      "commit": "e5248c7d",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_session_runner.py -q: 76 passed in 189.98s.",
-        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-        "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+        "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
+        "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
       ],
       "test_result": "Completed-bar forecasting and continuous protective-exit checks are distinct and tested. PA-03-02 remains PARTIAL pending trusted exchange-aligned bar-completion production and universal strategy-adapter wiring."
     },
@@ -20123,7 +20123,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-26T23:58:24Z",
+    "as_of_utc": "2026-11-27T00:01:12Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",

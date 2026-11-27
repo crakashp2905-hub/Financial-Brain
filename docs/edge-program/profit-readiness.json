@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-26T23:58:24Z",
+  "as_of_utc": "2026-11-27T00:01:12Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "6838a40d514c965bf3c2c263462087c557494d1e4bb9060b74a53bc7e41f8250",
-  "audit_export_sha256": "1325bf96aea8730feb1fcdedd8706a3e5d4d4db260abe23ea268cba1d9103b3d",
+  "status_ledger_sha256": "5c205234af2fadc9724d9a98a786364b1ab609a2a1f2888a3399fe85b3cd79c7",
+  "audit_export_sha256": "995408190c178dbf1e781e744156964b97e0a8dd353c725d4cd677bbbee6980d",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -904,16 +904,16 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build one deterministic event loop for session open, completed bars, quotes, corporate actions, margin changes, decisions, protective exits and closeout."
           },
-          "commit": "a37881ef",
+          "commit": "e5248c7d",
           "blocker": "PARTIAL: deterministic lifecycle orchestration is available, but existing strategy adapters, corporate-action and margin handlers, and session-close business logic have not all been wired through this event loop as the repository-wide canonical path.",
           "evidence": [
             "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop sorts normalized events by availability/event/sequence/ID, durably ingests each before dispatch, runs a market handler and protective-exit evaluation for every event, and acknowledges a durable consumer cursor only after handlers return; restart replays an unacknowledged event.",
             "tests/test_forward_edge_session_runner.py::test_deterministic_event_loop_orders_events_and_checks_exits_after_each and ::test_event_loop_replays_unacknowledged_event_after_restart."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_session_runner.py -q: 76 passed in 189.98s.",
-            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-            "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+            "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
+            "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
           ]
         },
         {
@@ -924,16 +924,16 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Separate forecasting frequency (e.g., every completed 15-minute index bar) from continuous exit evaluation; never wait 15 minutes to check a protective exit."
           },
-          "commit": "a37881ef",
+          "commit": "e5248c7d",
           "blocker": "PARTIAL: callback cadence is separated in the runner, but producers do not yet attest bar completion from exchange-aligned interval boundaries and existing forecasting strategies are not universally wired through on_completed_bar.",
           "evidence": [
-            "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop has a separate on_completed_bar callback gated on BAR payload is_complete is exactly true; absent or false markers do not trigger forecasting, while protective-exit evaluation still runs for every event.",
+            "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner.run_event_loop has a separate on_completed_bar callback gated on BAR payload complete being exactly true (aligned with intent_timing.py); absent or false markers do not trigger forecasting, while protective-exit evaluation still runs for every event.",
             "tests/test_forward_edge_session_runner.py::test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks proves inter-bar quote exit evaluation and that partial bars do not invoke the forecast callback."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_session_runner.py -q: 76 passed in 189.98s.",
-            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
-            "mypy src/financial_brain/forward_edge/session_runner.py: Success, no issues found in 1 source file."
+            "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
+            "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
           ]
         },
         {
@@ -3135,5 +3135,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "e27ee3c7543730355ce0c01c7fc81ce66fcb3fa3f7e5dfb88695a844ad3aa98b"
+  "report_sha256": "f359c4162383ca16bbf233c0236ca168c0561add10db0da6b3e555c2780c159a"
 }
