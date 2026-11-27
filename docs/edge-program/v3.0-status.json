@@ -10807,16 +10807,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/execution/oms/risk_gate.py enforces maximum order value, per-symbol position value, daily order count/notional turnover, gross exposure, duplicate live orders and one-minute rate independent of strategy signal output.",
-        "src/financial_brain/risk/killswitch.py has optional drawdown/daily-loss/stale-data/slippage checks, but OMS submissions do not require a current account-PnL or quote-receipt-age snapshot, and failed execution counts are not an OMS brake.",
-        "The order authorization path therefore does not yet enforce all named brakes against a durable, reconciled account snapshot."
+        "src/financial_brain/execution/oms/risk_gate.py enforces order value, per-symbol position value, daily count/turnover, gross exposure, duplicate and rate limits, max failed/unresolved execution count, max quote age, approved quote source and account daily-loss limit on every OMS submission.",
+        "PaperBroker preserves quote exchange/event time separately from local receipt time; KiteBroker reads the full quote endpoint and preserves Kite exchange packet timestamp plus receipt time. Human ticket approval rechecks current session, quote freshness, account loss, kill switch and all current order limits.",
+        "The order gate obtains daily P&L only from an OMS-level account_daily_pnl_provider; missing or failed provider state blocks orders. The trading helpers expose provider injection but no durable reconciled P&L provider is configured in the repository, so normal rehearsal/ticket flows cannot clear this gate yet.",
+        "docs/edge-program/oms-pretrade-brakes.md records thresholds, source timestamp semantics and the remaining provider integration requirement."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-27T08:44:05Z",
-      "commit": "9bce047a",
+      "last_audited_at_utc": "2026-11-27T08:59:19Z",
+      "commit": "89a9dbfb",
       "test_evidence": [
-        "tests/test_oms.py: order-value, price, daily/position/rate and order-state controls regressions; 21 passed.",
-        "Source review confirmed kill-switch loss/stale-data checks are optional inputs and are not required by OMS.submit."
+        "tests/test_oms.py: 25 cases cover quote source/exchange and receipt freshness, missing/invalid P&L, daily loss cap, failed execution brake, entry/approval rechecks and existing order controls; passed.",
+        "Combined tests/test_oms.py, tests/test_forward_edge_risk_throttle.py and tests/test_phase5_allocator.py: 37 passed.",
+        "Ruff on changed OMS/service/tests and mypy on OMS and trading service modules passed; git diff --check passed."
       ]
     },
     {
@@ -20997,7 +20999,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T08:44:05Z",
+    "as_of_utc": "2026-11-27T08:59:19Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
