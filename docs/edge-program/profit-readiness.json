@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:36:25Z",
+  "as_of_utc": "2026-11-27T00:43:17Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "86d45ede0a04d3d654f3d78c89b95a68cb593d657f55f175922ed3c9b419569a",
-  "audit_export_sha256": "ad2a52dab23a8d4e68e7baa51e2bcf149a1287624cf18ee404d80f03f767fe69",
+  "status_ledger_sha256": "dc5cf2edcd42e58ba584c9ca13e8179accde83a52419c4fc7b12328b1f653880",
+  "audit_export_sha256": "bca6af1f1962015436ec9ec4449be25f5ea8741fe92574c21a85943478f53765",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 803,
-    "UNASSESSED": 445
+    "PARTIAL": 804,
+    "UNASSESSED": 444
   },
-  "assessed_count": 933,
-  "unassessed_count": 445,
+  "assessed_count": 934,
+  "unassessed_count": 444,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 23,
-        "UNASSESSED": 5
+        "PARTIAL": 24,
+        "UNASSESSED": 4
       },
       "evidence": [
         {
@@ -1110,16 +1110,27 @@
         },
         {
           "item_id": "PA-03-11",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 968,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Tag each decision with `as_of`, `first_executable_after`, `expires_at`, last-good-quote-age and chosen execution method."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "f1e0a8d4",
+          "blocker": "Expiry is null unless a max-wait policy is configured; ensuring every paper order has an explicit bounded expiry and wiring equivalent tags through all non-forward decision systems remain open.",
+          "evidence": [
+            "src/financial_brain/forward_edge/session_runner.py::decide records input availability as `as_of` and last good input quote age in the immutable decision record.",
+            "src/financial_brain/forward_edge/session_runner.py::execute_paper_intent records `as_of`, `first_executable_after`, configured `expires_at` when max-wait is supplied, last-good quote age, and execution method in the immutable paper-intent request.",
+            "_timing_telemetry exposes the fields on each decision and linked order, using explicit null/empty values when no paper order exists.",
+            "tests/test_forward_edge_session_runner.py validates both no-order decision telemetry and candidate-to-fill timing metadata.",
+            "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_strategy_pipeline.py -q --basetemp=.pytest-pa0311: 87 passed; focused timing cases: 3 passed.",
+            "ruff and mypy src/financial_brain/forward_edge/session_runner.py passed."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_strategy_pipeline.py -q --basetemp=.pytest-pa0311: 87 passed; focused timing cases: 3 passed.",
+            "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py passed.",
+            "mypy src/financial_brain/forward_edge/session_runner.py passed."
+          ]
         },
         {
           "item_id": "PA-03-12",
@@ -3171,5 +3182,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "33dd85d405c829ad7dab57924f297b1d303a575559b115c522757d82be6817a4"
+  "report_sha256": "5ffaf0057718b0ffd044d390c25724b6225cd4780a8377fc1cd2fd85faaefeba"
 }

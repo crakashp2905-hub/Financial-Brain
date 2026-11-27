@@ -7813,12 +7813,25 @@
     {
       "id": "PA-03-11",
       "text": "Tag each decision with `as_of`, `first_executable_after`, `expires_at`, last-good-quote-age and chosen execution method.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py::decide records input availability as `as_of` and last good input quote age in the immutable decision record.",
+        "src/financial_brain/forward_edge/session_runner.py::execute_paper_intent records `as_of`, `first_executable_after`, configured `expires_at` when max-wait is supplied, last-good quote age, and execution method in the immutable paper-intent request.",
+        "_timing_telemetry exposes the fields on each decision and linked order, using explicit null/empty values when no paper order exists.",
+        "tests/test_forward_edge_session_runner.py validates both no-order decision telemetry and candidate-to-fill timing metadata.",
+        "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_strategy_pipeline.py -q --basetemp=.pytest-pa0311: 87 passed; focused timing cases: 3 passed.",
+        "ruff and mypy src/financial_brain/forward_edge/session_runner.py passed."
+      ],
+      "blocker": "Expiry is null unless a max-wait policy is configured; ensuring every paper order has an explicit bounded expiry and wiring equivalent tags through all non-forward decision systems remain open.",
+      "last_audited_at_utc": "2026-11-27T00:43:17+00:00",
+      "commit": "f1e0a8d4",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_runner.py tests/test_forward_edge_intent_timing.py tests/test_forward_edge_strategy_pipeline.py -q --basetemp=.pytest-pa0311: 87 passed; focused timing cases: 3 passed.",
+        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py passed.",
+        "mypy src/financial_brain/forward_edge/session_runner.py passed."
+      ],
+      "test_result": "The forward paper decision and order evidence now carries all requested timing tags where known and explicitly represents missing expiry/execution data. Universal bounded expiry and cross-system wiring remain incomplete, so status is PARTIAL."
     },
     {
       "id": "PA-03-12",
@@ -20167,7 +20180,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:36:25Z",
+    "as_of_utc": "2026-11-27T00:43:17Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20628,6 +20641,7 @@
       "PA-03-08",
       "PA-03-09",
       "PA-03-10",
+      "PA-03-11",
       "PA-03-15",
       "PA-04-01",
       "PA-04-02",
@@ -21103,13 +21117,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 933,
+    "audited_count": 934,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 803,
-      "UNASSESSED": 445
+      "PARTIAL": 804,
+      "UNASSESSED": 444
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21258,7 +21272,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 803,
-    "UNASSESSED": 445
+    "PARTIAL": 804,
+    "UNASSESSED": 444
   }
 }
