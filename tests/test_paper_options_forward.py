@@ -14,7 +14,8 @@ DECIDED = datetime(2026, 10, 29, 10, tzinfo=IST)
 
 
 def intent():
-    return Intent("forward-1", "cohort-a", "v1", 123, DECIDED,
+    return Intent("option-forward-1", "direction-forward-1", "a" * 64, "b" * 64,
+                  "cohort-a", "v1", 123, DECIDED,
                   DECIDED + timedelta(minutes=5), 110.0)
 
 
@@ -51,8 +52,8 @@ def test_forward_outcome_preserves_missing_quote_and_is_immutable():
     with pytest.raises(OptionPaperError, match="already recorded"):
         record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=8))
     assert audit(paper)["outcomes"] == 1
-    paper.execute("UPDATE outcomes SET result = '{}' WHERE signal_id = 'forward-1'")
-    assert audit(paper)["invalid_outcomes"] == [("cohort-a", "v1", "forward-1")]
+    paper.execute("UPDATE outcomes SET result = '{}' WHERE signal_id = 'option-forward-1'")
+    assert audit(paper)["invalid_outcomes"] == [("cohort-a", "v1", "option-forward-1")]
 
 
 def test_forward_fill_needs_observed_fresh_quotes_after_registration():

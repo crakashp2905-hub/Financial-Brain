@@ -14,7 +14,8 @@ EXPIRY = date(2026, 11, 5)
 
 
 def intent(expected=110.0):
-    return Intent("signal-1", "option-test", "v1", 123, D,
+    return Intent("option-signal-1", "direction-signal-1", "a" * 64, "b" * 64,
+                  "option-test", "v1", 123, D,
                   D + timedelta(minutes=5), expected)
 
 
@@ -31,6 +32,8 @@ def test_options_runner_requires_later_entry_and_real_exit():
     assert done["status"] == "CLOSED" and done["net_pnl_inr"] > 0
     assert done["mode"] == "replay" and done["rule_version"] == "v1"
     assert done["evidence_class"] == "HISTORICAL_REPLAY" and done["independently_attested"] is False
+    assert done["signal_id"] == done["option_signal_id"] == "option-signal-1"
+    assert done["directional_signal_id"] == "direction-signal-1"
 
 
 def test_options_runner_skips_cost_dominated_or_thin_entry():
@@ -43,9 +46,26 @@ def test_options_runner_skips_cost_dominated_or_thin_entry():
 
 def test_option_intent_normalizes_nominal_lots_before_replay():
     base = intent()
-    typed = Intent(base.signal_id, base.cohort, base.rule_version, base.token, base.decided_at,
+    typed = Intent(base.signal_id, base.directional_signal_id,
+                   base.directional_evidence_sha256, base.option_evidence_sha256,
+                   base.cohort, base.rule_version, base.token, base.decided_at,
                    base.planned_exit_at, base.expected_exit_bid, lots=OptionLots(2))
     assert typed.lots == 2
+
+
+def test_option_and_direction_hypotheses_require_distinct_ids_and_evidence():
+    base = intent()
+    import pytest
+    from financial_brain.paper.options import OptionPaperError
+
+    with pytest.raises(OptionPaperError, match="distinct signal IDs"):
+        Intent(base.signal_id, base.signal_id, base.directional_evidence_sha256,
+               base.option_evidence_sha256, base.cohort, base.rule_version, base.token,
+               base.decided_at, base.planned_exit_at, base.expected_exit_bid).validate()
+    with pytest.raises(OptionPaperError, match="SHA-256"):
+        Intent(base.signal_id, base.directional_signal_id, "bad", base.option_evidence_sha256,
+               base.cohort, base.rule_version, base.token, base.decided_at,
+               base.planned_exit_at, base.expected_exit_bid).validate()
 
 
 def test_stale_and_zero_depth_option_quotes_are_no_fill():

@@ -16,7 +16,12 @@ from financial_brain.forward_edge.evidence_labels import metadata
 
 @dataclass(frozen=True)
 class Intent:
+    # signal_id identifies the option execution hypothesis; directional_signal_id is
+    # a separate upstream hypothesis and never supplies its outcome score.
     signal_id: str
+    directional_signal_id: str
+    directional_evidence_sha256: str
+    option_evidence_sha256: str
     cohort: str
     rule_version: str
     token: int
@@ -33,8 +38,14 @@ class Intent:
         object.__setattr__(self, "lots", option_lot_count(self.lots))
 
     def validate(self) -> None:
-        if not self.signal_id or not self.cohort or not self.rule_version:
-            raise OptionPaperError("signal, cohort and rule version are required")
+        if not self.signal_id or not self.directional_signal_id or not self.cohort or not self.rule_version:
+            raise OptionPaperError("separate option/directional signals, cohort and rule version are required")
+        if self.signal_id == self.directional_signal_id:
+            raise OptionPaperError("directional and option hypotheses need distinct signal IDs")
+        for name in ("directional_evidence_sha256", "option_evidence_sha256"):
+            digest = getattr(self, name)
+            if (len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest)):
+                raise OptionPaperError(f"{name} must be a lowercase SHA-256 evidence reference")
         if self.decided_at.tzinfo is None or self.planned_exit_at.tzinfo is None:
             raise OptionPaperError("option intent timestamps must be timezone-aware")
         if self.planned_exit_at <= self.decided_at:
@@ -49,7 +60,12 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
     """No fill is synthesized when a quote, liquidity or exit is missing."""
     intent.validate()
     lots = option_lot_count(intent.lots)
-    base = {"signal_id": intent.signal_id, "cohort": intent.cohort,
+    base = {"signal_id": intent.signal_id,
+            "option_signal_id": intent.signal_id,
+            "directional_signal_id": intent.directional_signal_id,
+            "directional_evidence_sha256": intent.directional_evidence_sha256,
+            "option_evidence_sha256": intent.option_evidence_sha256,
+            "cohort": intent.cohort,
             "rule_version": intent.rule_version, "mode": "replay", **metadata("replay")}
     ordered = sorted((q for q in quotes if q.token == intent.token), key=lambda q: q.observed_at)
     entry_candidates = [q for q in ordered if intent.decided_at < q.observed_at <=
