@@ -2262,6 +2262,23 @@ def test_risk_breach_latch_persists_across_runner_restart_and_blocks_entries(tmp
     resumed.close()
 
 
+@pytest.mark.parametrize("reason", [
+    "DAILY_LOSS", "DRAWDOWN", "STALE_FEED", "RECONCILIATION_MISMATCH",
+    "LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH",
+])
+def test_persistent_loss_and_operational_latches_cannot_be_overridden_by_entry_callers(tmp_path, reason):
+    runner, event, decided = trade_setup(tmp_path)
+    runner.paper_kill_switch.trip(
+        event_id=f"gate:{reason}", reason=reason, occurred_at=decided,
+        evidence_hash="d" * 64, actor_id="risk-engine", actor_type="system")
+    for _attempt in range(2):  # repeated/reentrant UI or agent requests use the same guarded entry point
+        with pytest.raises(ForwardSessionRunnerError, match=f"paper kill switch is active: {reason}"):
+            execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["execution_receipts"] == []
+    runner.close()
+
+
 def test_paper_fill_cannot_precede_risk_assessment_clock(tmp_path):
     runner, event, decided = trade_setup(tmp_path, risk_assessment_offset_ms=200)
     with pytest.raises(ForwardSessionRunnerError, match="cannot precede the persisted risk assessment"):

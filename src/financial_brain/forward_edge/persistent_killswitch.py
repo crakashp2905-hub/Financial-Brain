@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,14 @@ from .approvals import Approval, ApprovalError, validate_approval
 KILL_REASONS = frozenset({"DAILY_LOSS", "DRAWDOWN", "STALE_FEED", "RECONCILIATION_MISMATCH",
                           "LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH"})
 GENESIS_HASH = "0" * 64
+_LOCKS_GUARD = threading.Lock()
+_PATH_LOCKS: dict[str, threading.RLock] = {}
+
+
+def _path_lock(path: Path) -> threading.RLock:
+    key = str(path.resolve())
+    with _LOCKS_GUARD:
+        return _PATH_LOCKS.setdefault(key, threading.RLock())
 
 
 class KillSwitchError(PermissionError):
@@ -60,6 +69,7 @@ class PersistentKillSwitch:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.switch_id = switch_id
+        self._write_lock = _path_lock(self.path)
         self._owns_connection = connection is None
         self._con = connection or sqlite3.connect(str(self.path))
         self._con.execute("PRAGMA journal_mode=WAL")
@@ -110,18 +120,29 @@ class PersistentKillSwitch:
         return tuple(self._state()[0])
 
     def _append(self, event: KillEvent) -> bool:
-        prior = self._con.execute("SELECT event_json FROM kill_events WHERE event_id=?", [event.event_id]).fetchone()
-        encoded = json.dumps(event.body(), sort_keys=True, separators=(",", ":"), allow_nan=False)
-        if prior:
-            if prior[0] != encoded:
-                raise KillSwitchError("event ID reused with changed kill-switch content")
-            return False
-        _, previous, sequence = self._state()
-        digest = _sha({"prev_hash": previous, "event_json": encoded})
-        self._con.execute("INSERT INTO kill_events VALUES (?,?,?,?,?)",
-                          [sequence + 1, event.event_id, previous, encoded, digest])
-        self._con.commit()
-        return True
+        # Serialize same-process users and reserve the SQLite writer slot before
+        # reading the chain head. Otherwise two concurrent trips can both derive
+        # the same next sequence/predecessor from a stale snapshot.
+        with self._write_lock:
+            self._con.execute("BEGIN IMMEDIATE")
+            try:
+                prior = self._con.execute(
+                    "SELECT event_json FROM kill_events WHERE event_id=?", [event.event_id]).fetchone()
+                encoded = json.dumps(event.body(), sort_keys=True, separators=(",", ":"), allow_nan=False)
+                if prior:
+                    if prior[0] != encoded:
+                        raise KillSwitchError("event ID reused with changed kill-switch content")
+                    self._con.commit()
+                    return False
+                _, previous, sequence = self._state()
+                digest = _sha({"prev_hash": previous, "event_json": encoded})
+                self._con.execute("INSERT INTO kill_events VALUES (?,?,?,?,?)",
+                                  [sequence + 1, event.event_id, previous, encoded, digest])
+                self._con.commit()
+                return True
+            except Exception:
+                self._con.rollback()
+                raise
 
     def trip(self, *, event_id: str, reason: str, occurred_at: datetime,
              evidence_hash: str, actor_id: str = "risk-engine", actor_type: str = "system") -> bool:
