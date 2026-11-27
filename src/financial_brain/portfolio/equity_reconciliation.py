@@ -78,6 +78,7 @@ class SourceEventReconciliation:
     mismatched_event_ids: tuple[str, ...]
     canonical_events_sha256: str
     source_events_sha256: str
+    source_document_sha256: str | None
     report_sha256: str
     reconciled: bool
     limitations: tuple[str, ...]
@@ -96,7 +97,8 @@ def _event_economics(row: dict[str, object]) -> dict[str, object]:
 
 def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str,
                             source_system: str, period_start: datetime, period_end: datetime,
-                            source_events: Sequence[PortfolioEvent]) -> SourceEventReconciliation:
+                            source_events: Sequence[PortfolioEvent],
+                            source_document_sha256: str | None = None) -> SourceEventReconciliation:
     """Compare source statement events with the canonical journal by stable event identity.
 
     A reconciled result proves only that the caller-supplied event rows match this journal for
@@ -107,6 +109,10 @@ def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str
     end = _as_of(period_end, "period_end")
     if not account_id.strip() or not source_system.strip() or end <= start:
         raise EquityReconciliationError("account, source and increasing statement period are required")
+    if source_document_sha256 is not None and (
+            len(source_document_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in source_document_sha256)):
+        raise EquityReconciliationError("source document SHA-256 must be 64 lowercase hex characters")
     account = account_id.strip()
     source_name = source_system.strip()
 
@@ -155,6 +161,7 @@ def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str
     source_hash = _digest([source_economics[key] for key in sorted(source_economics)])
     reconciled = not statement_only and not ledger_only and not mismatched
     limitations = (
+        *(("No raw source document hash was supplied.",) if source_document_sha256 is None else ()),
         "Caller-supplied statement rows are not authenticated by this comparison.",
         "Matching the supplied period does not prove that the external statement is complete.",
     )
@@ -165,11 +172,12 @@ def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str
         "matched_event_count": matched, "statement_only_event_ids": statement_only,
         "ledger_only_event_ids": ledger_only, "mismatched_event_ids": mismatched,
         "canonical_events_sha256": canonical_hash, "source_events_sha256": source_hash,
+        "source_document_sha256": source_document_sha256,
         "reconciled": reconciled, "limitations": limitations,
     }
     result = SourceEventReconciliation(
         account, source_name, start, end, len(canonical), len(source_economics), matched,
-        statement_only, ledger_only, mismatched, canonical_hash, source_hash,
+        statement_only, ledger_only, mismatched, canonical_hash, source_hash, source_document_sha256,
         _digest(body), reconciled, limitations,
     )
     registry_state = EquityReconciliationRegistry(ledger.path).record_source_events(
@@ -590,6 +598,8 @@ def require_source_events_reconciled(result: SourceEventReconciliation, *,
         status = result.registry_status
     if status != "CURRENT":
         raise EquityReconciliationError(f"source event report is not current: status={status}")
+    if result.source_document_sha256 is None:
+        raise EquityReconciliationError("source event report is not bound to a raw statement document")
     if not result.reconciled:
         raise EquityReconciliationError(
             "source event rows do not match canonical ledger: "

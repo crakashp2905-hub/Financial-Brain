@@ -131,6 +131,7 @@ def test_source_statement_rows_match_canonical_source_event_set(tmp_path):
     report = reconcile_source_events(
         ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
         period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
     )
 
     assert report.reconciled
@@ -150,6 +151,7 @@ def test_source_statement_comparison_reports_missing_extra_and_changed_rows(tmp_
     report = reconcile_source_events(
         ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
         period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
     )
 
     assert not report.reconciled
@@ -168,6 +170,15 @@ def test_source_statement_comparison_rejects_duplicate_source_event_ids(tmp_path
         )
 
 
+def test_source_event_reconciliation_rejects_malformed_document_digest(tmp_path):
+    ledger = _ledger(tmp_path / "digest.db")
+    with pytest.raises(EquityReconciliationError, match="document SHA-256"):
+        reconcile_source_events(
+            ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+            period_start=START, period_end=END, source_events=[], source_document_sha256="bad",
+        )
+
+
 def test_source_event_receipt_invalidates_on_late_backdated_canonical_event(tmp_path):
     ledger = _ledger(tmp_path / "late.db")
     source_rows = [
@@ -182,6 +193,7 @@ def test_source_event_receipt_invalidates_on_late_backdated_canonical_event(tmp_
     report = reconcile_source_events(
         ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
         period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
     )
     ledger.append(_event("late-source-event", EventKind.CASH_FLOW,
                          START + timedelta(hours=4), cash_delta="1"))
@@ -209,6 +221,7 @@ def test_source_event_receipt_ignores_post_period_canonical_events(tmp_path):
     report = reconcile_source_events(
         ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
         period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
     )
     ledger.append(_event("future-source-event", EventKind.CASH_FLOW,
                          END + timedelta(seconds=1), cash_delta="1"))

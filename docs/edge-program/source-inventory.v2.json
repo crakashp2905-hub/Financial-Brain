@@ -233,6 +233,7 @@
         "costs",
         "costs.india",
         "costs.tax",
+        "dataclasses",
         "datetime",
         "decimal",
         "decisions",
@@ -247,6 +248,7 @@
         "forward_edge.cli",
         "forward_edge.manual_paper_decisions",
         "graph",
+        "hashlib",
         "ingest",
         "ingest.announcements",
         "ingest.job",
@@ -271,6 +273,8 @@
         "pathlib",
         "pit.observations",
         "portfolio",
+        "portfolio.canonical_ledger",
+        "portfolio.equity_reconciliation",
         "providers",
         "providers.kite",
         "providers.kite_login_server",
@@ -294,7 +298,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "7f58932990ab4122baaf9e231ccee3fd7c68aa2b86edce8b90a46b3268bcb089",
+      "source_sha256": "1fd71a577e21270669ec92748f88c2c4085d42d3c2377227e31337ebdde2f452",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -12241,7 +12245,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/equity_reconciliation.py",
-      "source_sha256": "409934d64d76283f0a5727f59cd974b6f0f92d4a68ab9af18f6632a5598fbf3f",
+      "source_sha256": "3b555fe833ba5a16bf5296c76996740cefa7f7d569adf14dc9e2748705df33ad",
       "test_paths": []
     },
     {

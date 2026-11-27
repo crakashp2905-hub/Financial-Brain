@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "9f144583241efe606ea1f11222edbcf558ba18f6c8b36d0b2a4787aef81d325b",
-  "audit_export_sha256": "4224635af1fb997e82e1c6311d8a8cfb6789a9598b096f975b3c38947224089c",
+  "status_ledger_sha256": "dd77433cfaefb4714a444133ad4367309486c69e7de9bf4bf1031ba1f51faff2",
+  "audit_export_sha256": "7183ebe66b2e21d856e7b1c9b8495359be6110dad6c2bbe1d1a0138595815521",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 135,
@@ -1631,16 +1631,18 @@
             "`EquityReconciliationRegistry` now durably stores each reconciliation receipt in the canonical SQLite ledger. Its cutoff hash covers canonical events through the closing timestamp; status checks invalidate a persisted report when a late/backdated event changes that event set, while post-cutoff events leave the historical report current. `require_reconciled` rechecks the persisted registry before allowing a report through the reconciliation gate.",
             "Canonical equity now adds verified INR cash receivables to cash and marked positions. A redemption recognition reduces spendable cash while preserving total equity; observed payout settlement transfers the claim to cash without creating P&L. Regression: tests/test_portfolio_equity_reconciliation.py::test_unsettled_cash_receivable_remains_part_of_reconciled_equity.",
             "`reconcile_source_events` compares independently supplied normalized source events with the canonical account journal by source identity and economic payload within an explicit time window. It reports statement-only, ledger-only, duplicate, and changed events and binds both row sets plus the report with SHA-256. It does not authenticate the source document or claim complete statement coverage.",
-            "Source event reconciliation receipts are persisted in SQLite. Their validity is tied to the canonical source-event hash through the declared period end; late/backdated events invalidate old receipts while post-period events preserve historical validity. `require_source_events_reconciled` rechecks the registry cutoff before releasing a matched result."
+            "Source event reconciliation receipts are persisted in SQLite. Their validity is tied to the canonical source-event hash through the declared period end; late/backdated events invalidate old receipts while post-period events preserve historical validity. `require_source_events_reconciled` rechecks the registry cutoff before releasing a matched result.",
+            "`fb reconcile-source-events` accepts the normalized `fb.portfolio-source-statement.v1` JSON contract, hashes the exact input bytes, writes a machine-readable row-level report, persists the cutoff receipt, and returns exit code 2 for mismatches or invalid input. Decimal money fields must be strings; the CLI refuses to overwrite its source document."
           ],
           "tests": [
             "`python -m pytest --basetemp=.pytest-pa0415-registry-rerun tests/test_portfolio_equity_reconciliation.py tests/test_canonical_portfolio_ledger.py -q`: 24 passed.",
             "Regression verifies late/backdated event invalidation, post-cutoff historical validity, concurrent append invalidation, and refusal to pass an invalidated report through `require_reconciled`.",
             "`python -m ruff check src/financial_brain/portfolio/equity_reconciliation.py tests/test_portfolio_equity_reconciliation.py`: passed.",
             "`python -m mypy src/financial_brain/portfolio/equity_reconciliation.py --follow-imports=silent`: passed.",
-            "`python -m pytest tests/test_portfolio_equity_reconciliation.py tests/test_mutual_fund_portfolio_adapter.py -q`: 17 passed, including statement-event exact match, source-only, ledger-only, changed-event, duplicate-identity, durable invalidation, and post-period stability cases.",
+            "`python -m pytest tests/test_portfolio_equity_reconciliation.py tests/test_mutual_fund_portfolio_adapter.py -q`: 22 passed across statement CLI, source reconciliation, and MF adapter suites; exact match, mismatch exit, input hashing, overwrite refusal, duplicate identity, durable invalidation, and post-period stability are covered.",
             "`ruff check src/financial_brain/portfolio/equity_reconciliation.py tests/test_portfolio_equity_reconciliation.py` and targeted mypy: passed.",
-            "Fourteen focused equity reconciliation tests and three MF adapter tests pass; durable source-event report tests cover current receipt acceptance, late/backdated invalidation, post-period stability, and failed-gate behavior."
+            "Fourteen focused equity reconciliation tests and three MF adapter tests pass; durable source-event report tests cover current receipt acceptance, late/backdated invalidation, post-period stability, and failed-gate behavior.",
+            "`python -m mypy src/financial_brain/portfolio/equity_reconciliation.py --follow-imports=silent` and Ruff for the changed CLI, reconciliation module, and tests: passed."
           ]
         },
         {
@@ -3590,5 +3592,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "7500e3d8289a07ff87b185972be1d83161a045f3f04ca18123037446b6e0b375"
+  "report_sha256": "883dce9f3671397e0ae255d90a17878d5fd0983ea9dc31f055bb961b8d728a57"
 }
