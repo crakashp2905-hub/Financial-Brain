@@ -1,5 +1,6 @@
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+import random
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -124,6 +125,41 @@ def test_full_cash_settled_spread_emits_source_bound_per_contract_expiry_flows(t
             source_sha256="b" * 64,
         )
     db.close()
+
+
+def test_seeded_cash_settled_call_spreads_match_independent_intrinsic_accounting(tmp_path):
+    rng = random.Random(20261127)
+    published = datetime(2026, 11, 27, 10, tzinfo=timezone.utc)
+    for seed in range(20):
+        quantity = 50 * rng.randint(1, 12)
+        long_premium = Decimal(rng.randint(1, 30)) / Decimal("2")
+        short_premium = Decimal(rng.randint(1, 20)) / Decimal("2")
+        spot = Decimal(rng.randint(70, 140))
+        db = DerivativesSubledger(tmp_path / f"property-{seed}.sqlite3")
+        _open(db, package_id=f"spread-{seed}", quantity=quantity)
+        _fill(db, package_id=f"spread-{seed}", quantity=quantity,
+              price=str(long_premium), event_id=f"long-{seed}")
+        _fill(db, package_id=f"spread-{seed}", leg_id="short", quantity=quantity,
+              price=str(short_premium), event_id=f"short-{seed}")
+        for contract_id in ("NIFTY-100-CE", "NIFTY-110-CE"):
+            db.settle_expiry(
+                package_id=f"spread-{seed}", contract_id=contract_id,
+                event_id=f"settle-{seed}-{contract_id}", settlement_date=date(2026, 11, 26),
+                expiry_cutoff_at=EXPIRY_CUTOFF, expiry_calendar_sha256=CALENDAR_HASH,
+                settlement_at=published + timedelta(minutes=1), published_at=published,
+                underlying_price=spot, source_id="official-settlement",
+                source_sha256=f"{seed + 1:064x}",
+            )
+        rows = {row["contract_id"]: row for event in db.snapshot(f"spread-{seed}")["settlements"]
+                for row in event["legs"]}
+        expected_long = max(spot - Decimal("100"), Decimal(0)) * quantity - long_premium * quantity
+        expected_short = -max(spot - Decimal("110"), Decimal(0)) * quantity + short_premium * quantity
+        assert Decimal(rows["NIFTY-100-CE"]["gross_pnl_before_charges_inr"]) == expected_long
+        assert Decimal(rows["NIFTY-110-CE"]["gross_pnl_before_charges_inr"]) == expected_short
+        assert sum(Decimal(row["gross_pnl_before_charges_inr"]) for row in rows.values()) == (
+            expected_long + expected_short
+        )
+        db.close()
 
 
 def test_physical_call_assignment_records_strike_cash_and_underlying_units(tmp_path):
