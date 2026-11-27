@@ -10289,12 +10289,16 @@
     {
       "id": "PA-11-04",
       "text": "Implement a liquidity sweep with a previous confirmed high/low, threshold crossing, completed reclaim and bounded confirmation latency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/liquidity_sweeps.py: confirmed-time high/low level, absolute threshold breach, later-close reclaim and bounded bar latency",
+        "Same-candle wick/reclaim is excluded because OHLC cannot establish intrabar sequence; tests cover both sides, timeout and ordering",
+        "Detector is not integrated into eligible strategy adapters and has no prospective or economic edge evidence"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "b4e5fa46"
     },
     {
       "id": "PA-11-05",
@@ -21402,6 +21406,7 @@
       "PA-10-18",
       "PA-10-19",
       "PA-11-03",
+      "PA-11-04",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21825,13 +21830,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1008,
+    "audited_count": 1009,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 877,
-      "UNASSESSED": 370
+      "PARTIAL": 878,
+      "UNASSESSED": 369
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21980,7 +21985,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 877,
-    "UNASSESSED": 370
+    "PARTIAL": 878,
+    "UNASSESSED": 369
   }
 }
