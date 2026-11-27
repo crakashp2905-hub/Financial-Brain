@@ -32,7 +32,11 @@
   ],
   "local_tools_included": [
     ".github/workflows/ci.yml",
+    "docs/edge-program/checklist-completion-evidence-policy.md",
+    "docs/edge-program/completion-evidence-gaps.v1.json",
     "scripts/build_checklist_evidence_bundle.py",
+    "scripts/checklist_completion_gate.py",
+    "tests/test_checklist_completion_gate.py",
     "tests/test_checklist_evidence_bundle.py"
   ]
 }

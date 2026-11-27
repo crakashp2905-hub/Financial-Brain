@@ -58,6 +58,11 @@ jobs:
         run: python scripts/validate_paper_account_position_ownership.py
       - name: Verify complete per-item checklist audit export
         run: python scripts/export_checklist_audit.py --check
+      - name: Verify checklist completion evidence gap report
+        run: python scripts/checklist_completion_gate.py --check
+      - name: Reject unsupported new COMPLETE checklist claims
+        if: github.event_name == 'pull_request'
+        run: python scripts/checklist_completion_gate.py --base-commit ${{ github.event.pull_request.base.sha }}
       - name: Verify evidence-derived profit readiness report
         run: python scripts/profit_readiness.py --check
       - name: Verify release-blocking forward evidence gate
