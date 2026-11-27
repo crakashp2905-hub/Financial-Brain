@@ -56,7 +56,15 @@ def make_config(*, max_quote_age_ms=None):
                                         "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
                                         "effective_from": "2026-11-13", "effective_through": None,
                                         "evidence_ref": "tests/fixture-kite-permission",
-                                        "reviewer": "test-fixture"}]}
+                                        "reviewer": "test-fixture"}],
+                   "reservation_policy": {
+                       "version": "test-paper-reservation-v1",
+                       "frozen_at": "2026-11-12T00:00:00+00:00",
+                       "source_sha256": "b" * 64,
+                       "limits": {"CASH": "1000000000",
+                                  "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
+                                  "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
+                   }}
     if max_quote_age_ms is not None:
         constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
@@ -72,7 +80,15 @@ def make_config_with_constraints(constraints):
                                         "effective_from": "2026-11-13", "effective_through": None,
                                         "evidence_ref": "tests/fixture-kite-permission",
                                         "reviewer": "test-fixture"}],
-                   "instrument_rules": fixture_rule_book("NSE:INFY"), **constraints}
+                   "instrument_rules": fixture_rule_book("NSE:INFY"),
+                   "reservation_policy": {
+                       "version": "test-paper-reservation-v1",
+                       "frozen_at": "2026-11-12T00:00:00+00:00",
+                       "source_sha256": "b" * 64,
+                       "limits": {"CASH": "1000000000",
+                                  "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
+                                  "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
+                   }, **constraints}
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
@@ -1061,6 +1077,24 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    runner.close()
+
+
+def test_paper_intent_fails_closed_without_frozen_account_reservation_policy(tmp_path):
+    config = make_config()
+    constraints = dict(config.constraints)
+    constraints.pop("reservation_policy")
+    runner, event, decided = trade_setup(
+        tmp_path, config=replace(config, constraints=constraints))
+
+    with pytest.raises(ForwardSessionRunnerError, match="requires a frozen account reservation_policy"):
+        execute(runner, event, decided)
+
+    assert runner.records("s")["intents"] == []
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_intents").fetchone()[0] == 0
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='reservations'"
+    ).fetchone()[0] == 0
     runner.close()
 
 

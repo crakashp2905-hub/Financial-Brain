@@ -2202,11 +2202,12 @@ class ForwardSessionRunner:
         return receipt
 
     def _reservation_setup(self, config: ForwardRunConfig) -> tuple[DurableReservationLedger,
-                                                                     ReservationPolicy] | None:
-        """Load the explicitly frozen account policy; absent policy preserves legacy behavior."""
+                                                                     ReservationPolicy]:
+        """Load the frozen account policy required before every paper intent."""
         raw = config.constraints.get("reservation_policy")
         if raw is None:
-            return None
+            raise ForwardSessionRunnerError(
+                "paper intent requires a frozen account reservation_policy with explicit resource limits")
         if not isinstance(raw, dict):
             raise ForwardSessionRunnerError("reservation_policy must be a frozen configuration object")
         try:
@@ -2230,8 +2231,6 @@ class ForwardSessionRunner:
                               limit_price: Decimal, created_at: datetime,
                               source_sha256: str) -> None:
         setup = self._reservation_setup(config)
-        if setup is None:
-            return
         ledger, policy = setup
         resource_amounts: dict[str, Decimal] = {}
         resource_amounts[f"INSTRUMENT_QUANTITY:{instrument}"] = Decimal(quantity)
@@ -2274,8 +2273,6 @@ class ForwardSessionRunner:
         if receipt.get("status") not in {"MISSED", "REJECTED"}:
             return
         setup = self._reservation_setup(config)
-        if setup is None:
-            return
         ledger, _policy = setup
         terminal_kind = "REJECTED" if receipt["status"] == "REJECTED" else "EXPIRED"
         try:
