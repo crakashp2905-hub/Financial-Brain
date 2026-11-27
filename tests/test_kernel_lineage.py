@@ -58,6 +58,18 @@ def test_missing_membership_is_flagged_not_filled_with_present_day() -> None:
     assert stale.flag == "STALE" and stale.as_of == date(2024, 1, 1)
 
 
+def test_later_index_membership_snapshot_cannot_rewrite_a_past_universe() -> None:
+    january = date(2024, 1, 31)
+    march = date(2024, 3, 29)
+    snapshots = {january: frozenset({"OLD_ISIN", "DELISTED_ISIN"})}
+    before_later_snapshot = membership_on(snapshots, date(2024, 2, 15), 60)
+    snapshots[march] = frozenset({"OLD_ISIN", "NEW_ISIN"})
+    after_later_snapshot_arrives = membership_on(snapshots, date(2024, 2, 15), 60)
+    assert before_later_snapshot == after_later_snapshot_arrives
+    assert "DELISTED_ISIN" in after_later_snapshot_arrives.members
+    assert "NEW_ISIN" not in after_later_snapshot_arrives.members
+
+
 def test_split_preserves_notional_and_reconciles_to_ledger() -> None:
     before = Holding(Decimal("100"), Decimal("50"))
     after = adjust_for_split(before, Decimal("2"))
