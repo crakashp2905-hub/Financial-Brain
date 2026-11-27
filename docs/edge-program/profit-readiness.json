@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T10:09:11Z",
+  "as_of_utc": "2026-11-27T10:14:21Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c484d18bf963cd902a4d285bfd6e9b29eca1c127a51e02dde8eee1365ae90d58",
-  "status_ledger_sha256": "06e0b1ce75cea1ce84cc0ff9d47bbbbeda23ecf3746136bdd7f4d43197a8fb8f",
-  "audit_export_sha256": "392798c418592d7de72b604874615e6fd0d143eea9172ccf8ee533529462264f",
+  "status_ledger_sha256": "edc24549f3faffa1e326bed52e80f00d576b49b63e2d14f92f3d5afb09bf44aa",
+  "audit_export_sha256": "2b6c3efafe5d7a40974955adaa87ec683d6bcdcc1d4334f83e09ca979222c12e",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 120,
     "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
-    "PARTIAL": 918,
-    "UNASSESSED": 316
+    "PARTIAL": 919,
+    "UNASSESSED": 315
   },
-  "assessed_count": 1062,
-  "unassessed_count": 316,
+  "assessed_count": 1063,
+  "unassessed_count": 315,
   "verified_complete_count": 120,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -3540,5 +3540,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "a9fa76e0581f6a64b3ffa7b52ef190c74ab7b541e0b34f7a705032b827447f12"
+  "report_sha256": "64e93ef6efca248b0e177e20d66f7483682549b0216c38ee806ba9dc1c3e5fe5"
 }

@@ -211,6 +211,9 @@ def record_signal_decision(*, runner: ForwardSessionRunner, session_id: str,
                 or selection[0]["symbol"] != signal.instrument_id
                 or selection[0]["quantity"] != signal.shares):
             raise PaperBookAdapterError("manifest selection or horizon differs from the paper-book signal")
+        if config.mode == "LIVE_PAPER":
+            payload["expected_value_forecast"] = _expected_value_forecast(
+                manifest, candidate_id=decision_id, version=1)
         runner.decide(session_id=session_id, strategy_id=signal.version, decision_id=decision_id,
                       outcome="TRADE", input_event_ids=(quote_event_id,), decided_at=decided_at,
                       payload=payload)
@@ -382,6 +385,12 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
             "received_at": event.received_at.isoformat(),
             "available_at": event.available_at.isoformat(),
             "bid": float(quote["bid"]),
+            "ask": float(quote["ask"]),
+            "bid_quantity": quote["bid_quantity"],
+            "ask_quantity": quote["ask_quantity"],
+            "bid_levels": [[str(price), amount] for price, amount in quote["bid_levels"]],
+            "ask_levels": [[str(price), amount] for price, amount in quote["ask_levels"]],
+            "quote_event_sha256": event.sha256(),
             "last_price": last,
             "stop_price": cast(float, signal.stop_price),
             "completed_sessions_held": held,
@@ -452,11 +461,30 @@ def record_exit_decision(*, runner: ForwardSessionRunner, session_id: str, exit_
     payload = signal.payload() | {"side": "SELL", "exit_reason": exit_signal.reason,
                                   "completed_sessions_held": exit_signal.completed_sessions_held,
                                   "exit_bid_price": exit_signal.bid_price}
+    if config.mode == "LIVE_PAPER":
+        payload["expected_value_forecast"] = _expected_value_forecast(
+            manifest, candidate_id=decision_id, version=1)
     runner.decide(session_id=session_id, strategy_id=signal.version, decision_id=decision_id,
                   outcome="TRADE", input_event_ids=(exit_signal.quote_event_id,),
                   decided_at=decided_at, payload=payload)
     runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
     return decision_id
+
+
+def _expected_value_forecast(manifest: dict[str, Any], *, candidate_id: str, version: int) -> dict[str, Any]:
+    """Copy the canonical, dated EV fields into the decision before publishing its manifest."""
+    try:
+        gross = Decimal(manifest["predicted_return_fraction"])
+        costs = Decimal(manifest["predicted_cost_fraction"])
+    except (KeyError, InvalidOperation, TypeError) as exc:
+        raise PaperBookAdapterError("LIVE_PAPER book candidate manifest needs expected-value fields") from exc
+    return {"candidate_id": candidate_id, "version": version,
+            "forecasted_at_utc": manifest["decision_at_utc"],
+            "predicted_return_fraction": manifest["predicted_return_fraction"],
+            "predicted_cost_fraction": manifest["predicted_cost_fraction"],
+            "expected_net_fraction": str(gross - costs), "forecast": manifest["forecast"],
+            "model_sha256": manifest["model_sha256"],
+            "cost_model_sha256": manifest["cost_model_sha256"]}
 
 
 def reconcile_exit_receipt(*, book: Any, runner: ForwardSessionRunner, session_id: str,

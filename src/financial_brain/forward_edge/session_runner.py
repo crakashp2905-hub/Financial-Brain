@@ -2490,6 +2490,10 @@ class ForwardSessionRunner:
                         "event_time_utc": event.event_time.isoformat(),
                         "received_at_utc": event.received_at.isoformat(),
                         "available_at_utc": event.available_at.isoformat(),
+                        "bid": str(quote["bid"]), "ask": str(quote["ask"]),
+                        "bid_quantity": quote["bid_quantity"], "ask_quantity": quote["ask_quantity"],
+                        "bid_levels": [[str(price), amount] for price, amount in quote["bid_levels"]],
+                        "ask_levels": [[str(price), amount] for price, amount in quote["ask_levels"]],
                     },
                     "trade_provenance": [{
                         "event_id": trade.event_id, "event_sha256": trade.sha256(),

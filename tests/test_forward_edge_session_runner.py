@@ -1459,6 +1459,10 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
     assert receipt["quote_provenance"]["event_sha256"] == fill_event.sha256()
     assert receipt["quote_provenance"]["exchange"] == "NSE"
     assert receipt["quote_provenance"]["available_at_utc"] == fill_event.available_at.isoformat()
+    assert receipt["quote_provenance"]["bid"] == "100.0"
+    assert receipt["quote_provenance"]["ask"] == "100.1"
+    assert receipt["quote_provenance"]["bid_quantity"] == 20
+    assert receipt["quote_provenance"]["ask_quantity"] == 20
     decision_inputs = runner.records("s")["decisions"][0]["input_event_ids"]
     assert decision_inputs
     assert signal_event.event_id not in decision_inputs
@@ -2358,6 +2362,10 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
     assert len(monitor_rows) == 1
     assert monitor_rows[0]["record"]["evaluation"] == "HOLD"
     assert monitor_rows[0]["record"]["quote_event_id"] == entry_quote.event_id
+    assert monitor_rows[0]["record"]["quote_event_sha256"] == entry_quote.sha256()
+    assert monitor_rows[0]["record"]["bid"] == 99.95
+    assert monitor_rows[0]["record"]["ask"] == 100.05
+    assert monitor_rows[0]["record"]["available_at"] == entry_quote.available_at.isoformat()
     runner.close_session("s", complete=True, now=entry_fill_at + timedelta(seconds=2))
 
     exit_day = date(2026, 11, 16)
@@ -2385,6 +2393,11 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
     monitor_rows = [row for row in runner.durable.audit_records("s2")
                     if row["kind"] == "position_monitor"]
     assert [row["record"]["evaluation"] for row in monitor_rows] == ["STOP", "TIME"]
+    assert all(row["record"]["quote_event_sha256"] == stop_quote.sha256() for row in monitor_rows)
+    assert all(row["record"]["bid"] == 94.95 and row["record"]["ask"] == 95.05
+               for row in monitor_rows)
+    assert all(row["record"]["available_at"] == stop_quote.available_at.isoformat()
+               for row in monitor_rows)
     assert due_exits(book, runner=runner, session_id="s2", mode="live", version=version,
                      exchange_date=exit_day,
                      completed_sessions_held={signal.signal_id: signal.horizon_sessions},
