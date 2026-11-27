@@ -14,6 +14,7 @@ import pytest
 
 from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.durable import DurableJournalError
 from financial_brain.forward_edge.instrument_rules import fixture_rule_book
 from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
@@ -1861,6 +1862,13 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     assert [item["kind"] for item in baseline["audit_log"]] == [
         "preflight", "market_event", "decision", "decision_manifest", "risk_verdict", "market_event",
         "paper_intent", "execution_receipt"]
+    audit = baseline["audit_log"]
+    assert all(row["event_sha256"] and row["previous_event_sha256"] for row in audit)
+    market_record = next(row["record"] for row in audit if row["kind"] == "market_event")
+    assert market_record["event"]["exchange_at"]
+    assert market_record["event"]["received_at"]
+    assert market_record["event"]["available_at"]
+    assert market_record["ingested_at"] and market_record["ingest_clock_source"]
     with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
     runner.rebuild_materialized_views("s")
@@ -1894,6 +1902,35 @@ def test_trading_audit_rows_bind_source_commit_and_executable_runner(tmp_path):
         assert "source_commit" in provenance
         assert "branch_ancestry_sha256" in provenance
     runner.close()
+
+
+def test_audit_hash_chain_detects_tampered_record_and_previous_link(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    rows = runner.durable.audit_records("s")
+    assert len(rows) >= 4
+    assert rows[0]["previous_event_sha256"] == "0" * 64
+    assert rows[1]["previous_event_sha256"] == rows[0]["event_sha256"]
+    runner._con.execute("DROP TRIGGER runner_audit_no_update")
+    runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s' AND sequence=2")
+    with pytest.raises(DurableJournalError, match="hash chain verification failed"):
+        runner.durable.audit_records("s")
+    runner.close()
+
+
+def test_audit_hash_chain_backfills_legacy_rows_on_reopen(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    runner._con.execute("DROP TRIGGER runner_audit_no_update")
+    runner._con.execute("ALTER TABLE runner_audit_log DROP COLUMN previous_event_sha256")
+    runner._con.execute("ALTER TABLE runner_audit_log DROP COLUMN event_sha256")
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    rows = resumed.durable.audit_records("s")
+    assert rows and rows[0]["previous_event_sha256"] == "0" * 64
+    assert all(row["event_sha256"] for row in rows)
+    resumed.close()
 
 
 def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_path, monkeypatch):
