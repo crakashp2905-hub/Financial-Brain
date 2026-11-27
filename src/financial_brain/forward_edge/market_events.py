@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Any
 
@@ -22,6 +22,7 @@ class EventKind(StrEnum):
     QUOTE = "quote"
     BOOK_DEPTH = "book_depth"
     BAR = "bar"
+    NAV = "nav"
     HALT = "halt"
     AUCTION = "auction"
     CORPORATE_ACTION = "corporate_action"
@@ -127,6 +128,15 @@ class MarketEvent:
             if values["volume"] < 0 or values["high"] < max(values["open"], values["close"], values["low"]) or \
                     values["low"] > min(values["open"], values["close"], values["high"]):
                 raise MarketEventError("bar OHLCV is inconsistent")
+        elif self.kind is EventKind.NAV:
+            _finite_number(p.get("nav_per_unit"), "nav_per_unit", allow_zero=False)
+            nav_date = p.get("nav_date")
+            if not isinstance(nav_date, str):
+                raise MarketEventError("NAV event requires an ISO nav_date")
+            try:
+                date.fromisoformat(nav_date)
+            except ValueError as exc:
+                raise MarketEventError("NAV event requires an ISO nav_date") from exc
         elif self.kind is EventKind.HALT:
             if p.get("status") not in {"HALTED", "RESUMED"}:
                 raise MarketEventError("halt event status must be HALTED or RESUMED")

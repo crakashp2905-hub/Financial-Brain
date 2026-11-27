@@ -34,6 +34,7 @@ from financial_brain.kernel.units import BasisPoints, Price, WholeUnits
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
+    SessionStateError,
     SessionState,
 )
 from financial_brain.forward_edge.venue_calendar import Session as VenueSession, VenueCalendar
@@ -74,6 +75,25 @@ def make_config_with_constraints(constraints):
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
 
+def make_profiled_config(profile="EQUITY_EXECUTION"):
+    return make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": profile}
+    ]})
+
+
+def test_event_loop_requires_a_profile_for_every_frozen_instrument(tmp_path):
+    runner = make_runner(tmp_path)
+    with pytest.raises(ForwardSessionRunnerError, match="requires an explicit data profile"):
+        runner.run_event_loop(
+            session_id="unprofiled", config=make_config(), events=[],
+            session_open_at=NOW, preflight=READY_PREFLIGHT,
+            consumer_id="strategy:unprofiled", on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: None)
+    with pytest.raises(SessionStateError, match="unknown forward session"):
+        runner.state_store.state("unprofiled")
+    runner.close()
+
+
 def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
     return MarketEvent(event_id, EventKind.QUOTE, "NSE", "NSE:INFY", event_time,
                        available_at, available_at, {"bid": 100.0, "ask": 100.1}, "FIXTURE")
@@ -81,7 +101,7 @@ def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
 
 def test_deterministic_event_loop_orders_events_and_checks_exits_after_each(tmp_path):
     runner = make_runner(tmp_path)
-    config = make_config()
+    config = make_profiled_config()
     later = make_event(event_id="later", available_at=NOW + timedelta(seconds=2),
                        event_time=NOW + timedelta(seconds=2))
     earlier = make_event(event_id="earlier", available_at=NOW + timedelta(seconds=1),
@@ -105,7 +125,7 @@ def test_deterministic_event_loop_orders_events_and_checks_exits_after_each(tmp_
 
 
 def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
-    config = make_config()
+    config = make_profiled_config()
     events = [make_event(event_id=f"restart-{index}",
                          available_at=NOW + timedelta(seconds=index),
                          event_time=NOW + timedelta(seconds=index)) for index in range(2)]
@@ -162,7 +182,7 @@ def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_check
     forecast_bars = []
     exit_checks = []
     runner.run_event_loop(
-        session_id="cadence", config=make_config(), events=[completed, partial, quote],
+        session_id="cadence", config=make_profiled_config(), events=[completed, partial, quote],
         session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
         consumer_id="strategy:cadence",
         on_market_event=lambda event, _: market_events.append(event.event_id),
@@ -188,7 +208,7 @@ def test_completed_bar_rejects_interval_not_aligned_to_sourced_session_open(tmp_
          "bar_start_at": start.isoformat(), "bar_end_at": end.isoformat()}, "FIXTURE")
     with pytest.raises(ForwardSessionRunnerError, match="not aligned to the official exchange session open"):
         runner.run_event_loop(
-            session_id="misaligned", config=make_config(), events=[event],
+            session_id="misaligned", config=make_profiled_config(), events=[event],
             session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
             consumer_id="strategy:misaligned", on_market_event=lambda *_: None,
             evaluate_protective_exits=lambda *_: None, on_completed_bar=lambda *_: None,
@@ -232,6 +252,18 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     assert records["events"][0]["ingested_at"] == archived_at.isoformat()
     assert records["events"][0]["ingest_clock_source"] == "QUOTE_ARCHIVE"
     archive.close()
+    runner.close()
+
+
+def test_configured_mutual_fund_nav_profile_rejects_quote_feed_event(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": "MUTUAL_FUND_NAV"}
+    ]})
+    opened(runner, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="requires an NAV observation"):
+        runner.ingest("s", config, [make_event()])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 
@@ -918,6 +950,17 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    runner.close()
+
+
+def test_index_level_profile_cannot_be_used_as_paper_execution_data(tmp_path):
+    config = make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": "INDEX_LEVEL_ONLY"}
+    ]})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="index level-only profile cannot supply execution"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
     runner.close()
 
 

@@ -24,6 +24,7 @@ def _event(kind: EventKind, payload: dict, **kw) -> MarketEvent:
     (EventKind.QUOTE, {"bid": 100.0, "ask": 101.0, "bid_quantity": 5, "ask_quantity": 6}),
     (EventKind.BOOK_DEPTH, {"bids": [[100, 2], [99, 3]], "asks": [[101, 2], [102, 4]]}),
     (EventKind.BAR, {"open": 100, "high": 103, "low": 99, "close": 102, "volume": 10}),
+    (EventKind.NAV, {"nav_per_unit": 125.4, "nav_date": "2026-11-14"}),
     (EventKind.HALT, {"status": "HALTED"}),
     (EventKind.AUCTION, {"phase": "OPEN"}),
     (EventKind.CORPORATE_ACTION, {"action": "SPLIT", "ratio": [2, 1]}),

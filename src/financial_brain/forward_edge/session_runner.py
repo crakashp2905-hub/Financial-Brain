@@ -18,6 +18,11 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_depth_scenario,
     evaluate_passive_scenario,
 )
+from financial_brain.forward_edge.data_profiles import (
+    DataProfileError,
+    profiles_from_constraints,
+    validate_profile_event,
+)
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.heartbeats import SessionHeartbeatLedger
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
@@ -339,6 +344,10 @@ class ForwardSessionRunner:
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
               preflight: dict[str, bool]) -> SessionState:
         """Create or resume a session, recording every preflight check before opening it."""
+        try:
+            profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
         now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
         state = self.state_store.state(session_id)
@@ -409,6 +418,13 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("session open clock must be timezone aware")
         if not callable(on_market_event) or not callable(evaluate_protective_exits):
             raise ForwardSessionRunnerError("market and protective-exit handlers are required")
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
+        if profiles is None:
+            raise ForwardSessionRunnerError(
+                "deterministic event loop requires an explicit data profile for every frozen instrument")
         if on_close is not None and not callable(on_close):
             raise ForwardSessionRunnerError("session close handler must be callable")
         if on_completed_bar is not None and not callable(on_completed_bar):
@@ -719,6 +735,10 @@ class ForwardSessionRunner:
         expected = set(config.instrument_universe)
         counts = {"received": 0, "persisted": 0, "duplicate": 0}
         batch = list(events)
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
         persisted_events: list[tuple[MarketEvent, datetime]] = []
         self._con.execute("SAVEPOINT ingest_batch")
         try:
@@ -726,6 +746,11 @@ class ForwardSessionRunner:
                 counts["received"] += 1
                 if event.instrument_id not in expected:
                     raise ForwardSessionRunnerError("event instrument is outside frozen universe")
+                if profiles is not None:
+                    try:
+                        validate_profile_event(profiles[event.instrument_id], event)
+                    except DataProfileError as exc:
+                        raise ForwardSessionRunnerError(f"instrument data profile rejected event: {exc}") from exc
                 permission_evidence: dict[str, Any] | None = None
                 if event.source in {"FIXTURE", "SYNTHETIC_FIXTURE"}:
                     if config.constraints.get("allow_synthetic_fixture_events") is not True:
@@ -1731,6 +1756,12 @@ class ForwardSessionRunner:
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+            if profiles is not None:
+                validate_profile_event(profiles[event.instrument_id], event, for_execution=True)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"instrument execution data profile rejected intent: {exc}") from exc
         if candidate_intent is not None and candidate_intent.get("symbol") != event.instrument_id:
             raise ForwardSessionRunnerError("paper quote instrument differs from the canonical candidate intent")
         if self._instrument_halted(session_id, event.instrument_id, simulated_at):
