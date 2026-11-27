@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T04:39:12Z",
+  "as_of_utc": "2026-11-27T04:43:55Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "a10e1825cd4ccbda08b725b22437c7112ff0e18741dcf73bc754ad4477a1a3fa",
-  "audit_export_sha256": "ac74a2013e3f6d5ac41d44dea05e2b03f65b7f79504a63674be9245741f9b186",
+  "status_ledger_sha256": "27b6646da9829ae1a806feb130f44b9d52be1a02e5524fd7c40dc91331211cfd",
+  "audit_export_sha256": "1ad2cbec0367d1666a3874b1bdb6ed67bc0cb53e888365f80af815a7e8b8e2be",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 809,
-    "UNASSESSED": 439
+    "PARTIAL": 810,
+    "UNASSESSED": 438
   },
-  "assessed_count": 939,
-  "unassessed_count": 439,
+  "assessed_count": 940,
+  "unassessed_count": 438,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 29,
-        "UNASSESSED": 32
+        "PARTIAL": 30,
+        "UNASSESSED": 31
       },
       "evidence": [
         {
@@ -3047,16 +3047,25 @@
         },
         {
           "item_id": "PA-08-02",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1089,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Define owner-editable hard limits on daily loss, rolling drawdown, per-position risk, sector/industry allocation, underlying delta and derivatives buying power."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "3359553c",
+          "blocker": "Partial: daily-loss/drawdown, exposure, option buying-power and option-delta controls exist in separate modules, but a single owner-editable versioned policy and universal entry-path enforcement are missing. Per-position risk and sector/industry controls are not reconciled with all paper books.",
+          "evidence": [
+            "`risk.killswitch.Limits` supports independent daily-loss and peak-to-trough drawdown thresholds; its evaluator reports breach reasons and reduce/halt decisions. The threshold object is not yet a single owner-managed, versioned account policy consumed by all order adapters.",
+            "`forward_edge.exposure_limits` and `forward_edge.portfolio_risk.check_batch` provide fail-closed gross, net, single-name, sector/factor exposure checks. Commit 3359553c adds validation for missing/empty symbols, unsupported sides, negative notionals and non-finite notionals before cumulative limit evaluation.",
+            "`portfolio.durable_reservations` enforces explicit OPTION_BUYING_POWER and cash reservations on canonical option fills; `portfolio_exit_guard` also supports a gross option-delta cap for exit decisions. These protections are separate interfaces and are not yet tied into one editable risk policy or every paper entry path.",
+            "Current code does not establish one integrated hard-limit record covering per-position risk, sector/industry, underlying delta, derivatives buying power and every live paper sleeve. Status remains PARTIAL."
+          ],
+          "tests": [
+            "`python -m pytest --basetemp .pytest-pa0802-final tests/test_forward_edge_exposure_limits.py tests/test_forward_edge_persistent_killswitch.py tests/test_kernel_portfolio_risk.py tests/test_portfolio_durable_reservations.py tests/test_forward_edge_f09.py -q`: 48 passed.",
+            "The test set covers daily-loss/drawdown persistence, sector/factor and batch exposure decisions, option buying-power reservations and malformed risk-intent refusal; it does not prove universal account-level wiring.",
+            "Ruff passed for the touched risk module and tests; targeted mypy passed for five relevant risk/reservation modules; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-08-03",
@@ -3277,5 +3286,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "70c705ddcdcc0c18bc68bca43f5f78a5876ec85937e1cad59d7ca019f3d64942"
+  "report_sha256": "c1d39384d9aaaf76cdd3710e64adda8546a06fef9f207340b85c14208db2396c"
 }

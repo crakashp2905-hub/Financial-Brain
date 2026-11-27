@@ -9233,12 +9233,23 @@
     {
       "id": "PA-08-02",
       "text": "Define owner-editable hard limits on daily loss, rolling drawdown, per-position risk, sector/industry allocation, underlying delta and derivatives buying power.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk.killswitch.Limits` supports independent daily-loss and peak-to-trough drawdown thresholds; its evaluator reports breach reasons and reduce/halt decisions. The threshold object is not yet a single owner-managed, versioned account policy consumed by all order adapters.",
+        "`forward_edge.exposure_limits` and `forward_edge.portfolio_risk.check_batch` provide fail-closed gross, net, single-name, sector/factor exposure checks. Commit 3359553c adds validation for missing/empty symbols, unsupported sides, negative notionals and non-finite notionals before cumulative limit evaluation.",
+        "`portfolio.durable_reservations` enforces explicit OPTION_BUYING_POWER and cash reservations on canonical option fills; `portfolio_exit_guard` also supports a gross option-delta cap for exit decisions. These protections are separate interfaces and are not yet tied into one editable risk policy or every paper entry path.",
+        "Current code does not establish one integrated hard-limit record covering per-position risk, sector/industry, underlying delta, derivatives buying power and every live paper sleeve. Status remains PARTIAL."
+      ],
+      "blocker": "Partial: daily-loss/drawdown, exposure, option buying-power and option-delta controls exist in separate modules, but a single owner-editable versioned policy and universal entry-path enforcement are missing. Per-position risk and sector/industry controls are not reconciled with all paper books.",
+      "last_audited_at_utc": "2026-11-27T04:43:55Z",
+      "commit": "3359553c",
+      "test_evidence": [
+        "`python -m pytest --basetemp .pytest-pa0802-final tests/test_forward_edge_exposure_limits.py tests/test_forward_edge_persistent_killswitch.py tests/test_kernel_portfolio_risk.py tests/test_portfolio_durable_reservations.py tests/test_forward_edge_f09.py -q`: 48 passed.",
+        "The test set covers daily-loss/drawdown persistence, sector/factor and batch exposure decisions, option buying-power reservations and malformed risk-intent refusal; it does not prove universal account-level wiring.",
+        "Ruff passed for the touched risk module and tests; targeted mypy passed for five relevant risk/reservation modules; git diff --check passed."
+      ],
+      "test_result": "Risk-limit, persistent kill-switch, option buying-power reservation and portfolio-batch suites: 48 passed. Ruff and targeted mypy passed. PA-08-02 remains PARTIAL pending a single owner-editable policy and universal risk-gate wiring."
     },
     {
       "id": "PA-08-03",
@@ -20288,7 +20299,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T04:39:12Z",
+    "as_of_utc": "2026-11-27T04:43:55Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20807,6 +20818,7 @@
       "PA-06-16",
       "PA-06-17",
       "PA-08-01",
+      "PA-08-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21230,13 +21242,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 939,
+    "audited_count": 940,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 809,
-      "UNASSESSED": 439
+      "PARTIAL": 810,
+      "UNASSESSED": 438
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21385,7 +21397,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 809,
-    "UNASSESSED": 439
+    "PARTIAL": 810,
+    "UNASSESSED": 438
   }
 }
