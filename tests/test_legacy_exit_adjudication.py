@@ -51,3 +51,17 @@ def test_report_uses_hashed_case_references_and_blocks_pnl_for_unknowns():
     assert report["classification_counts"]["OPEN_UNKNOWN"] == 1
     assert report["pnl_release_authorized"] is False
     assert "old-trade" not in str(report)
+
+
+def test_all_51_legacy_missing_exits_remain_open_unknown_without_inferred_fills():
+    events = [_unresolved(event_id=f"legacy-trade-{index:02d}:unresolved") for index in range(51)]
+    rows = classify_legacy_exits(events)
+    report = report_body(events=events, source_snapshot_sha256="c" * 64,
+                         snapshot_as_of_utc="2026-11-27T12:00:00+00:00")
+
+    assert len(rows) == 51
+    assert all(row.classification is LegacyExitStatus.OPEN_UNKNOWN for row in rows)
+    assert all(row.exit_fill_inferred is False for row in rows)
+    assert report["classification_counts"] == {
+        "OPEN_UNKNOWN": 51, "LEDGER_INCOMPLETE": 0, "CONFIRMED_CLOSED": 0}
+    assert report["pnl_release_authorized"] is False

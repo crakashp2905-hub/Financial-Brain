@@ -141,6 +141,7 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
                  "frozen_at": "1900-01-01T00:00:00+00:00",
                  "source_sha256": hashlib.sha256(b"local-fixture-reservation-v1").hexdigest(),
                  "limits": {"CASH": "1000000000000",
+                            "PAPER_COST_BUFFER": "1000000000",
                             f"INSTRUMENT_QUANTITY:{instrument}": "1000000000",
                             f"SELLABLE_INVENTORY:{instrument}": "1000000000"},
              },
