@@ -10784,12 +10784,22 @@
     {
       "id": "PA-13-06",
       "text": "Restrict Kelly-like sizing to audited forward net outcomes, conservative shrinkage and hard fraction caps; never infer optimal size from in-sample win rate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/audited_forward_kelly.py verifies an Ed25519 signature over the forward periodic NAV-return series, training cutoff, cohort and strategy hashes, cost/audit artifacts, and explicit net-of-costs/zero-return-period flags.",
+        "Kelly sizing uses a Newey-West/Bartlett standard error and one-sided conservative mean lower bound, then applies a fractional-Kelly multiplier and maximum position fraction capped at 25%.",
+        "src/financial_brain/risk/allocator.py now requires a verified receipt for each sleeve and exact equality between supplied returns and signed observations; the money gate remains separate.",
+        "The trading/paper OMS does not yet call this allocator, and the trusted auditor key is a caller-supplied trust root rather than a centrally managed production configuration."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T08:41:26Z",
+      "commit": "0bbfd070",
+      "test_evidence": [
+        "tests/test_audited_forward_kelly.py covers signed net forward sizing, negative outcomes, signature tampering/wrong key, in-sample/future/cost-incomplete data, minimum observations and fraction caps.",
+        "tests/test_phase5_allocator.py verifies signed evidence is mandatory, mismatched returns and invalid receipts fail closed, paper-only money gate, negative-edge stop and per-sleeve/portfolio caps.",
+        "Combined audited-Kelly, evidence-aware sizing and phase-5 allocation/sizing set: 49 passed; Ruff and mypy passed; git diff --check passed."
+      ]
     },
     {
       "id": "PA-13-07",
@@ -20979,7 +20989,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T08:34:56Z",
+    "as_of_utc": "2026-11-27T08:41:26Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21602,6 +21612,7 @@
       "PA-13-03",
       "PA-13-04",
       "PA-13-05",
+      "PA-13-06",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22025,13 +22036,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1043,
+    "audited_count": 1044,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 904,
-      "UNASSESSED": 335
+      "PARTIAL": 905,
+      "UNASSESSED": 334
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22180,7 +22191,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 904,
-    "UNASSESSED": 335
+    "PARTIAL": 905,
+    "UNASSESSED": 334
   }
 }
