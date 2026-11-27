@@ -85,6 +85,11 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             order_timing.append({
                 "order_id": order_id,
                 "intent_at": intent.get("simulated_at"),
+                "as_of": intent.get("as_of"),
+                "first_executable_after": intent.get("first_executable_after"),
+                "expires_at": intent.get("expires_at"),
+                "last_good_quote_age_ms": intent.get("last_good_quote_age_ms"),
+                "execution_method": intent.get("execution_style"),
                 "intent_ledger_recorded_at": audit_times.get(("paper_intent", f"paper_intent:{order_id}")),
                 "simulated_arrival_earliest_at": intent.get("earliest_fill_time"),
                 "oms_states": [{"state": event["state"], "occurred_at": event["occurred_at"]}
@@ -135,6 +140,13 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
         signals.append({
             "decision_id": decision_id, "strategy_id": decision["strategy_id"],
             "outcome": decision["outcome"], "source_clocks": source_clocks,
+            "as_of": decision.get("as_of"),
+            "first_executable_after": min((row["first_executable_after"] for row in order_timing
+                                            if row["first_executable_after"]), default=None),
+            "expires_at": min((row["expires_at"] for row in order_timing if row["expires_at"]), default=None),
+            "last_good_quote_age_ms": decision.get("last_good_quote_age_ms"),
+            "execution_method": sorted({row["execution_method"] for row in order_timing
+                                        if row["execution_method"]}),
             "feature_computation_started_at": decision.get("feature_started_at"),
             "feature_ready_at": decision.get("feature_ready_at"),
             "model_inference_started_at": decision.get("model_inference_started_at"),
@@ -1022,10 +1034,15 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("model inference cannot complete after the signal decision")
         max_quote_age = self._max_quote_age(session_id)
         stale = []
+        quote_ages_ms = []
+        input_available = []
         for event_id, kind, _, event_json in rows:
+            input_event = MarketEvent.from_dict(json.loads(event_json))
+            input_available.append(input_event.available_at.astimezone(timezone.utc))
             if kind != "quote":
                 continue
-            source_time = MarketEvent.from_dict(json.loads(event_json)).event_time.astimezone(timezone.utc)
+            source_time = input_event.event_time.astimezone(timezone.utc)
+            quote_ages_ms.append((clock - source_time).total_seconds() * 1000)
             if source_time > clock or clock - source_time > timedelta(milliseconds=max_quote_age):
                 stale.append(event_id)
         if stale and outcome != "DATA_UNUSABLE":
@@ -1033,6 +1050,8 @@ class ForwardSessionRunner:
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
+                "as_of": max(input_available).isoformat() if input_available else None,
+                "last_good_quote_age_ms": max(quote_ages_ms) if quote_ages_ms else None,
                 "feature_ready_at": feature_clock.isoformat() if feature_clock else None,
                 "feature_started_at": feature_start_clock.isoformat() if feature_start_clock else None,
                 "model_inference_started_at": inference_start_clock.isoformat() if inference_start_clock else None,
@@ -1863,6 +1882,11 @@ class ForwardSessionRunner:
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
                    "event_id": event_id, "side": side, "quantity": quantity,
                    "quantity_unit": quantity_unit,
+                   "as_of": signal_event.available_at.astimezone(timezone.utc).isoformat(),
+                   "first_executable_after": timed.earliest_fill_time.isoformat(),
+                   "expires_at": (timed.earliest_fill_time + timedelta(milliseconds=max_wait_ms)).isoformat()
+                   if max_wait_ms is not None else None,
+                   "last_good_quote_age_ms": quote_age.total_seconds() * 1000,
                    "decision_manifest_sha256": manifest_row[0],
                    "instrument_rulebook_sha256": rulebook.digest,
                    "effective_instrument_rule": effective_rule,
@@ -1871,6 +1895,7 @@ class ForwardSessionRunner:
                    "max_wait_ms": max_wait_ms,
                    "price_band": [str(value) for value in band] if band is not None else None,
                    "execution_style": "PASSIVE_LIMIT" if passive_trade_event_ids else "MARKETABLE_LIMIT",
+                   "execution_method": "PASSIVE_LIMIT" if passive_trade_event_ids else "MARKETABLE_LIMIT",
                    "passive_trade_event_ids": list(passive_trade_event_ids),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
                    "simulated_at": simulated_at.astimezone(timezone.utc).isoformat()}

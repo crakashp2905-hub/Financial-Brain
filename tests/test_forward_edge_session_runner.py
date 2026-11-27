@@ -409,6 +409,10 @@ def test_session_records_publish_per_signal_timing_telemetry_and_missing_stages(
     telemetry = runner.records("s")["timing_telemetry"]
     assert telemetry["schema"] == "fb.forward_session_timing_telemetry.v1"
     row = telemetry["signals"][0]
+    assert row["as_of"] == event.available_at.astimezone(timezone.utc).isoformat()
+    assert row["first_executable_after"] is None
+    assert row["expires_at"] is None
+    assert row["execution_method"] == []
     assert row["feature_ready_at"] == feature_ready.isoformat()
     assert row["signal_decision_at"] == decided.isoformat()
     assert row["oms_risk_assessed_at"] == approved.isoformat()
@@ -894,6 +898,15 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
     assert records["order_events"][-1]["fill_evidence_id"] is not None
     timing = records["timing_telemetry"]["signals"][0]
+    intent = records["intents"][0]
+    assert intent["as_of"] == signal_event.available_at.astimezone(timezone.utc).isoformat()
+    assert intent["first_executable_after"] == (decided_at + timedelta(milliseconds=100)).isoformat()
+    assert intent["expires_at"] == (decided_at + timedelta(milliseconds=5100)).isoformat()
+    assert intent["last_good_quote_age_ms"] >= 0
+    assert intent["execution_method"] == "MARKETABLE_LIMIT"
+    assert timing["first_executable_after"] == intent["first_executable_after"]
+    assert timing["expires_at"] == intent["expires_at"]
+    assert timing["execution_method"] == ["MARKETABLE_LIMIT"]
     assert timing["orders"][0]["fills"][0]["filled_quantity"] == 2
     assert timing["orders"][0]["simulated_fill_at"] == result.receipt["simulated_at"]
     assert "FEATURE_READY_TIMESTAMP" in timing["missing_stages"]
