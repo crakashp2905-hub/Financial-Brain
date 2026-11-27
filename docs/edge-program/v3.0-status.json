@@ -10603,22 +10603,29 @@
     {
       "id": "PA-12-10",
       "text": "Use the existing knowledge graph as a research feature only when edges are dated, typed and auditable, not as a free-form LLM trading signal.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/graph/promoter_dated.py builds typed pledge/insider links from dated filer records, records first/last evidence dates and applies explicit time-to-live sensitivity",
+        "src/financial_brain/graph/extract.py uses deterministic disclosure parsing; graph outputs are research functions rather than free-form LLM trade signals",
+        "The dated graph covers a limited promoter relationship type; other graph inputs and signal pathways are not covered by one repository-wide dated-edge audit"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "9af425cd"
     },
     {
       "id": "PA-12-11",
       "text": "Test residualized factors that target independent excess beyond momentum/low volatility; retain the residual signal's reduced effect honestly.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/evaluation/neutral.py residualizes cross-sectional signals and forward returns against beta, sector, size proxy and volatility; tests/test_phase5_neutral.py verifies a true signal survives while a disguised beta bet disappears",
+        "Existing work does not provide a complete momentum/low-volatility factor residualization report with the observed effect reduction retained across untouched market phases"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "9af425cd"
     },
     {
       "id": "PA-12-12",
@@ -21529,6 +21536,8 @@
       "PA-12-07",
       "PA-12-08",
       "PA-12-09",
+      "PA-12-10",
+      "PA-12-11",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21952,13 +21961,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1031,
+    "audited_count": 1033,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 894,
-      "UNASSESSED": 347
+      "PARTIAL": 896,
+      "UNASSESSED": 345
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22107,7 +22116,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 894,
-    "UNASSESSED": 347
+    "PARTIAL": 896,
+    "UNASSESSED": 345
   }
 }
