@@ -7920,12 +7920,21 @@
     {
       "id": "PA-03-16",
       "text": "Validate 20 consecutive local replay sessions with injected missing minutes, restarts, rate limits and market pauses; inspect event ordering and output consistency.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_forward_edge_pipeline_compat.py::test_twenty_consecutive_local_replay_sessions_are_deterministic_and_ordered runs 20 dated synthetic sessions across all eight fixture outcome/fault cases twice and compares signatures, ordered traces, durable report hashes, counts, and paper-only/accounting invariants.",
+        "Existing independent controls cover restart replay (tests/test_forward_edge_session_runner.py::test_event_loop_replays_unacknowledged_event_after_restart), stale/missing input abstention, venue holiday/special-session pauses, Kite token-bucket quota and backpressure, and stream reconnect/queue-drop no-entry."
+      ],
+      "blocker": "Inject missing-minute gaps, process restarts, provider rate limits, and sourced market pauses into the same 20-session runner sequence; the current 20-session matrix is synthetic and its fault controls are covered only in separate tests, not as one prospective replay artifact.",
+      "last_audited_at_utc": "2026-11-27T01:26:02+00:00",
+      "commit": "ba774cd9",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_pipeline_compat.py::test_twenty_consecutive_local_replay_sessions_are_deterministic_and_ordered -q --basetemp=.pytest-pa0316-final: 1 passed; 20 sessions replayed twice and outputs matched.",
+        "python -m pytest [restart, missing/stale data, holiday/calendar pause, special session bounds, stream queue/reconnect, token-bucket quota and backpressure focused cases] -q --basetemp=.pytest-pa0316-controls: 7 passed.",
+        "ruff check tests/test_forward_edge_pipeline_compat.py: passed."
+      ],
+      "test_result": "Twenty consecutive dated local fixture sessions now replay twice with identical signatures, event-stage order, durable report hashes and accounting/paper-only invariants. Restart, missing-data, rate-control and calendar-pause controls pass separately. Status remains PARTIAL because these faults are not injected together in the 20-session replay."
     },
     {
       "id": "PA-04-01",
@@ -20214,7 +20223,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:00:00+00:00",
+    "as_of_utc": "2026-11-27T01:26:02+00:00",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20680,6 +20689,7 @@
       "PA-03-13",
       "PA-03-14",
       "PA-03-15",
+      "PA-03-16",
       "PA-04-01",
       "PA-04-02",
       "PA-04-03",
@@ -21154,13 +21164,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 937,
+    "audited_count": 938,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 807,
-      "UNASSESSED": 441
+      "PARTIAL": 808,
+      "UNASSESSED": 440
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21303,13 +21313,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring. PA-03-04 now also has normalized 1-minute/15-minute interval validation against source-hashed exchange-session bounds; raw-provider finality and universal producer adoption remain partial. PA-03-05 now has a rate-limited bounded Kite quote snapshot API with exact subscription coverage, jitter and fail-fast batch admission; streaming subscription lifecycle and runner integration remain partial. PA-03-06 now has frozen product-specific index/equity/option/MF-NAV profiles and executable-data checks; legacy paths and all-desk propagation remain partial. PA-03-14 now rejects simulated paper fills outside sourced exchange session bounds; sourced expiry settlement and carry/forced-flatten integration remain open."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring. PA-03-04 now also has normalized 1-minute/15-minute interval validation against source-hashed exchange-session bounds; raw-provider finality and universal producer adoption remain partial. PA-03-05 now has a rate-limited bounded Kite quote snapshot API with exact subscription coverage, jitter and fail-fast batch admission; streaming subscription lifecycle and runner integration remain partial. PA-03-06 now has frozen product-specific index/equity/option/MF-NAV profiles and executable-data checks; legacy paths and all-desk propagation remain partial. PA-03-14 now rejects simulated paper fills outside sourced exchange session bounds; sourced expiry settlement and carry/forced-flatten integration remain open. PA-03-16 now verifies 20 consecutive dated local fixture replays twice with deterministic outputs; integrated fault injection for missing minutes, restart, rate limits, and market pauses remains open."
   },
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 807,
-    "UNASSESSED": 441
+    "PARTIAL": 808,
+    "UNASSESSED": 440
   }
 }

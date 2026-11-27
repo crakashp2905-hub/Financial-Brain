@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:00:00+00:00",
+  "as_of_utc": "2026-11-27T01:26:02+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "0076570525eab859d3cfce1de90bd3cc106ee34ddf58dbf18108ad1a4196c919",
-  "audit_export_sha256": "2d28cac87f046fffd4a0bd2740ae50366e9273ac2ed000c58f52b8226b9fee1a",
+  "status_ledger_sha256": "950952c6873bb42de1e544e3d599311dfb5599afbc8ce6971dd9316c26d7a5c2",
+  "audit_export_sha256": "bda9a5c824d7cb22245a6b044b40b3bb189b7a712ac1059edbbd61cf9b6ccc53",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 807,
-    "UNASSESSED": 441
+    "PARTIAL": 808,
+    "UNASSESSED": 440
   },
-  "assessed_count": 937,
-  "unassessed_count": 441,
+  "assessed_count": 938,
+  "unassessed_count": 440,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 27,
-        "UNASSESSED": 1
+        "PARTIAL": 28,
+        "UNASSESSED": 0
       },
       "evidence": [
         {
@@ -1222,16 +1222,23 @@
         },
         {
           "item_id": "PA-03-16",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 973,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Validate 20 consecutive local replay sessions with injected missing minutes, restarts, rate limits and market pauses; inspect event ordering and output consistency."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "ba774cd9",
+          "blocker": "Inject missing-minute gaps, process restarts, provider rate limits, and sourced market pauses into the same 20-session runner sequence; the current 20-session matrix is synthetic and its fault controls are covered only in separate tests, not as one prospective replay artifact.",
+          "evidence": [
+            "tests/test_forward_edge_pipeline_compat.py::test_twenty_consecutive_local_replay_sessions_are_deterministic_and_ordered runs 20 dated synthetic sessions across all eight fixture outcome/fault cases twice and compares signatures, ordered traces, durable report hashes, counts, and paper-only/accounting invariants.",
+            "Existing independent controls cover restart replay (tests/test_forward_edge_session_runner.py::test_event_loop_replays_unacknowledged_event_after_restart), stale/missing input abstention, venue holiday/special-session pauses, Kite token-bucket quota and backpressure, and stream reconnect/queue-drop no-entry."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_pipeline_compat.py::test_twenty_consecutive_local_replay_sessions_are_deterministic_and_ordered -q --basetemp=.pytest-pa0316-final: 1 passed; 20 sessions replayed twice and outputs matched.",
+            "python -m pytest [restart, missing/stale data, holiday/calendar pause, special session bounds, stream queue/reconnect, token-bucket quota and backpressure focused cases] -q --basetemp=.pytest-pa0316-controls: 7 passed.",
+            "ruff check tests/test_forward_edge_pipeline_compat.py: passed."
+          ]
         }
       ]
     },
@@ -3210,5 +3217,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "bce5797787be099804ccd78a6b81577ba44404068b0b4c466eb590bcff83fe32"
+  "report_sha256": "fa21308ac75f4da5df5ba4c1b9440694c80a28159ff3bb5b7cfa2c60bf3b6aba"
 }
