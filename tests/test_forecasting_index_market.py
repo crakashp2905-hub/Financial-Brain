@@ -15,6 +15,8 @@ from financial_brain.forecasting.index_market import (
     build_15m_bars,
     direction_label,
     forward_return,
+    forward_targets,
+    summarize_forward_distributions,
 )
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -119,3 +121,36 @@ def test_invalid_or_noncontiguous_label_inputs_fail_closed() -> None:
         direction_label(0.1, noise_threshold=0)
     with pytest.raises(IndexMarketError, match="contiguous"):
         forward_return([bars[0], bars[2]], 0)
+
+
+def test_forward_targets_separate_intraday_horizons_from_session_close() -> None:
+    bars = build_15m_bars(minute_rows(375),
+                          as_of=datetime(2026, 11, 25, 15, 31, tzinfo=IST))
+    rows = forward_targets(bars)
+    assert len(rows) == 25
+    first = rows[0]
+    assert first.return_15m == pytest.approx(bars[1].close / bars[0].close - 1)
+    assert first.label_end_15m == bars[1].end
+    assert first.return_30m == pytest.approx(bars[2].close / bars[0].close - 1)
+    assert first.label_end_30m == bars[2].end
+    assert first.return_60m == pytest.approx(bars[4].close / bars[0].close - 1)
+    assert first.label_end_60m == bars[4].end
+    assert first.return_close == pytest.approx(bars[-1].close / bars[0].close - 1)
+    assert first.label_end_close == bars[-1].end
+    assert rows[-1].return_close is None
+    assert rows[-1].label_end_close is None
+    distributions = summarize_forward_distributions(rows)
+    assert distributions["descriptive_only"] is True
+    assert distributions["15m"]["n"] == 24
+    assert distributions["close"]["n"] == 24
+    assert distributions["close"]["missing"] == 1
+    assert distributions["close"]["q05"] <= distributions["close"]["median"]
+
+
+def test_close_target_is_missing_when_complete_session_close_bar_is_absent() -> None:
+    bars = build_15m_bars(minute_rows(360),
+                          as_of=datetime(2026, 11, 25, 15, 31, tzinfo=IST))
+    rows = forward_targets(bars)
+    assert rows[0].return_15m is not None
+    assert rows[0].return_close is None
+    assert rows[0].label_end_close is None

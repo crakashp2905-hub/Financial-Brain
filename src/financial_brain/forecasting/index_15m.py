@@ -16,11 +16,14 @@ from math import isfinite
 from financial_brain.forecasting.index_market import (
     BAR,
     IndexBar15m,
+    IndexForwardTarget,
     IndexMarketError,
     IndexMinute,
     build_15m_bars,
     direction_label,
     forward_return,
+    forward_targets,
+    summarize_forward_distributions,
 )
 
 SeriesError = IndexMarketError
@@ -207,7 +210,8 @@ def brier(probabilities: dict[str, float], actual: str) -> float:
 
 
 __all__ = [
-    "Bar", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
-    "features_at", "forward_return", "frequency_baseline", "label", "leak_check",
+    "Bar", "IndexForwardTarget", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
+    "features_at", "forward_return", "forward_targets", "frequency_baseline", "label", "leak_check",
+    "summarize_forward_distributions",
     "noise_threshold", "purged_splits", "purged_time_splits",
 ]

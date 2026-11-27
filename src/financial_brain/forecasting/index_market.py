@@ -190,6 +190,27 @@ class IndexBar15m:
     minute_count: int = 15
 
 
+@dataclass(frozen=True)
+class IndexForwardTarget:
+    """Point-in-time decision row with separate short, medium and session-close labels.
+
+    ``label_end_*`` is retained for purging overlapping outcomes in chronological
+    validation. Missing future bars stay ``None``; horizons are never carried across
+    sessions or inferred from an incomplete session.
+    """
+
+    decision_at: datetime
+    session_date: date
+    return_15m: float | None
+    label_end_15m: datetime | None
+    return_30m: float | None
+    label_end_30m: datetime | None
+    return_60m: float | None
+    label_end_60m: datetime | None
+    return_close: float | None
+    label_end_close: datetime | None
+
+
 def _aware(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise IndexMarketError("timestamps must be timezone-aware")
@@ -253,6 +274,87 @@ def forward_return(bars: list[IndexBar15m], index: int, *, horizon_bars: int = 1
     if future.end - base.end != horizon_bars * BAR or future.end.date() != base.end.date():
         raise IndexMarketError("target bars must be contiguous and within the same session")
     return future.close / base.close - 1.0
+
+
+def forward_targets(bars: list[IndexBar15m]) -> list[IndexForwardTarget]:
+    """Create 15m/30m/60m and same-session-close targets for each decision bar.
+
+    Short-horizon targets require exact contiguous 15-minute bars. The close target is
+    defined only when that same session has a complete bar ending at 15:30 IST and that
+    bar is strictly after the decision. This keeps 15-minute claims separable from
+    longer-horizon relevance and makes each outcome's end clock available for purging.
+    """
+    by_session: dict[date, list[tuple[int, IndexBar15m]]] = {}
+    for index, bar in enumerate(bars):
+        by_session.setdefault(bar.end.date(), []).append((index, bar))
+
+    targets: list[IndexForwardTarget] = []
+    for index, bar in enumerate(bars):
+        values: dict[int, tuple[float | None, datetime | None]] = {}
+        for horizon in (1, 2, 4):
+            try:
+                outcome = bars[index + horizon]
+                value = forward_return(bars, index, horizon_bars=horizon)
+                values[horizon] = (value, outcome.end)
+            except (IndexError, IndexMarketError):
+                values[horizon] = (None, None)
+
+        close_target: tuple[float | None, datetime | None] = (None, None)
+        session_bars = by_session[bar.end.date()]
+        close_rows = [(i, candidate) for i, candidate in session_bars
+                      if candidate.end.time() == SESSION_CLOSE]
+        if close_rows:
+            _, close_bar = close_rows[-1]
+            if close_bar.end > bar.end:
+                close_target = (close_bar.close / bar.close - 1.0, close_bar.end)
+
+        targets.append(IndexForwardTarget(
+            decision_at=bar.end, session_date=bar.end.date(),
+            return_15m=values[1][0], label_end_15m=values[1][1],
+            return_30m=values[2][0], label_end_30m=values[2][1],
+            return_60m=values[4][0], label_end_60m=values[4][1],
+            return_close=close_target[0], label_end_close=close_target[1]))
+    return targets
+
+
+def summarize_forward_distributions(
+        targets: list[IndexForwardTarget]) -> dict[str, dict[str, float | int | None] | bool]:
+    """Describe realized forward-return samples without treating them as independent.
+
+    Adjacent decision rows have overlapping outcomes. The result is descriptive only;
+    use dependence-aware inference and a frozen out-of-sample manifest for significance.
+    Quantiles use linear interpolation between sorted observations.
+    """
+    fields = {"15m": "return_15m", "30m": "return_30m",
+              "60m": "return_60m", "close": "return_close"}
+    result: dict[str, dict[str, float | int | None] | bool] = {"descriptive_only": True}
+
+    def quantile(values: list[float], probability: float) -> float | None:
+        if not values:
+            return None
+        position = probability * (len(values) - 1)
+        low = int(position)
+        high = min(low + 1, len(values) - 1)
+        weight = position - low
+        return values[low] * (1.0 - weight) + values[high] * weight
+
+    for horizon, field_name in fields.items():
+        values = sorted(float(value) for row in targets
+                        if (value := getattr(row, field_name)) is not None)
+        count = len(values)
+
+        mean = sum(values) / count if count else None
+        stdev = ((sum((value - mean) ** 2 for value in values) / count) ** 0.5
+                 if count and mean is not None else None)
+        result[horizon] = {
+            "n": count, "missing": len(targets) - count, "mean": mean, "stdev": stdev,
+            "q05": quantile(values, 0.05), "q25": quantile(values, 0.25),
+            "median": quantile(values, 0.50), "q75": quantile(values, 0.75),
+            "q95": quantile(values, 0.95),
+            "minimum": values[0] if values else None,
+            "maximum": values[-1] if values else None,
+        }
+    return result
 
 
 def direction_label(realized_return: float, *, noise_threshold: float) -> str:
