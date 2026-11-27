@@ -9940,12 +9940,18 @@
     {
       "id": "PA-09-16",
       "text": "Require an independently monitored prospective forecast sample before applying confidence as a sizing signal to paper option orders.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_sizing.py requires a pre-entry finalized sample, at least 60 independent prospective sessions, passed predictive-skill gate, calibration error upper bound within policy, and VERIFIED Ed25519 custody for the sample manifest before confidence can affect size.",
+        "confidence_adjusted_paper_lots fails to zero lots unless eligibility passes and never exceeds the precomputed risk cap. src/financial_brain/paper/options_plan.py now requires both calibrated confidence and the evidence gate whenever confidence sizing is requested, and records the evidence hash in its paper plan.",
+        "tests/test_forecasting_index_sizing.py and tests/test_paper_options_plan.py verify valid signed evidence, missing/late/insufficient evidence, skill/calibration refusal and lot scaling; 16 focused tests passed, Ruff and mypy passed.",
+        "No real 60-session independently attested index forecast cohort currently exists or flows into option sizing, so no confidence-based paper plan can yet be validly produced from current market evidence."
+      ],
+      "blocker": "Build and independently monitor the prospective forecast cohort, accumulate at least 60 eligible sessions, pass predictive/calibration gates and wire verified reports into paper option planning.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e0ce5318",
+      "test_result": "16 focused sizing and option-plan tests passed; Ruff and mypy passed for sizing and option-plan modules."
     },
     {
       "id": "PA-09-17",
@@ -21271,6 +21277,7 @@
       "PA-09-13",
       "PA-09-14",
       "PA-09-15",
+      "PA-09-16",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21694,13 +21701,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 986,
+    "audited_count": 987,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 856,
-      "UNASSESSED": 392
+      "PARTIAL": 857,
+      "UNASSESSED": 391
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21849,7 +21856,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 856,
-    "UNASSESSED": 392
+    "PARTIAL": 857,
+    "UNASSESSED": 391
   }
 }
