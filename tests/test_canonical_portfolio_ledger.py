@@ -78,6 +78,21 @@ def test_valuation_mark_cannot_carry_sell_semantics_or_realize_pnl(tmp_path):
     assert position["unrealized_pnl"] == Decimal("-100")
 
 
+def test_futures_contract_multiplier_is_applied_to_cash_and_position(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "futures.sqlite")
+    ledger.append(event(
+        "future-buy", EventKind.FILL, asset_class=AssetClass.FUTURE,
+        instrument_id="NFO:NIFTY-2026-12-31-FUT", side="BUY", position_action="BUY",
+        quantity="50", price="22000", multiplier="25"))
+
+    snapshot = ledger.snapshot("paper-main")
+
+    assert snapshot["positions"][0]["asset_class"] == "FUTURE"
+    assert snapshot["positions"][0]["quantity"] == Decimal("50")
+    assert snapshot["positions"][0]["multiplier"] == Decimal("25")
+    assert snapshot["cash"]["INR"] == Decimal("-27500000")
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,

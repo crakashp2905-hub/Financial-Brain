@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "3eee13d3ad9f0bdd03dd8282b138237053633b947f517a81833200c9c4949140",
-  "audit_export_sha256": "f8f3512aa2b3ad765e9ff0da69f273682195b3bef66b89cf176d408e012fe9ec",
+  "status_ledger_sha256": "f34a54eb06e736f9e15c4b27bb4fff7d34925cb9e135b916012a4d854b681c6f",
+  "audit_export_sha256": "635577604005b81457e77a64b8e022ae6978a66a029f3a23d22fa24134e6187d",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1352,13 +1352,16 @@
             "`ForwardSessionRunner` now reads an explicitly frozen `reservation_policy` from run constraints and stores reservation tables in its durable journal. Before writing a paper intent/order event, it atomically reserves computed limit-price cash and instrument quantity (or sellable inventory for a sell), plus optional configured per-unit resource amounts for that instrument. Policy/resource failures fail closed before order-journal mutation.",
             "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because the position ledger does not yet atomically take over that exposure.",
             "Every ForwardSessionRunner paper intent now fails closed unless the run config contains an explicitly frozen reservation_policy with explicit resource limits; the check precedes reservation-ledger initialization and intent/order journaling. The synthetic fixture adapter provides a separately labeled bounded fixture policy. Regression verifies no paper-intent row or reservation table is created when policy is absent.",
-            "The module and runner are not wired into every desk/OMS path; filled exposure is not transferred atomically into canonical positions, and sourced margin/settlement/options buying-power limits remain caller provided."
+            "Supported forward paper fills are appended to portfolio_events and bound to a POSITION_FILL_RECORDED reservation receipt in one SQLite BEGIN IMMEDIATE transaction. Replay verifies matching event hashes and does not duplicate either journal row; invalid canonical position transitions roll both writes back. Runner restart recovery retries the idempotent fill-to-book binding for dispatched receipts.",
+            "Forward runner maps share, ETF-unit, option-contract and futures-contract units to canonical asset classes; derivative fills require explicit position_accounting contract multipliers, and non-INR instruments require configured currency. Filled reservations remain active conservatively, so canonical-position resource accounting and reservation-to-position capacity substitution remain outstanding.",
+            "The module and runner are not wired into every desk/OMS path; order reservations remain active after fill rather than being replaced by shared position-level resource usage, and sourced margin/settlement/options buying-power limits remain caller provided."
           ],
           "tests": [
             "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 92 passed.",
-            "Focused reservation regressions: `python -m pytest tests/test_forward_edge_session_runner.py -q -k reservation`: 4 passed, 88 deselected.",
-            "Runner reservation tests cover filled exposure persistence, missing-policy rejection before intent/order mutation, over-budget rejection, and refusal to override computed cash exposure.",
-            "Ruff passed for the runner, fixture adapter and runner tests; targeted mypy passed for the runner."
+            "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 7 passed; includes atomic fill replay and rollback on invalid position transition.",
+            "`python -m pytest tests/test_canonical_portfolio_ledger.py -q`: 16 passed, including futures multiplier cash projection.",
+            "Runner reservation tests cover filled exposure persistence, atomic canonical position recording, missing-policy rejection before intent/order mutation, over-budget rejection, and refusal to override computed cash exposure.",
+            "Ruff passed for runner, reservation module and affected tests; targeted mypy passed for runner and reservation module."
           ]
         },
         {
@@ -3255,5 +3258,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "13fdaf20d36c39bc0284da3c79ac8045d9e77ace2c01fd8115d8a26e7aa52344"
+  "report_sha256": "eb21936d9eb0d24a9bb01a6f0378bb7261bfc1c8f80925d42e47df1a87c1035f"
 }

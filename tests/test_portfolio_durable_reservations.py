@@ -13,6 +13,12 @@ from financial_brain.portfolio.durable_reservations import (
     ReservationPolicy,
     ReservationRequest,
 )
+from financial_brain.portfolio.canonical_ledger import (
+    AssetClass,
+    CanonicalPortfolioLedger,
+    EventKind,
+    PortfolioEvent,
+)
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -122,3 +128,50 @@ def test_conflicting_replay_policy_change_and_naive_time_fail_closed(tmp_path):
     with pytest.raises(ReservationError, match="timezone-aware"):
         ReservationRequest("bad", "paper-account", "intraday", NOW.replace(tzinfo=None),
                            {"CASH": Decimal("1")}, "b" * 64)
+
+
+def test_paper_fill_and_reservation_receipt_commit_atomically_and_replay_once(tmp_path):
+    path = tmp_path / "shared-book.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(), _request("s::o", CASH="1000", **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fill", source_sha256="c" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="5", price="100",
+        metadata={"reservation_id": "s::o"},
+    )
+
+    payload_sha = reservations.record_paper_fill(reservation_id="s::o", fill=fill)
+    replay_sha = reservations.record_paper_fill(reservation_id="s::o", fill=fill)
+
+    assert replay_sha == payload_sha
+    canonical = CanonicalPortfolioLedger(path)
+    assert canonical.snapshot("paper-account")["positions"][0]["quantity"] == Decimal("5")
+    assert canonical.event_count() == 1
+    assert reservations.active_amounts("paper-account")["CASH"] == Decimal("1000")
+    assert reservations.verify("paper-account") == {
+        "events": 2, "mismatched": 0, "reservations_missing_receipts": 0,
+        "released_reservations_missing_receipts": 0,
+    }
+
+
+def test_failed_position_transition_rolls_back_fill_and_binding_receipt(tmp_path):
+    path = tmp_path / "atomic-rejection.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(), _request("s::sell", **{"SELLABLE_INVENTORY:NSE:ABC": "5"}))
+    invalid_close = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:sell:fill", source_sha256="d" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="SELL", position_action="SELL", quantity="5", price="100",
+    )
+
+    with pytest.raises(ReservationError, match="canonical position transition denied"):
+        reservations.record_paper_fill(reservation_id="s::sell", fill=invalid_close)
+
+    assert CanonicalPortfolioLedger(path).event_count() == 0
+    assert reservations.active_amounts("paper-account")["SELLABLE_INVENTORY:NSE:ABC"] == Decimal("5")
+    assert reservations.verify("paper-account")["events"] == 1

@@ -776,6 +776,11 @@ class ForwardSessionRunner:
             elif (history[-1]["state"] != body["status"]
                   or history[-1]["filled_quantity"] != body["filled_quantity"]):
                 raise ForwardSessionRunnerError("dispatched receipt conflicts with terminal order journal state")
+            # Repair a crash after order-receipt persistence but before the canonical
+            # position event was attached to the still-active account reservation.
+            self._record_canonical_paper_fill(
+                config=config, session_id=session_id, order_id=order_id,
+                receipt=body, receipt_sha256=str(receipt[0]))
         if dispatched:
             self._con.commit()
         records = self.records(session_id)
@@ -1506,6 +1511,79 @@ class ForwardSessionRunner:
             accounting={"source": "PAPER_EXECUTION_RECEIPT", "receipt_sha256": receipt_sha256,
                         "resolution_actor": reconciled_by, "physical_order_submitted": False})
         self._con.commit()
+        self._record_canonical_paper_fill(
+            config=self.state_store.config(session_id), session_id=session_id,
+            order_id=order_id, receipt=receipt, receipt_sha256=receipt_sha256)
+
+    def _record_canonical_paper_fill(self, *, config: ForwardRunConfig, session_id: str,
+                                     order_id: str, receipt: dict[str, Any],
+                                     receipt_sha256: str) -> None:
+        """Atomically bind observed paper fills to the canonical book and active reservation."""
+        filled_quantity = int(receipt.get("filled_quantity", 0))
+        if filled_quantity <= 0:
+            return
+        from financial_brain.portfolio.canonical_ledger import (
+            AssetClass,
+            EventKind as PortfolioEventKind,
+            PortfolioEvent,
+        )
+
+        intent_row = self._con.execute(
+            "SELECT request_json FROM paper_intents WHERE session_id=? AND order_id=?",
+            [session_id, order_id],
+        ).fetchone()
+        if intent_row is None:
+            raise ForwardSessionRunnerError("paper fill has no durable intent for canonical position booking")
+        intent = json.loads(intent_row[0])
+        market_event = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
+            [session_id, intent["event_id"]],
+        ).fetchone()
+        if market_event is None:
+            raise ForwardSessionRunnerError("paper fill's source market event is missing")
+        instrument = str(json.loads(market_event[0])["instrument_id"])
+        position_rules = config.constraints.get("position_accounting", {})
+        if not isinstance(position_rules, dict) or not isinstance(position_rules.get(instrument, {}), dict):
+            raise ForwardSessionRunnerError("position_accounting must map instruments to canonical asset metadata")
+        explicit = position_rules.get(instrument, {})
+        unit = str(intent.get("quantity_unit", "UNSPECIFIED"))
+        asset_by_unit = {"SHARES": AssetClass.EQUITY, "ETF_UNITS": AssetClass.ETF,
+                         "OPTION_CONTRACTS": AssetClass.OPTION,
+                         "FUTURES_CONTRACTS": AssetClass.FUTURE}
+        if unit not in asset_by_unit:
+            raise ForwardSessionRunnerError(
+                f"canonical paper position ledger does not support quantity unit {unit!r}")
+        asset_class = AssetClass(str(explicit.get("asset_class", asset_by_unit[unit].value)))
+        if asset_class is not asset_by_unit[unit]:
+            raise ForwardSessionRunnerError("position asset class conflicts with instrument quantity unit")
+        currency = str(explicit.get("currency", "INR" if instrument.startswith(("NSE:", "NFO:")) else ""))
+        if not currency:
+            raise ForwardSessionRunnerError("position_accounting requires currency outside NSE/NFO instruments")
+        if unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"} and "multiplier" not in explicit:
+            raise ForwardSessionRunnerError(
+                "derivative position_accounting requires an explicit contract multiplier")
+        multiplier = Decimal(str(explicit.get("multiplier", "1")))
+        try:
+            fill = PortfolioEvent(
+                account_id=config.ledger_id, sleeve_id=config.cohort,
+                source_system="FORWARD_PAPER", source_event_id=f"{session_id}:{order_id}:fill",
+                source_sha256=receipt_sha256, event_kind=PortfolioEventKind.FILL,
+                occurred_at=str(receipt["simulated_at"]), currency=currency,
+                asset_class=asset_class, instrument_id=instrument,
+                side=str(intent["side"]), position_action=str(intent["side"]),
+                quantity=filled_quantity, price=str(receipt["average_price"]), multiplier=multiplier,
+                evidence_class="LOCAL_PAPER",
+                metadata={"session_id": session_id, "order_id": order_id,
+                          "decision_id": str(intent["decision_id"]),
+                          "reservation_id": f"{session_id}::{order_id}",
+                          "execution_receipt_sha256": receipt_sha256,
+                          "simulation_fidelity": receipt.get("simulation_fidelity")},
+            )
+            reservation_ledger = DurableReservationLedger(self.journal_path)
+            reservation_ledger.record_paper_fill(
+                reservation_id=f"{session_id}::{order_id}", fill=fill)
+        except (KeyError, TypeError, ValueError, InvalidOperation, ReservationError) as exc:
+            raise ForwardSessionRunnerError(f"canonical paper fill transfer failed: {exc}") from exc
 
     def arm_paper_oco(self, *, session_id: str, group_id: str, stop_order_id: str,
                       target_order_id: str, occurred_at: datetime, evidence_id: str) -> Any:

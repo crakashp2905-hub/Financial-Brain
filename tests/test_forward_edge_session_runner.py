@@ -1059,6 +1059,9 @@ def append_fill_quote(runner, config, signal_event, *, event_id, available_at):
 
 
 def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
     runner, event, decided = trade_setup(tmp_path)
     first = execute(runner, event, decided)
     second = execute(runner, event, decided)
@@ -1077,6 +1080,16 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["cash"]["INR"] == Decimal("-200.40")
+    reservations = DurableReservationLedger(tmp_path / "journal.sqlite")
+    assert reservations.active_amounts("ledger-1") == {
+        "CASH": Decimal("200.60"), "INSTRUMENT_QUANTITY:NSE:INFY": Decimal("2")}
+    assert reservations.verify("ledger-1")["mismatched"] == 0
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM reservation_events WHERE event_kind='POSITION_FILL_RECORDED'"
+    ).fetchone()[0] == 1
     runner.close()
 
 
@@ -1818,7 +1831,10 @@ def test_expiring_option_position_is_reported_separately_and_blocks_complete_clo
     rules = fixture_rule_book("NSE:INFY", quantity_unit="OPTION_CONTRACTS",
                               expiry=config.exchange_date)
     config = replace(config, constraints={**config.constraints, "instrument_rules": rules,
-                                          "carry_authorized_instruments": ["NSE:INFY"]})
+                                          "carry_authorized_instruments": ["NSE:INFY"],
+                                          "position_accounting": {"NSE:INFY": {
+                                              "asset_class": "OPTION", "currency": "INR",
+                                              "multiplier": "1"}}})
     runner, event, decided = trade_setup(tmp_path, config=config)
     receipt = execute(runner, event, decided, order_id="expiring-option", qty=2)
     assert receipt["filled_quantity"] == 2

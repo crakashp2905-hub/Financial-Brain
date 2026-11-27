@@ -18,6 +18,13 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Mapping
 
+from financial_brain.portfolio.canonical_ledger import (
+    CanonicalLedgerError,
+    CanonicalPortfolioLedger,
+    EventKind,
+    PortfolioEvent,
+)
+
 
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 _ZERO = Decimal("0")
@@ -291,6 +298,74 @@ class DurableReservationLedger:
             connection.execute("UPDATE reservations SET state='RELEASED' WHERE account_id=? AND reservation_id=?",
                                (account_id, reservation_id))
             return ReservationDisposition.RELEASED
+
+    def record_paper_fill(self, *, reservation_id: str, fill: PortfolioEvent) -> str:
+        """Atomically append a canonical paper fill and bind it to its active reservation.
+
+        The reservation remains active after a fill: this records the position transfer
+        evidence but does not yet replace order exposure with portfolio-level risk usage.
+        Both append-only journals share this SQLite transaction, so restart replay cannot
+        leave the fill unjournaled in one ledger while present in the other.
+        """
+        row = fill.normalized()
+        if row["event_kind"] != EventKind.FILL.value:
+            raise ReservationError("paper position transfer requires a fill event")
+        account_id = str(row["account_id"])
+        if not reservation_id.strip():
+            raise ReservationError("reservation ID is required for paper fill transfer")
+        try:
+            CanonicalPortfolioLedger(self.path)
+        except (OSError, sqlite3.Error) as exc:
+            raise ReservationError(f"cannot initialize canonical portfolio journal: {exc}") from exc
+        body = json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        payload_sha = hashlib.sha256(body.encode("utf-8")).hexdigest()
+        position_event_id = f"POSITION:{reservation_id}:{row['source_event_id']}"
+        position_receipt = {
+            "account_id": account_id, "event_id": position_event_id,
+            "reservation_id": reservation_id, "event_kind": "POSITION_FILL_RECORDED",
+            "position_event_id": row["source_event_id"], "position_payload_sha256": payload_sha,
+            "occurred_at": row["occurred_at"], "source_sha256": row["source_sha256"],
+        }
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            reservation = connection.execute(
+                "SELECT state FROM reservations WHERE account_id=? AND reservation_id=?",
+                (account_id, reservation_id),
+            ).fetchone()
+            if reservation is None:
+                raise ReservationError("paper fill has no matching account reservation")
+            if reservation["state"] != "ACTIVE":
+                raise ReservationError("paper fill cannot attach to a released reservation")
+            prior_transfer = connection.execute(
+                "SELECT event_sha256 FROM reservation_events WHERE account_id=? AND event_id=?",
+                (account_id, position_event_id),
+            ).fetchone()
+            transfer_sha = _digest(position_receipt)
+            if prior_transfer is not None and prior_transfer["event_sha256"] != transfer_sha:
+                raise ReservationError("paper position fill replay conflicts with prior transfer evidence")
+
+            existing = connection.execute(
+                "SELECT payload_sha256 FROM portfolio_events WHERE account_id=? AND source_system=? "
+                "AND source_event_id=?",
+                (row["account_id"], row["source_system"], row["source_event_id"]),
+            ).fetchone()
+            if existing is not None and existing["payload_sha256"] != payload_sha:
+                raise ReservationError("paper position event ID conflicts with existing canonical fill")
+            if existing is None:
+                connection.execute(
+                    "INSERT INTO portfolio_events "
+                    "(account_id,sleeve_id,source_system,source_event_id,source_sha256,payload_sha256,event_json) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (row["account_id"], row["sleeve_id"], row["source_system"], row["source_event_id"],
+                     row["source_sha256"], payload_sha, body),
+                )
+                try:
+                    CanonicalPortfolioLedger._validate_position_transitions(connection, account_id)
+                except CanonicalLedgerError as exc:
+                    raise ReservationError(f"canonical position transition denied: {exc}") from exc
+            if prior_transfer is None:
+                self._append_event(connection, position_receipt)
+            return payload_sha
 
     def active_amounts(self, account_id: str) -> Mapping[str, Decimal]:
         with self._connection() as connection:

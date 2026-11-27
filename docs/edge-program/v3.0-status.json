@@ -8025,18 +8025,21 @@
         "`ForwardSessionRunner` now reads an explicitly frozen `reservation_policy` from run constraints and stores reservation tables in its durable journal. Before writing a paper intent/order event, it atomically reserves computed limit-price cash and instrument quantity (or sellable inventory for a sell), plus optional configured per-unit resource amounts for that instrument. Policy/resource failures fail closed before order-journal mutation.",
         "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because the position ledger does not yet atomically take over that exposure.",
         "Every ForwardSessionRunner paper intent now fails closed unless the run config contains an explicitly frozen reservation_policy with explicit resource limits; the check precedes reservation-ledger initialization and intent/order journaling. The synthetic fixture adapter provides a separately labeled bounded fixture policy. Regression verifies no paper-intent row or reservation table is created when policy is absent.",
-        "The module and runner are not wired into every desk/OMS path; filled exposure is not transferred atomically into canonical positions, and sourced margin/settlement/options buying-power limits remain caller provided."
+        "Supported forward paper fills are appended to portfolio_events and bound to a POSITION_FILL_RECORDED reservation receipt in one SQLite BEGIN IMMEDIATE transaction. Replay verifies matching event hashes and does not duplicate either journal row; invalid canonical position transitions roll both writes back. Runner restart recovery retries the idempotent fill-to-book binding for dispatched receipts.",
+        "Forward runner maps share, ETF-unit, option-contract and futures-contract units to canonical asset classes; derivative fills require explicit position_accounting contract multipliers, and non-INR instruments require configured currency. Filled reservations remain active conservatively, so canonical-position resource accounting and reservation-to-position capacity substitution remain outstanding.",
+        "The module and runner are not wired into every desk/OMS path; order reservations remain active after fill rather than being replaced by shared position-level resource usage, and sourced margin/settlement/options buying-power limits remain caller provided."
       ],
       "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions with atomic reservation-to-position transfer, and source current margin/settlement/options buying-power/inventory limits before the acceptance criteria can be complete.",
-      "last_audited_at_utc": "2026-11-27T02:01:04Z",
+      "last_audited_at_utc": "2026-11-27T03:23:57Z",
       "commit": "pending",
       "test_evidence": [
         "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 92 passed.",
-        "Focused reservation regressions: `python -m pytest tests/test_forward_edge_session_runner.py -q -k reservation`: 4 passed, 88 deselected.",
-        "Runner reservation tests cover filled exposure persistence, missing-policy rejection before intent/order mutation, over-budget rejection, and refusal to override computed cash exposure.",
-        "Ruff passed for the runner, fixture adapter and runner tests; targeted mypy passed for the runner."
+        "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 7 passed; includes atomic fill replay and rollback on invalid position transition.",
+        "`python -m pytest tests/test_canonical_portfolio_ledger.py -q`: 16 passed, including futures multiplier cash projection.",
+        "Runner reservation tests cover filled exposure persistence, atomic canonical position recording, missing-policy rejection before intent/order mutation, over-budget rejection, and refusal to override computed cash exposure.",
+        "Ruff passed for runner, reservation module and affected tests; targeted mypy passed for runner and reservation module."
       ],
-      "test_result": "Forward paper runner: 92 passed; focused reservation regressions: 4 passed; Ruff and targeted mypy passed. PA-04-04 remains PARTIAL pending cross-OMS atomic exposure transfer and sourced limits."
+      "test_result": "Forward paper runner: 92 passed; durable reservation ledger: 7 passed; Ruff and targeted mypy passed. PA-04-04 remains PARTIAL pending cross-OMS integration, position-level resource substitution, and sourced limits."
     },
     {
       "id": "PA-04-05",

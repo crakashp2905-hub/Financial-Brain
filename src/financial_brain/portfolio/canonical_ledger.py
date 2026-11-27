@@ -27,6 +27,7 @@ class AssetClass(StrEnum):
     EQUITY = "EQUITY"
     ETF = "ETF"
     OPTION = "OPTION"
+    FUTURE = "FUTURE"
     MUTUAL_FUND = "MUTUAL_FUND"
 
 
