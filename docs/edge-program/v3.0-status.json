@@ -6918,13 +6918,13 @@
       "id": "PA-00-04",
       "text": "Reconcile the historical trial count (13 in earlier files versus 14 in the newer survey); let immutable ledger bytes determine the truth, and annotate contradictions instead of rewriting history.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "The byte-pinned ledger has 14 JSONL rows: 1 kind=history pre-ADR summary plus 13 kind=trial records. All 13 trial records retain verdict=FAIL. The 13-trial count is authoritative; the 14-count survey counted the history row as a trial.",
         "The normalized LF SHA-256 is 9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c, matching docs/forward-edge/protected-pins.json. The working-tree raw SHA differs only because the pinned contract normalizes CRLF on the ledger path.",
         "Added docs/edge-program/trial-count-reconciliation.v1.json and scripts/validate_trial_count_reconciliation.py. The historical 14-trial note remains unchanged in the imported read-only v1.4 audit/index and is explicitly annotated as a row-counting error; no ledger/history bytes were rewritten."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T17:23:41+00:00",
       "commit": null,
       "test_evidence": [
@@ -6974,13 +6974,13 @@
       "id": "PA-00-07",
       "text": "Build a capability provenance manifest separating main, PR #34, #36/#37/#38, #39 and #40; include each source's actual commit SHA and dependency graph.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "Added docs/edge-program/capability-provenance.v1.json from a fresh GitHub API snapshot of main and PR #34, #36, #37, #38, #39, and merged #40. Each node has exact commit refs, state/mergeability, PR base/head SHAs, current-main relation, capability-ownership file Git blob SHA, and declared capability/module counts with deltas against captured main.",
         "Verified dependency edges: PR #37 head equals PR #36 base; PR #36 head equals PR #38 base; PR #40 merge commit is an ancestor of captured main. PR #39 is explicitly marked diverged (2 ahead / 12 behind captured main) and left without an inferred dependency.",
         "The manifest keeps unmerged PRs separate from main and states that ownership registries and changed paths do not prove behavioral validity."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T17:33:58+00:00",
       "commit": null,
       "test_evidence": [
@@ -7006,13 +7006,13 @@
       "id": "PA-00-09",
       "text": "Define the five desks and their permissible actions: equities/intraday/swing, ETFs, long or defined-risk options, and NAV-based mutual funds; never force intraday execution on mutual funds.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "docs/edge-program/product-charter.v1.json defines SWING, INTRADAY, OPTIONS, ETF and MUTUAL_FUND, their products, clocks and permitted paper actions. It explicitly limits options to long or defined-risk actions and defines mutual-fund subscribe/redeem/switch/hold on scheme business-day cutoff/NAV mechanics, excluding exchange ticks and intraday matching.",
         "scripts/validate_product_charter.py --check verifies all five desk identifiers, options risk restrictions, NAV-only mutual-fund mechanics, and that scope is not misrepresented as implemented capability.",
         "tests/test_product_charter.py contains assertions for the defined-risk options and mutual-fund execution boundaries; not rerun in this assessment."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null
     },
@@ -7020,13 +7020,13 @@
       "id": "PA-00-10",
       "text": "Declare the business objective: positive expected *and realized prospective* risk-adjusted net value after full costs, not daily positive P&L or every-signal trade frequency.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "docs/edge-program/product-charter.v1.json::business_objective explicitly requires positive expected and realized prospective risk-adjusted net value after all applicable costs, keeps those measures separate, and requires pre-frozen benchmark/risk budget/window/cost/uncertainty method.",
         "The charter explicitly states that historical evidence cannot substitute for prospective results and rejects daily positive P&L or signal frequency as success criteria. This records the product objective only; it is not profitability evidence.",
         "scripts/validate_product_charter.py --check enforces the objective and its evaluation/non-objective requirements."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null
     },
@@ -7048,14 +7048,14 @@
       "id": "PA-00-12",
       "text": "Emit a machine-readable `profit_readiness.json` listing current `RED/AMBER/GREEN` gates and links to exact evidence; reject hand-edited status percentages.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "`scripts/profit_readiness.py` deterministically generates `docs/edge-program/profit-readiness.json` from the v3 status ledger, per-item audit export, launch-gates contract and physical-order build policy.",
         "Report includes RED/AMBER/GREEN evidence gates for engineering integrity, data/rights, paper execution/accounting, strategy economics, physical-order safety and external launch prerequisites. Each checklist evidence record includes source path/line, status, evidence, blocker, commit and tests.",
         "Counts and gate states are recomputed from canonical item statuses; the report omits hand-editable completion percentages, hashes its inputs/output, and `--check` rejects modified or stale report bytes. The CLI check is required in GitHub Actions.",
         "Live trading authorization remains false; current external permission/custody/broker prerequisites produce an overall RED readiness status rather than an inferred GREEN."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-25T03:16:00Z",
       "commit": "83f29d38",
       "test_evidence": [
@@ -7069,13 +7069,13 @@
       "id": "PA-01-01",
       "text": "Establish a canonical merge sequence by graph-based dependency audit; PR #37 precedes #36, and #38 depends on #36 unless deliberately rebased with a test-backed change log.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "docs/edge-program/capability-provenance.v1.json records exact SHA dependency edges PR-37 -> PR-36 -> PR-38 and PR-40 -> captured main.",
         "docs/edge-program/canonical-merge-sequence.v1.json freezes the exact-SHA sequence, isolated PR-34 treatment, PR-39 hold/reconciliation decision, and explicitly labels the artifact PLAN_ONLY_NOT_MERGED.",
         "scripts/validate_canonical_merge_sequence.py verifies the plan hash, source SHAs and required graph edges. Validation passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null
     },
@@ -7097,13 +7097,13 @@
       "id": "PA-01-03",
       "text": "Explicitly preserve both forward-edge F17 instrument/data gates and F13 capability renderer if needed; PR #40 documents their omission and they must not vanish unnoticed.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/forward_edge/pipeline.py::_integrity_gate_codes retains the F17 instrument/data integrity gate path; tests/test_forward_edge_integrity_gates.py covers refusal and stable reason codes.",
         "src/financial_brain/forward_edge/tracker.py retains the F13 machine-readable capability matrix renderer; tests/test_forward_edge_tracker.py covers tracker-derived output and freshness.",
         "SL-00-05 records the PR #40 omission audit and restored F17/F13 paths with focused regression evidence (60 tests across F00/F13/F17 and pipeline compatibility). This preserves the capabilities and their regression coverage; it does not claim every adapter is integrated."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null
     },
@@ -7111,14 +7111,14 @@
       "id": "PA-01-04",
       "text": "Reconcile trial governance: retain mandatory experiment charter, cohort registry, immutable trials and owner-authorized quarter budget when reconciling PR #40's branch trial policy.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/forward_edge/charter.py::CharterRegistry persists immutable experiment charter/cohort-schedule bindings; `trials.py` requires exact charter and cohort scope for each protected trial.",
         "src/financial_brain/forward_edge/trials.py requires configured human-owner approvals for protocol/budget changes, validates approval scope/expiry/actor, refuses spent budgets and leaves Q1-2027 closed without an owner-approved protocol ADR and explicit positive budget.",
         "docs/forward-edge/trial-program.v1.json and scripts/validate_trial_program.py confirm the Q4-2026 budget is exhausted at 13/13 and Q1-2027 remains unauthorized; validator passed.",
         "tests/test_forward_edge_f00.py contains protected-ledger pin, spent-budget, owner mismatch, missing charter/cohort, and Q1 authorization regression cases (not rerun in this assessment)."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null
     },
@@ -7140,14 +7140,14 @@
       "id": "PA-01-06",
       "text": "Re-run all historical protected-baseline SHA checks after every merge, including LF/CRLF normalization rules with canonical serialization tests.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "`.github/workflows/ci.yml` runs on every push and pull request on Ubuntu and Windows; `scripts/validate_trial_program.py` invokes all protected-pin checks, while the full CI suite runs baseline parity tests.",
         "`src/financial_brain/forward_edge/trials.py::sha256_file` normalizes CRLF to LF only for files explicitly listed in protected-pins.json; all other pins remain byte-exact.",
         "`tests/test_forward_edge_f00.py::test_protected_pin_normalizes_declared_crlf_checkout_to_canonical_lf` verifies CRLF parity and rejects unauthorized content changes.",
         "Local verification passed: `python scripts/validate_trial_program.py`, `python scripts/trial_preservation_audit.py --check`, and the dedicated CRLF pin test (1 passed) with Ruff."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7161,14 +7161,14 @@
       "id": "PA-01-07",
       "text": "Resolve source inventory snapshot failure in PR #40 without loosening assertions; create deterministic cross-platform inventory generation.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "scripts/source_inventory.py creates deterministic sorted Python-source inventory; source hashes normalize CRLF to LF and serialized JSON has canonical ordering. The generator preserves unknown ownership/maturity rather than weakening assertions.",
         "tests/test_source_inventory.py verifies complete source coverage, stable double generation, LF/CRLF-normalized hashes, and exact equality with the committed inventory and runner graph snapshots.",
         ".github/workflows/ci.yml runs source-inventory and forward-engine graph freshness checks on every push and PR on Windows and Ubuntu.",
         "Regenerated docs/edge-program/source-inventory.v2.json and docs/edge-program/forward-engine-dependency-graph.v1.json after the test exposed stale graph output; focused suite passed 5 tests, Ruff passed, and both generator `--check` commands passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7197,14 +7197,14 @@
       "id": "PA-01-09",
       "text": "Eliminate duplicate chart-pattern CI steps; maintain an explicit `ruff`, `mypy`, migration, invariant, unit, integration, coverage, dependency-audit matrix.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "`.github/workflows/ci.yml` has one chart-pattern matrix freshness step, one offline demo step and one chart-pattern coverage floor; the validator rejects duplicates.",
         "docs/edge-program/ci-check-matrix.v1.json explicitly maps Ruff, mypy, migration tests, repository invariants, unit and integration coverage (shared full-suite invocation documented), critical/package coverage, and dependency audit to workflow steps.",
         "scripts/validate_ci_check_matrix.py runs in CI and checks required commands, invariant gates and unique chart-pattern/coverage steps.",
         "Focused test, Ruff and local CI matrix validation passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7257,13 +7257,13 @@
       "id": "PA-01-13",
       "text": "Add a release provenance manifest containing source SHA, test artifact hashes, changelog, strategy-rule hashes and data-rights posture.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "scripts/build_release_provenance.py creates and verifies docs/edge-program/release-provenance.current.json with exact source commit/branch/tree state, test artifact SHA-256, changelog hash, all Python strategy-rule hashes plus PineScript/rule catalogue hashes, and source-specific data-rights registry/review hashes and posture.",
         "The manifest is content-addressed, verifies all referenced bytes, records credential values as absent, and cannot label itself released. The GitHub Actions workflow generates/verifies and uploads per-OS release-provenance artifacts after tests.",
         "Local manifest 02b684e7771a333342d952e47f3e3f67d9eb658a27abfa25ea10352d5c31f4b8 records 2 test artifacts; this dirty worktree remains NOT_RELEASED."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7302,14 +7302,14 @@
       "id": "PA-01-16",
       "text": "Keep live broker order routing physically disabled at build, config, CLI, API and integration-test layers throughout the entire profitability program.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/execution/order_policy.py fixes PHYSICAL_ORDERS_ENABLED=False and deny_physical_order has no runtime configuration/credential/approval override.",
         "src/financial_brain/forward_edge/modes.py cannot grant LIVE_CASH; every session mode reports may_send_physical_order=False. Legacy Kite broker writes use the same permanent build-policy lock.",
         "Negative tests cover human-approval/config attempts, forged build enable, broker credentials/environment flags, legacy POST/PUT/PATCH/DELETE, CLI and fixture-pipeline behavior.",
         "Hosted CI runs these integration/unit tests on Windows and Ubuntu; this turn ran the focused physical-order/CLI/compatibility set (20 passed) with Ruff clean."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7545,14 +7545,14 @@
       "id": "PA-02-13",
       "text": "Add deterministic, low-cost synthetic fixture and delayed/replay feed modes for engineering tests; visually and cryptographically distinguish fixture rows from true market observations.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/forward_edge/fixtures.py::fixture_pack provides deterministic synthetic sessions for win, loss, no-trade, rejection, late quote, unknown order, adverse fill, and missed fill; tests/test_forward_edge_pipeline_compat.py checks all golden signatures and repeat-run determinism.",
         "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote supports an explicit non-negative availability_delay while preserving the KITE_CONNECT_READ_ONLY source and separate exchange, receipt, and availability clocks.",
         "src/financial_brain/forward_edge/market_events.py hashes source identity in the canonical event; QuoteArchive coverage displays LIVE_OBSERVED only for recognized Kite/exchange source classes and FIXTURE_OR_MIXED for synthetic fixture classes. The coverage label does not authenticate vendor origin, as documented in quote_archive.py.",
         "tests/test_forward_edge_quote_archive.py::test_kite_delayed_feed_and_synthetic_fixture_have_distinct_hashed_source_classes proves delay clocks, different event hashes, and separate live/fixture coverage labels; CLI and fixture compatibility tests cover historical replay mode and deterministic fixture outcomes."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T23:13:56Z",
       "commit": "e8c2981b",
       "test_evidence": [
@@ -7919,14 +7919,14 @@
       "id": "PA-03-15",
       "text": "Keep provider calls read-only in paper mode and prove via monkeypatching/denying all broker write endpoints.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/execution/order_policy.py sets PHYSICAL_ORDERS_ENABLED=False and unconditionally denies physical orders; there is no environment, credential, UI, approval or kill-switch override.",
         "src/financial_brain/execution/oms/kite_broker.py refuses every non-GET request before reading credentials or invoking network transport; the market-data and account adapters use GET for Kite reads.",
         "tests/test_oms.py::test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open opens legacy flags, supplies credentials and proves place/cancel/POST/PUT/PATCH/DELETE cause no transport call.",
         "tests/test_forward_edge_f00.py live-cash tests prove the forward paper pipeline also rejects LIVE_CASH despite credentials or forged approvals."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -7958,13 +7958,13 @@
       "id": "PA-04-01",
       "text": "Enumerate existing OMS, paper books, legacy intraday runner, option spread runner and forward-edge pipeline; document one authoritative account/position ownership contract.",
       "source_checked": false,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "docs/edge-program/paper-account-position-ownership.v1.json enumerates the broker OMS, legacy intraday and swing books, decision candidate paper book, mutual-fund books, option execution subledger, ForwardSessionRunner, kernel EventKernel and CanonicalPortfolioLedger with source paths and explicit authoritative/not-authoritative scopes.",
         "The contract makes CanonicalPortfolioLedger the single consolidated paper-accounting/position projection, while the external broker remains authoritative for actual holdings. Operational OMS and desk ledgers own only their local order/event lifecycles until source-bound events are imported once; missing/conflicting fills remain unresolved and no synthetic close is allowed.",
         "ETF-specific source books were not identified in the audited local databases. Forward, kernel and derivatives subledger imports, broker reconciliation, and multi-asset accounting integrations remain explicit unresolved domains tracked by other checklist items; this item is limited to the requested ownership inventory and contract."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T22:56:15Z",
       "commit": "a6cea56f",
       "test_evidence": [
@@ -8237,12 +8237,12 @@
       "id": "PA-04-12",
       "text": "Model ambiguous same-bar stop/target ordering as conservative adverse-first or `UNRESOLVED`; never choose favorable outcome after seeing the bar.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/kernel/exit_scenarios.py::_replay counts a same-bar stop/target collision and executes the stop before any intrabar target, resolving OHLC ambiguity adversely for long and short positions. Opening gaps are processed chronologically before intrabar ranges.",
         "tests/test_kernel_exit_scenarios.py verifies long and short same-bar collisions: stop executes, target is not credited, and ambiguous_bar_count is one; historical replay does not select the favorable path."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T14:26:05Z",
       "commit": null,
       "test_evidence": [
@@ -8736,14 +8736,14 @@
       "id": "PA-06-03",
       "text": "Keep prior 2026Q4 protected trial limits intact unless the owner explicitly authorizes a documented amendment; never grant AI authority to increase its own budget.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "docs/forward-edge/trial-program.v1.json: Q4-2026 remains EXHAUSTED at the frozen 13-trial budget; Q1-2027 remains NOT_AUTHORIZED with null budget and ADR.",
         "src/financial_brain/forward_edge/trials.py: an exhausted budget rejects additional trials; any amendment requires a larger explicit budget, budget ADR, matching owner authority, and separate TRIAL_BUDGET_AMENDMENT; the agent actor cannot satisfy human approval.",
         "scripts/validate_trial_program.py and .github/workflows/ci.yml: CI validates the Q4 13/13 exhausted state and closed Q1 program; protected pins include the trial program and ledger.",
         "scripts/trial_preservation_audit.py --check: protected ledger/manifests match pinned bytes; the audit explicitly does not reconstruct missing historical evidence."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T16:33:27+00:00",
       "commit": null,
       "test_evidence": [
@@ -8868,14 +8868,14 @@
       "id": "PA-06-09",
       "text": "Estimate trade- and session-clustered uncertainty (HAC/block bootstrap) with effective independent observations, not raw overlapping trade counts.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "forward_edge.cluster_attribution.trade_session_block_bootstrap estimates uncertainty by resampling chronological sessions in stationary blocks and trade IDs as whole clusters; each observed cell receives the product of sampled session/trade multiplicities.",
         "The report includes percentile confidence bounds, effective independent observation count (conservative minimum of Kish session/trade cluster dimensions), observed cluster counts, block length, replicate count, seed, method and source-bound report hash.",
         "This directly satisfies the checklist requirement to estimate trade/session-clustered uncertainty using block bootstrap and effective independent observations rather than raw overlapping marks. The companion two-way cluster diagnostic remains explicitly labeled normal-approximation only.",
         "Central promotion-pipeline enforcement and family-specific preregistration remain separate open requirements and are not claimed complete by this item."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T21:02:00+00:00",
       "commit": "65ef6324",
       "test_evidence": [
@@ -8922,14 +8922,14 @@
       "id": "PA-06-11",
       "text": "Report two independent scientific outcomes: forecasting skill vs an honest null, and executable after-cost economic skill vs benchmark.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "research.dual_skill_report.build_dual_skill_report computes forecast Brier loss and skill against an explicit null as one scientific outcome, and compounded strategy net return/excess versus a same-session benchmark as a separate economic outcome.",
         "The panels retain distinct forecast/economic source-hash sets and the report defines no combined score; it explicitly labels the economic comparison descriptive and not alpha certification.",
         "Tests verify both panel calculations, the case where positive forecast skill accompanies worse economic performance, and fail-closed missing/duplicate inputs. Three focused tests, Ruff and mypy pass.",
         "Automatically joining forecasts to one prospective quote-backed and reconciled paper cohort is a separate end-to-end data integration requirement; this checklist item’s two-outcome report is implemented."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T21:14:50+00:00",
       "commit": "aa5c7a57",
       "test_evidence": [
@@ -8942,14 +8942,14 @@
       "id": "PA-06-12",
       "text": "Diagnose fragility by source date, instrument bucket, regime, exposure, hold duration, cost level, slippage, top names and exclusion filters.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "research.fragility.build_fragility_report emits source-hashed descriptive slices by source date, trading session, instrument bucket, regime, exposure bucket, holding-period bucket, cost level, slippage bucket and exclusion filter, and reports top-five instrument concentration.",
         "Every dimension is explicit (including UNKNOWN rather than omission); sparse groups are labeled LOW_SAMPLE, IDs must be unique, and reports preserve both input and output hashes without selecting a winner.",
         "A dedicated source_date field is distinct from the trading session and included in the hashed input and report dimensions. Three focused tests, Ruff and mypy pass.",
         "The checklist’s fragility-diagnostic capability is implemented. Feeding every prospective cohort and wiring the report into strategy health are separate pipeline requirements, not hidden claims of this item."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T21:04:47+00:00",
       "commit": "237f6f7b",
       "test_evidence": [
@@ -8962,14 +8962,14 @@
       "id": "PA-06-13",
       "text": "Add sensitivity analysis around strategy parameters without using test-period performance to select a new best parameter.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "research.parameter_sensitivity freezes the candidate parameter grid and training/validation/test source identities before scoring, and requires the designated center to be the training-score winner.",
         "The report returns all held-out test values as descriptive-only, never ranks or selects a test winner, and explicitly records that the test period was not used for selection.",
         "A regression test gives a neighboring parameter a much better test score than the training-selected center and confirms the center remains training-selected with no test winner field. Three focused tests, Ruff and mypy pass.",
         "Wiring every strategy searcher to this contract and running any approved data-backed sensitivity cohort are broader integration/evaluation work; this item’s no-test-selection sensitivity capability is implemented."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T21:05:35+00:00",
       "commit": "aa5c7a57",
       "test_evidence": [
@@ -9030,14 +9030,14 @@
       "id": "PA-06-16",
       "text": "Produce machine-readable pass/fail decision with exactly which confidence, cost, null, robustness, drawdown or fidelity gate failed.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "forward_edge.evidence_stats.promotion_verdict returns a machine-readable overall disposition, exact reason codes, and named confidence, cost, null, robustness, drawdown and fidelity gate states.",
         "Each gate distinguishes PASS, FAIL and UNASSESSED; missing null/fidelity/drawdown facts cannot silently pass. Invalid non-finite returns, malformed cost arrays, invalid cluster shares and truthy non-boolean gate values are rejected before verdict generation.",
         "Forty focused F08/falsification/claim-tier tests pass, including independent failures for each named gate and malformed-evidence cases; Ruff and mypy pass.",
         "The decision-contract requirement is implemented. Gate inputs remain caller-supplied rather than recomputed from a canonical evidence package; measurement provenance and universal evaluator wiring remain separate requirements."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-26T21:16:05+00:00",
       "commit": "30bf6813",
       "test_evidence": [
@@ -10278,13 +10278,13 @@
       "id": "PA-10-19",
       "text": "Keep short-premium naked selling explicitly disabled; future defined-risk credit strategies require separate contract/margin/legal review and dedicated validation.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/execution/order_policy.py hard-codes PHYSICAL_ORDERS_ENABLED = False and deny_physical_order always refuses broker writes; docs/edge-program/launch-gates.v1.json independently sets physical_orders_enabled=false and states naked writing is excluded.",
         "The paper option builder supports long buys and defined-risk debit spreads only; src/financial_brain/paper/options_spread_execution.py fills short legs only after covered long fills and enforces short_filled_contracts <= long_filled_contracts plus a positive debit after costs. Offline credit-spread research remains non-executable and no physical order route exists.",
         "tests/test_launch_gates.py verifies physical orders stay disabled and unknown broker approval cannot open the gate; tests/test_paper_options_spread_execution.py verifies zero unsupported naked-short quantity. Existing launch-gate tests and recent focused spread tests pass."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "72a29d84",
       "test_result": "Launch-gate safety contract tests pass; asynchronous spread tests verify short quantity never exceeds filled long coverage."
@@ -10321,12 +10321,12 @@
       "id": "PA-11-03",
       "text": "Implement FVG/IFVG from precisely defined three-candle non-overlap rules with availability-at time and invalidation; avoid visual hindsight zones.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/price_action_gaps.py: causal bullish/bearish three-candle non-overlap detector, third-close availability, later mitigation, and explicit inverse side on close-through invalidation",
         "Detector outputs immutable point-in-time states and rejects naive timestamps, unordered bars, invalid OHLC, and any state transition before gap availability"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "10c48ebb",
       "test_evidence": [
@@ -10337,12 +10337,12 @@
       "id": "PA-11-04",
       "text": "Implement a liquidity sweep with a previous confirmed high/low, threshold crossing, completed reclaim and bounded confirmation latency.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/liquidity_sweeps.py: confirmed-time high/low level, absolute threshold breach, later-close reclaim and bounded bar latency",
         "Same-candle wick/reclaim is excluded because OHLC cannot establish intrabar sequence; returned event records breach/reclaim bars and elapsed confirmation count"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "b4e5fa46",
       "test_evidence": [
@@ -10353,12 +10353,12 @@
       "id": "PA-11-05",
       "text": "Implement five-minute and 15-minute opening range breakout with known session-open clock, close-through, buffer, volume gate and invalidation.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/opening_range_breakout.py: exact timezone-aware session open, contiguous 5/15 one-minute range bars, buffered close-through, volume gate and close-back-through invalidation",
         "Zero-volume range data fails closed; only completed range bars can establish the high/low and breakout is timestamped at trigger close for next-bar use"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "10c48ebb",
       "test_evidence": [
@@ -10383,13 +10383,13 @@
       "id": "PA-11-07",
       "text": "Implement continuation pullback and 20C moving-average filters with exact Wilder SMMA recurrence, lookback initialization and no-lookahead pivots.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/four_node/indicators.py: Wilder SMMA seeds from an n-value SMA, applies exact recurrence, emits warmup None and has explicit session reset policy; 20C bands use aligned SMMA streams",
         "src/financial_brain/strategies/four_node/nodes.py and tests/test_four_node_replay.py: pivots are observable only after right-side confirmation; prefix-only replay tests confirmation latency",
         "src/financial_brain/strategies/continuation_pullback.py: explicit higher-low/lower-high 20C pullback rule gates on confirmed pivots, confirms at bar close and sets next-bar actionability"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "f7a7ad68",
       "test_evidence": [
@@ -10401,12 +10401,12 @@
       "id": "PA-11-08",
       "text": "Implement E1/E2 scaling as two distinct conditional intents linked to one maximum account risk, protecting against correlated doubling of loss.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/strategies/risk_scaled_intents.py: E1/E2 have distinct identity and conditions; E2 requires filled E1; unit risk includes caller-provided stop and costs",
         "Combined worst-case reserved risk is capped by max_account_risk; zero-quantity E1 disables E2, preventing an unbacked add"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "2da2883d",
       "test_evidence": [
@@ -10511,13 +10511,13 @@
       "id": "PA-12-01",
       "text": "Create an 'alpha hypothesis ledger' with mechanism, who trades against whom, why information is delayed/ignored, expected horizon and what would falsify it.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/research/alpha_hypothesis_ledger.py creates a persistent SQLite ledger with explicit mechanism, counterparty, information friction, expected horizon, falsification conditions, source commit and source hash",
         "Unique hypothesis/version keys plus database triggers prevent mutation or deletion; result records are kept separate from hypothesis records",
         "Local ledger explicitly does not claim independent timestamp attestation"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "6c1136a1",
       "test_evidence": [
@@ -10720,12 +10720,12 @@
       "id": "PA-12-16",
       "text": "Keep an explicit `NO_REPLICABLE_ALPHA_FOUND` outcome; no optimization objective is allowed to rewrite this into a favorable verdict.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/research/family_registry.py accepts NO_REPLICABLE_ALPHA_FOUND as a terminal research verdict and closes the family as failed",
         "The result is recorded in an append-only hash-chained registry; a closed family cannot restart without preregistered new information or mechanism"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "d32d10f7",
       "test_evidence": [
@@ -10736,12 +10736,12 @@
       "id": "PA-13-01",
       "text": "Require fixed initial owner-defined capital, risk-per-trade, daily/weekly/monthly max drawdown, max contract exposure and maximum acceptable slippage in a signed policy.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/risk/signed_policy.py defines fixed initial capital, per-trade risk, daily/weekly/monthly drawdown caps, maximum contracts, signed Nifty-direction delta cap, slippage ceiling, owner identity and effective interval",
         "Canonical policy bytes require verification against a caller-trusted Ed25519 owner key; modified, expired or internally impossible limits are rejected"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "70ed1c2e",
       "test_evidence": [
@@ -11039,14 +11039,14 @@
       "id": "PA-14-04",
       "text": "Write append-only local intent/decision/quote/outcome records with source clocks and SHA-linked previous event; treat local hashes as tamper-evident only, not independent proof.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "DurableSessionJournal now stores session-ordered SHA-linked previous/event hashes over sequence, identity, type, UTC occurrence clock, and canonical record digest; append-only SQLite triggers remain active.",
         "audit_records() verifies record bytes and every chain link on read/restart; legacy local-only audit tables receive deterministic chain backfill on reopen. Local hashes remain tamper-evident only, not independently attested.",
         "ForwardSessionRunner records source event clocks (exchange, received, available), ingestion clock/source, decisions, paper intents, and execution receipts in the shared audit sequence.",
         "tests/test_forward_edge_session_runner.py -k \"append_only_audit or audit_hash_chain or lifecycle_event_and_audit\": 4 passed; Ruff and git diff --check passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T09:45:15Z",
       "commit": null
     },
@@ -11054,14 +11054,14 @@
       "id": "PA-14-05",
       "text": "Use independent third-party custody/timestamp receipts only when legally available, else label evidence `LOCAL_ONLY`, never fabricated `ATTESTED`.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "UnconfiguredProvider.anchor() refuses independent custody requests and cannot synthesize a receipt; decision custody classifies absence of a receipt as LOCAL_ONLY.",
         "Only a receipt signed by a configured pinned external trust root can classify VERIFIED; LOCAL_ONLY is never eligible for a formal forward claim.",
         "tests/test_forward_edge_f04.py: 11 passed, including explicit unconfigured-provider failure, LOCAL_ONLY fallback, zero verified sessions, and formal-claim denial; Ruff and git diff --check passed.",
         "No external timestamp provider or legal authorization is represented as configured; prospective evidence remains local-only until a permitted provider is actually configured."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T09:48:11Z",
       "commit": null
     },
@@ -11084,7 +11084,7 @@
       "id": "PA-14-07",
       "text": "Keep true session return series including zero-return cash days and partial positions; never filter the P&L sample down to profitable sessions.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "build_session_pnl() reconciles realized and unrealized changes against cash plus marked holdings, includes partial carried positions, and computes net return using prior-session equity.",
         "Cash-only/no-filled-position sessions are recorded with exactly zero P&L and zero return; they remain rows in the prospective session series.",
@@ -11092,7 +11092,7 @@
         "monthly_report() emits one row per scheduled date, labels absent reports UNRECORDED with null return, and suppresses aggregate P&L when any scheduled date is absent instead of filtering the sample.",
         "tests/test_forward_edge_prospective_pnl.py: 6 passed, covering frozen schedules, cash zero-return sessions, partial-position returns, missing-session preservation and immutability; Ruff and git diff --check passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T09:56:40Z",
       "commit": null
     },
@@ -11100,7 +11100,7 @@
       "id": "PA-14-08",
       "text": "Require every candidate to publish its expected-value forecast **before** the execution clock and record changes as new versions, not retroactive annotation.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "ForwardSessionRunner requires LIVE_PAPER TRADE/candidate decisions to include an immutable expected_value_forecast in the decision payload before decision persistence; validates finite decimal return/cost/net values, distribution ordering/probability, forecast timestamp, and frozen cost SHA.",
         "Forecast versions are tied to a stable candidate_id, start at 1, increment exactly by one, and must use a newly published timestamp; changes cannot overwrite the prior decision identity. Forecast and decision are appended atomically to the hash-linked audit sequence, with the forecast event preceding the decision event.",
@@ -11108,7 +11108,7 @@
         "execute_candidate() propagates manifest forecast values to the decision record for every canonical strategy candidate.",
         "tests/test_forward_edge_session_runner.py focused EV/live-paper selection: 6 passed, including absent/late forecast rejection, sequential immutable revisions, manifest mismatch, audit replay and execution-clock ordering. tests/test_forward_edge_strategy_pipeline.py: 5 passed. Ruff and git diff --check passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T10:09:11Z",
       "commit": null
     },
@@ -11158,13 +11158,13 @@
       "id": "PA-14-12",
       "text": "Add shock drills with feed loss, process restart, system clock skew, option expiry, canceled orders and unmapped tokens during a paper session.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "Added one integrated ForwardSessionRunner paper-session shock drill covering source clock skew rejection, unmapped instrument rejection, process restart and replay idempotency, OCO fill/cancel confirmation, option expiry disposition, and stale-feed shutdown.",
         "Acceptance assertions prove the skewed quote does not enter the event log, restart retains exactly one confirmed fill and the open option position, the sibling order ends CANCELED, and feed loss closes the session INCOMPLETE while preserving EXPIRY_SETTLEMENT_REQUIRED plus stale-mark and missing-exit exposures.",
         "Verification: python -m pytest tests/test_forward_edge_session_runner.py -k integrated_shock_drill -q: 1 passed; Ruff and git diff --check passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T10:42:00Z",
       "commit": null
     },
@@ -11172,13 +11172,13 @@
       "id": "PA-14-13",
       "text": "Create an independent daily reporting job that verifies all decisions and quote lineage from raw logs, without importing research/backtest targets.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "scripts/forward_session_daily_audit.py is a standalone Python-standard-library audit job that opens raw session state and runner audit SQLite databases read-only; it does not import project strategy, research, backtest, target-generation or materialized-view code.",
         "The daily report verifies the frozen session configuration hash, raw append-only audit hash chain, source market-event hashes and availability clocks, decision input causality, decision-manifest source hashes/clocks, execution receipt quote provenance and execution timing, plus unresolved exposure counts. Reports include a digest and fail with exit code 2 on validation failure.",
         "tests/test_forward_edge_session_runner.py: clean decision/fill lineage passes; corrupted audit-chain hash and corrupted execution quote hash each fail closed. Focused verification: 3 passed; integrated session shock drill: 1 passed; Ruff and git diff --check passed."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -11901,7 +11901,7 @@
       "id": "PA-17-01",
       "text": "Add test fixtures for same-bar SL+TP, gap-through-stop, no exchange liquidity, partial option fills, closing quote older than the stop trigger and market halt.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_kernel_fills.py::test_stop_and_target_in_same_bar_resolve_adversely",
         "tests/test_kernel_fills.py::test_gap_through_stop_fills_at_open_not_at_stop",
@@ -11913,7 +11913,7 @@
         "tests/test_forward_edge_session_runner.py::test_sourced_instrument_halt_blocks_fills_until_a_later_resumption",
         "src/financial_brain/paper/options_exit.py: requires exit quote observation at or after the frozen trigger timestamp; receipt time alone cannot make a pre-trigger quote executable."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:28:12Z",
       "commit": null,
       "test_evidence": [
@@ -11928,13 +11928,13 @@
       "id": "PA-17-02",
       "text": "Build clock-leakage tests for 1m/5m/15m/futures/options/MF data, all with publication-time and available-at mutations.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_forward_edge_market_events.py::test_cross_asset_publication_and_availability_clock_mutations_fail_closed (1m, 5m, 15m bars; futures; options; mutual-fund NAV)",
         "src/financial_brain/forward_edge/market_events.py::MarketEvent enforces published_at <= available_at <= decision_time and event serialization preserves clocks.",
         "src/financial_brain/forward_edge/session_runner.py::_validate_completed_bar and tests/test_forward_edge_session_runner.py::test_completed_five_minute_bar_is_clock_checked_and_dispatched (5m completed bars now accepted only on valid session-aligned clocks)."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:30:48Z",
       "commit": null,
       "test_evidence": [
@@ -11949,14 +11949,14 @@
       "id": "PA-17-03",
       "text": "Test corporate action and index membership lookahead using historical ticker/ISIN changes, delisted symbols and revised filings.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_kernel_instrument_history.py::test_ticker_transition_is_visible_only_after_publication_and_keeps_old_id",
         "tests/test_kernel_lineage.py::test_delisted_symbol_can_relist_only_after_it_ended and ::test_later_index_membership_snapshot_cannot_rewrite_a_past_universe",
         "tests/test_phase1_corpact.py::test_split_maps_to_the_isin_in_force_on_the_ex_date",
         "tests/test_phase0.py::TestPITStore::test_as_of_hides_the_future and ::test_restatement_never_destroys_the_original"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:34:01Z",
       "commit": null,
       "test_evidence": [
@@ -11970,7 +11970,7 @@
       "id": "PA-17-04",
       "text": "Fuzz options chain contract identity, negative/zero bid, crossed quotes, infinity/NaN Greeks, expired token, wrong lot size and wrong option right.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_paper_options_plan.py::test_mutated_option_quotes_with_zero_negative_crossed_or_nonfinite_prices_fail",
         "tests/test_paper_options_plan.py::test_expired_contract_wrong_underlying_lot_and_option_right_are_rejected",
@@ -11979,7 +11979,7 @@
         "src/financial_brain/paper/options_plan.py validates underlying/right/strike symbol identity, optional frozen token and lot size, and rejects decision-time expired contracts.",
         "src/financial_brain/forward_edge/option_surface.py fails closed on non-finite computed Greeks."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:38:19Z",
       "commit": null,
       "test_evidence": [
@@ -11993,13 +11993,13 @@
       "id": "PA-17-05",
       "text": "Run property-based accounting tests for cash, units, gross/net book, charge conservation, dividend, split, option settlement and partial exits.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_accounting_property_invariants.py::test_seeded_cash_equity_partial_fill_and_exit_books_conserve_cash_units_and_net_pnl",
         "tests/test_accounting_property_invariants.py::test_seeded_split_and_dividend_entries_conserve_notional_and_gross_cash",
         "tests/test_derivatives_subledger.py::test_seeded_cash_settled_call_spreads_match_independent_intrinsic_accounting"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:45:00Z",
       "commit": null,
       "test_evidence": [
@@ -12012,7 +12012,7 @@
       "id": "PA-17-06",
       "text": "Simulate state-machine crashes before/after every durable write, after quote but before intent, before/after fill and during ledger reconciliation.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_forward_edge_f14.py::test_after_restart_no_economic_event_is_lost_duplicated_or_invented (all 25 stage/mode crash cases)",
         "tests/test_forward_edge_session_runner.py::test_crash_after_quote_before_intent_resumes_without_inventing_order",
@@ -12022,7 +12022,7 @@
         "tests/test_forward_edge_session_runner.py::test_restart_rebuilds_terminal_order_state_from_dispatched_receipt",
         "tests/test_forward_edge_session_runner.py::test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:48:00Z",
       "commit": null,
       "test_evidence": [
@@ -12036,7 +12036,7 @@
       "id": "PA-17-07",
       "text": "Test all loss-limit gates under concurrent desk decisions; ensure a risk block cannot be overridden by the UI, agent, broker adapter or reentrant event.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_persistent_killswitch.py::test_concurrent_desk_loss_trips_append_one_valid_chain",
         "tests/test_persistent_killswitch.py::test_replayed_concurrent_loss_trip_is_idempotent",
@@ -12044,7 +12044,7 @@
         "tests/test_forward_edge_session_runner.py::test_risk_breach_latch_persists_across_runner_restart_and_blocks_entries",
         "ForwardSessionRunner.execute_paper_intent is the guarded paper-entry surface; receipts explicitly persist physical_order_submitted=false."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T12:52:00Z",
       "commit": null,
       "test_evidence": [
@@ -12059,7 +12059,7 @@
       "id": "PA-17-08",
       "text": "Reproduce monthly-book November freeze, 51 missing exits, source-inventory CRLF issue, F13/F17 regression and nonmonotonic events as permanent regression tests.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_phase5_zoo.py::test_november_missing_future_price_freezes_only_failed_monthly_book",
         "tests/test_phase5_zoo.py::test_missing_held_return_is_incomplete_and_does_not_block_other_strategy",
@@ -12071,7 +12071,7 @@
         "tests/test_forward_edge_session_runner.py::test_decisions_require_available_inputs_and_are_immutable (backward decision clock rejected)",
         "src/financial_brain/forward_edge/fixture_adapter.py supplies the required frozen PAPER_COST_BUFFER limit for the F13/F17 synthetic runner path."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T13:10:00Z",
       "commit": null,
       "test_evidence": [
@@ -12087,12 +12087,12 @@
       "id": "PA-17-09",
       "text": "Include quote-feed outage and recovery scenarios with a position that remains open: stale valuation must not be converted into a fabricated closed fill.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/paper/intraday_runner.py no longer converts a cached quote into an end-of-day close; unresolved open positions remain valuation-only and the session is marked aborted.",
         "tests/test_phase5_intraday_runner.py::test_feed_outage_recovery_does_not_synthesize_exit_for_open_position"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T13:20:00Z",
       "commit": null,
       "test_evidence": [
@@ -12109,13 +12109,13 @@
       "id": "PA-17-10",
       "text": "Add an explicit no-broker-write test intercepting network and all order client functions; every intended paper trade must remain local.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_forward_edge_session_runner.py::test_intended_forward_paper_trades_never_write_to_kite_or_open_network intercepts KiteBroker.place/cancel/_request and urllib.request.urlopen as hard failures, then executes both BUY and SELL forward-paper intents with forged live flags.",
         "tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags",
         "tests/test_oms.py::test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open"
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T14:05:00Z",
       "commit": null,
       "test_evidence": [
@@ -12132,14 +12132,14 @@
       "id": "PA-17-11",
       "text": "Run strategy acceptance with surrogate labels and permuted returns to prove the pipeline does not 'discover' strong alpha from random noise.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_family_validation.py::test_seeded_permuted_strategy_search_does_not_produce_a_promotion_signal runs 12 fixed-seed null strategy families with 20 candidates and 160 periods each; familywise SPA p-value false-promotion count is bounded at 2.",
         "tests/test_family_validation.py::test_on_noise_pbo_averages_a_half_and_spa_rarely_rejects",
         "tests/test_family_validation.py::test_one_real_strategy_is_found",
         "src/financial_brain/evaluation/family_validation.py::reality_check applies stationary-bootstrap strategy-family correction; src/financial_brain/forward_edge/evidence_stats.py::promotion_verdict requires preregistered candidate family and blocks failed familywise inference."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T14:25:00Z",
       "commit": null,
       "test_evidence": [
@@ -12156,13 +12156,13 @@
       "id": "PA-17-12",
       "text": "Verify candidate confidence calibration and economic expectancy independently with known randomized experiments and fixed seeds.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_kernel_probability_calibration.py::test_fixed_seed_randomized_forecasts_separate_calibration_from_costed_expectancy independently evaluates 200 seeded out-of-time forecasts and costed trade outcomes; calibration report is explicitly not execution authorization.",
         "src/financial_brain/kernel/probability_calibration.py computes Brier/log loss and reliability bins only from frozen model forecasts in a strictly later matured holdout.",
         "src/financial_brain/forward_edge/trade_expectancy.py computes net expectancy only from complete itemized-cost trade outcomes."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T14:40:00Z",
       "commit": null,
       "test_evidence": [
@@ -12178,14 +12178,14 @@
       "id": "PA-17-13",
       "text": "Ensure no strategy promotion on validation-only datasets, training-only holdout, post-hoc prior assignments or false 'independent' custody labels.",
       "source_checked": true,
-      "status": "COMPLETE",
+      "status": "PARTIAL",
       "evidence": [
         "tests/test_kernel_probability_calibration.py::test_validation_only_or_training_data_cannot_be_reused_as_promotion_holdout rejects an outcome visible before prediction time.",
         "tests/test_forward_edge_f08.py::test_promotion_requires_exact_pre_registered_inference_plan; ::test_promotion_refuses_a_research_look_omitted_from_registered_family; ::test_promotion_rejects_retrospective_inference_registration; ::test_promotion_requires_registered_dataset_method_and_lags.",
         "tests/test_evidence_labels.py::test_local_paper_cannot_claim_independent_custody_after_the_fact verifies caller-asserted independent evidence is rejected.",
         "src/financial_brain/forward_edge/evidence_labels.py derives evidence class from mode and verified custody; src/financial_brain/research/inference_registration.py binds promotion inference to prior registration."
       ],
-      "blocker": null,
+      "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
       "last_audited_at_utc": "2026-11-27T15:00:00Z",
       "commit": null,
       "test_evidence": [
@@ -12438,11 +12438,16 @@
     {
       "id": "PA-18-09",
       "text": "Identify current Indian exchange/broker/SEBI rules for retail automated orders and provider data use from official sources before contemplating an actual broker connection.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/edge-program/PA-18-09-indian-retail-algo-and-market-data-rules-2026-11-27.md (dated primary-source review: SEBI retail-algo circular and extension, NSE operational modalities and 2026 tech-savvy investor circular, NSE FAQ, and Zerodha Kite data-use terms)",
+        "NSE Circular NSE/INSP/77559 dated 2026-11-20: https://archives.nseindia.com/content/circulars/INSP77559.pdf",
+        "SEBI Circular SEBI/HO/MIRSD/MIRSD-PoD/P/CIR/2025/0000013: https://www.sebi.gov.in/legal/circulars/feb-2025/safer-participation-of-retail-investors-in-algorithmic-trading_91614.html",
+        "Zerodha Kite Connect data-use terms: https://support.zerodha.com/category/trading-and-markets/general-kite/kite-api/articles/can-i-use-historical-and-live-data-taken-from-kite-connect-api-on-other-platforms"
+      ],
+      "blocker": "PARTIAL: primary-source baseline is documented, but account-specific written broker/API confirmation, exact exchange and segment requirements, and any external chart/data-display rights are not verified. No live-order authorization is inferred.",
+      "last_audited_at_utc": "2026-11-27T14:30:00Z",
       "commit": null
     },
     {
@@ -18664,7 +18669,7 @@
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "25b88bc7",
+      "commit": "013b0640",
       "test_evidence": [
         "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
       ],
@@ -22476,6 +22481,7 @@
       "PA-17-18",
       "PA-18-01",
       "PA-18-07",
+      "PA-18-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22899,15 +22905,15 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1123,
+    "audited_count": 1124,
     "status_counts": {
-      "COMPLETE": 136,
-      "PARTIAL": 963,
-      "NOT_STARTED": 17,
+      "COMPLETE": 85,
       "EXTERNAL_BLOCKED": 7,
-      "UNASSESSED": 255
+      "NOT_STARTED": 17,
+      "PARTIAL": 1015,
+      "UNASSESSED": 254
     },
-    "verified_complete_count": 136,
+    "verified_complete_count": 85,
     "method": "Repository source, hostile-test, static-path, and artifact-hash review; completion status is not inferred from a checklist declaration.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -23062,13 +23068,13 @@
       "tests/test_source_inventory.py",
       "docs/edge-program/PA-18-07-physical-order-lock-acceptance-2026-11-27.json"
     ],
-    "evidence_update": "PA-18-07 is COMPLETE: central physical-order policy, guarded legacy Kite transport, static unique-order-path check, and hostile forged-flag paper/replay tests are evidenced by a hashed acceptance artifact; four focused tests passed. Counts: COMPLETE=136, PARTIAL=963, NOT_STARTED=17, EXTERNAL_BLOCKED=7, UNASSESSED=255."
+    "evidence_update": "PR evidence-gate audit downgraded 51 changed COMPLETE claims with missing item-specific acceptance evidence to PARTIAL; SL-22-01 was restored to the base row because only its metadata changed. PA-18-07 remains COMPLETE with a verified hashed acceptance artifact and focused tests. Counts: COMPLETE=85, PARTIAL=1015, NOT_STARTED=17, EXTERNAL_BLOCKED=7, UNASSESSED=254."
   },
   "counts_by_status": {
-    "COMPLETE": 136,
-    "PARTIAL": 963,
-    "NOT_STARTED": 17,
+    "COMPLETE": 85,
     "EXTERNAL_BLOCKED": 7,
-    "UNASSESSED": 255
+    "NOT_STARTED": 17,
+    "PARTIAL": 1015,
+    "UNASSESSED": 254
   }
 }

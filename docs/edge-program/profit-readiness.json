@@ -4,19 +4,19 @@
   "as_of_utc": "2026-11-27T17:45:33Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "1cfe71639c88d5251b9f621de5b1496dd007f9e249d9bfba959f1d9c56f3666e",
-  "audit_export_sha256": "4c330ee1ff5339147bf94f96d6ad3d023f60672c02a0329f77115ef7f338a52e",
+  "status_ledger_sha256": "af9cd602d03acde2f1dc3731871e996a55df3b979c9077efed6efb5c40d84946",
+  "audit_export_sha256": "f37d78381c9393b909c6909e1af66b9a464b6faeed8f524d1477918dbee2898c",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 136,
+    "COMPLETE": 85,
     "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
-    "PARTIAL": 963,
-    "UNASSESSED": 255
+    "PARTIAL": 1015,
+    "UNASSESSED": 254
   },
-  "assessed_count": 1123,
-  "unassessed_count": 255,
-  "verified_complete_count": 136,
+  "assessed_count": 1124,
+  "unassessed_count": 254,
+  "verified_complete_count": 85,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -30,10 +30,10 @@
       "status": "AMBER",
       "item_count": 28,
       "counts_by_status": {
-        "COMPLETE": 13,
+        "COMPLETE": 0,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 15,
+        "PARTIAL": 28,
         "UNASSESSED": 0
       },
       "evidence": [
@@ -100,14 +100,14 @@
         },
         {
           "item_id": "PA-00-04",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 890,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Reconcile the historical trial count (13 in earlier files versus 14 in the newer survey); let immutable ledger bytes determine the truth, and annotate contradictions instead of rewriting history."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "The byte-pinned ledger has 14 JSONL rows: 1 kind=history pre-ADR summary plus 13 kind=trial records. All 13 trial records retain verdict=FAIL. The 13-trial count is authoritative; the 14-count survey counted the history row as a trial.",
             "The normalized LF SHA-256 is 9a572365f1700ebd9abc50f8759bafff396c358fefd6bfb5efaad4eb2b1a398c, matching docs/forward-edge/protected-pins.json. The working-tree raw SHA differs only because the pinned contract normalizes CRLF on the ledger path.",
@@ -162,14 +162,14 @@
         },
         {
           "item_id": "PA-00-07",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 893,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build a capability provenance manifest separating main, PR #34, #36/#37/#38, #39 and #40; include each source's actual commit SHA and dependency graph."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "Added docs/edge-program/capability-provenance.v1.json from a fresh GitHub API snapshot of main and PR #34, #36, #37, #38, #39, and merged #40. Each node has exact commit refs, state/mergeability, PR base/head SHAs, current-main relation, capability-ownership file Git blob SHA, and declared capability/module counts with deltas against captured main.",
             "Verified dependency edges: PR #37 head equals PR #36 base; PR #36 head equals PR #38 base; PR #40 merge commit is an ancestor of captured main. PR #39 is explicitly marked diverged (2 ahead / 12 behind captured main) and left without an inferred dependency.",
@@ -199,14 +199,14 @@
         },
         {
           "item_id": "PA-00-09",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 895,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Define the five desks and their permissible actions: equities/intraday/swing, ETFs, long or defined-risk options, and NAV-based mutual funds; never force intraday execution on mutual funds."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "docs/edge-program/product-charter.v1.json defines SWING, INTRADAY, OPTIONS, ETF and MUTUAL_FUND, their products, clocks and permitted paper actions. It explicitly limits options to long or defined-risk actions and defines mutual-fund subscribe/redeem/switch/hold on scheme business-day cutoff/NAV mechanics, excluding exchange ticks and intraday matching.",
             "scripts/validate_product_charter.py --check verifies all five desk identifiers, options risk restrictions, NAV-only mutual-fund mechanics, and that scope is not misrepresented as implemented capability.",
@@ -216,14 +216,14 @@
         },
         {
           "item_id": "PA-00-10",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 896,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Declare the business objective: positive expected *and realized prospective* risk-adjusted net value after full costs, not daily positive P&L or every-signal trade frequency."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "docs/edge-program/product-charter.v1.json::business_objective explicitly requires positive expected and realized prospective risk-adjusted net value after all applicable costs, keeps those measures separate, and requires pre-frozen benchmark/risk budget/window/cost/uncertainty method.",
             "The charter explicitly states that historical evidence cannot substitute for prospective results and rejects daily positive P&L or signal frequency as success criteria. This records the product objective only; it is not profitability evidence.",
@@ -250,14 +250,14 @@
         },
         {
           "item_id": "PA-00-12",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 898,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Emit a machine-readable `profit_readiness.json` listing current `RED/AMBER/GREEN` gates and links to exact evidence; reject hand-edited status percentages."
           },
           "commit": "83f29d38",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "`scripts/profit_readiness.py` deterministically generates `docs/edge-program/profit-readiness.json` from the v3 status ledger, per-item audit export, launch-gates contract and physical-order build policy.",
             "Report includes RED/AMBER/GREEN evidence gates for engineering integrity, data/rights, paper execution/accounting, strategy economics, physical-order safety and external launch prerequisites. Each checklist evidence record includes source path/line, status, evidence, blocker, commit and tests.",
@@ -272,14 +272,14 @@
         },
         {
           "item_id": "PA-01-01",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 908,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Establish a canonical merge sequence by graph-based dependency audit; PR #37 precedes #36, and #38 depends on #36 unless deliberately rebased with a test-backed change log."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_existing_executable_test_artifact, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "docs/edge-program/capability-provenance.v1.json records exact SHA dependency edges PR-37 -> PR-36 -> PR-38 and PR-40 -> captured main.",
             "docs/edge-program/canonical-merge-sequence.v1.json freezes the exact-SHA sequence, isolated PR-34 treatment, PR-39 hold/reconciliation decision, and explicitly labels the artifact PLAN_ONLY_NOT_MERGED.",
@@ -306,14 +306,14 @@
         },
         {
           "item_id": "PA-01-03",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 910,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Explicitly preserve both forward-edge F17 instrument/data gates and F13 capability renderer if needed; PR #40 documents their omission and they must not vanish unnoticed."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/forward_edge/pipeline.py::_integrity_gate_codes retains the F17 instrument/data integrity gate path; tests/test_forward_edge_integrity_gates.py covers refusal and stable reason codes.",
             "src/financial_brain/forward_edge/tracker.py retains the F13 machine-readable capability matrix renderer; tests/test_forward_edge_tracker.py covers tracker-derived output and freshness.",
@@ -323,14 +323,14 @@
         },
         {
           "item_id": "PA-01-04",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 911,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Reconcile trial governance: retain mandatory experiment charter, cohort registry, immutable trials and owner-authorized quarter budget when reconciling PR #40's branch trial policy."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_recorded_test_evidence, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/forward_edge/charter.py::CharterRegistry persists immutable experiment charter/cohort-schedule bindings; `trials.py` requires exact charter and cohort scope for each protected trial.",
             "src/financial_brain/forward_edge/trials.py requires configured human-owner approvals for protocol/budget changes, validates approval scope/expiry/actor, refuses spent budgets and leaves Q1-2027 closed without an owner-approved protocol ADR and explicit positive budget.",
@@ -358,14 +358,14 @@
         },
         {
           "item_id": "PA-01-06",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 913,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Re-run all historical protected-baseline SHA checks after every merge, including LF/CRLF normalization rules with canonical serialization tests."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "`.github/workflows/ci.yml` runs on every push and pull request on Ubuntu and Windows; `scripts/validate_trial_program.py` invokes all protected-pin checks, while the full CI suite runs baseline parity tests.",
             "`src/financial_brain/forward_edge/trials.py::sha256_file` normalizes CRLF to LF only for files explicitly listed in protected-pins.json; all other pins remain byte-exact.",
@@ -381,14 +381,14 @@
         },
         {
           "item_id": "PA-01-07",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 914,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Resolve source inventory snapshot failure in PR #40 without loosening assertions; create deterministic cross-platform inventory generation."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "scripts/source_inventory.py creates deterministic sorted Python-source inventory; source hashes normalize CRLF to LF and serialized JSON has canonical ordering. The generator preserves unknown ownership/maturity rather than weakening assertions.",
             "tests/test_source_inventory.py verifies complete source coverage, stable double generation, LF/CRLF-normalized hashes, and exact equality with the committed inventory and runner graph snapshots.",
@@ -422,14 +422,14 @@
         },
         {
           "item_id": "PA-01-09",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 916,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Eliminate duplicate chart-pattern CI steps; maintain an explicit `ruff`, `mypy`, migration, invariant, unit, integration, coverage, dependency-audit matrix."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "`.github/workflows/ci.yml` has one chart-pattern matrix freshness step, one offline demo step and one chart-pattern coverage floor; the validator rejects duplicates.",
             "docs/edge-program/ci-check-matrix.v1.json explicitly maps Ruff, mypy, migration tests, repository invariants, unit and integration coverage (shared full-suite invocation documented), critical/package coverage, and dependency audit to workflow steps.",
@@ -493,14 +493,14 @@
         },
         {
           "item_id": "PA-01-13",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 920,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add a release provenance manifest containing source SHA, test artifact hashes, changelog, strategy-rule hashes and data-rights posture."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "scripts/build_release_provenance.py creates and verifies docs/edge-program/release-provenance.current.json with exact source commit/branch/tree state, test artifact SHA-256, changelog hash, all Python strategy-rule hashes plus PineScript/rule catalogue hashes, and source-specific data-rights registry/review hashes and posture.",
             "The manifest is content-addressed, verifies all referenced bytes, records credential values as absent, and cannot label itself released. The GitHub Actions workflow generates/verifies and uploads per-OS release-provenance artifacts after tests.",
@@ -546,14 +546,14 @@
         },
         {
           "item_id": "PA-01-16",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 923,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Keep live broker order routing physically disabled at build, config, CLI, API and integration-test layers throughout the entire profitability program."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/execution/order_policy.py fixes PHYSICAL_ORDERS_ENABLED=False and deny_physical_order has no runtime configuration/credential/approval override.",
             "src/financial_brain/forward_edge/modes.py cannot grant LIVE_CASH; every session mode reports may_send_physical_order=False. Legacy Kite broker writes use the same permanent build-policy lock.",
@@ -572,10 +572,10 @@
       "status": "RED",
       "item_count": 32,
       "counts_by_status": {
-        "COMPLETE": 3,
+        "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 28,
+        "PARTIAL": 30,
         "UNASSESSED": 0
       },
       "evidence": [
@@ -818,14 +818,14 @@
         },
         {
           "item_id": "PA-02-13",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 945,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add deterministic, low-cost synthetic fixture and delayed/replay feed modes for engineering tests; visually and cryptographically distinguish fixture rows from true market observations."
           },
           "commit": "e8c2981b",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/forward_edge/fixtures.py::fixture_pack provides deterministic synthetic sessions for win, loss, no-trade, rejection, late quote, unknown order, adverse fill, and missed fill; tests/test_forward_edge_pipeline_compat.py checks all golden signatures and repeat-run determinism.",
             "src/financial_brain/forward_edge/market_data.py::normalize_kite_quote supports an explicit non-negative availability_delay while preserving the KITE_CONNECT_READ_ONLY source and separate exchange, receipt, and availability clocks.",
@@ -1210,14 +1210,14 @@
         },
         {
           "item_id": "PA-03-15",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 972,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Keep provider calls read-only in paper mode and prove via monkeypatching/denying all broker write endpoints."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/execution/order_policy.py sets PHYSICAL_ORDERS_ENABLED=False and unconditionally denies physical orders; there is no environment, credential, UI, approval or kill-switch override.",
             "src/financial_brain/execution/oms/kite_broker.py refuses every non-GET request before reading credentials or invoking network transport; the market-data and account adapters use GET for Kite reads.",
@@ -1256,23 +1256,23 @@
       "status": "AMBER",
       "item_count": 35,
       "counts_by_status": {
-        "COMPLETE": 3,
+        "COMPLETE": 1,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 32,
+        "PARTIAL": 34,
         "UNASSESSED": 0
       },
       "evidence": [
         {
           "item_id": "PA-04-01",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 983,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Enumerate existing OMS, paper books, legacy intraday runner, option spread runner and forward-edge pipeline; document one authoritative account/position ownership contract."
           },
           "commit": "a6cea56f",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "docs/edge-program/paper-account-position-ownership.v1.json enumerates the broker OMS, legacy intraday and swing books, decision candidate paper book, mutual-fund books, option execution subledger, ForwardSessionRunner, kernel EventKernel and CanonicalPortfolioLedger with source paths and explicit authoritative/not-authoritative scopes.",
             "The contract makes CanonicalPortfolioLedger the single consolidated paper-accounting/position projection, while the external broker remains authoritative for actual holdings. Operational OMS and desk ledgers own only their local order/event lifecycles until source-bound events are imported once; missing/conflicting fills remain unresolved and no synthetic close is allowed.",
@@ -1556,14 +1556,14 @@
         },
         {
           "item_id": "PA-04-12",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 994,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Model ambiguous same-bar stop/target ordering as conservative adverse-first or `UNRESOLVED`; never choose favorable outcome after seeing the bar."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "src/financial_brain/kernel/exit_scenarios.py::_replay counts a same-bar stop/target collision and executes the stop before any intrabar target, resolving OHLC ambiguity adversely for long and short positions. Opening gaps are processed chronologically before intrabar ranges.",
             "tests/test_kernel_exit_scenarios.py verifies long and short same-bar collisions: stop executes, target is not credited, and ambiguous_bar_count is one; historical replay does not select the favorable path."
@@ -1706,7 +1706,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement long-only/short-enabled feasible weight projection with desk-specific limits and signed exposure accounting."
           },
-          "commit": "25b88bc7",
+          "commit": "013b0640",
           "blocker": null,
           "evidence": [
             "Added `portfolio/constraints.py::project_feasible_weights`, with per-sleeve lower/upper bounds, long-only or short-enabled signed weights, cash-feasible zero bounds, gross/net exposure budgets and long/short exposure reporting. Seven focused tests cover projection and fail-closed invalid limits."
@@ -2066,10 +2066,10 @@
       "status": "AMBER",
       "item_count": 67,
       "counts_by_status": {
-        "COMPLETE": 6,
+        "COMPLETE": 0,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 61,
+        "PARTIAL": 67,
         "UNASSESSED": 0
       },
       "evidence": [
@@ -2455,14 +2455,14 @@
         },
         {
           "item_id": "PA-06-03",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1037,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Keep prior 2026Q4 protected trial limits intact unless the owner explicitly authorizes a documented amendment; never grant AI authority to increase its own budget."
           },
           "commit": null,
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "docs/forward-edge/trial-program.v1.json: Q4-2026 remains EXHAUSTED at the frozen 13-trial budget; Q1-2027 remains NOT_AUTHORIZED with null budget and ADR.",
             "src/financial_brain/forward_edge/trials.py: an exhausted budget rejects additional trials; any amendment requires a larger explicit budget, budget ADR, matching owner authority, and separate TRIAL_BUDGET_AMENDMENT; the agent actor cannot satisfy human approval.",
@@ -2599,14 +2599,14 @@
         },
         {
           "item_id": "PA-06-09",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1043,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Estimate trade- and session-clustered uncertainty (HAC/block bootstrap) with effective independent observations, not raw overlapping trade counts."
           },
           "commit": "65ef6324",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "forward_edge.cluster_attribution.trade_session_block_bootstrap estimates uncertainty by resampling chronological sessions in stationary blocks and trade IDs as whole clusters; each observed cell receives the product of sampled session/trade multiplicities.",
             "The report includes percentile confidence bounds, effective independent observation count (conservative minimum of Kish session/trade cluster dimensions), observed cluster counts, block length, replicate count, seed, method and source-bound report hash.",
@@ -2657,14 +2657,14 @@
         },
         {
           "item_id": "PA-06-11",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1045,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Report two independent scientific outcomes: forecasting skill vs an honest null, and executable after-cost economic skill vs benchmark."
           },
           "commit": "aa5c7a57",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "research.dual_skill_report.build_dual_skill_report computes forecast Brier loss and skill against an explicit null as one scientific outcome, and compounded strategy net return/excess versus a same-session benchmark as a separate economic outcome.",
             "The panels retain distinct forecast/economic source-hash sets and the report defines no combined score; it explicitly labels the economic comparison descriptive and not alpha certification.",
@@ -2679,14 +2679,14 @@
         },
         {
           "item_id": "PA-06-12",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1046,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Diagnose fragility by source date, instrument bucket, regime, exposure, hold duration, cost level, slippage, top names and exclusion filters."
           },
           "commit": "237f6f7b",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "research.fragility.build_fragility_report emits source-hashed descriptive slices by source date, trading session, instrument bucket, regime, exposure bucket, holding-period bucket, cost level, slippage bucket and exclusion filter, and reports top-five instrument concentration.",
             "Every dimension is explicit (including UNKNOWN rather than omission); sparse groups are labeled LOW_SAMPLE, IDs must be unique, and reports preserve both input and output hashes without selecting a winner.",
@@ -2701,14 +2701,14 @@
         },
         {
           "item_id": "PA-06-13",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1047,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add sensitivity analysis around strategy parameters without using test-period performance to select a new best parameter."
           },
           "commit": "aa5c7a57",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "research.parameter_sensitivity freezes the candidate parameter grid and training/validation/test source identities before scoring, and requires the designated center to be the training-score winner.",
             "The report returns all held-out test values as descriptive-only, never ranks or selects a test winner, and explicitly records that the test period was not used for selection.",
@@ -2775,14 +2775,14 @@
         },
         {
           "item_id": "PA-06-16",
-          "status": "COMPLETE",
+          "status": "PARTIAL",
           "source": {
             "line": 1050,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Produce machine-readable pass/fail decision with exactly which confidence, cost, null, robustness, drawdown or fidelity gate failed."
           },
           "commit": "30bf6813",
-          "blocker": null,
+          "blocker": "PARTIAL: promotion is withheld because the checklist completion evidence gate found: missing_existing_documentation_reference, missing_hashed_acceptance_artifact. Attach accurate item-specific acceptance evidence before restoring COMPLETE.",
           "evidence": [
             "forward_edge.evidence_stats.promotion_verdict returns a machine-readable overall disposition, exact reason codes, and named confidence, cost, null, robustness, drawdown and fidelity gate states.",
             "Each gate distinguishes PASS, FAIL and UNASSESSED; missing null/fidelity/drawdown facts cannot silently pass. Invalid non-finite returns, malformed cost arrays, invalid cluster shares and truthy non-boolean gate values are rejected before verdict generation.",
@@ -3598,5 +3598,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "a0f91157ea703016ffbf0e5bc978a49b7ae316e3d3d0d4fe8f9ac4ed77d96461"
+  "report_sha256": "950d2212700e9c436b3b8fa08264014b6368a49466755b3058ec6e1dea00dd97"
 }
