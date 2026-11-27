@@ -19,6 +19,7 @@ class _OptionGreeks(TypedDict):
     delta: Decimal
     gamma: Decimal
     vega: Decimal
+    theta: Decimal
 
 
 class _NormalizedPosition(TypedDict):
@@ -41,7 +42,9 @@ class _NormalizedLimits(TypedDict):
     greek_caps: dict[str, Decimal]
 
 
-_GREEK_NAMES: tuple[Literal["delta", "gamma", "vega"], ...] = ("delta", "gamma", "vega")
+_GREEK_NAMES: tuple[Literal["delta", "gamma", "vega", "theta"], ...] = (
+    "delta", "gamma", "vega", "theta"
+)
 
 
 def _decimal(value: Decimal | str | int, label: str) -> Decimal:
@@ -67,6 +70,9 @@ class GuardPosition:
     option_delta_exposure_inr: Decimal | str | int = Decimal("0")
     option_gamma_exposure_inr: Decimal | str | int = Decimal("0")
     option_vega_exposure_inr: Decimal | str | int = Decimal("0")
+    # Normalize contract theta to signed INR per calendar day, including the
+    # contract multiplier. The guard uses absolute portfolio exposure.
+    option_theta_exposure_inr_per_day: Decimal | str | int = Decimal("0")
     quote_executable: bool = False
     visible_exit_quantity: Decimal | str | int = Decimal("0")
 
@@ -84,6 +90,9 @@ class GuardPosition:
             "delta": _decimal(self.option_delta_exposure_inr, "option_delta_exposure_inr"),
             "gamma": _decimal(self.option_gamma_exposure_inr, "option_gamma_exposure_inr"),
             "vega": _decimal(self.option_vega_exposure_inr, "option_vega_exposure_inr"),
+            "theta": _decimal(
+                self.option_theta_exposure_inr_per_day, "option_theta_exposure_inr_per_day"
+            ),
         }
         if quantity <= 0 or step <= 0 or stop_risk < 0 or visible < 0:
             raise PortfolioExitGuardError("quantity/step must be positive; risk and visible depth non-negative")
@@ -115,6 +124,7 @@ class ExitGuardLimits:
     max_gross_option_delta_inr: Decimal | str | int | None = None
     max_gross_option_gamma_inr: Decimal | str | int | None = None
     max_gross_option_vega_inr: Decimal | str | int | None = None
+    max_gross_option_theta_inr_per_day: Decimal | str | int | None = None
 
     def normalized(self) -> _NormalizedLimits:
         stop = _decimal(self.max_open_stop_risk_inr, "max_open_stop_risk_inr")
@@ -131,9 +141,12 @@ class ExitGuardLimits:
         greek_caps = {}
         for name, raw_cap in (("delta", self.max_gross_option_delta_inr),
                               ("gamma", self.max_gross_option_gamma_inr),
-                              ("vega", self.max_gross_option_vega_inr)):
+                              ("vega", self.max_gross_option_vega_inr),
+                              ("theta", self.max_gross_option_theta_inr_per_day)):
             if raw_cap is not None:
-                cap = _decimal(raw_cap, f"max_gross_option_{name}_inr")
+                label = ("max_gross_option_theta_inr_per_day" if name == "theta"
+                         else f"max_gross_option_{name}_inr")
+                cap = _decimal(raw_cap, label)
                 if cap <= 0:
                     raise PortfolioExitGuardError("option Greek limits must be positive")
                 greek_caps[name] = cap
