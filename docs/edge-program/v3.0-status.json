@@ -9360,7 +9360,7 @@
       ],
       "blocker": "Partial: a durable, hash-verified session P&L builder and monthly aggregate are implemented, with actual net returns tied to prospectively sealed fills; automatic runner/mark/shadow/dashboard integration and independent evidence custody remain.",
       "last_audited_at_utc": "2026-11-27T05:56:05Z",
-      "commit": null,
+      "commit": "4617c9eb",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0717-ledgerfinal tests/test_forward_edge_prospective_pnl.py -q: 5 passed, covering filled inventory reconciliation, paper/shadow split, monthly sums, immutable replay, unsealed-fill rejection, held-position P&L and cash-only status.",
         "Ruff on prospective_pnl and its tests: passed.",
