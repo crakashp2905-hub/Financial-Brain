@@ -395,3 +395,44 @@ def test_monthly_candidate_subperiod_report_keeps_fixed_params_and_descriptive_b
     assert report["periods"]["2024"]["benchmark_variant"] == "PRICE"
     assert "Do not use them" in report["selection_warning"]
     assert "not prospective" in report["fills_note"]
+
+
+def test_owner_sleeve_gate_requires_owner_approval_and_rejects_over_capital():
+    plan = {"status": "READY_FOR_PAPER_REVIEW", "capital_inr": 10_000.0,
+            "estimated_costs_inr": 50.0, "orders": [{"lineage": "L1", "side": "BUY"}]}
+    kwargs = {"plan": plan, "owner_id": "owner-1", "approval_reference": "risk-review-v3",
+              "approved_risk_sleeve_inr": 8_000.0, "available_risk_capital_inr": 8_000.0,
+              "expected_gross_alpha_inr": 100.0, "alpha_evidence_sha256": "a" * 64}
+    result = ZE.gate_monthly_plan_to_owner_sleeve(**kwargs)
+    assert result["status"] == "REJECTED_CAPITAL_LIMIT"
+    assert result["orders"] == []
+    with pytest.raises(ValueError, match="approval reference"):
+        ZE.gate_monthly_plan_to_owner_sleeve(**{**kwargs, "approval_reference": " "})
+
+
+def test_owner_sleeve_gate_returns_cash_when_costs_exceed_or_alpha_is_unverified():
+    plan = {"status": "READY_FOR_PAPER_REVIEW", "capital_inr": 5_000.0,
+            "estimated_costs_inr": 75.0, "orders": [{"lineage": "L1", "side": "BUY"}]}
+    base = {"plan": plan, "owner_id": "owner-1", "approval_reference": "approval-7",
+            "approved_risk_sleeve_inr": 10_000.0, "available_risk_capital_inr": 8_000.0,
+            "expected_gross_alpha_inr": 75.0, "alpha_evidence_sha256": "b" * 64}
+    result = ZE.gate_monthly_plan_to_owner_sleeve(**base)
+    assert result["status"] == "CASH_NO_TRADE"
+    assert result["orders"] == []
+    assert "does not exceed" in result["reason"]
+    no_receipt = ZE.gate_monthly_plan_to_owner_sleeve(
+        **{**base, "expected_gross_alpha_inr": None, "alpha_evidence_sha256": None})
+    assert no_receipt["status"] == "CASH_NO_TRADE"
+    assert "unavailable" in no_receipt["reason"]
+
+
+def test_owner_sleeve_gate_passes_only_reviewable_paper_intents_with_edge_after_costs():
+    plan = {"status": "READY_FOR_PAPER_REVIEW", "capital_inr": 5_000.0,
+            "estimated_costs_inr": 25.0, "orders": [{"lineage": "L1", "side": "BUY"}]}
+    result = ZE.gate_monthly_plan_to_owner_sleeve(
+        plan=plan, owner_id="owner-1", approval_reference="approval-8",
+        approved_risk_sleeve_inr=10_000.0, available_risk_capital_inr=8_000.0,
+        expected_gross_alpha_inr=100.0, alpha_evidence_sha256="c" * 64)
+    assert result["status"] == "READY_FOR_PAPER_REVIEW"
+    assert result["orders"] == plan["orders"]
+    assert result["physical_orders_submitted"] is False

@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "a1bf3c48caf9bf2f365f2998529a0cefe34ca4aa776bf2989b421f909d8e1e25",
-  "audit_export_sha256": "2277156013f1629b6ac3e0a8cb68099dbccc20b0cecffbddb6bdc2e25c21f926",
+  "status_ledger_sha256": "ec9c80b5aa549c2e23490413000c499ab7453ed5f7f6650b0dcd67888d163047",
+  "audit_export_sha256": "2c461ddca0a101f5bad89fe1d4fb994c7a36ec0782419eed32f851109a6c734a",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 838,
-    "UNASSESSED": 410
+    "PARTIAL": 839,
+    "UNASSESSED": 409
   },
-  "assessed_count": 968,
-  "unassessed_count": 410,
+  "assessed_count": 969,
+  "unassessed_count": 409,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 58,
-        "UNASSESSED": 3
+        "PARTIAL": 59,
+        "UNASSESSED": 2
       },
       "evidence": [
         {
@@ -3100,16 +3100,27 @@
         },
         {
           "item_id": "PA-07-16",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1076,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Limit live paper capital to an owner-specified risk sleeve; model a no-trade cash outcome when available risk capital cannot cover realistic costs."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: explicit owner sleeve and cost-versus-edge gates are implemented for monthly plan receipts, but approval and expectancy evidence are not independently authenticated and the gate is not wired into every paper strategy path.",
+          "evidence": [
+            "`ForwardRunConfig` already requires explicit capital in its immutable run identity, and `forward_edge.capital_proposal` produces a human-review-pending paper/micro-capital proposal with hard cost-to-P&L checks; neither proves approval is wired into all paper allocation paths.",
+            "`kernel.trade_admissibility` can return CASH for absent edge, excessive costs and insufficient budget, but this decision path is not universally connected to monthly zoo candidate intents.",
+            "Commit pending adds `paper.zoo_edges.gate_monthly_plan_to_owner_sleeve`, which requires an owner identity, approval reference, approved sleeve amount, currently available amount, plan capital, an expected gross alpha estimate and its SHA-256 evidence reference. It rejects plans above either capital limit and emits no orders.",
+            "The monthly gate returns CASH_NO_TRADE when alpha/cost evidence is absent or estimated costs are greater than or equal to expected gross alpha; it only passes review-required paper intents, never physical orders.",
+            "The approval reference and alpha evidence hash are caller-supplied and are not cryptographically authenticated or bound to an external owner trust root; universal monthly/forward runner enforcement is not complete."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0716-capital-gate tests/test_zoo_h_targets.py -q: 24 passed, covering missing owner approval, sleeve/available capital caps, missing alpha evidence, costs >= expected gross edge, and permitted paper-review-only intents.",
+            "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+            "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-17",
@@ -3508,5 +3519,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "10f0a111a38f4b5f38cd4754ad1a56385a0c96b2763e2a3c4d0a353814c4d7cd"
+  "report_sha256": "f806d2491692adeec88e0af3f55aa0bb5feee9202e3c41b489c2173379d774f0"
 }

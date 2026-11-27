@@ -484,6 +484,97 @@ def record_monthly_paper_snapshot(z, *, strategy: str, session: date,
     return {**payload, "payload_hash": payload_hash, "idempotent_replay": False}
 
 
+def gate_monthly_plan_to_owner_sleeve(*, plan: dict, owner_id: str,
+                                       approval_reference: str,
+                                       approved_risk_sleeve_inr: float,
+                                       available_risk_capital_inr: float,
+                                       expected_gross_alpha_inr: float | None,
+                                       alpha_evidence_sha256: str | None) -> dict:
+    """Fail closed on monthly paper intents without an owner-approved capital sleeve.
+
+    A plan remains a paper-review artifact. The expected gross alpha is consumed as an
+    evidence-backed estimate; this function does not estimate alpha or grant approval.
+    Costs equal to or above expected gross alpha produce a CASH outcome with no intents.
+    """
+    import re
+
+    if not owner_id.strip() or not approval_reference.strip():
+        raise ValueError("owner identity and explicit sleeve approval reference are required")
+    for name, value in (("approved_risk_sleeve_inr", approved_risk_sleeve_inr),
+                        ("available_risk_capital_inr", available_risk_capital_inr)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or not np.isfinite(value) or value <= 0:
+            raise ValueError(f"{name} must be finite and positive")
+    if available_risk_capital_inr > approved_risk_sleeve_inr:
+        raise ValueError("available risk capital cannot exceed the owner-approved sleeve")
+    plan_capital = plan.get("capital_inr")
+    if isinstance(plan_capital, bool) or not isinstance(plan_capital, (int, float)) \
+            or not np.isfinite(plan_capital) or plan_capital <= 0:
+        raise ValueError("plan must include finite positive capital_inr")
+    if plan_capital > approved_risk_sleeve_inr or plan_capital > available_risk_capital_inr:
+        return {"status": "REJECTED_CAPITAL_LIMIT", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "monthly plan exceeds approved or currently available risk capital",
+                "physical_orders_submitted": False}
+    if (expected_gross_alpha_inr is None or isinstance(expected_gross_alpha_inr, bool)
+            or not isinstance(expected_gross_alpha_inr, (int, float))
+            or not np.isfinite(expected_gross_alpha_inr)
+            or not isinstance(alpha_evidence_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", alpha_evidence_sha256)):
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "evidence-backed expected gross alpha is unavailable",
+                "physical_orders_submitted": False}
+    estimated_costs = plan.get("estimated_costs_inr")
+    if isinstance(estimated_costs, bool) or not isinstance(estimated_costs, (int, float)) \
+            or not np.isfinite(estimated_costs) or estimated_costs < 0:
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "realistic estimated transaction costs are unavailable",
+                "physical_orders_submitted": False}
+    if expected_gross_alpha_inr <= estimated_costs:
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital,
+                "expected_gross_alpha_inr": expected_gross_alpha_inr,
+                "estimated_costs_inr": estimated_costs,
+                "alpha_evidence_sha256": alpha_evidence_sha256, "orders": [],
+                "reason": "expected gross alpha does not exceed estimated costs",
+                "physical_orders_submitted": False}
+    if plan.get("status") != "READY_FOR_PAPER_REVIEW" or not plan.get("orders"):
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital,
+                "expected_gross_alpha_inr": expected_gross_alpha_inr,
+                "estimated_costs_inr": estimated_costs,
+                "alpha_evidence_sha256": alpha_evidence_sha256, "orders": [],
+                "reason": "monthly plan has no actionable paper intents",
+                "physical_orders_submitted": False}
+    return {"status": "READY_FOR_PAPER_REVIEW", "owner_id": owner_id,
+            "approval_reference": approval_reference,
+            "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+            "available_risk_capital_inr": available_risk_capital_inr,
+            "requested_capital_inr": plan_capital,
+            "expected_gross_alpha_inr": expected_gross_alpha_inr,
+            "estimated_costs_inr": estimated_costs,
+            "alpha_evidence_sha256": alpha_evidence_sha256,
+            "orders": plan["orders"], "reason": "within owner sleeve and expected gross edge covers costs",
+            "physical_orders_submitted": False}
+
+
 def monthly_book_diversification_report(z, *, strategies: tuple[str, ...] = MONTHLY_BOOKS,
                                        start: date | None = None, end: date | None = None,
                                        industry_by_lineage: dict[str, str] | None = None,

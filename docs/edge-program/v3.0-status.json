@@ -9326,12 +9326,25 @@
     {
       "id": "PA-07-16",
       "text": "Limit live paper capital to an owner-specified risk sleeve; model a no-trade cash outcome when available risk capital cannot cover realistic costs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`ForwardRunConfig` already requires explicit capital in its immutable run identity, and `forward_edge.capital_proposal` produces a human-review-pending paper/micro-capital proposal with hard cost-to-P&L checks; neither proves approval is wired into all paper allocation paths.",
+        "`kernel.trade_admissibility` can return CASH for absent edge, excessive costs and insufficient budget, but this decision path is not universally connected to monthly zoo candidate intents.",
+        "Commit pending adds `paper.zoo_edges.gate_monthly_plan_to_owner_sleeve`, which requires an owner identity, approval reference, approved sleeve amount, currently available amount, plan capital, an expected gross alpha estimate and its SHA-256 evidence reference. It rejects plans above either capital limit and emits no orders.",
+        "The monthly gate returns CASH_NO_TRADE when alpha/cost evidence is absent or estimated costs are greater than or equal to expected gross alpha; it only passes review-required paper intents, never physical orders.",
+        "The approval reference and alpha evidence hash are caller-supplied and are not cryptographically authenticated or bound to an external owner trust root; universal monthly/forward runner enforcement is not complete."
+      ],
+      "blocker": "Partial: explicit owner sleeve and cost-versus-edge gates are implemented for monthly plan receipts, but approval and expectancy evidence are not independently authenticated and the gate is not wired into every paper strategy path.",
+      "last_audited_at_utc": "2026-11-27T05:46:41Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0716-capital-gate tests/test_zoo_h_targets.py -q: 24 passed, covering missing owner approval, sleeve/available capital caps, missing alpha evidence, costs >= expected gross edge, and permitted paper-review-only intents.",
+        "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+        "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "The monthly paper gate requires explicit sleeve information, prevents excess planned capital and retains cash when alpha proof is unavailable or expected costs consume gross edge. It does not authenticate owner approvals or enforce all strategy runners; PA-07-16 remains PARTIAL."
     },
     {
       "id": "PA-07-17",
@@ -21110,6 +21123,7 @@
       "PA-07-13",
       "PA-07-14",
       "PA-07-15",
+      "PA-07-16",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21548,11 +21562,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 968,
+    "audited_count": 969,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 838,
-      "UNASSESSED": 410,
+      "PARTIAL": 839,
+      "UNASSESSED": 409,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21701,8 +21715,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 838,
-    "UNASSESSED": 410,
+    "PARTIAL": 839,
+    "UNASSESSED": 409,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }
