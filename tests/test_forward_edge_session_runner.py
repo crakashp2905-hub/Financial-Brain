@@ -21,6 +21,7 @@ from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     ForwardSessionRunnerError,
 )
+from financial_brain.forward_edge.trader_dashboard import snapshots_from_forward_sessions
 from financial_brain.forward_edge.paper_book_adapter import (
     PaperBookSignal,
     due_exits,
@@ -451,6 +452,22 @@ def test_end_checkpoint_hashes_event_consumer_offsets(tmp_path):
     runner._con.execute("UPDATE runner_event_cursors SET event_id='tampered' WHERE session_id='s'")
     runner._con.commit()
     assert runner.verify_checkpoint("s", checkpoint["checkpoint_id"])["current_records_match"] is False
+    runner.close()
+
+
+def test_dashboard_adapter_consumes_durable_forward_session_close_evidence(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    runner.ingest("s", config, [make_event(event_id="dashboard-quote")])
+    runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    (snapshot,) = snapshots_from_forward_sessions(
+        runner=runner, desks={"SWING": ("s", "FIXTURE", 10.0)})
+    assert snapshot.source_mode == "FIXTURE"
+    assert snapshot.source_sha256 == runner.records("s")["session_reports"][0]["report_sha256"]
+    assert snapshot.newest_quote_age_seconds == 1.0
+    assert snapshot.free_cash_inr == 100000
+    assert snapshot.risk_policy_status == "PASS"
     runner.close()
 
 

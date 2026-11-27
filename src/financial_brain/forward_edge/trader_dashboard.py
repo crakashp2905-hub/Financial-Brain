@@ -9,10 +9,15 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol
 
 
 class TraderDashboardError(ValueError):
     """Dashboard snapshots are incomplete, stale, or internally inconsistent."""
+
+
+class ForwardSessionRecords(Protocol):
+    def records(self, session_id: str) -> dict[str, object]: ...
 
 
 DESKS = frozenset({"SWING", "INTRADAY", "OPTIONS", "ETF", "MUTUAL_FUND"})
@@ -392,6 +397,78 @@ class DeskDashboardSnapshot:
         if self.newest_quote_age_seconds is None:
             return "UNKNOWN"
         return "FRESH" if self.newest_quote_age_seconds <= self.maximum_quote_age_seconds else "STALE"
+
+
+def snapshots_from_forward_sessions(*, runner: ForwardSessionRecords,
+                                    desks: dict[str, tuple[str, str, float]]) -> tuple[DeskDashboardSnapshot, ...]:
+    """Adapt closed durable ForwardSessionRunner records into dashboard desk snapshots.
+
+    Each desk maps to `(session_id, explicitly classified source_mode, maximum_quote_age_seconds)`.
+    The adapter intentionally refuses non-terminal, unreconciled and uncosted sessions.
+    """
+    snapshots: list[DeskDashboardSnapshot] = []
+    for desk, (session_id, source_mode, max_quote_age) in sorted(desks.items()):
+        if desk not in DESKS:
+            raise TraderDashboardError("forward session adapter received an unknown product desk")
+        records = runner.records(session_id)
+        reports = records.get("session_reports")
+        accounting = records.get("accounting")
+        if not isinstance(reports, list) or len(reports) != 1 or not isinstance(reports[0], dict):
+            raise TraderDashboardError(f"{desk} requires exactly one durable session close report")
+        report = reports[0]
+        reconciliation = report.get("day_end_reconciliation")
+        if (report.get("status") != "CLOSED" or not isinstance(reconciliation, dict)
+                or reconciliation.get("reconciled") is not True
+                or reconciliation.get("fees_reconciled") is not True):
+            raise TraderDashboardError(f"{desk} forward session is not closed and reconciled with fee coverage")
+        if not isinstance(accounting, dict):
+            raise TraderDashboardError(f"{desk} forward session has no rebuilt OMS accounting")
+        try:
+            as_of = datetime.fromisoformat(str(report["closed_at"]))
+            cash = float(reconciliation["cash_inr"])
+            positions = reconciliation["positions"]
+            marks = reconciliation["position_marks"]
+            if not isinstance(positions, dict) or not isinstance(marks, list):
+                raise TypeError("invalid position and mark projections")
+            if (reconciliation.get("profitability_eligible") is not True
+                    and (int(accounting.get("filled_order_count", 0)) > 0 or positions)):
+                raise ValueError("traded or open positions lack fully costed net-P&L evidence")
+            marks_by_instrument = {str(mark["instrument_id"]): mark for mark in marks if isinstance(mark, dict)}
+            if set(positions) != set(marks_by_instrument):
+                raise ValueError("position inventory and quote mark coverage differ")
+            holdings = tuple(DashboardHolding(
+                instrument=str(instrument), quantity=float(quantity),
+                market_value_inr=float(marks_by_instrument[instrument]["market_value_inr"]),
+                unrealized_pnl_inr=float(marks_by_instrument[instrument]["unrealized_gross_pnl_inr"]))
+                for instrument, quantity in sorted(positions.items()))
+            quote_ages = [float(mark["quote_age_ms"]) / 1000 for mark in marks_by_instrument.values()]
+            if not quote_ages:
+                events = records.get("events")
+                if isinstance(events, list):
+                    for event in events:
+                        if not isinstance(event, dict):
+                            continue
+                        available_at = event.get("available_at")
+                        if available_at:
+                            quote_ages.append(max(0.0, (as_of - datetime.fromisoformat(str(available_at))).total_seconds()))
+            quote_age = max(quote_ages) if quote_ages else None
+            realized = float(reconciliation["realized_gross_pnl_inr"])
+            unrealized = float(reconciliation["unrealized_gross_pnl_inr"])
+            charges = float(reconciliation["charges_inr"])
+            daily_net = realized + unrealized - charges
+            historical_net = float(accounting["realized_gross_pnl_inr"]) + unrealized - float(accounting["charges_inr"])
+            digest = str(report["report_sha256"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise TraderDashboardError(f"{desk} forward session evidence is malformed: {exc}") from exc
+        snapshot = DeskDashboardSnapshot(
+            desk=desk, as_of=as_of, source_mode=source_mode, source_sha256=digest,
+            newest_quote_age_seconds=quote_age, maximum_quote_age_seconds=max_quote_age,
+            risk_policy_status="PASS" if not report.get("unresolved_exposures") else "BLOCK",
+            holdings=holdings, free_cash_inr=cash, daily_net_pnl_inr=daily_net,
+            historical_net_pnl_inr=historical_net)
+        snapshot.validate()
+        snapshots.append(snapshot)
+    return tuple(snapshots)
 
 
 def build_trader_dashboard(*, snapshots: tuple[DeskDashboardSnapshot, ...],
