@@ -9716,12 +9716,18 @@
     {
       "id": "PA-09-02",
       "text": "Build strict 09:15 IST session-aligned 15-minute OHLC from complete intraday feeds and prevent the currently forming bar from leaking future observations.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_market.py build_15m_bars validates timezone-aware IST session alignment, OHLC ordering, unique minute observations, all 15 expected minutes, bar end and source availability cutoff; incomplete/forming/delayed bars are excluded.",
+        "src/financial_brain/forecasting/index_15m.py completed_before and features_at restrict to completed, available bars in the current session; leak_check shocks unknown future bars.",
+        "tests/test_forecasting_index_market.py and tests/test_forecasting_index_15m.py: 18 passed; Ruff and mypy passed.",
+        "No authorized index-minute feed/storage adapter is wired to this pure builder; local archives contain no index-minute history, so end-to-end coverage and operational leakage validation remain unproven."
+      ],
+      "blocker": "Wire an authorized complete index-minute feed into this builder, persist source and availability clocks, and validate on real sessions. Current repo provides the strict pure builder but no end-to-end data path.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": null,
+      "test_result": "18 focused forecasting-index tests passed; Ruff and mypy passed for both forecast modules."
     },
     {
       "id": "PA-09-03",
@@ -21173,6 +21179,7 @@
       "PA-08-14",
       "PA-08-15",
       "PA-09-01",
+      "PA-09-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21596,13 +21603,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 972,
+    "audited_count": 973,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 842,
-      "UNASSESSED": 406
+      "PARTIAL": 843,
+      "UNASSESSED": 405
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21751,7 +21758,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 842,
-    "UNASSESSED": 406
+    "PARTIAL": 843,
+    "UNASSESSED": 405
   }
 }
