@@ -10549,12 +10549,14 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/evaluation/events.py defines momentum and recent-return matching controls; src/financial_brain/evaluation/event_response.py subtracts the same-window universe median from event returns",
-        "A complete event-selection comparison against matched sector and size exposures, combined with momentum-overlap attribution, was not found"
+        "src/financial_brain/evaluation/events.py controls for 12-1 momentum and 20-day recent return; src/financial_brain/evaluation/event_response.py subtracts same-window universe median reaction",
+        "src/financial_brain/strategies/evaluation_controls.py provides same-sector matching on momentum, 52-week-high proximity and volatility; matched_sector_size_controls adds positive point-in-time size matching",
+        "tests/test_event_matched_sector_size.py: same-sector, size/covariate matching, uniqueness and missing-size refusal",
+        "The matched controls have not yet been joined into a unified event-selection report and evaluated on the historical event cohort"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "a791a227"
+      "commit": "4eecd196"
     },
     {
       "id": "PA-12-07",
