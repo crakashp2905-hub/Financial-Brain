@@ -178,11 +178,64 @@ def test_calls_are_throttled_to_the_published_rate():
     """Exceeding Kite's limits risks the owner's account, which is not this project's
     cost to impose."""
     import time
-    kd._last_call = 0.0
+    kd._rate_limiter.reset()
     t0 = time.monotonic()
     kd._throttle()
     kd._throttle()
     assert time.monotonic() - t0 >= kd.MIN_INTERVAL_S * 0.9
+
+
+def test_token_bucket_enforces_quota_with_deterministic_clock():
+    clock = [0.0]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        clock[0] += seconds
+
+    bucket = kd.TokenBucket(rate_per_second=3, capacity=1,
+                            clock=lambda: clock[0], sleeper=sleep)
+    bucket.acquire()
+    bucket.acquire()
+    assert sleeps == pytest.approx([1 / 3])
+
+
+def test_quote_snapshot_batches_subscriptions_and_reports_missing_coverage(monkeypatch):
+    symbols = [f"NSE:S{i}" for i in range(kd.MAX_QUOTE_SYMBOLS + 1)]
+    calls = []
+    delays = []
+
+    def fetch(batch, *, kind):
+        calls.append((list(batch), kind))
+        # Deliberately omit one requested symbol and include an unexpected one.
+        result = {symbol: {"last_price": 100.0} for symbol in batch if symbol != symbols[-1]}
+        result["NSE:UNSUBSCRIBED"] = {"last_price": 1.0}
+        return result
+
+    monkeypatch.setattr(kd, "quote", fetch)
+    snapshot = kd.quote_snapshot(
+        symbols, kind="full", max_batches=2, max_jitter_s=0.05,
+        jitter_source=lambda low, high: 0.02, sleeper=delays.append)
+
+    assert [len(batch) for batch, _ in calls] == [500, 1]
+    assert all(kind == "full" for _, kind in calls)
+    assert delays == [0.02]
+    assert snapshot.status == "INCOMPLETE"
+    assert snapshot.missing_symbols == (symbols[-1],)
+    assert snapshot.unexpected_symbols == ("NSE:UNSUBSCRIBED",)
+    assert snapshot.coverage_fraction == pytest.approx(500 / 501)
+    assert snapshot.market_wide_coverage_claim is False
+    assert snapshot.claim_scope == "EXPLICIT_REQUESTED_SUBSCRIPTIONS_ONLY"
+    assert len(snapshot.sha256()) == 64
+
+
+def test_quote_snapshot_applies_backpressure_before_any_api_call(monkeypatch):
+    calls = []
+    monkeypatch.setattr(kd, "quote", lambda *args, **kwargs: calls.append(args) or {})
+    symbols = [f"NSE:S{i}" for i in range(kd.MAX_QUOTE_SYMBOLS + 1)]
+    with pytest.raises(kd.KiteDataError, match="bounded backlog"):
+        kd.quote_snapshot(symbols, max_batches=1)
+    assert calls == []
 
 
 def test_datetime_bounds_carry_the_time_of_day():

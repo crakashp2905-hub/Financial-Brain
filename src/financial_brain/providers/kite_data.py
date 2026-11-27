@@ -37,15 +37,20 @@ rather than defaulted to "now", so a caller must state the moment it is reasonin
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
+import math
 import os
+import random
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Callable
 
 API = "https://api.kite.trade"
 MIN_INTERVAL_S = 1 / 3          # Kite's documented ceiling for historical data
@@ -64,8 +69,78 @@ ENDPOINTS = (
 INTERVALS = ("minute", "3minute", "5minute", "10minute", "15minute", "30minute",
              "60minute", "day")
 
-_clock = threading.Lock()
-_last_call = 0.0
+class TokenBucket:
+    """Thread-safe token bucket with injectable time for deterministic verification."""
+
+    def __init__(self, *, rate_per_second: float, capacity: float = 1.0,
+                 clock: Callable[[], float] = time.monotonic,
+                 sleeper: Callable[[float], None] = time.sleep) -> None:
+        if (not math.isfinite(rate_per_second) or rate_per_second <= 0 or
+                not math.isfinite(capacity) or capacity < 1):
+            raise ValueError("token-bucket rate must be positive and capacity at least one")
+        self.rate_per_second = float(rate_per_second)
+        self.capacity = float(capacity)
+        self._clock = clock
+        self._sleep = sleeper
+        self._tokens = self.capacity
+        self._updated_at = self._clock()
+        self._lock = threading.Lock()
+
+    def acquire(self, tokens: float = 1.0) -> None:
+        if not math.isfinite(tokens) or tokens <= 0 or tokens > self.capacity:
+            raise ValueError("requested token count must be positive and within bucket capacity")
+        with self._lock:
+            while True:
+                now = self._clock()
+                elapsed = max(0.0, now - self._updated_at)
+                self._tokens = min(self.capacity, self._tokens + elapsed * self.rate_per_second)
+                self._updated_at = now
+                if self._tokens >= tokens:
+                    self._tokens -= tokens
+                    return
+                self._sleep((tokens - self._tokens) / self.rate_per_second)
+
+    def reset(self) -> None:
+        """Restore a full bucket; intended for isolated tests and controlled startup."""
+        with self._lock:
+            self._tokens = self.capacity
+            self._updated_at = self._clock()
+
+
+@dataclass(frozen=True)
+class QuoteSnapshot:
+    """Observed quote coverage for an explicit, bounded subscription set."""
+
+    requested_symbols: tuple[str, ...]
+    observed_symbols: tuple[str, ...]
+    missing_symbols: tuple[str, ...]
+    unexpected_symbols: tuple[str, ...]
+    batch_count: int
+    quotes: dict[str, dict]
+    claim_scope: str = "EXPLICIT_REQUESTED_SUBSCRIPTIONS_ONLY"
+    market_wide_coverage_claim: bool = False
+
+    @property
+    def status(self) -> str:
+        return "COMPLETE" if not self.missing_symbols else "INCOMPLETE"
+
+    @property
+    def coverage_fraction(self) -> float:
+        return len(self.observed_symbols) / len(self.requested_symbols)
+
+    def sha256(self) -> str:
+        body = {"requested_symbols": self.requested_symbols,
+                "observed_symbols": self.observed_symbols,
+                "missing_symbols": self.missing_symbols,
+                "unexpected_symbols": self.unexpected_symbols,
+                "batch_count": self.batch_count, "quotes": self.quotes,
+                "claim_scope": self.claim_scope,
+                "market_wide_coverage_claim": self.market_wide_coverage_claim}
+        encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+MAX_QUOTE_BATCHES_PER_SNAPSHOT = 20
 
 
 class KiteNotConfigured(RuntimeError):
@@ -94,13 +169,12 @@ def credentials() -> tuple[str, str]:
     return key, token
 
 
+_rate_limiter = TokenBucket(rate_per_second=1 / MIN_INTERVAL_S, capacity=1.0)
+
+
 def _throttle() -> None:
-    global _last_call
-    with _clock:
-        wait = MIN_INTERVAL_S - (time.monotonic() - _last_call)
-        if wait > 0:
-            time.sleep(wait)
-        _last_call = time.monotonic()
+    """Acquire one shared historical/quote API request token (no burst above 3/s)."""
+    _rate_limiter.acquire()
 
 
 def _get(path: str, params: dict | None = None, *, timeout: int = 30) -> dict:
@@ -166,7 +240,7 @@ def candles(instrument_token: int, start: date | datetime, as_of: date | datetim
     if interval not in INTERVALS:
         raise KiteDataError(f"interval must be one of {INTERVALS}")
     fmt = "%Y-%m-%d %H:%M:%S" if isinstance(start, datetime) else "%Y-%m-%d"
-    params = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
+    params: dict[str, str | int] = {"from": start.strftime(fmt), "to": as_of.strftime(fmt)}
     if continuous:
         params["continuous"] = 1            # futures: expired contracts stitched into one series (day interval)
     if oi:
@@ -195,6 +269,58 @@ def quote(symbols: list[str], kind: str = "ohlc") -> dict:
                             f"got {len(symbols)}")
     body = _get(paths[kind], {"i": symbols})
     return body.get("data", {})
+
+
+def quote_snapshot(symbols: list[str], kind: str = "full", *,
+                   max_batches: int = MAX_QUOTE_BATCHES_PER_SNAPSHOT,
+                   max_jitter_s: float = 0.0,
+                   jitter_source: Callable[[float, float], float] = random.SystemRandom().uniform,
+                   sleeper: Callable[[float], None] = time.sleep) -> QuoteSnapshot:
+    """Fetch a bounded subscription set in explicit batches and report missing coverage.
+
+    Backpressure is fail-fast: no requests are started if the frozen subscription set
+    exceeds ``max_batches``. Requests remain sequential and use the shared token bucket;
+    optional jitter decorrelates multi-batch polling. A complete result describes only
+    the requested symbols and never implies market-wide or option-chain completeness.
+    """
+    if type(max_batches) is not int or max_batches < 1:
+        raise KiteDataError("max_batches must be a positive integer")
+    if not math.isfinite(max_jitter_s) or max_jitter_s < 0:
+        raise KiteDataError("max_jitter_s must be finite and non-negative")
+    if not callable(jitter_source) or not callable(sleeper):
+        raise KiteDataError("jitter and sleep providers must be callable")
+    requested = tuple(symbols)
+    if not requested or any(not isinstance(symbol, str) or not symbol.strip() for symbol in requested):
+        raise KiteDataError("quote snapshot requires non-empty symbols")
+    if len(requested) != len(set(requested)):
+        raise KiteDataError("quote snapshot symbols must be unique")
+    batch_count = (len(requested) + MAX_QUOTE_SYMBOLS - 1) // MAX_QUOTE_SYMBOLS
+    if batch_count > max_batches:
+        raise KiteDataError(
+            f"quote snapshot exceeds bounded backlog: {batch_count} batches requested, limit is {max_batches}")
+
+    quotes: dict[str, dict] = {}
+    unexpected: set[str] = set()
+    for batch_index in range(batch_count):
+        start = batch_index * MAX_QUOTE_SYMBOLS
+        batch = list(requested[start:start + MAX_QUOTE_SYMBOLS])
+        if batch_index and max_jitter_s:
+            delay = jitter_source(0.0, max_jitter_s)
+            if not math.isfinite(delay) or delay < 0 or delay > max_jitter_s:
+                raise KiteDataError("jitter provider returned a delay outside its configured bounds")
+            sleeper(delay)
+        response = quote(batch, kind=kind)
+        if not isinstance(response, dict):
+            raise KiteDataError("quote endpoint returned a non-object response")
+        requested_batch = set(batch)
+        unexpected.update(str(symbol) for symbol in response if symbol not in requested_batch)
+        for symbol in batch:
+            row = response.get(symbol)
+            if isinstance(row, dict):
+                quotes[symbol] = row
+    observed = tuple(symbol for symbol in requested if symbol in quotes)
+    missing = tuple(symbol for symbol in requested if symbol not in quotes)
+    return QuoteSnapshot(requested, observed, missing, tuple(sorted(unexpected)), batch_count, quotes)
 
 
 def quote_url(symbols: list[str], kind: str = "ohlc") -> str:
