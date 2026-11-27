@@ -8126,19 +8126,20 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`src/financial_brain/execution/oms/stops.py::evaluate_stop` adds a deterministic paper stop evaluator: SELL triggers on bid <= stop, BUY on ask >= stop; STOP_MARKET fills at observed executable side (so gap-through losses are represented), STOP_LIMIT can trigger without fill, displayed depth bounds partial fills, no depth produces no fill, and positive latency requires a later quote rather than assuming a trigger-price fill.",
-        "`tests/test_oms_stops.py` covers buy/sell triggers, gap-through stop, partial quantity, stop-limit unfilled, absent liquidity, latency, trigger-not-met and invalid protective limit orientation.",
-        "Combined `tests/test_oms_stops.py tests/test_kernel_closures_r.py`: 33 passed; Ruff and targeted mypy passed."
+        "`src/financial_brain/execution/oms/stops.py::evaluate_stop` provides side-correct quote triggers: long exits trigger on bid <= stop, short covers on ask >= stop. STOP_MARKET uses the observed executable side, so a gap-through is not filled at the stop price.",
+        "`evaluate_stop_path` now replays timezone-aware observations in timestamp order. The trigger observation arms the order; modeled latency starts at that time; a fill uses only a quote at or after the latency deadline. A STOP_LIMIT may remain live after triggering and fill against a later marketable quote. One snapshot’s displayed quantity bounds the fill; repeated snapshots are not assumed to replenish liquidity.",
+        "When a triggered stop has no executable depth, it returns no fill. When a stop-limit remains non-marketable, it reports `limit_not_marketable_queue_position_unknown` and does not invent queue priority or a fill.",
+        "`tests/test_oms_stops.py tests/test_oms_oco.py`: 15 passed, covering gap-through, bid/ask triggers, partial depth, stop-limit non-fill and later fill, no liquidity, latency-window eligibility, out-of-order/naive timestamps, and OCO lifecycle regressions. Ruff and targeted mypy passed."
       ],
-      "blocker": "The stop evaluator is not wired into the legacy/forward paper runner or OMS lifecycle; queued limit priority, exchange-specific triggers, delayed later-quote execution and calibrated fill/slippage assumptions require integration and prospective data.",
-      "last_audited_at_utc": "2026-11-25T04:45:41Z",
-      "commit": "PENDING",
+      "blocker": "Partial: deterministic stop trigger/path semantics now cover later quotes and latency, but this evaluator is not wired into legacy/forward runner order lifecycles. Exchange-specific trigger rules, live queue priority, and prospective fill/slippage calibration remain unproven.",
+      "last_audited_at_utc": "2026-11-27T02:14:57Z",
+      "commit": "pending",
       "test_evidence": [
-        "`python -m pytest tests/test_oms_stops.py tests/test_kernel_closures_r.py -q`: 33 passed.",
-        "`python -m ruff check src/financial_brain/execution/oms/stops.py tests/test_oms_stops.py`: passed.",
-        "`python -m mypy src/financial_brain/execution/oms/stops.py`: passed."
+        "`python -m pytest tests/test_oms_stops.py tests/test_oms_oco.py -q`: 15 passed.",
+        "`ruff check src/financial_brain/execution/oms/stops.py tests/test_oms_stops.py`: passed.",
+        "`mypy src/financial_brain/execution/oms/stops.py`: passed."
       ],
-      "test_result": "Evidence-based stop trigger/fill model implemented and tested across gap, depth, partial, no-liquidity and latency cases. PA-04-09 remains PARTIAL pending integration and calibrated queue/execution evidence."
+      "test_result": "Timestamp-ordered stop replay and OCO suites: 15 tests passed; Ruff and targeted mypy passed. PA-04-09 remains PARTIAL pending production paper-runner integration and empirical execution calibration."
     },
     {
       "id": "PA-04-10",

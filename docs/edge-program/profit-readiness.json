@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "4dac52b825e95ccab7437939a73dede42e0552851eef4dc66f9a862c3b97a23b",
-  "audit_export_sha256": "7c7870be02c2489f92b73ed8ec5be0823404d9e540b28457c9b51e77e1c0b9e8",
+  "status_ledger_sha256": "6f9a3d10bdf3b82cbd8a3ed298a30a438270a904f6b4e6c9c5800d3d145e7eb7",
+  "audit_export_sha256": "f0e7c4c379871f1b8cf2d6402b5145354ccfbf425fbbff862e4e9a37393e7bfd",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1455,17 +1455,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement stop-market and stop-limit paper semantics with bid/ask, gap-through-stop, partial fill, queue/latency and no-liquidity cases; SL is a trigger, not a guaranteed price."
           },
-          "commit": "PENDING",
-          "blocker": "The stop evaluator is not wired into the legacy/forward paper runner or OMS lifecycle; queued limit priority, exchange-specific triggers, delayed later-quote execution and calibrated fill/slippage assumptions require integration and prospective data.",
+          "commit": "pending",
+          "blocker": "Partial: deterministic stop trigger/path semantics now cover later quotes and latency, but this evaluator is not wired into legacy/forward runner order lifecycles. Exchange-specific trigger rules, live queue priority, and prospective fill/slippage calibration remain unproven.",
           "evidence": [
-            "`src/financial_brain/execution/oms/stops.py::evaluate_stop` adds a deterministic paper stop evaluator: SELL triggers on bid <= stop, BUY on ask >= stop; STOP_MARKET fills at observed executable side (so gap-through losses are represented), STOP_LIMIT can trigger without fill, displayed depth bounds partial fills, no depth produces no fill, and positive latency requires a later quote rather than assuming a trigger-price fill.",
-            "`tests/test_oms_stops.py` covers buy/sell triggers, gap-through stop, partial quantity, stop-limit unfilled, absent liquidity, latency, trigger-not-met and invalid protective limit orientation.",
-            "Combined `tests/test_oms_stops.py tests/test_kernel_closures_r.py`: 33 passed; Ruff and targeted mypy passed."
+            "`src/financial_brain/execution/oms/stops.py::evaluate_stop` provides side-correct quote triggers: long exits trigger on bid <= stop, short covers on ask >= stop. STOP_MARKET uses the observed executable side, so a gap-through is not filled at the stop price.",
+            "`evaluate_stop_path` now replays timezone-aware observations in timestamp order. The trigger observation arms the order; modeled latency starts at that time; a fill uses only a quote at or after the latency deadline. A STOP_LIMIT may remain live after triggering and fill against a later marketable quote. One snapshot’s displayed quantity bounds the fill; repeated snapshots are not assumed to replenish liquidity.",
+            "When a triggered stop has no executable depth, it returns no fill. When a stop-limit remains non-marketable, it reports `limit_not_marketable_queue_position_unknown` and does not invent queue priority or a fill.",
+            "`tests/test_oms_stops.py tests/test_oms_oco.py`: 15 passed, covering gap-through, bid/ask triggers, partial depth, stop-limit non-fill and later fill, no liquidity, latency-window eligibility, out-of-order/naive timestamps, and OCO lifecycle regressions. Ruff and targeted mypy passed."
           ],
           "tests": [
-            "`python -m pytest tests/test_oms_stops.py tests/test_kernel_closures_r.py -q`: 33 passed.",
-            "`python -m ruff check src/financial_brain/execution/oms/stops.py tests/test_oms_stops.py`: passed.",
-            "`python -m mypy src/financial_brain/execution/oms/stops.py`: passed."
+            "`python -m pytest tests/test_oms_stops.py tests/test_oms_oco.py -q`: 15 passed.",
+            "`ruff check src/financial_brain/execution/oms/stops.py tests/test_oms_stops.py`: passed.",
+            "`mypy src/financial_brain/execution/oms/stops.py`: passed."
           ]
         },
         {
@@ -3235,5 +3236,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "4ad7c59d7dce81fd80fe6bf9cf230585a0eda0398f0ab524cc26f0d8f086e4b4"
+  "report_sha256": "47b1b1023e73ba4140cf08b0a2f1b52712f0e9f00dda3584bf538ad63f50761b"
 }
