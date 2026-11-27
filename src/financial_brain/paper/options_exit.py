@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import math
+import hashlib
+import json
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -15,6 +17,8 @@ class PremiumExitPolicy:
     target_premium: float
     expiry_exit_at: datetime
     contract_expiry_at: datetime
+    registered_event_triggers: tuple[str, ...] = (
+        "TIME_STOP", "VOLATILITY_SHIFT", "SIGNAL_REVERSAL", "END_OF_DAY")
 
     def validate(self) -> None:
         if (not math.isfinite(self.stop_premium) or not math.isfinite(self.target_premium)
@@ -25,6 +29,19 @@ class PremiumExitPolicy:
                 raise OptionPaperError("expiry exit clocks must be timezone-aware")
         if self.expiry_exit_at >= self.contract_expiry_at:
             raise OptionPaperError("expiry exit cutoff must precede contract expiry")
+        allowed = {"TIME_STOP", "VOLATILITY_SHIFT", "SIGNAL_REVERSAL", "END_OF_DAY"}
+        if (not self.registered_event_triggers
+                or len(set(self.registered_event_triggers)) != len(self.registered_event_triggers)
+                or not set(self.registered_event_triggers) <= allowed):
+            raise OptionPaperError("exit policy event triggers must be unique supported registered rules")
+
+    def sha256(self) -> str:
+        body = {"stop_premium": self.stop_premium, "target_premium": self.target_premium,
+                "expiry_exit_at": self.expiry_exit_at.isoformat(),
+                "contract_expiry_at": self.contract_expiry_at.isoformat(),
+                "registered_event_triggers": list(self.registered_event_triggers)}
+        encoded = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -33,8 +50,17 @@ class OptionExitQuote:
     available_at: datetime
 
 
+@dataclass(frozen=True)
+class OptionExitDirective:
+    event_id: str
+    trigger: str
+    available_at: datetime
+    evidence_sha256: str
+
+
 def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolicy,
                             quotes: tuple[OptionExitQuote, ...], max_quote_age_seconds: float,
+                            directives: tuple[OptionExitDirective, ...] = (),
                             costs: CostModel | None = None) -> dict[str, object]:
     """Process observed premium quotes; never invent a stop, target, or expiry fill.
 
@@ -53,6 +79,19 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
     expiry_exit = policy.expiry_exit_at
     contract_expiry = policy.contract_expiry_at
     model = costs or CostModel()
+    cost_body = {name: (dict(value) if name == "impact" else value)
+                 for name in model.__dataclass_fields__
+                 for value in (getattr(model, name),)}
+    cost_hash = hashlib.sha256(json.dumps(cost_body, sort_keys=True, separators=(",", ":"),
+                                          allow_nan=False).encode("utf-8")).hexdigest()
+    for directive in directives:
+        if (not directive.event_id.strip() or directive.trigger not in policy.registered_event_triggers
+                or directive.available_at.tzinfo is None or directive.available_at.utcoffset() is None
+                or len(directive.evidence_sha256) != 64
+                or any(char not in "0123456789abcdef" for char in directive.evidence_sha256)):
+            raise OptionPaperError("exit directive must match a pre-registered trigger with sourced evidence")
+    if len({directive.event_id for directive in directives}) != len(directives):
+        raise OptionPaperError("exit directive event IDs must be unique")
     requested = lot_count * entry.lot_size
     remaining = requested
     trigger: str | None = None
@@ -62,6 +101,8 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
                                      segment=Segment.OPT, include_impact=False)["total"])
     exit_fees = 0.0
     exit_value = 0.0
+    ordered_directives = iter(sorted(directives, key=lambda directive: directive.available_at))
+    next_directive = next(ordered_directives, None)
     for item in sorted(quotes, key=lambda observation: observation.available_at):
         quote = item.quote
         if item.available_at.tzinfo is None or item.available_at.utcoffset() is None:
@@ -79,6 +120,11 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
         age = (item.available_at - quote.observed_at).total_seconds()
         if age > max_quote_age_seconds:
             continue
+        if trigger is None:
+            while next_directive is not None and next_directive.available_at <= item.available_at:
+                trigger = next_directive.trigger
+                next_directive = next(ordered_directives, None)
+                break
         if trigger is None:
             if quote.bid <= policy.stop_premium:
                 trigger = "PREMIUM_STOP"
@@ -105,7 +151,8 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
             break
     gross = exit_value - entry_notional
     status = "CLOSED" if remaining == 0 else "PARTIALLY_CLOSED" if fills else "OPEN"
-    return {"status": status, "trigger": trigger, "requested_contracts": requested,
+    return {"status": status, "trigger": trigger, "exit_policy_sha256": policy.sha256(),
+            "cost_assumptions_sha256": cost_hash, "requested_contracts": requested,
             "filled_contracts": requested - remaining, "remaining_contracts": remaining,
             "fills": fills, "entry_premium_inr": entry_notional,
             "exit_premium_inr": exit_value, "gross_pnl_inr": gross,

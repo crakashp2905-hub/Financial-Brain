@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from financial_brain.paper.options import Quote
 from financial_brain.paper.options_exit import (
+    OptionExitDirective,
     OptionExitQuote,
     PremiumExitPolicy,
     manage_long_option_exit,
@@ -73,3 +74,29 @@ def test_expiry_cutoff_requires_a_pre_expiry_executable_quote():
     )
     assert unresolved["status"] == "OPEN"
     assert unresolved["unresolved_at_expiry"] is True
+
+
+def test_preregistered_reversal_and_time_rules_trigger_at_observed_quotes():
+    entry = _quote(ENTRY_AT, 9.9, 100, ask=10, ask_qty=100)
+    available = ENTRY_AT + timedelta(seconds=1)
+    result = manage_long_option_exit(
+        entry=entry, lots=1, policy=_policy(), max_quote_age_seconds=1,
+        directives=(OptionExitDirective("reverse-1", "SIGNAL_REVERSAL", available,
+                                        "a" * 64),),
+        quotes=(OptionExitQuote(_quote(available, 9, 10), available),),
+    )
+    assert result["trigger"] == "SIGNAL_REVERSAL"
+    assert result["fills"][0]["reason"] == "SIGNAL_REVERSAL"
+    assert len(result["exit_policy_sha256"]) == 64
+    assert len(result["cost_assumptions_sha256"]) == 64
+    restricted = PremiumExitPolicy(_policy().stop_premium, _policy().target_premium,
+                                   _policy().expiry_exit_at, _policy().contract_expiry_at,
+                                   registered_event_triggers=("TIME_STOP",))
+    import pytest
+    from financial_brain.paper.options import OptionPaperError
+    with pytest.raises(OptionPaperError, match="pre-registered"):
+        manage_long_option_exit(
+            entry=entry, lots=1, policy=restricted, max_quote_age_seconds=1,
+            directives=(OptionExitDirective("vol-1", "VOLATILITY_SHIFT", available,
+                                            "b" * 64),), quotes=(),
+        )
