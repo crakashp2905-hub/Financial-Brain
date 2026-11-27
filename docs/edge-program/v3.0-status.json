@@ -10858,11 +10858,15 @@
     {
       "id": "PA-13-10",
       "text": "Add crash-safe kill switches for broker and paper engines, with external owner reset required after risk breach; AI recommendations cannot override a halt.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/execution/oms/killswitch.py atomically replaces the persisted broker latch before attempting broker cancellations; oms/engine.py checks it at submit, approval and send. tests/test_oms.py verifies cancellation, entry blocking and agent-reset refusal.",
+        "src/financial_brain/forward_edge/persistent_killswitch.py uses SQLite WAL, synchronous=FULL, an immutable hash-chained event ledger and scoped approval validation; tests/test_forward_edge_persistent_killswitch.py covers restart persistence, integrity, idempotency and human approval.",
+        "Integration is incomplete: ForwardSessionRunner.execute_paper_intent does not consult PersistentKillSwitch, and the broker file reset accepts any non-agent actor rather than an externally verified owner identity. Therefore a paper path can bypass the persistent latch and owner-level reset authorization is not established."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T09:45:00Z",
       "commit": null
     },
     {
@@ -21640,6 +21644,7 @@
       "PA-13-07",
       "PA-13-08",
       "PA-13-09",
+      "PA-13-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22063,13 +22068,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1047,
+    "audited_count": 1048,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 908,
-      "UNASSESSED": 331
+      "PARTIAL": 909,
+      "UNASSESSED": 330
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22218,7 +22223,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 908,
-    "UNASSESSED": 331
+    "PARTIAL": 909,
+    "UNASSESSED": 330
   }
 }
