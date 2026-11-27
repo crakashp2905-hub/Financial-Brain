@@ -10914,11 +10914,15 @@
     {
       "id": "PA-13-14",
       "text": "Test historical stress years, option spread blowouts, settlement events, split errors, mass data outages and platform/clock failures independently.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/disaster_stress.py models gap, limit-down, spread blowout, expiry shock and network partition with portfolio loss, unfilled exposure, entry blocking and reconciliation flags; tests/test_forward_edge_disaster_stress.py covers these deterministic cases.",
+        "Related coverage exists in tests/test_derivatives_subledger.py (expiry settlement/restart), tests/test_forward_edge_options_spread.py (option spread risk), tests/test_kernel_trading_clock.py (exchange clock distinctions), and tests/test_etf_prices.py (split adjustment factors).",
+        "Requirement remains partial: no single independent acceptance matrix was found covering named historical stress years, split-error fault injection, mass data outages, platform failure and clock failure with restart/reconciliation assertions."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T10:15:00Z",
       "commit": null
     },
     {
@@ -21660,6 +21664,7 @@
       "PA-13-11",
       "PA-13-12",
       "PA-13-13",
+      "PA-13-14",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22083,13 +22088,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1051,
+    "audited_count": 1052,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 912,
-      "UNASSESSED": 327
+      "PARTIAL": 913,
+      "UNASSESSED": 326
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22238,7 +22243,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 912,
-    "UNASSESSED": 327
+    "PARTIAL": 913,
+    "UNASSESSED": 326
   }
 }
