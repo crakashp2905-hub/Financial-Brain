@@ -1822,6 +1822,38 @@ def test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags(tmp_pat
     runner.close()
 
 
+def test_intended_forward_paper_trades_never_write_to_kite_or_open_network(monkeypatch, tmp_path):
+    import urllib.request
+
+    from financial_brain.execution.oms.kite_broker import KiteBroker
+    from financial_brain.forward_edge import modes
+
+    calls = []
+    def forbidden(*_args, **_kwargs):
+        calls.append("unexpected-write-or-network")
+        raise AssertionError("paper intent attempted a broker write or network request")
+
+    monkeypatch.setattr(KiteBroker, "place", forbidden)
+    monkeypatch.setattr(KiteBroker, "cancel", forbidden)
+    monkeypatch.setattr(KiteBroker, "_request", forbidden)
+    monkeypatch.setattr(urllib.request, "urlopen", forbidden)
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
+
+    runner, event, decided = trade_setup(tmp_path)
+    try:
+        for side in ("BUY", "SELL"):
+            receipt = execute(runner, event, decided, order_id=f"paper-{side.lower()}")
+            assert receipt["status"] == "FILLED"
+            assert receipt["physical_order_submitted"] is False
+        assert calls == []
+        assert len(runner.records("s")["execution_receipts"]) == 2
+    finally:
+        runner.close()
+
+
 def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path):
     runner, event, decided = trade_setup(tmp_path)
     execute(runner, event, decided)
