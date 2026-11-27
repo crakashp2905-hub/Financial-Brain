@@ -59,6 +59,24 @@ def test_greeks_need_positive_time() -> None:
         greeks(100, 100, 0.0, 0.05, 0.3, call=True)
 
 
+@pytest.mark.parametrize("kwargs", [
+    {"rate": float("nan")}, {"div": float("inf")},
+])
+def test_pricing_rejects_non_finite_carry_inputs(kwargs) -> None:
+    params = {"spot": 100, "strike": 100, "t": 1.0, "rate": 0.05,
+              "vol": 0.3, "call": True, "div": 0.0}
+    params.update(kwargs)
+    with pytest.raises(OptionError, match="finite"):
+        bsm_price(**params)
+
+
+def test_implied_vol_rejects_non_finite_price_and_invalid_solver_bounds() -> None:
+    with pytest.raises(OptionError, match="finite"):
+        implied_vol(float("nan"), 100, 100, 1.0, 0.05, True)
+    with pytest.raises(OptionError, match="bounds"):
+        implied_vol(10, 100, 100, 1.0, 0.05, True, lo=0.5, hi=0.4)
+
+
 def test_debit_vertical_payoff_has_known_max_gain_and_loss() -> None:
     # long 100 call, short 110 call, net debit 3: max loss 3, max gain 7
     legs = [
