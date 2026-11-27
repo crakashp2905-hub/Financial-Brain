@@ -8086,21 +8086,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "docs/edge-program/canonical-migration-audit.v1.json records 51 unresolved intraday:live-v1:live positions from the 2026-11-21 canonical migration snapshot; the account P&L promotion gate is BLOCKED.",
-        "scripts/reconcile_legacy_intraday_exits.py verifies every stored canonical payload hash and emits a trade-detail-free case report with stable hashed references bound to each source-row SHA-256.",
-        "The pinned snapshot classifies all 51 cases as OPEN_UNKNOWN, with zero matching broker receipts, zero confirmed closes, exit_fill_inferred=false for every case, and pnl_release_authorized=false.",
-        "portfolio.legacy_exit_adjudication confirms a close only when the complete source-bound broker receipt set matches unresolved event, instrument, closing side and full quantity; partial/conflicting receipts classify LEDGER_INCOMPLETE.",
-        "The canonical snapshot is as of 2026-11-21. A fresh read of the current paper_live.duckdb was not possible during this audit because another process held the database open; no current authenticated broker receipt export was available."
+        "`docs/edge-program/canonical-migration-audit.v1.json` and `scripts/reconcile_legacy_intraday_exits.py` pin and verify each canonical payload hash; the report classifies only exact source-bound broker receipt sets as confirmed closes.",
+        "The current local `data/paper_live.duckdb` was reopened read-only. It contains 1,456 live trades, of which 51 have no exit timestamp/price; all 51 are dated 2026-11-03.",
+        "A read-only exact-ID reconciliation between those 51 current DuckDB rows and the canonical `UNRESOLVED_POSITION` legacy IDs found 51/51 matches, with zero DuckDB-only and zero canonical-only IDs. Both sorted-ID set digests match: `b3bfa291c44a54880a0ec47484710908b0fc31d5b5b56e1938429eb71b6f8ac2`.",
+        "The canonical adjudication remains 51 OPEN_UNKNOWN, 0 LEDGER_INCOMPLETE, 0 CONFIRMED_CLOSED, `exit_fill_inferred=false` on every case, and `pnl_release_authorized=false`. The local forward-event SQLite contains market-event data only; no authenticated closing broker receipts are available in these sources."
       ],
-      "blocker": "Partial: the 51 historical cases are individually classified OPEN_UNKNOWN without inventing exits, but none has an authenticated closing receipt. The pinned migration snapshot is four days old and the current source DuckDB could not be re-read while locked; reconcile only after a fresh source snapshot and broker execution receipts are available.",
-      "last_audited_at_utc": "2026-11-25T04:04:14Z",
-      "commit": "5ab353fc",
+      "blocker": "Partial: current DuckDB and canonical unresolved rows now reconcile exactly, but all 51 remain OPEN_UNKNOWN because authenticated broker closing receipts are absent. Do not synthesize fills or release P&L until receipt artifacts are supplied.",
+      "last_audited_at_utc": "2026-11-27T02:06:57Z",
+      "commit": "pending",
       "test_evidence": [
-        "python -m pytest tests/test_legacy_exit_adjudication.py -q: 4 passed across absent, partial/conflicting and exact receipt scenarios plus report privacy/P&L blocking.",
-        "Ruff and targeted mypy passed for the adjudication module, CLI and tests.",
-        "Against the local pinned canonical SQLite snapshot: 51 cases classified OPEN_UNKNOWN, 0 receipts, 0 confirmed closes; report regeneration and --check passed."
+        "`python scripts/reconcile_legacy_intraday_exits.py --source-db D:\\Finance-Brain\\data\\canonical_portfolio.sqlite --check`: 51 cases; all OPEN_UNKNOWN; P&L release false.",
+        "Read-only DuckDB query and SQLite canonical comparison: 51 current open trade IDs, 51 canonical unresolved legacy IDs, exact match 51/51, zero mismatches."
       ],
-      "test_result": "4 adjudication tests passed; Ruff and targeted mypy passed; pinned snapshot run classified 51/51 OPEN_UNKNOWN with no inferred exit or P&L release."
+      "test_result": "Fresh local-source reconciliation confirms all 51 current live rows match canonical unresolved records but no broker receipts close them. PA-04-07 remains PARTIAL and P&L release remains blocked."
     },
     {
       "id": "PA-04-08",
