@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -924,6 +925,72 @@ def test_paper_session_integrated_shock_drill_preserves_exposure_and_order_truth
                           if row["paper_order_id"] in {"shock-stop", "shock-target"}}
     assert shock_order_states == {"shock-stop": "FILLED", "shock-target": "CANCELED"}
     runner.close()
+
+
+def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_path):
+    runner, fill_quote, decided = trade_setup(tmp_path)
+    receipt = execute(runner, fill_quote, decided)
+    assert receipt["status"] == "FILLED"
+    runner.close()
+
+    script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
+         "--journal-db", str(tmp_path / "journal.sqlite"), "--date", "2026-11-13"],
+        cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr + result.stdout
+    report = json.loads(result.stdout)
+    assert report["status"] == "PASS"
+    assert report["session_count"] == 1
+    assert report["decision_count"] == 1
+    assert report["execution_receipt_count"] == 1
+    [session] = report["sessions"]
+    assert session["raw_hash_chain_valid"] is True
+    assert session["decision_quote_lineage_valid"] is True
+    assert session["raw_market_event_count"] == 2
+    assert session["filled_receipt_count"] == 1
+    assert session["issues"] == []
+
+
+@pytest.mark.parametrize("tamper,expected_flag", [
+    ("chain", "raw_hash_chain_valid"),
+    ("quote", "decision_quote_lineage_valid"),
+])
+def test_independent_daily_audit_fails_closed_on_raw_log_tampering(tmp_path, tamper, expected_flag):
+    runner, fill_quote, decided = trade_setup(tmp_path)
+    execute(runner, fill_quote, decided)
+    runner.close()
+
+    audit_copy = tmp_path / "tampered-journal.sqlite"
+    shutil.copy2(tmp_path / "journal.sqlite", audit_copy)
+    journal = sqlite3.connect(audit_copy)
+    journal.execute("DROP TRIGGER IF EXISTS runner_audit_no_update")
+    journal.execute("DROP TRIGGER IF EXISTS runner_audit_no_delete")
+    if tamper == "chain":
+        journal.execute("UPDATE runner_audit_log SET event_sha256=? WHERE kind='decision'",
+                        ("f" * 64,))
+    else:
+        receipt_row = journal.execute(
+            "SELECT sequence,record_json FROM runner_audit_log WHERE kind='execution_receipt'"
+        ).fetchone()
+        body = json.loads(receipt_row[1])
+        body["quote_provenance"]["event_sha256"] = "e" * 64
+        journal.execute("UPDATE runner_audit_log SET record_json=? WHERE sequence=?",
+                        (json.dumps(body, sort_keys=True, separators=(",", ":")), receipt_row[0]))
+    journal.commit()
+    journal.close()
+
+    script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
+         "--journal-db", str(audit_copy), "--date", "2026-11-13"],
+        cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2, result.stderr + result.stdout
+    report = json.loads(result.stdout)
+    assert report["status"] == "FAIL"
+    [session] = report["sessions"]
+    assert session[expected_flag] is False
+    assert session["issues"]
 
 
 def test_supervisor_fails_closed_for_open_sessions_without_calendar_plan(tmp_path):

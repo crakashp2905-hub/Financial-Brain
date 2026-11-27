@@ -1249,7 +1249,7 @@ Implement the **monthly momentum book first** (H005/H003/P3), because those are 
 - [ ] **PA-14-10** Automate day-end reconciliations of orders, positions, cash, open risk, fees and marked equity; seal a run only after all exceptions are resolved.
 - [ ] **PA-14-11** Maintain a separate unresolved-exposure journal: stale price, missing exit, no confirmable quote and broker/fill ambiguity are adverse evidence, not zero-loss exceptions.
 - [x] **PA-14-12** Add shock drills with feed loss, process restart, system clock skew, option expiry, canceled orders and unmapped tokens during a paper session.
-- [ ] **PA-14-13** Create an independent daily reporting job that verifies all decisions and quote lineage from raw logs, without importing research/backtest targets.
+- [x] **PA-14-13** Create an independent daily reporting job that verifies all decisions and quote lineage from raw logs, without importing research/backtest targets.
 - [ ] **PA-14-14** Generate one-page session proof with eligible count, generated signals, blocked signals, matched fills, missing fills, gross/net P&L, worst loss and benchmark comparison.
 - [ ] **PA-14-15** Keep portfolio performance and evidence separated by asset class, strategy, origin (manual/automatic), forward regime and realized versus valuation components.
 - [ ] **PA-14-16** Reproduce the entire session and compare deterministic event hashes to original run, including abstentions and unknown outcomes; fail on material mismatch.
