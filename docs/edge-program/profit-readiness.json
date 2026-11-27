@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:12:29Z",
+  "as_of_utc": "2026-11-27T00:17:54Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "0439546ffce7afcfd0723d929a7beb2ca89927b7daed03e27a6155201e02a111",
-  "audit_export_sha256": "db75a6eaa44addd6e086d4c0229dfe57ea58599260e757f045f6b10729ddb7ef",
+  "status_ledger_sha256": "1f7842094d0382467a59285193aaebbcbd2b22c58cbc6be436f4ca376ae9ae43",
+  "audit_export_sha256": "3029a275214a26593bf8c5d41e7b4a9c74dfdef8a4feb7c0f3b296f5a2ce8d92",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 799,
-    "UNASSESSED": 449
+    "PARTIAL": 800,
+    "UNASSESSED": 448
   },
-  "assessed_count": 929,
-  "unassessed_count": 449,
+  "assessed_count": 930,
+  "unassessed_count": 448,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 19,
-        "UNASSESSED": 9
+        "PARTIAL": 20,
+        "UNASSESSED": 8
       },
       "evidence": [
         {
@@ -982,16 +982,24 @@
         },
         {
           "item_id": "PA-03-05",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 962,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build rate-limit-aware batching with token-bucket quotas, backpressure, subscriptions and request jitter; never infer full market coverage from one successful option-chain quote call."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "c3fbda08",
+          "blocker": "PARTIAL: bounded synchronous snapshots and request quotas are implemented, but subscription lifecycle, queued/asynchronous backpressure, prioritized feed scheduling, and universal integration into forward-session market polling remain outstanding.",
+          "evidence": [
+            "src/financial_brain/providers/kite_data.py::TokenBucket provides a thread-safe 3-request/second quota with capacity one, integrated into all allowlisted Kite GET calls.",
+            "quote_snapshot batches an explicit unique subscription list in at most 500 symbols per request, uses bounded admission (20 batches by default) before any network call, optionally jitters sequential requests, and returns requested/observed/missing/unexpected symbol coverage with a content hash and explicit requested-subscriptions-only scope; market_wide_coverage_claim is always false.",
+            "tests/test_phase3_kite.py covers deterministic quota refill, 500+1 batching, jitter, missing/unexpected symbols, fail-fast backlog bounds and explicit non-market-wide scope."
+          ],
+          "tests": [
+            "python -m pytest tests/test_phase3_kite.py -q: 28 passed in 2.24s.",
+            "ruff check src/financial_brain/providers/kite_data.py tests/test_phase3_kite.py: passed.",
+            "mypy src/financial_brain/providers/kite_data.py: Success, no issues found in 1 source file."
+          ]
         },
         {
           "item_id": "PA-03-06",
@@ -3137,5 +3145,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "9e4df675eaf66037ef1c20fabed44df3eebd318dcde99fcc073ad2613b297473"
+  "report_sha256": "900bea3e79577cbe5885d15290f5969d633eec555098fffe93181cc720723553"
 }
