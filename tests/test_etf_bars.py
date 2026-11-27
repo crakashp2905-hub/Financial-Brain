@@ -47,14 +47,31 @@ def test_aggregator_uses_sourced_session_buckets_and_as_of_availability() -> Non
         as_of=datetime(2026, 11, 13, 3, 52, tzinfo=UTC),
     )
 
-    assert len(bars) == 2  # no synthetic rows for empty intervals
+    assert len(bars) == 1  # the 03:50-03:55 candle is still forming at the 03:52 cutoff
     assert (bars[0]["open"], bars[0]["high"], bars[0]["low"], bars[0]["close"]) == (100, 102, 100, 102)
     assert bars[0]["volume"] == 5  # first observation has no prior volume baseline
-    assert bars[1]["close"] == 99 and bars[1]["volume"] == 25
-    assert bars[1]["available_at"] == "2026-11-13T03:51:01+00:00"
     assert bars[0]["bucket_start"] == "2026-11-13T03:45:00+00:00"
     assert bars[0]["source_event_ids"] == ["one", "two"]
     assert len(bars[0]["input_sha256"]) == 64
+
+    completed = aggregate_session_bars(
+        events, venue="BSE", instrument_id="BSE:INDEXETF", session_date=DAY,
+        calendar=_calendar(), interval_minutes=5,
+        as_of=datetime(2026, 11, 13, 3, 56, tzinfo=UTC),
+    )
+    assert len(completed) == 2
+    assert completed[1]["close"] == 200 and completed[1]["volume"] == 85
+    assert completed[1]["available_at"] == "2026-11-13T03:53:00+00:00"
+
+
+def test_shortened_final_hour_bucket_is_not_reported_as_a_complete_candle() -> None:
+    events = [_tick("last-hour", 9, 46, 0, 100, 10)]
+    bars = aggregate_session_bars(
+        events, venue="BSE", instrument_id="BSE:INDEXETF", session_date=DAY,
+        calendar=_calendar(), interval_minutes=60,
+        as_of=datetime(2026, 11, 13, 10, 30, tzinfo=UTC),
+    )
+    assert bars == []
 
 
 def test_missing_sourced_exchange_session_fails_closed() -> None:

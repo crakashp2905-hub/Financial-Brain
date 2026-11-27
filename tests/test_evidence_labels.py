@@ -65,6 +65,14 @@ def test_report_stamping_rejects_caller_claimed_independent_forward_label():
         stamp_report({"tier": "PAPER_FORWARD"}, "replay")
 
 
+def test_local_paper_cannot_claim_independent_custody_after_the_fact():
+    forged = {"independently_attested": True, "tier": "INDEPENDENT_FORWARD"}
+    with pytest.raises(EvidenceLabelError, match="without verified"):
+        stamp_report(forged, "local_paper", market_observed=True,
+                     pre_entry_sealed=True, session_complete=True,
+                     custody_status=CustodyStatus.LOCAL_ONLY)
+
+
 def test_unknown_mode_fails_closed():
     with pytest.raises(EvidenceLabelError, match="unsupported"):
         classify("looks_forward_to_me")

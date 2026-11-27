@@ -1,11 +1,13 @@
 """The live paper zoo: settlement arithmetic, idempotence, pairs and martingale state."""
 from datetime import date
 
+import duckdb
 import numpy as np
 import pandas as pd
 import pytest
 
 from financial_brain.paper import zoo as Z
+from financial_brain.paper import zoo_edges as ZE
 
 
 def test_settle_earns_yesterdays_weights_and_charges_the_change(tmp_path):
@@ -16,6 +18,86 @@ def test_settle_earns_yesterdays_weights_and_charges_the_change(tmp_path):
     assert r["gross"] == pytest.approx(0.5 * 0.02 - 0.5 * 0.01)
     assert r["cost"] == pytest.approx(1.0 * Z.COST_LONG)                      # +0.5 A, -0.5 B
     assert r["net"] == pytest.approx(r["gross"] - r["cost"]) and r["bench"] == 0.004
+
+
+def test_monthly_rebalance_audit_reports_exact_missed_signal_date_and_hash_mismatch():
+    scheduled = date(2026, 11, 2)
+    state = {"set": "2026-10-30", "targets": {"edge_p1_residual_mom": {"OLD": 1.0}}}
+    intended = {"edge_p1_residual_mom": {"NEW": 1.0}}
+
+    audit = ZE.monthly_rebalance_audit(date(2026, 11, 4), scheduled, state, intended)
+
+    assert audit["status"] == "MISSED_OR_STALE"
+    assert audit["signal_date"] == "2026-11-02"
+    assert audit["detected_on"] == "2026-11-04"
+    assert "edge_p1_residual_mom" in audit["mismatched_books"]
+    assert len(audit["intended_hashes"]["edge_p1_residual_mom"]) == 64
+    assert ZE.monthly_rebalance_audit(scheduled, scheduled, state, intended) is None
+    assert state["targets"]["edge_p1_residual_mom"] == {"OLD": 1.0}
+
+
+def test_missing_held_return_is_incomplete_and_does_not_block_other_strategy(tmp_path):
+    z = Z.connect(tmp_path / "missing-return.duckdb")
+    first, second = date(2026, 11, 2), date(2026, 11, 3)
+    Z.settle(z, "missing", first, None, {}, 0.0, {"A": 1.0})
+    Z.settle(z, "observed", first, None, {}, 0.0, {"B": 1.0})
+
+    missing = Z.settle(z, "missing", second, first, {}, 0.0, {"A": 1.0})
+    observed = Z.settle(z, "observed", second, first, {"B": 0.02}, 0.01, {"B": 1.0})
+
+    assert missing["gross"] is None and missing["net"] is None and missing["bench"] is None
+    assert observed["gross"] == pytest.approx(0.02)
+    assert observed["net"] == pytest.approx(observed["gross"] - observed["cost"])
+    quality = z.execute(
+        "SELECT status, missing_return_keys FROM zoo_pnl_quality WHERE strategy='missing' AND day=?",
+        [second],
+    ).fetchone()
+    assert quality == ("INCOMPLETE_MISSING_RETURN", '["A"]')
+    summary = Z.summary(z)
+    assert pd.isna(summary.loc["missing", "last_net"])
+    assert summary.loc["observed", "last_net"] == pytest.approx(observed["net"])
+
+
+def test_november_missing_future_price_freezes_only_failed_monthly_book(tmp_path, monkeypatch):
+    day = date(2026, 11, 2)
+    names = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan",
+             "edge_h003_riskadj_mom", "edge_h005_industry_mom")
+    old = {name: {"OLD": 1.0} for name in names}
+    fresh = {name: {"NEW": 1.0} for name in names if name != "edge_p2_volmanaged_mom"}
+    fresh["_errors"] = {"edge_p2_volmanaged_mom": "missing future price from November 2026 history"}
+    monkeypatch.setattr(ZE, "monthly_targets", lambda *_args: dict(fresh))
+    monkeypatch.setattr(ZE, "_first_of_month", lambda *_args: True)
+    monkeypatch.setattr(ZE, "s1_targets", lambda *_args: {})
+    monkeypatch.setattr(ZE, "s2_targets", lambda *_args: ({}, {}))
+    monkeypatch.setattr(ZE, "ls_targets", lambda *_args: {})
+    monkeypatch.setattr(ZE, "ensemble_target", lambda *_args: {})
+    monkeypatch.setattr(ZE, "l2_targets", lambda *_args: {})
+    monkeypatch.setattr(ZE, "index_day", lambda *_args: {})
+    monkeypatch.setattr(ZE, "v1_return", lambda *_args: None)
+
+    source = duckdb.connect(str(tmp_path / "source.duckdb"))
+    source.execute("CREATE TABLE features (business_date DATE)")
+    source.execute("INSERT INTO features VALUES (?)", [day])
+    source.execute("CREATE TABLE adjusted_prices (business_date DATE, ticker VARCHAR, lineage VARCHAR)")
+    paper = Z.connect(tmp_path / "paper.duckdb")
+    ZE.save(paper, "edge_monthly", {"targets": old, "set": "2026-10-01"})
+    done = {"edge_s1_no_news_reversal", "edge_s2_reaction_drift", "edge_e1_mom_ensemble",
+            "edge_w1_reversal_ls", "edge_w2_52wh_ls", "edge_w3_momentum_ls", "edge_l2_learned_ls",
+            "edge_m1_momentum_book", "edge_v1_vwap_bounce", "edge_a16_india_year_end",
+            "edge_i1_index_intraday", "edge_i2_seasonality_ls", *[f"edge_{name.lower()}" for name in ZE.A_NAMES],
+            "edge_hv1_rising_volume", "edge_hv2_improving_liquidity"}
+    result = Z.edge_strategies(
+        source, paper, day, date(2026, 10, 30), done, [], {}, {}, 0.0, [], pd.Series(dtype=float))
+
+    assert set(result) == set(names)
+    state = ZE.state(paper, "edge_monthly")
+    assert state["set"] == day.isoformat()
+    assert state["errors"] == fresh["_errors"]
+    assert state["targets"]["edge_p2_volmanaged_mom"] == old["edge_p2_volmanaged_mom"]
+    for name in set(names) - {"edge_p2_volmanaged_mom"}:
+        assert state["targets"][name] == fresh[name]
+    source.close()
+    paper.close()
 
 
 

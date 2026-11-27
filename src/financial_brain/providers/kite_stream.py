@@ -157,6 +157,9 @@ class KiteTickerStream:
         """Start the SDK socket and subscribe to the frozen universe in full mode."""
         if type(threaded) is not bool:
             raise KiteStreamError("threaded must be boolean")
+        if not self._permission_is_effective():
+            self._halt_for_expired_permission()
+            raise KiteStreamError("Kite PAPER_SIMULATION permission has expired")
         if self._ticker is not None:
             raise KiteStreamError("Kite stream was already started")
         ticker = self._make_ticker()
@@ -182,6 +185,25 @@ class KiteTickerStream:
             self._record(_state="STOPPED")
             self._ticker = None
 
+    def _permission_is_effective(self) -> bool:
+        """Recheck the dated grant continuously; a socket cannot outlive its entitlement."""
+        now = _aware_utc(self.clock.now(), "stream clock")
+        return self.permission.allows(
+            source_id=SOURCE_ID, use=DataUse.PAPER_SIMULATION, on=now.astimezone(IST).date())
+
+    def _halt_for_expired_permission(self) -> None:
+        """Close an active provider socket and fail closed after grant expiry/revocation."""
+        with self._lock:
+            ticker = self._ticker
+            self._ticker = None
+            self._state = "RIGHTS_BLOCKED"
+            self._last_error = "Kite PAPER_SIMULATION permission expired or is no longer effective"
+        if ticker is not None:
+            try:
+                ticker.close()
+            except Exception as exc:  # provider SDK close failures must not revive consumption
+                self._record(_last_error=f"Kite permission expired; socket close failed: {exc}")
+
     def _on_connect(self, ws, _response) -> None:
         tokens = list(sorted(self.token_to_instrument))
         ws.subscribe(tokens)
@@ -189,6 +211,9 @@ class KiteTickerStream:
         self._record(_state="CONNECTED", _last_error=None)
 
     def _on_ticks(self, _ws, ticks) -> None:
+        if not self._permission_is_effective():
+            self._halt_for_expired_permission()
+            return
         received_at = _aware_utc(self.clock.now(), "tick receipt clock")
         for tick in ticks or []:
             with self._lock:
@@ -227,6 +252,9 @@ class KiteTickerStream:
     def drain_fresh_events(self, *, decision_time: datetime, max_quote_age: timedelta,
                            limit: int = 1000, wait_seconds: float = 0) -> list[MarketEvent]:
         """Drain bounded batches; discard future/stale ticks and non-executable option books."""
+        if not self._permission_is_effective():
+            self._halt_for_expired_permission()
+            return []
         decision_time = _aware_utc(decision_time, "decision_time")
         if not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
             raise KiteStreamError("max_quote_age must be a non-negative timedelta")
@@ -271,10 +299,12 @@ class KiteTickerStream:
         with self._lock:
             no_entry = (self._state != "CONNECTED" or self._queue_dropped > 0 or
                         self._stale > 0 or self._rejected > 0 or
-                        self._option_book_rejected > 0)
+                        self._option_book_rejected > 0 or self._state == "RIGHTS_BLOCKED")
             reasons = []
             if self._state != "CONNECTED":
                 reasons.append(f"stream_state_{self._state.lower()}")
+            if self._state == "RIGHTS_BLOCKED":
+                reasons.append("data_permission_expired")
             if self._queue_dropped:
                 reasons.append("queue_events_dropped")
             if self._stale:

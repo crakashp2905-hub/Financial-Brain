@@ -1,0 +1,429 @@
+{
+  "schema": "fb.legacy-intraday-exit-adjudication.v1",
+  "snapshot_as_of_utc": "2026-11-21T09:10:40+00:00",
+  "source_snapshot_sha256": "4cdeb30ed37a12cbf9bf789358eacea6b5fc410167376d2dd427652a7cbf465a",
+  "account_id": "intraday:live-v1:live",
+  "scope_limitations": [
+    "The report adjudicates the pinned canonical SQLite migration snapshot only; it does not re-read the original DuckDB source.",
+    "No broker receipt artifact is authenticated or created by this report; absent exact stored receipt sets remain OPEN_UNKNOWN."
+  ],
+  "case_count": 51,
+  "classification_counts": {
+    "OPEN_UNKNOWN": 51,
+    "LEDGER_INCOMPLETE": 0,
+    "CONFIRMED_CLOSED": 0
+  },
+  "cases": [
+    {
+      "case_ref": "022d44e258b7ac6793e842e6d72565d7ed45fe8485b6b190a4cb9c19895edd91",
+      "source_sha256": "8dbb43086fe6d3a2fb8f8e9a034cef88ca9b25b4fea35c5c22ef6b7da1b60e6f",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "0515f6d0f9e6d4d8458e742166828a465d62d8da58148da5d903aab9f1c4c632",
+      "source_sha256": "f4603239aa7b54bcd316bd5b138411b4ff213141de1d9ab6f9c07afaee71036b",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "0aa13ebd7055af5877f78e7677b2cead8ef80d3de1d1d1405df3ad4ad92f3b4d",
+      "source_sha256": "6e4aadbedaf80663eda2445ce9ffc7f34d7f63cdb1903400ff36d47aba9a32e7",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "1164f4057755ce834f0e1217dad2dca9674c77e83840215b064ce32a1af4377b",
+      "source_sha256": "93b00343b1888dbf2eeb2234cb8f5b56688ac354aeb5b417f72118c56a6e4097",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "1787703ddbbb5088a5bf291204a55fe70ca0b5016f51fc2f3513a71e4ab607e5",
+      "source_sha256": "d5fb4d5714a4a1410616ab0945b856814d3c596578bda574044c12c6087446e8",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "1a1ae30c660db36865ede3126498b0284b9fe6eb81ff97d03b55ca8348e17005",
+      "source_sha256": "edbf0e817a2799b75539a86a823880f6530a89889d80b83fce42305ba900d978",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "1f8f8baec95f1a9d9810ae3d403ae00fd37ef02326d1402f6f1142e4c7e68585",
+      "source_sha256": "b43b3701d100f5a5e52cad7b6f2e3851e839b5a88f298cdcc2acb787f0acfa42",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "401794c12e930d13f20bf6ea0e71e68cfdf4f18927ebcfa2fcac2447a46a1a3b",
+      "source_sha256": "e4f5f7386f984f0106f4bb0b72a07a1ea3750c871a0dc67f89a61f2453ec84e8",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "4226e5659586893f7e2583481b3d77d32fa83f00c2157940ce902f7df5201f37",
+      "source_sha256": "f13e66693595423152bdb595e987e9a20eb4679e893b681c4e13693859906e4e",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "431076934f794cd84f7dc33719ed54d8ecaa5efc6b279e3a3d781cf9c09acdfa",
+      "source_sha256": "e047fba29603183971c535d2689b030b449f03a8e8b194ecd6388d3c20d7dfc2",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "43287fc4956e3301c5e76a77a4b9e72a969cff204caa689b647683b902cbe3d8",
+      "source_sha256": "fb96426f35eaf90acbcad8ee46f4057f854dc788ac773be569896247a709ccf0",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "4683a56ffedd60fd946c76ce13f78404cac564d4e681a85a46bca78def1820f7",
+      "source_sha256": "cacdc7579a887d7e00061eb0e532f6a51b776eca2becbd6929c79daeaf60dc89",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "4825e1a9dac5004c2fdde24692cef5f42501dd3917f88512dceaffb1fcd35004",
+      "source_sha256": "777ea644bbacfa591163eeb66b254e893d0614655f6745c3dd35130e9f42526f",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "52bfe43d9c794bdf7b32b8a83d7115e63ce9da5ab3a728d4a314cf74d44413d6",
+      "source_sha256": "0f8f2745b6f96befdc9e08aedf73b3dcb440937b57dd4a5760959a03ac009138",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "593c6062cb08c664638021e84d2624858f5e3397ee7dc3cb4e3760f6554b61c0",
+      "source_sha256": "035e1baa6539f0908e13ab1b434fdaffeba32fdeb3df3ee06a60ab531ab5ba27",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "5e8cf9cad3dbb744fb1166154acc9c23f44595401861b06c560b3a45ee5c99de",
+      "source_sha256": "273c522fc13f59641caa60ece137151e9907bbebaa69e6a3fe603359da559bb2",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "60a8a4d59ffd3b468b7b0725ee384b2da97b11aa738b86e951b5fd277fd1eb89",
+      "source_sha256": "cddb65abfe88e103efa45a66e3fba34b0dd8bca65abf9c884f3a158236dfd352",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "674de39b3b1266b60f4629169c076526892afdab9c52b6296f06b1318837d337",
+      "source_sha256": "3e76b3cab040d09344ea226c87acc89c64d8b72024645b483c7240a826671fd5",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "6e28c01e66bfc25988efbc8828611ef73c7d9be066a78bebbbdea850bba048c0",
+      "source_sha256": "6f1dc1f8e53cd9d996abf080ae80ac8edb3cfc155983332ddad48337053f726f",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "73e8ab66343697de52f2db04c5959afd05753b9f0e3f8a20242425689d8b0fd3",
+      "source_sha256": "bc2c230623785cb1b2c09b3df0a89979b494584ff2f33d78035317eae7dd1c65",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "77f7279c481eb43c7851431d66fe926dc113943c37460ef40afbf5b12ebe028f",
+      "source_sha256": "b3167b9d4d5dd35426830364143e9de9d19795996a080a67dadffe36345e2626",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "782fb4db3b59cc3e1cbb72f51f72d0ca310ee4815405d0b420e7c323f6d9bcf8",
+      "source_sha256": "ac4ddb55a5555cdd1ed1972f2240ea94ef1da97de0d578570062ed0f1e554ee8",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "7d6ac157cc1663d9d9776ce1f2d1f024b36bb4a4ce3376538319c7d31f732056",
+      "source_sha256": "bbe8b8bbbe1bb6d6c0564aaa11f77d443b27804ca985f6bb77482399449d31f7",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "8650e9254ca4fbbed5fd9348110e75208392287aa334e88b3866c4ca80ee43de",
+      "source_sha256": "0ed59ae6801d238f924c89fccfd5a1db7bf491e15d16144302981f3cb4d1e108",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "8729c985e275677369c148c092cc680cc58550285ebdc585bce5207275fe07d2",
+      "source_sha256": "765919c0aebfb3837dfb63583675ff6bd856f78fdeae36fb15358a77526c7cc0",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "8ccf1b01fff325476e1ec202ac14e069b0795e0e5049956a3dedc3e764f6d5cb",
+      "source_sha256": "e173a58c4b06c8da9efad25d487ed2f6bfb5f69a337997948256486ac0aaf002",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "91ee0b2e23c2271ba2d3a5870a00ea4ecf259e0d266501daf062b7fd51935838",
+      "source_sha256": "fc2a104d52c1631096db1088859d0f27a8eb77fc7069b2ebf3aea033c6b7b02a",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "98bb07a9a3f7486e2198b7b6b90dfaf7d587a85f9a036f8145fb90a621c69747",
+      "source_sha256": "6b3f555c28fbce9979bd70f291aeb232811d4bb437bc478c310e807c8ded5815",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "a18c3577305f7ec8f13e7c2f4f949a4ae96c2287306460f0f298e464df7abe28",
+      "source_sha256": "afcad164f9bffce91f29b33e0c83ea5febf449dfeb525914016dc05e054bb0a3",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "a44cbab1c354c29c319716a5eb473510ea98996ed9eb09568f46c195fa6daca4",
+      "source_sha256": "e5df1b2d98d31720f018b65cc3a9f1907f9dabcf9b59ec6c0c91eaf94602cf89",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "a4a229fa4e079ce88bee98ca4fdb86cf197da7601601cc9a04a49408419f6525",
+      "source_sha256": "8dd9ee2103b91563eec82f024ff52cc06087709ee89344c87e5b3ec659bf97ff",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "a9469e7fbdf5c0f46c81171910902ff78197be5536405ee7cd9a60388311cddb",
+      "source_sha256": "a6f6472964a89da64b443b62eac3d1cad51347b75f056a30c8b7c6ffbf9f05da",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "ae53ccabdb13ba4616a16e5db682e635b7a5bc4bd93ec7c74dbc903e2ed05e55",
+      "source_sha256": "e546d3459127004210d58341e3ee528fb1376a208b7f42781c0819d613de3951",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "afc18d623b224729a3cd0a34aa24a96ffb8918c0bc5470ef657912d68c7e2ca9",
+      "source_sha256": "0d7b2820917559d6b50c284e15379e618727c4ec1699223ca70bd200f8483eee",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "b225e086cd0c7b004ad62b65636642f413f6828048ec19544fa2ad7ffcf0c954",
+      "source_sha256": "45616421b786641ad04e72ddb7aea81dda42c09e9dce00864cc83e9cd59e9772",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "bc7998f3ea8f71f352f2d271f54728bfb4462ce18b902d8612c862fc8200099e",
+      "source_sha256": "8ec26db24eb5d0c26e4710bc1522dffbfb045511e4019c2c440c1f55b84372fa",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "c37f46adcfea3d7823bd1234fad9a7a1db6cf134bd61d21b57fade1accae3c8d",
+      "source_sha256": "9a0512209f79af3735cc5917a97a61ca15a8cc52a59015b80fff1c792dbefef8",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "c597a0c9ea704c402f57503e0938bee3885b004fa441cd6cb1fa183e1d9df218",
+      "source_sha256": "89a0eacb5cbc81f869d81c72135507793ca9db3b2922e093126160b432e6046b",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "c7a649da4ac23c9c738a905de0bb7f402b5a4557c7d1f04f0265f85f3e51501d",
+      "source_sha256": "7c75225df59d369d6d9383ccbcdf0dc08939fa050a5888d1e66760fe0b551af2",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "cb9f91be8e2e291db24034f6cd4d1db17db0545fe1df451406d3ad2d6b10fc21",
+      "source_sha256": "d049724beaacfb25d6b9f4419409eb62f4d6a766b66ce538cf62e898bad6e57a",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "ce692049e6cf40952416420cc85eac52cc41b9655c64a4e8828a0df596fdbadc",
+      "source_sha256": "93e3f65fa0624cb96580c57a1e4e570de07565e1a4a7397c3469889c10c5a573",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "cf750c38944d7e15a512df83c512b12117491f1a168bcc3a6face73dff778cf5",
+      "source_sha256": "88412387240f67cf80b8075d5b648d99519c6f6ffad73fb14c49d20b0dd6073a",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "d1b0bddab28eb99571e3c1931595abae25ac06f6b61048dfc8baf45bf73acf62",
+      "source_sha256": "ff8c2b270403ebbf5800f24504131e0b799c5ce237c4d6f2e75bb4ece8bb8b79",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "d2331ace5d7bf20c4a553304a8c13cc6477fdca16ddfdbf71f37bfc6d0be0f32",
+      "source_sha256": "7bc76cff057202d26f4ce5265966df697e93cf370c67e2619248962c20b44495",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "d59f82dc9bc41572d351e8b52d082dffd336c2240b13aa991083aa195f93f843",
+      "source_sha256": "c4a81b9e31aa8cb99be47985b9545b185e42faf94873420c23b6f6a6effe9fbf",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "dc39ac26d156fb14e2b6cf344d1bc989bf210a9c38dd7948bd2b0799d75b1ef5",
+      "source_sha256": "d23d061cc5caedb44214b45c90160e4fe6942c3a5dc73f6ba960f068fc37f20a",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "df906fb2a9b4218a905ee2464c28dced58065ef4390cacb14329bf4937eafc08",
+      "source_sha256": "f16e8e9987e4b0b1e95d887155a57f6444c611a025b44c3c43db3a8edbe3d359",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "e16dbb90b00185fb25b2ddfc625e224b32bd8a719116402d73b0c95fb704f607",
+      "source_sha256": "6003d9499fb71dba2245ec732af18b2faa2deca4fd6d1ff8934a384a8ae2a9e3",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "eb02af748bea56080f304746e53a894e2b542d0103a17c0e3bd22b75700e928a",
+      "source_sha256": "4d38082bcbab51d3ae287a61c9530c76c3653293445d66decffd170bcbe2d311",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "f8337d9241bedd5dd52709a3dd1d94e62e20c34ee1c1cc004c3560193d9e0ecc",
+      "source_sha256": "d68777e6aecd16795439387eb4c3ed3902ed1fea052dd557203b0913752c7c5a",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    },
+    {
+      "case_ref": "f878ea6e3b25676094b2e6fdebd770d63ace8616ac6c4f59d91a35bc6cf205b8",
+      "source_sha256": "b6e90b5ad0a363cf56746d0c14fb71b2d014740fdae2f718957642814f2dfe2d",
+      "classification": "OPEN_UNKNOWN",
+      "reason_code": "NO_RECORDED_EXIT_OR_BROKER_RECEIPT",
+      "matching_receipt_count": 0,
+      "exit_fill_inferred": false
+    }
+  ],
+  "policy": "Only exact source-bound broker execution receipts confirm a close; marks and reconstructed bars never create fills.",
+  "pnl_release_authorized": false,
+  "report_sha256": "e2d7241ae58f1ccd7c89f685680b12da1b7b79c411490d746bf6f8d5c459f199"
+}

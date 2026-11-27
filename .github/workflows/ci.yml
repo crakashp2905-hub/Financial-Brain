@@ -28,14 +28,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
+      - name: Validate CI check matrix and unique chart-pattern steps
+        run: python scripts/validate_ci_check_matrix.py
       - name: Lint
         run: python -m ruff check src tests
       - name: Validate capability claims
         run: python scripts/validate_capability_matrix.py
+      - name: Reject unsupported financial-performance claims
+        run: python scripts/audit/claim_safety.py
       - name: Verify forward-edge capability matrix rendering
         run: python scripts/forward_edge_capability_matrix.py --check
       - name: Validate market-data source rights and credential inventory
         run: python scripts/validate_market_data_sources.py
+      - name: Verify provider-product data-use matrix
+        run: python scripts/market_data_use_matrix.py --check
       - name: Validate independent release semantics
         run: python scripts/validate_release_semantics.py
       - name: Inventory source ownership gaps
@@ -48,8 +54,19 @@ jobs:
         run: python scripts/validate_product_charter.py --check
       - name: Validate five-desk launch gates and evidence labels
         run: python scripts/validate_launch_gates.py --check
+      - name: Validate authoritative paper-account position ownership
+        run: python scripts/validate_paper_account_position_ownership.py
       - name: Verify complete per-item checklist audit export
         run: python scripts/export_checklist_audit.py --check
+      - name: Verify checklist completion evidence gap report
+        run: python scripts/checklist_completion_gate.py --check
+      - name: Reject unsupported new COMPLETE checklist claims
+        if: github.event_name == 'pull_request'
+        run: python scripts/checklist_completion_gate.py --base-commit ${{ github.event.pull_request.base.sha }}
+      - name: Verify evidence-derived profit readiness report
+        run: python scripts/profit_readiness.py --check
+      - name: Verify release-blocking forward evidence gate
+        run: python scripts/forward_evidence_gate.py --check
       - name: Verify old/new forward-engine dependency graph
         run: python scripts/forward_engine_graph.py --check
       - name: Verify fixed-fixture legacy/integrated paper equivalence report
@@ -78,6 +95,10 @@ jobs:
         run: python -m financial_brain.patterns.demo --offline
       - name: Test suite
         run: python -m coverage run --source=financial_brain -m pytest -q -ra --junitxml=pytest-results.xml
+      - name: Build release provenance manifest
+        run: python scripts/build_release_provenance.py --test-artifact pytest-results.xml
+      - name: Verify release provenance manifest
+        run: python scripts/build_release_provenance.py --check
       - name: Summarize test and skip counts
         if: always()
         run: python scripts/ci_test_summary.py pytest-results.xml
@@ -87,6 +108,13 @@ jobs:
         with:
           name: pytest-results-${{ matrix.os }}
           path: pytest-results.xml
+          if-no-files-found: warn
+      - name: Upload release provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-provenance-${{ matrix.os }}
+          path: docs/edge-program/release-provenance.current.json
           if-no-files-found: warn
       - name: Critical-module coverage
         run: python -m coverage report --include="*/execution/oms/*,*/risk/*,*/evaluation/champion.py,*/evaluation/prospective.py,*/decisions/net_alpha.py,*/interfaces/*"
@@ -124,5 +152,7 @@ jobs:
         run: python -m pip check
       - name: Verify Python, timezone, seed, lock, and fixture fingerprints
         run: python scripts/verify_reproducibility.py
+      - name: Audit locked installs and reject user-specific source paths
+        run: python scripts/audit_reproducible_install.py --check
       - name: Verify deterministic fixture behavior without market access
         run: python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl

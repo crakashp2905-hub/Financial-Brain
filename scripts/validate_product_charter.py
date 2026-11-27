@@ -29,6 +29,11 @@ def validate() -> None:
         raise ValueError("mutual-fund scope must use NAV/business-day execution, not exchange ticks")
     if any(row.get("implementation_claim") != "SCOPE_ONLY" for row in desks):
         raise ValueError("product charter must not imply that desk capability is implemented")
+    objective = body.get("business_objective", {})
+    if "expected and realized prospective" not in objective.get("objective", "") or "after all applicable" not in objective.get("objective", ""):
+        raise ValueError("business objective must require expected and prospective net value after all costs")
+    if len(objective.get("evaluation_requirements", [])) < 3 or len(objective.get("non_objectives", [])) < 3:
+        raise ValueError("business objective must separate evaluation rules from non-objectives")
     if len(body.get("success_criteria", [])) < 3 or len(body.get("shared_invariants", [])) < 4:
         raise ValueError("charter is missing success criteria or shared invariants")
 

@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS zoo_targets (strategy VARCHAR, day DATE, key VARCHAR,
 CREATE TABLE IF NOT EXISTS zoo_pnl (strategy VARCHAR, day DATE, gross DOUBLE, cost DOUBLE, net DOUBLE, bench DOUBLE,
                                     holdings INTEGER, PRIMARY KEY (strategy, day));
 CREATE TABLE IF NOT EXISTS zoo_state (strategy VARCHAR PRIMARY KEY, state VARCHAR);
+CREATE TABLE IF NOT EXISTS zoo_pnl_quality (
+    strategy VARCHAR, day DATE, status VARCHAR, missing_return_keys VARCHAR,
+    PRIMARY KEY (strategy, day));
 """
 
 
@@ -84,7 +87,24 @@ def settle(z, strategy: str, day: date, prev_day: date | None, rets: dict, bench
     old = {}
     if prev_day is not None:
         old = dict(z.execute("SELECT key, weight FROM zoo_targets WHERE strategy = ? AND day = ?", [strategy, prev_day]).fetchall())
-    gross = float(sum(w * rets.get(k, 0.0) for k, w in old.items()))
+    valid_returns: dict[str, float] = {}
+    missing_returns: list[str] = []
+    for key in old:
+        raw_return = rets.get(key)
+        if raw_return is None or isinstance(raw_return, bool):
+            missing_returns.append(key)
+            continue
+        try:
+            value = float(raw_return)
+        except (TypeError, ValueError):
+            value = float("nan")
+        if not np.isfinite(value):
+            missing_returns.append(key)
+        else:
+            valid_returns[key] = value
+    incomplete = bool(missing_returns)
+    gross = (None if incomplete else
+             float(sum(weight * valid_returns.get(key, 0.0) for key, weight in old.items())))
     keys = set(old) | set(new)
     cost = 0.0
     for k in keys:
@@ -95,9 +115,19 @@ def settle(z, strategy: str, day: date, prev_day: date | None, rets: dict, bench
     z.execute("DELETE FROM zoo_targets WHERE strategy = ? AND day = ?", [strategy, day])
     if new:
         z.executemany("INSERT INTO zoo_targets VALUES (?,?,?,?)", [(strategy, day, k, float(w)) for k, w in new.items() if w])
-    row = {"gross": gross if prev_day else 0.0, "cost": cost, "net": (gross if prev_day else 0.0) - cost,
-           "bench": bench if prev_day else 0.0, "holdings": int(sum(1 for w in new.values() if w))}
+    settled_gross = gross if prev_day else 0.0
+    status = "INCOMPLETE_MISSING_RETURN" if incomplete else (
+        "INITIAL_TARGET_SET" if prev_day is None else "COMPLETE")
+    settled_net: float | None = None
+    if not incomplete:
+        settled_net = (settled_gross if settled_gross is not None else 0.0) - cost
+    row = {"gross": settled_gross, "cost": cost,
+           "net": settled_net,
+           "bench": None if incomplete else (bench if prev_day else 0.0),
+           "holdings": int(sum(1 for w in new.values() if w))}
     z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", [strategy, day, *row.values()])
+    z.execute("INSERT OR REPLACE INTO zoo_pnl_quality VALUES (?,?,?,?)",
+              [strategy, day, status, json.dumps(sorted(missing_returns), separators=(",", ":"))])
     return row
 
 
@@ -106,7 +136,7 @@ def settle(z, strategy: str, day: date, prev_day: date | None, rets: dict, bench
 def rule_targets(bars: dict[str, pd.DataFrame], day: date) -> dict[str, dict]:
     """Every technical rule's equal-weighted longs among ``bars`` (lineage -> history up to ``day``)."""
     from ..evaluation import rule_systems as RS
-    longs = {r: [] for r in RULES}
+    longs: dict[str, list[str]] = {rule: [] for rule in RULES}
     for lin, b in bars.items():
         if len(b) < 210 or b["d"].iloc[-1] != day:
             continue
@@ -144,7 +174,7 @@ def pairs_targets(px: pd.DataFrame, st: dict, *, coint: bool, formation: int = 2
         if coint:
             pairs = sorted(pairs, key=lambda p: p["t"])[:n_pairs]
         st = {"formed_at": today, "n_rows": len(px), "pairs": pairs}
-    w = {}
+    w: dict[str, float] = {}
     live = [p for p in st["pairs"] if p["i"] in px.columns and p["j"] in px.columns]
     for p in live:
         pi, pj = px[p["i"]].iloc[-1], px[p["j"]].iloc[-1]
@@ -346,10 +376,23 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
              "edge_h003_riskadj_mom", "edge_h005_industry_mom")
     st = ZE.state(z, "edge_monthly")
     if ZE._first_of_month(z, day) or not st.get("targets"):
+        month_sessions = [session for session in sessions
+                          if session.year == day.year and session.month == day.month]
+        scheduled_signal_date = min(month_sessions) if month_sessions else day
+        rebalance_audit = None
+        if day > scheduled_signal_date and st.get("set") != str(scheduled_signal_date):
+            intended = ZE.monthly_targets(rcon, scheduled_signal_date)
+            rebalance_audit = ZE.monthly_rebalance_audit(day, scheduled_signal_date, st, intended)
+            if rebalance_audit:
+                log.error("ALERT monthly rebalance missed signal_date=%s detected_on=%s mismatched_books=%s",
+                          rebalance_audit["signal_date"], rebalance_audit["detected_on"],
+                          rebalance_audit["mismatched_books"])
         fresh = ZE.monthly_targets(rcon, day)
         errors = fresh.pop("_errors", {})
         kept = {n: st.get("targets", {}).get(n, {}) for n in errors}    # a failed book keeps its last targets
         st = {"targets": {**fresh, **kept}, "set": str(day), "errors": errors}
+        if rebalance_audit:
+            st["last_rebalance_audit"] = rebalance_audit
         if errors:
             log.warning("monthly targets: %s kept previous targets: %s", sorted(errors), errors)
         ZE.save(z, "edge_monthly", st)
@@ -473,9 +516,10 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
             z.execute("INSERT OR REPLACE INTO zoo_pnl VALUES (?,?,?,?,?,?,?)", ["edge_i2_seasonality_ls", day, None, None, r, 0.0, 13])
             out["edge_i2_seasonality_ls"] = {"net": r}
     if day in lv.index:                                  # batch four: eight Nifty rules, daily (paper only)
-        for n, w in ZE.q_targets(lv["Nifty 50"]).items():
+        for n, target_weight in ZE.q_targets(lv["Nifty 50"]).items():
             if n not in done:
-                out[n] = settle(z, n, day, prev, rets, 0.0, {INDEX: w} if w else {})
+                out[n] = settle(z, n, day, prev, rets, 0.0,
+                                {INDEX: target_weight} if target_weight else {})
     if "edge_v1_vwap_bounce" not in done:               # V1: settled from today's Nifty minute bars, after index_day
         r = ZE.v1_return(day)
         if r is not None:
@@ -491,15 +535,16 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
             try:
                 st = {"w": ZE.anomaly_targets(rcon, day), "set": str(day)}
                 ZE.save(z, "edge_anomalies", st)
-            except Exception as e:                       # noqa: BLE001 - keep yesterday's books rather than none
-                print(f"anomaly books not refreshed tonight: {e}")
+            except Exception as exc:                      # noqa: BLE001 - keep yesterday's books rather than none
+                print(f"anomaly books not refreshed tonight: {exc}")
         for n in anames:
             if n not in done:
                 out[n] = settle(z, n, day, prev, rets, ubench, st.get("w", {}).get(n, {}))
     if day in lv.index:
-        for n, e in ZE.calendar_exposures(day, lv["Nifty 50"]).items():
+        for n, exposure in ZE.calendar_exposures(day, lv["Nifty 50"]).items():
             if n not in done:
-                out[n] = settle(z, n, day, prev, rets, rets.get(INDEX, 0.0), {INDEX: e} if e else {})
+                out[n] = settle(z, n, day, prev, rets, rets.get(INDEX, 0.0),
+                                {INDEX: exposure} if exposure else {})
     if "edge_a16_india_year_end" not in done:
         st = ZE.state(z, "edge_a16")
         if ZE.a16_window(day):
@@ -528,8 +573,10 @@ def summary(z) -> pd.DataFrame:
     if df.empty:
         return df
     g = df.groupby("strategy")
-    out = pd.DataFrame({"days": g.size() - 1, "net_total": g["net"].sum(), "bench_total": g["bench"].sum(),
-                        "last_net": g["net"].last(), "holdings": g["holdings"].last()})
+    out = pd.DataFrame({"days": g["net"].count() - 1, "net_total": g["net"].sum(min_count=1),
+                        "bench_total": g["bench"].sum(min_count=1),
+                        "last_net": g["net"].agg(lambda values: values.iloc[-1]),
+                        "holdings": g["holdings"].last()})
     out["vs_bench"] = out["net_total"] - out["bench_total"]
     out["kind"] = [KIND.get(s, "book") for s in out.index]
     from ..evaluation import performance as PF
@@ -619,5 +666,7 @@ def run(rcon, z, *, day: date | None = None, fno_symbols: list[str] | None = Non
     except Exception as e:                              # noqa: BLE001 - the rest of the zoo settles regardless
         print(f"edge strategies skipped tonight: {e}")
     if ALLOCATOR not in done and out:
-        out[ALLOCATOR] = run_allocator(z, day, prev)
+        allocator_row = run_allocator(z, day, prev)
+        if allocator_row is not None:
+            out[ALLOCATOR] = allocator_row
     return {"day": day, "prev": prev, "settled": len(out)}

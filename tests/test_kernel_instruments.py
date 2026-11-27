@@ -12,6 +12,8 @@ from financial_brain.kernel.instruments import (
     InstrumentError,
     InstrumentId,
     InstrumentMaster,
+    NFOContractMaster,
+    NFOContractRecord,
     Phase,
     RuleVersion,
     Status,
@@ -196,6 +198,49 @@ def test_instrument_identity_point_in_time_metadata_for_etf_option_and_fund() ->
         rules=[RuleVersion(date(2026, 1, 1), tick=Decimal("0.05"))],
     )
     assert option.expiry == date(2026, 12, 31)
+
+
+def _nfo_record(**changes) -> NFOContractRecord:
+    values = {"exchange": "NFO", "underlying": "NIFTY", "right": "CE",
+              "strike": Decimal("25000"), "expiry": date(2026, 12, 31),
+              "instrument_token": 123456, "tradingsymbol": "NIFTY26DEC25000CE",
+              "effective_from": date(2026, 11, 1)}
+    values.update(changes)
+    return NFOContractRecord(**values)
+
+
+def test_nfo_contract_master_resolves_only_exact_effective_listed_identity() -> None:
+    master = NFOContractMaster((_nfo_record(),))
+    resolved = master.resolve(exchange="nfo", underlying="nifty", right="ce",
+                              strike=Decimal("25000"), expiry=date(2026, 12, 31),
+                              instrument_token=123456, on=date(2026, 11, 27))
+    assert resolved.tradingsymbol == "NIFTY26DEC25000CE"
+    assert '"NFO","NIFTY","CE","25000","2026-12-31",123456' in resolved.canonical_id()
+    with pytest.raises(InstrumentError, match="unknown, stale"):
+        master.resolve(exchange="NFO", underlying="NIFTY", right="CE",
+                       strike=Decimal("25000"), expiry=date(2026, 12, 31),
+                       instrument_token=654321, on=date(2026, 11, 27))
+    with pytest.raises(InstrumentError, match="unknown, stale"):
+        master.resolve(exchange="NFO", underlying="NIFTY", right="CE",
+                       strike=Decimal("25000"), expiry=date(2026, 12, 31),
+                       instrument_token=123456, on=date(2027, 1, 1))
+
+
+@pytest.mark.parametrize("changes", [
+    {"exchange": "NSE"}, {"right": "CALL"}, {"strike": Decimal("NaN")},
+    {"instrument_token": 0}, {"status": "DELISTED"},
+])
+def test_nfo_contract_records_reject_invalid_or_non_active_terms(changes) -> None:
+    if changes.get("status") == "DELISTED":
+        record = _nfo_record(**changes)
+        master = NFOContractMaster((record,))
+        with pytest.raises(InstrumentError, match="unknown, stale"):
+            master.resolve(exchange="NFO", underlying="NIFTY", right="CE",
+                           strike=Decimal("25000"), expiry=date(2026, 12, 31),
+                           instrument_token=123456, on=date(2026, 11, 27))
+    else:
+        with pytest.raises(InstrumentError):
+            _nfo_record(**changes)
 
 
 @pytest.mark.parametrize("state", [

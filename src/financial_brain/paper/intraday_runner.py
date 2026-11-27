@@ -3,7 +3,7 @@ minute candles - and keep the evidence.
 
     live     polls Kite's read-only quote endpoint every ``POLL_SECONDS`` from 09:15 to 15:30 IST, sets the
              opening range from the quote's own day high and low at 09:30, feeds every polled price to the
-             engine, flattens at 15:15 and writes the day's report. Exits on its own on a holiday (no trade
+             engine, attempts to flatten at 15:15 and writes the day's report. Exits on its own on a holiday (no trade
              printed today by 09:25) and if the Kite session is missing or expires.
     replay   the same engine fed a past day's exact one-minute candles (open, then the bar's extremes in
              the order its direction implies, then the close). Labelled ``replay`` everywhere: it uses rules
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS runs (day VARCHAR, mode VARCHAR, version VARCHAR, sta
 EXTRA_COLUMNS = (("entry_decision_px", "DOUBLE"), ("exit_decision_px", "DOUBLE"), ("spread_bp", "DOUBLE"),
                  ("shortfall_bp", "DOUBLE"), ("mkt_ret", "DOUBLE"), ("daily_up", "BOOLEAN"), ("gap", "DOUBLE"),
                  ("or_width", "DOUBLE"), ("entry_minute", "INTEGER"), ("entry_vwap", "DOUBLE"), ("exit_vwap", "DOUBLE"),
-                 ("entry_walk_bp", "DOUBLE"))
+                  ("entry_walk_bp", "DOUBLE"), ("entry_price_basis", "VARCHAR"), ("exit_price_basis", "VARCHAR"))
 
 
 def cohort_path(base: Path, cohort: str | None, strategies, rules: dict[str, I.StrategyRule] | None) -> tuple[Path, str]:
@@ -117,12 +117,13 @@ def save(con, t: I.Trade, mode: str) -> None:
     con.execute("""INSERT OR REPLACE INTO trades (trade_id, mode, version, day, strategy, symbol, side, qty, entry_ts,
                    entry_px, stop, target, exit_ts, exit_px, exit_reason, gross_pnl, costs, net_pnl, r_multiple, bucket,
                    entry_decision_px, exit_decision_px, spread_bp, shortfall_bp, mkt_ret, daily_up, gap, or_width,
-                   entry_minute, entry_vwap, exit_vwap, entry_walk_bp)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   entry_minute, entry_vwap, exit_vwap, entry_walk_bp, entry_price_basis, exit_price_basis)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 [t.trade_id, mode, t.version, t.day, t.strategy, t.symbol, t.side, t.qty, t.entry_ts, t.entry_px,
                  t.stop, t.target, t.exit_ts, t.exit_px, t.exit_reason, t.gross_pnl, t.costs, t.net_pnl,
                  t.r_multiple, t.bucket, t.entry_decision_px, t.exit_decision_px, t.spread_bp, t.shortfall_bp,
-                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute, t.entry_vwap, t.exit_vwap, t.entry_walk_bp])
+                 t.mkt_ret, t.daily_up, t.gap, t.or_width, t.entry_minute, t.entry_vwap, t.exit_vwap,
+                 t.entry_walk_bp, t.entry_price_basis, t.exit_price_basis])
 
 
 def record_run(con, day: str, mode: str, **kw) -> None:
@@ -263,7 +264,7 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         return json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
     buckets = {u["tradingsymbol"]: bucket_for(u.get("adv")) for u in uni}
-    eng = I.DayEngine(day, strategies=strategies, rules=rules)
+    eng = I.DayEngine(day, strategies=strategies, rules=rules, require_observed_quote=True)
     eng.daily_up = daily_up(date.fromisoformat(day))
     started = now.isoformat()
     daily, asof, rcon = daily_view() if daily_fn is None else daily_fn()
@@ -334,24 +335,26 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
                                        else "Quote unavailable — retrying"),
                     polls=polls, prices=last, quote_at=quote_at)
             if failures >= max_failures and any(t.is_open for t in eng.trades) and not eng.closed_for_day:
-                # Open positions must not be abandoned (2026-11-03: 51 trades left without an exit).
-                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns; at the
-                # flatten time with no feed, close at the last good quote, labelled as stale.
+                # Keep retrying slowly so stop/target/15:15 still apply if the feed returns.
+                # A last-good quote is valuation-only: it is not executable exit evidence.
                 if clock < I.TIME_EXIT:
                     record_run(con, day, "live", started=started, status="degraded", symbols=len(syms),
                                polls=polls, note=f"quotes failing, holding open positions: {str(e)[:100]}",
                                version=fingerprint)
                     sleep_fn(max(poll, 60))
                     continue
-                for t in eng.end_of_day(now.replace(tzinfo=None), last):
-                    t.exit_reason = "time_stale_quote"
-                    save(con, t, "live")
-                log.warning("feed down at the flatten time: open positions closed at the last good quote")
+                unresolved = sum(t.is_open for t in eng.trades)
+                log.warning("feed down at flatten time: %d open positions remain unresolved; last-good quotes are valuation estimates only",
+                            unresolved)
             if failures >= max_failures:
+                unresolved = sum(t.is_open for t in eng.trades)
                 record_run(con, day, "live", started=started, finished=now.isoformat(), status="aborted",
                            symbols=len(syms), polls=polls,
-                           note=feed_health_note(failure_class=type(e).__name__), version=fingerprint)
+                           note=feed_health_note(failure_class=type(e).__name__, unresolved_positions=unresolved,
+                                                 valuation_estimate_only=True), version=fingerprint)
                 return {"day": day, "status": "aborted", "why": str(e)[:200],
+                        "unresolved_positions": unresolved, "valuation_estimate_only": bool(unresolved),
+                        "realized_pnl_released": False,
                         "feed_health": feed_health.snapshot(now=now_fn())}
             record_run(con, day, "live", started=started, status="running", symbols=len(syms), polls=polls,
                        note=feed_health_note(), version=fingerprint)
@@ -457,21 +460,31 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         publish(path, eng, now=now, status="Paper session running", polls=polls,
                 prices=last, quote_at=quote_at)
         sleep_fn(poll)
-    if session_issue is None and not eng.closed_for_day:
-        for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
-            save(con, t, "live")
-    status = "session_unavailable" if session_issue is not None else "complete"
+    # A cached last quote can support a valuation estimate, never a synthetic
+    # flatten fill. The normal 15:15 branch above closes positions only while a
+    # fresh poll is being processed; anything still open here remains unresolved.
+    unresolved = sum(t.is_open for t in eng.trades)
+    status = ("session_unavailable" if session_issue is not None else
+              "aborted" if unresolved else "complete")
+    note = feed_health_note(
+        skipped=len(eng.skipped), unresolved_positions=unresolved,
+        valuation_estimate_only=bool(unresolved),
+        reason="OPEN_POSITIONS_UNRESOLVED_AT_SESSION_END" if unresolved else None,
+    )
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=feed_health_note(skipped=len(eng.skipped)),
-               version=fingerprint)
+               symbols=len(syms), polls=polls, note=note, version=fingerprint)
     if qcon is not None:
         qcon.close()
-    if session_issue is None and _has_board(con):
+    if session_issue is None and not unresolved and _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls,
            "forward_quote_archive": forward_quote_archive_stats,
            "feed_health": feed_health.snapshot(now=now_fn())}
-    publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
+    if unresolved:
+        out.update({"unresolved_positions": unresolved, "valuation_estimate_only": True,
+                    "realized_pnl_released": False})
+    publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else
+            "Open positions unresolved — valuation only" if unresolved else "Session unavailable",
             polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)
     return out

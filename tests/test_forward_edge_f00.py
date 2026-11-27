@@ -5,6 +5,7 @@ Offline and deterministic. No broker, no credentials, no network (open PRs are n
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import shutil
 from dataclasses import FrozenInstanceError, replace
@@ -145,6 +146,22 @@ def test_pins_agree_with_the_existing_protected_baseline() -> None:
     for rel, digest in pinned.items():
         if rel in existing:
             assert existing[rel] == digest, rel
+
+
+def test_protected_pin_normalizes_declared_crlf_checkout_to_canonical_lf(tmp_path: Path) -> None:
+    rel = "docs/trials/ledger.jsonl"
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True)
+    canonical = b'{"kind":"trial"}\n'
+    target.write_bytes(canonical.replace(b"\n", b"\r\n"))
+    expected = hashlib.sha256(canonical).hexdigest()
+    pins_dir = tmp_path / "docs/forward-edge"
+    pins_dir.mkdir(parents=True)
+    (pins_dir / "protected-pins.json").write_text(
+        json.dumps({"files": {rel: expected}, "normalize_eol": [rel]}), encoding="utf-8")
+    assert trials.verify_pins(tmp_path) == []
+    target.write_bytes(canonical + b"unauthorized\n")
+    assert trials.verify_pins(tmp_path) == [f"changed: {rel}"]
 
 
 def test_sealed_historical_record_tampering_is_detected_by_the_runtime_guard(tmp_path: Path) -> None:

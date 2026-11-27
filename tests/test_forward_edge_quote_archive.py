@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 import json
 import sqlite3
 
@@ -9,6 +12,7 @@ import pytest
 
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.clock import FixedClock
+from financial_brain.forward_edge.market_data import normalize_kite_quote
 from financial_brain.forward_edge.quote_archive import QuoteArchive, QuoteArchiveError
 from financial_brain.forward_edge.data_distribution import PriceWindow, DistributionThresholds, compare_windows
 
@@ -34,6 +38,67 @@ def test_archive_is_append_only_idempotent_and_roundtrips_provenance(tmp_path) -
         assert archive.rows()[0]["source"] == "kite-fixture"
         with pytest.raises(QuoteArchiveError, match="different content"):
             archive.append(_quote(2, event_id=first.event_id))
+        assert archive.count() == 1
+    finally:
+        archive.close()
+
+
+def test_semantic_duplicate_is_deduped_but_corrected_payload_is_preserved_with_lineage(tmp_path):
+    archive = QuoteArchive(tmp_path / "corrections.sqlite3")
+    try:
+        original = _quote(1)
+        duplicate_packet = replace(original, event_id="same-source-packet-different-local-id")
+        correction = replace(original, event_id="exchange-correction-1",
+                             payload={**original.payload, "bid": 99.5})
+
+        assert archive.append(original)
+        assert not archive.append(duplicate_packet)
+        assert archive.append(correction)
+        assert archive.count() == 2
+        lineage = archive.revision_lineage(correction.event_id)
+        assert lineage["revision"] == 2
+        assert lineage["supersedes_event_id"] == original.event_id
+        assert archive.get(original.event_id).payload["bid"] == 101
+        assert archive.get(correction.event_id).payload["bid"] == 99.5
+    finally:
+        archive.close()
+
+
+def test_late_market_event_is_retained_as_its_own_source_clock_observation(tmp_path):
+    archive = QuoteArchive(tmp_path / "late-arrival.sqlite3")
+    try:
+        current = _quote(2)
+        late = replace(_quote(1), received_at=current.received_at + timedelta(seconds=1),
+                       available_at=current.received_at + timedelta(seconds=1))
+        assert archive.append(current)
+        assert archive.append(late)
+        assert archive.count() == 2
+        assert archive.get(late.event_id).event_time < archive.get(current.event_id).event_time
+    finally:
+        archive.close()
+
+
+def test_semantic_dedupe_is_atomic_across_concurrent_archive_connections(tmp_path):
+    path = tmp_path / "quotes.sqlite3"
+    initialized = QuoteArchive(path)
+    initialized.close()
+    barrier = Barrier(2)
+    base = _quote(3)
+    events = (replace(base, event_id="connection-one"), replace(base, event_id="connection-two"))
+
+    def append_after_barrier(event):
+        archive = QuoteArchive(path)
+        try:
+            barrier.wait(timeout=3)
+            return archive.append(event)
+        finally:
+            archive.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(append_after_barrier, events))
+    assert sorted(results) == [False, True]
+    archive = QuoteArchive(path)
+    try:
         assert archive.count() == 1
     finally:
         archive.close()
@@ -278,6 +343,39 @@ def test_coverage_report_uses_explicit_denominators_and_labels_fixture_sources(t
         archive.close()
 
 
+def test_kite_delayed_feed_and_synthetic_fixture_have_distinct_hashed_source_classes(tmp_path) -> None:
+    received = T0 + timedelta(seconds=2)
+    quote = {
+        "timestamp": "2026-11-15 09:30:00", "last_price": 101.0, "volume": 100,
+        "depth": {"buy": [{"price": 100.9, "quantity": 12}],
+                  "sell": [{"price": 101.1, "quantity": 10}]},
+    }
+    live = normalize_kite_quote("NSE:INFY", quote, received_at=received,
+                                availability_delay=timedelta(milliseconds=250))
+    synthetic = replace(live, event_id="fixture-copy", source="SYNTHETIC_FIXTURE")
+    assert live.source == "KITE_CONNECT_READ_ONLY"
+    assert live.available_at == received + timedelta(milliseconds=250)
+    assert synthetic.sha256() != live.sha256()
+
+    archive = QuoteArchive(tmp_path / "source-classes.sqlite3")
+    try:
+        archive.append(live)
+        live_report = archive.coverage(expected_sessions={"s1"},
+                                       intents={("s1", "NSE:INFY"): 10_000},
+                                       as_of=received + timedelta(seconds=1))
+        assert live_report.claim_scope == "LIVE_OBSERVED"
+        assert live_report.source_classes == ("live",)
+
+        archive.append(replace(synthetic, instrument_id="NSE:RELIANCE"))
+        fixture_report = archive.coverage(expected_sessions={"s1"},
+                                          intents={("s1", "NSE:RELIANCE"): 10_000},
+                                          as_of=received + timedelta(seconds=1))
+        assert fixture_report.claim_scope == "FIXTURE_OR_MIXED"
+        assert fixture_report.source_classes == ("fixture",)
+    finally:
+        archive.close()
+
+
 def test_coverage_rejects_intents_outside_declared_sessions_and_naive_clock(tmp_path) -> None:
     archive = QuoteArchive(tmp_path / "quotes.sqlite3")
     try:
@@ -286,5 +384,43 @@ def test_coverage_rejects_intents_outside_declared_sessions_and_naive_clock(tmp_
         with pytest.raises(ValueError, match="timezone aware"):
             archive.coverage(expected_sessions={"s1"}, intents={("s1", "NSE:INFY"): 100},
                              as_of=datetime(2026, 11, 15))
+    finally:
+        archive.close()
+
+
+def test_replay_markouts_use_standard_horizons_and_source_hashes(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "markouts.sqlite3")
+    try:
+        execution = T0
+        for index, seconds in enumerate((5, 30, 60, 900), start=1):
+            at = execution + timedelta(seconds=seconds)
+            archive.append(MarketEvent(
+                f"markout-{seconds}", EventKind.QUOTE, "NSE", "NSE:INFY", at, at, at,
+                {"bid": 100 + index, "ask": 100.2 + index}, "kite-fixture",
+                evidence_id="fixture:markout"))
+        report = archive.replay_markouts(
+            venue="NSE", instrument_id="NSE:INFY", side="BUY", execution_price=100,
+            execution_at=execution, as_of=execution + timedelta(minutes=16), authorized_use=True)
+        rows = report["horizons"]
+        assert [row["horizon_seconds"] for row in rows] == [5, 30, 60, 900]
+        assert all(row["status"] == "MEASURED" and len(row["event_sha256"]) == 64 for row in rows)
+        assert rows[0]["markout_bps"] > 0
+        assert report["evidence_tier"] == "HISTORICAL_REPLAY"
+    finally:
+        archive.close()
+
+
+def test_replay_markout_fails_closed_without_rights_or_horizon_coverage(tmp_path) -> None:
+    archive = QuoteArchive(tmp_path / "markouts-empty.sqlite3")
+    try:
+        with pytest.raises(QuoteArchiveError, match="authorization"):
+            archive.replay_markouts(venue="NSE", instrument_id="NSE:INFY", side="BUY",
+                                    execution_price=100, execution_at=T0, as_of=T0,
+                                    authorized_use=False)
+        report = archive.replay_markouts(venue="NSE", instrument_id="NSE:INFY", side="BUY",
+                                         execution_price=100, execution_at=T0,
+                                         as_of=T0 + timedelta(hours=1), authorized_use=True)
+        assert all(row["status"] == "UNAVAILABLE" for row in report["horizons"])
+        assert all(row["markout_bps"] is None for row in report["horizons"])
     finally:
         archive.close()

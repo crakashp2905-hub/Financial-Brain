@@ -1,4 +1,4 @@
-"""Capital follows evidence of edge, and leaves when the evidence does.
+"""Capital follows audited forward evidence of edge, and leaves when the evidence does.
 
 A strategy is not good or bad; it has an estimated edge with an uncertainty, and that estimate moves.
 This turns a set of net-return histories into a capital allocation with four states:
@@ -20,15 +20,25 @@ is a strategy whose recent estimate rests on a few observations, and the t says 
 capital and one at ``t = 3`` keeps 89% of its mean. Selecting the best of many sleeves on a noisy
 estimate and then trusting that estimate is the winner's curse; the shrinkage is what offsets it.
 
-**Real money is a separate gate.** ``money_gate_passed`` must be true for a sleeve to receive anything
-but paper capital, whatever its statistics say. The allocator never decides that a strategy is fit for
-real money; it decides how a *validated* strategy is weighted against other validated strategies.
+**Only verified forward evidence can size.** ``allocate`` requires a signed audit receipt,
+verified against a caller-pinned auditor key, for every sleeve. The supplied periodic net returns
+must exactly match the signed observations. ``money_gate_passed`` remains a separate paper/live
+permission gate. The allocator does not establish that the trusted key belongs to an independent auditor.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Mapping
 
 import numpy as np
+
+from financial_brain.risk.audited_forward_kelly import (
+    AuditedForwardReturns,
+    AuditedKellyDecision,
+    AuditedKellyPolicy,
+    size_from_audited_forward_returns,
+)
 
 HALF_LIFE = 36            #: periods (months, for monthly sleeves)
 MIN_OBS = 24              #: fewer than this and the sleeve is on PAPER
@@ -94,31 +104,54 @@ def state_of(sleeve: Sleeve) -> dict:
     return {"state": st, "why": why, **e, "drawdown_sigmas": dd}
 
 
-def allocate(sleeves: list[Sleeve], *, fraction: float = KELLY_FRACTION,
-             cap: float = MAX_SLEEVE) -> dict:
-    """Capital weights per sleeve, summing to at most 1; the remainder is cash."""
+def allocate(
+    sleeves: list[Sleeve],
+    *,
+    forward_evidence: Mapping[str, AuditedForwardReturns],
+    policy: AuditedKellyPolicy,
+    decision_at: datetime,
+    trusted_auditor_public_key_b64: str,
+) -> dict:
+    """Allocate only signed-audited forward net returns; all unavailable evidence gets zero size."""
     if not sleeves:
         raise AllocatorError("no sleeves to allocate between")
     names = [s.name for s in sleeves]
     if len(set(names)) != len(names):
         raise AllocatorError("sleeve names must be unique")
+    if set(forward_evidence) != set(names):
+        raise AllocatorError("each sleeve needs exactly one audited forward outcome receipt")
     detail, raw = {}, {}
+    audit_results: dict[str, AuditedKellyDecision] = {}
     for s in sleeves:
+        evidence = forward_evidence[s.name]
+        if tuple(s.returns) != evidence.net_period_returns:
+            raise AllocatorError("sleeve returns must exactly match signed audited forward returns")
+        try:
+            audited = size_from_audited_forward_returns(
+                evidence,
+                policy,
+                decision_at=decision_at,
+                trusted_auditor_public_key_b64=trusted_auditor_public_key_b64,
+            )
+        except ValueError as exc:
+            raise AllocatorError(f"{s.name} audited forward evidence rejected: {exc}") from exc
         st = state_of(s)
-        shrink = max(0.0, 1.0 - 1.0 / st["t"] ** 2) if st["t"] > 0 else 0.0
-        m_hat = st["mean"] * shrink
-        want = 0.0
-        if st["state"] in (ACTIVE, REDUCE) and st["sd"] > 0:
-            want = fraction * m_hat / st["sd"] ** 2
-            want *= 1.0 if st["state"] == ACTIVE else 0.5
+        want = audited.applied_position_fraction
+        if st["state"] == REDUCE:
+            want *= 0.5
+        elif st["state"] in (PAPER, STOP):
+            want = 0.0
         gated = want > 0 and not s.money_gate_passed
-        detail[s.name] = {**st, "shrunk_mean": m_hat, "wanted": want,
+        detail[s.name] = {**st, "audited_kelly_fraction": audited.conservative_kelly_fraction,
+                          "audited_wanted": want,
                           "money_gate_passed": s.money_gate_passed,
-                          "held_to_paper_by_money_gate": gated}
+                          "held_to_paper_by_money_gate": gated,
+                          "forward_evidence_sha256": audited.forward_evidence_sha256}
         raw[s.name] = 0.0 if gated else want
-    raw = {k: min(v, cap) for k, v in raw.items()}
+        audit_results[s.name] = audited
     total = sum(raw.values())
     if total > 1.0:
         raw = {k: v / total for k, v in raw.items()}
     paper = [k for k, d in detail.items() if d["state"] == PAPER or d["held_to_paper_by_money_gate"]]
-    return {"weights": raw, "cash": 1.0 - sum(raw.values()), "paper_only": paper, "detail": detail}
+    return {"weights": raw, "cash": 1.0 - sum(raw.values()), "paper_only": paper,
+            "detail": detail, "audited_kelly_decisions": audit_results}

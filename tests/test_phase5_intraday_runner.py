@@ -88,7 +88,7 @@ def price_at(t):
         return 100.5
     if m < 600:
         return 101.6          # breaks above the 101 range high -> ORB long
-    return 106.9              # beyond the 2R target
+    return 107.1              # beyond the 2R target after ask-side entry pricing
 
 
 def fake_quotes(clock, day="2026-10-06", traded=True):
@@ -96,6 +96,8 @@ def fake_quotes(clock, day="2026-10-06", traded=True):
         px = price_at(clock.t)
         hi = max(101.0, px) if clock.t.hour * 60 + clock.t.minute >= 570 else 101.0
         return {s: {"last_price": px, "last_trade_time": f"{day} 09:20:00" if traded else "2026-10-01 15:29:59",
+                    "depth": {"buy": [{"price": px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": px + 0.05, "quantity": 10_000}]},
                     "ohlc": {"open": 100.0, "high": hi if clock.t.hour * 60 + clock.t.minute > 570 else 101.0,
                              "low": 99.0, "close": 100.0}} for s in symbols}
     return q
@@ -301,7 +303,10 @@ def test_a_late_start_takes_the_opening_range_from_candles_not_from_the_days_hig
                  "close": 100.0} for k in range(15)]
 
     def quotes(symbols, kind):                          # by now the day's high is 107: the wrong range
-        return {s: {"last_price": 101.6 if c.t.minute < 55 else 106.9, "last_trade_time": "2026-10-06 09:49:00",
+        px = 101.6 if c.t.minute < 55 else 107.1
+        return {s: {"last_price": px, "last_trade_time": "2026-10-06 09:49:00",
+                    "depth": {"buy": [{"price": px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": px + 0.05, "quantity": 10_000}]},
                     "ohlc": {"open": 100.0, "high": 107.0, "low": 99.0, "close": 100.0}} for s in symbols}
     R.run_live(quote_fn=quotes, now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
                candles_fn=candles, token_fn=lambda s: 1)
@@ -326,7 +331,12 @@ def board_daily():
 
 def test_the_live_day_posts_a_0930_board_and_resolves_it_at_the_close(setup):
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
-    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb", daily_fn=board_daily)
+    permission = {"source_id": "KITE_CONNECT_READ_ONLY", "use": "PAPER_SIMULATION",
+                  "status": "USE_ALLOWED", "effective_from": "2026-01-01",
+                  "effective_through": None, "evidence_ref": "tests/synthetic-feed",
+                  "reviewer": "test-fixture"}
+    R.run_live(quote_fn=fake_quotes(c), now_fn=c.now, sleep_fn=c.sleep, path=setup / "l.duckdb",
+               daily_fn=board_daily, data_permission=permission)
     con = R.ledger(setup / "l.duckdb")
     row = con.execute("SELECT symbol, top, clears, ret_close FROM board WHERE mode = 'live'").fetchone()
     assert row[0] == "X" and row[1] is True and row[2] is False and row[3] is not None
@@ -384,19 +394,32 @@ def _feed_breaks_after_entry(c, recover_at=None):
             raise OSError("getaddrinfo failed")
         if m < 592:
             return good(symbols, kind)
-        return {s: {"last_price": 106.9, "last_trade_time": "2026-10-06 11:00:00",
-                    "ohlc": {"open": 100.0, "high": 106.9, "low": 99.0, "close": 100.0}} for s in symbols}
+        recovered_px = 107.1 if recover_at is not None else 100.2
+        return {s: {"last_price": recovered_px, "last_trade_time": "2026-10-06 11:00:00",
+                    "depth": {"buy": [{"price": recovered_px - 0.05, "quantity": 10_000}],
+                              "sell": [{"price": recovered_px + 0.05, "quantity": 10_000}]},
+                    "ohlc": {"open": 100.0, "high": max(101.0, recovered_px), "low": 99.0,
+                             "close": 100.0}} for s in symbols}
     return q
 
 
-def test_feed_failure_with_open_positions_closes_them_at_the_flatten_not_abandons_them(setup):
+def test_feed_failure_at_flatten_keeps_positions_open_and_last_quote_valuation_only(setup):
     c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
     out = R.run_live(quote_fn=_feed_breaks_after_entry(c), now_fn=c.now, sleep_fn=c.sleep,
                      path=setup / "l.duckdb", max_failures=5)
     assert out["status"] == "aborted"
-    rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason, exit_px, exit_ts FROM trades").fetchall()
-    assert rows and all(r[0] == "time_stale_quote" and abs(r[1] - 101.6) < 0.1 for r in rows)
-    assert all(r[2] >= "2026-10-06T15:15" for r in rows)
+    assert out["unresolved_positions"] > 0
+    assert out["valuation_estimate_only"] is True
+    assert out["realized_pnl_released"] is False
+    con = R.ledger(setup / "l.duckdb")
+    rows = con.execute("SELECT exit_reason, exit_px, exit_ts, gross_pnl, net_pnl FROM trades").fetchall()
+    open_rows = [row for row in rows if row[2] is None]
+    assert open_rows and all(row[0:2] == (None, None) for row in open_rows)
+    assert all(row[3:] == (0.0, 0.0) for row in open_rows)
+    run_note = con.execute("SELECT status, note FROM runs WHERE mode = 'live'").fetchone()
+    assert run_note[0] == "aborted"
+    assert '"valuation_estimate_only":true' in run_note[1]
+    assert '"unresolved_positions":' in run_note[1]
 
 
 def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
@@ -406,3 +429,32 @@ def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
     assert out["status"] == "complete"
     rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason FROM trades").fetchall()
     assert ("target",) in rows
+
+
+def test_feed_outage_recovery_does_not_synthesize_exit_for_open_position(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    good = fake_quotes(c)
+
+    def quote(symbols, kind):
+        minute = c.t.hour * 60 + c.t.minute
+        if 592 <= minute < 600 or minute >= 915:  # outage after entry, recovery, outage at flatten
+            raise OSError("simulated quote-feed outage")
+        if minute < 592:
+            return good(symbols, kind)
+        return {symbol: {"last_price": 100.2, "last_trade_time": "2026-10-06 10:01:00",
+                         "depth": {"buy": [{"price": 100.15, "quantity": 10_000}],
+                                   "sell": [{"price": 100.25, "quantity": 10_000}]},
+                         "ohlc": {"open": 100.0, "high": 100.2, "low": 100.2, "close": 100.2}}
+                for symbol in symbols}
+
+    out = R.run_live(poll=300, quote_fn=quote, now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "outage-recovery-open.duckdb", max_failures=5)
+    assert out["status"] == "aborted"
+    assert out["unresolved_positions"] > 0
+    assert out["valuation_estimate_only"] is True
+    assert out["realized_pnl_released"] is False
+    con = R.ledger(setup / "outage-recovery-open.duckdb")
+    rows = con.execute("SELECT exit_reason, exit_px, exit_ts, gross_pnl, net_pnl FROM trades").fetchall()
+    open_rows = [row for row in rows if row[2] is None]
+    assert open_rows and all(row[0:2] == (None, None) for row in open_rows)
+    assert all(row[3:] == (0.0, 0.0) for row in open_rows)

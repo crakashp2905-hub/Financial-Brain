@@ -1,0 +1,25 @@
+{
+  "schema": "fb.replay_release_rollback_audit.v1",
+  "as_of": "2026-11-26",
+  "replay_before_release": {
+    "status": "IMPLEMENTED_FOR_FIXED_FIXTURES",
+    "source": "scripts/forward_edge_equivalence_report.py",
+    "artifact": "docs/edge-program/forward-edge-equivalence-report.v1.json",
+    "workflow_gate": ".github/workflows/ci.yml::Verify fixed-fixture legacy/integrated paper equivalence report",
+    "check_result": "PASS after regenerating a stale artifact",
+    "scope": "Synthetic frozen fixtures; compares legacy and integrated journal outcomes, order/cash evidence, ledger reconciliation and no-trade/physical-order invariants."
+  },
+  "rollback_rehearsal": {
+    "status": "NOT_IMPLEMENTED_FOR_RELEASES",
+    "related_controls": [
+      "tests/test_forward_edge_champion_governance.py covers champion safe-hold rollback after drift triggers.",
+      "tests/test_mf_account_ledger.py covers transaction rollback on account-ledger failure."
+    ],
+    "missing": [
+      "No release artifact promotion/deployment pointer with previous known-good version.",
+      "No rehearsal that injects net-P&L or ledger invariant failure during release validation and restores previous release.",
+      "No rollback evidence package tied to exact release manifest and strategy rule hashes."
+    ]
+  },
+  "conclusion": "PARTIAL"
+}

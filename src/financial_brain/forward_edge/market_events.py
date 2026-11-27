@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Any
 
@@ -22,6 +22,7 @@ class EventKind(StrEnum):
     QUOTE = "quote"
     BOOK_DEPTH = "book_depth"
     BAR = "bar"
+    NAV = "nav"
     HALT = "halt"
     AUCTION = "auction"
     CORPORATE_ACTION = "corporate_action"
@@ -60,6 +61,7 @@ class MarketEvent:
     source_at: datetime | None = None
     exchange_at: datetime | None = None
     published_at: datetime | None = None
+    computed_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not all(isinstance(x, str) and x.strip() for x in
@@ -72,18 +74,21 @@ class MarketEvent:
         object.__setattr__(self, "kind", kind)
         for name in ("event_time", "received_at", "available_at"):
             object.__setattr__(self, name, _utc(getattr(self, name), name))
-        for name in ("decision_time", "source_at", "exchange_at", "published_at"):
+        for name in ("decision_time", "source_at", "exchange_at", "published_at", "computed_at"):
             value = getattr(self, name)
             if value is not None:
                 object.__setattr__(self, name, _utc(value, name))
         if self.published_at is not None and self.published_at > self.available_at:
             raise MarketEventError("event cannot be available to strategy before publication")
+        if self.computed_at is not None and self.computed_at < self.available_at:
+            raise MarketEventError("computed event cannot precede its available inputs")
         if self.sequence is not None and (type(self.sequence) is not int or self.sequence < 0):
             raise MarketEventError("sequence must be a non-negative integer")
         if not isinstance(self.payload, dict):
             raise MarketEventError("payload must be an object")
         self._validate_payload()
-        if self.decision_time is not None and self.available_at > self.decision_time:
+        if self.decision_time is not None and max(
+                self.available_at, self.computed_at or self.available_at) > self.decision_time:
             raise MarketEventError("event was not available at the stated decision_time")
 
     def _validate_payload(self) -> None:
@@ -118,10 +123,24 @@ class MarketEvent:
         elif self.kind == EventKind.BAR:
             values = {key: _finite_number(p.get(key), key, allow_zero=key == "volume")
                       for key in ("open", "high", "low", "close", "volume")}
+            if "complete" in p and type(p["complete"]) is not bool:
+                raise MarketEventError("bar complete marker must be boolean")
             if values["volume"] < 0 or values["high"] < max(values["open"], values["close"], values["low"]) or \
                     values["low"] > min(values["open"], values["close"], values["high"]):
                 raise MarketEventError("bar OHLCV is inconsistent")
-        elif self.kind in (EventKind.HALT, EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
+        elif self.kind is EventKind.NAV:
+            _finite_number(p.get("nav_per_unit"), "nav_per_unit", allow_zero=False)
+            nav_date = p.get("nav_date")
+            if not isinstance(nav_date, str):
+                raise MarketEventError("NAV event requires an ISO nav_date")
+            try:
+                date.fromisoformat(nav_date)
+            except ValueError as exc:
+                raise MarketEventError("NAV event requires an ISO nav_date") from exc
+        elif self.kind is EventKind.HALT:
+            if p.get("status") not in {"HALTED", "RESUMED"}:
+                raise MarketEventError("halt event status must be HALTED or RESUMED")
+        elif self.kind in (EventKind.AUCTION, EventKind.CORPORATE_ACTION, EventKind.BROKER_UPDATE):
             if not p:
                 raise MarketEventError(f"{self.kind.value} payload cannot be empty")
 
@@ -133,7 +152,7 @@ class MarketEvent:
                 "sequence": self.sequence, "source": self.source, "evidence_id": self.evidence_id,
                 "payload": self.payload}
         # Preserve legacy event hashes unless a source explicitly supplies these separate clocks.
-        for name in ("source_at", "exchange_at", "published_at"):
+        for name in ("source_at", "exchange_at", "published_at", "computed_at"):
             value = getattr(self, name)
             if value is not None:
                 result[name] = value.isoformat()
@@ -147,7 +166,7 @@ class MarketEvent:
     def from_dict(cls, data: dict[str, Any]) -> "MarketEvent":
         fields = dict(data)
         for key in ("event_time", "received_at", "available_at", "decision_time",
-                    "source_at", "exchange_at", "published_at"):
+                    "source_at", "exchange_at", "published_at", "computed_at"):
             if fields.get(key) is not None:
                 fields[key] = datetime.fromisoformat(fields[key])
         return cls(**fields)

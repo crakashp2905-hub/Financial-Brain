@@ -1,5 +1,5 @@
 """Calendar dates come from the filings' own text and the exchange's expiry rule; the ticket preview never sends."""
-from datetime import date
+from datetime import date, timedelta
 
 import duckdb
 
@@ -21,9 +21,21 @@ def test_board_meeting_date_is_parsed_from_the_intimation():
     assert list(bm["date"]) == [date(2026, 11, 3)] and bool(bm["results"].iloc[0])
 
 
-def test_ticket_preview_runs_the_real_gate():
+def test_ticket_preview_runs_the_real_gate_and_fails_closed_without_current_context():
     when = W.next_session_10am(date(2026, 10, 16))
     assert when.weekday() == 0 and when.hour == 10                 # Friday -> Monday
-    ok = W.ticket(symbol="INFY", price=1500.0, shares=6, cost_one_side=0.0015, when=when)
-    big = W.ticket(symbol="INFY", price=1500.0, shares=60, cost_one_side=0.0015, when=when)
-    assert ok["verdict"] == "would pass" and "10,000" in big["verdict"]
+    context = {
+        "quote_exchange_at": when - timedelta(seconds=1),
+        "quote_received_at": when - timedelta(milliseconds=500),
+        "quote_source": "PAPER_SIMULATION",
+        "account_daily_pnl_inr": 0.0,
+    }
+    ok = W.ticket(symbol="INFY", price=1500.0, shares=6, cost_one_side=0.0015,
+                  when=when, **context)
+    big = W.ticket(symbol="INFY", price=1500.0, shares=60, cost_one_side=0.0015,
+                   when=when, **context)
+    missing = W.ticket(symbol="INFY", price=1500.0, shares=6, cost_one_side=0.0015, when=when)
+    assert ok["verdict"] == "would pass"
+    assert "10,000" in big["verdict"]
+    assert "market-data exchange timestamp is missing or invalid" in missing["verdict"]
+    assert "current account daily P&L is missing or invalid" in missing["verdict"]

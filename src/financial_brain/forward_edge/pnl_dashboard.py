@@ -23,6 +23,7 @@ def _number(row: dict[str, object], key: str) -> float:
 @dataclass(frozen=True)
 class PnlDashboard:
     session: str
+    pnl_evidence_class: str
     strategy_rows: tuple[dict[str, object], ...]
     portfolio_net_pnl: float
     benchmark_net_pnl: float
@@ -40,7 +41,8 @@ def build_pnl_dashboard(attribution: StrategyAttributionReport, *, benchmark_net
     if len(benchmark_source_sha256) != 64 or any(
             character not in "0123456789abcdef" for character in benchmark_source_sha256):
         raise PnlDashboardError("benchmark must carry a lowercase SHA-256 source identity")
-    return PnlDashboard(attribution.session.isoformat(), attribution.strategy_rows,
+    return PnlDashboard(attribution.session.isoformat(), attribution.pnl_evidence_class,
+                        attribution.strategy_rows,
                         attribution.portfolio_net_pnl, benchmark_net_pnl,
                         benchmark_source_sha256, attribution.report_hash)
 
@@ -81,6 +83,7 @@ def render_pnl_dashboard(report: PnlDashboard, output: Path) -> Path:
             "td:first-child,th:first-child{text-align:left}.chart-row{display:grid;grid-template-columns:140px 1fr 100px;gap:10px;align-items:center;margin:6px 0}"
             ".track{height:12px;background:#e9edf0}.bar{height:12px}.chart-row b{text-align:right}code{overflow-wrap:anywhere}</style><main>"
             f"<h1>After-cost P&amp;L — {html.escape(report.session)}</h1>"
+            f"<p>Evidence class: <strong>{html.escape(report.pnl_evidence_class)}</strong></p>"
             "<p>Values are read from an attribution that reconciled to ledger within its configured tolerance. "
             "Filled orders are not assumed to be closed trades.</p><h2>Net P&amp;L comparison</h2>"
             + "".join(bars) + "<h2>Ledger reconciliation and cost components</h2><div style='overflow:auto'><table><thead><tr>"

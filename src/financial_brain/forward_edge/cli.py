@@ -264,7 +264,8 @@ def cmd_report(as_of: str) -> tuple[dict, int]:
     verdict = ES.promotion_verdict(
         daily_net_alpha=[0.001, -0.001, 0.0005, 0.0], eligible_independent_sessions=0, tier=ES.ClaimTier.LOCAL_PAPER,
         net_by_cost_multiplier={1.0: 0.0, 1.5: 0.0, 2.0: 0.0}, best_block=1.0, sample_design_predeclared=False,
-        falsification_status="INSUFFICIENT_EVIDENCE")
+        falsification_status="INSUFFICIENT_EVIDENCE", null_pass=None, max_drawdown=None,
+        max_drawdown_limit=None, fidelity_pass=False)
     report = {"as_of": as_of, "mode": "FIXTURE_REPLAY", "tier": "HISTORICAL_REPLAY",
               "scheduled_sessions": len(sessions), "outcomes": by_outcome,
               "independent_forward_sessions": 0, "benchmark": "FIXTURE_CASH", "coverage": cov,

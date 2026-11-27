@@ -178,3 +178,73 @@ class OrderJournal:
         rows = self.replay(order_id)
         return hashlib.sha256(json.dumps(rows, sort_keys=True, separators=(",", ":"),
                                          allow_nan=False).encode()).hexdigest()
+
+    def audit_state(self, as_of: datetime) -> dict[str, Any]:
+        """Return a verified point-in-time lifecycle snapshot and ambiguous order IDs.
+
+        This audits what this journal knows; it does not claim reconciliation with an
+        external broker order book. Ambiguous (UNKNOWN/TIMED_OUT) states fail closed.
+        """
+        if as_of.tzinfo is None or as_of.utcoffset() is None:
+            raise OrderJournalError("order audit as_of must be timezone aware")
+        cutoff = as_of.astimezone(timezone.utc)
+        rows = self._con.execute(
+            "SELECT order_id, sequence, event_hash, event_json FROM order_events "
+            "ORDER BY order_id, sequence").fetchall()
+        histories: dict[str, list[OrderEvent]] = {}
+        canonical_rows: list[dict[str, Any]] = []
+        for order_id, sequence, stored_hash, event_json in rows:
+            try:
+                body = json.loads(event_json)
+                event = OrderEvent(
+                    order_id=body["order_id"], event_id=body["event_id"], sequence=body["sequence"],
+                    state=body["state"], occurred_at=datetime.fromisoformat(body["occurred_at"]),
+                    quantity=body["quantity"], filled_quantity=body["filled_quantity"],
+                    price=body["price"], accounting=body["accounting"],
+                    fill_evidence_id=body.get("fill_evidence_id"),
+                    reconciliation_evidence_id=body.get("reconciliation_evidence_id"))
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise OrderJournalError("order audit found a malformed journal event") from exc
+            if event.order_id != order_id or event.sequence != sequence or event.event_hash() != stored_hash:
+                raise OrderJournalError("order audit found a payload/hash mismatch")
+            if event.occurred_at.astimezone(timezone.utc) <= cutoff:
+                histories.setdefault(order_id, []).append(event)
+                canonical_rows.append({"order_id": order_id, "sequence": sequence,
+                                       "event_hash": stored_hash})
+
+        states: dict[str, str] = {}
+        for order_id, history in histories.items():
+            previous: OrderEvent | None = None
+            for event in history:
+                if previous is None:
+                    if event.sequence != 0 or event.state != "CREATED":
+                        raise OrderJournalError("order audit found a missing initial lifecycle event")
+                else:
+                    if event.sequence != previous.sequence + 1:
+                        raise OrderJournalError("order audit found a lifecycle sequence gap")
+                    if event.state not in TRANSITIONS[previous.state]:
+                        raise OrderJournalError("order audit found an illegal lifecycle transition")
+                    if event.filled_quantity < previous.filled_quantity:
+                        raise OrderJournalError("order audit found decreasing cumulative fills")
+                    fill_increased = event.filled_quantity > previous.filled_quantity
+                    if fill_increased and event.state not in {"PARTIAL", "FILLED"}:
+                        raise OrderJournalError("order audit found a fill increase in a non-fill state")
+                    if fill_increased and event.fill_evidence_id is None:
+                        raise OrderJournalError("order audit found a fill without immutable evidence")
+                    if (previous.state == "UNKNOWN" or
+                            (previous.state == "TIMED_OUT" and event.state != "UNKNOWN")) \
+                            and event.reconciliation_evidence_id is None:
+                        raise OrderJournalError("order audit found an ambiguous order resolved without evidence")
+                    if event.state == "REJECTED" and event.filled_quantity:
+                        raise OrderJournalError("order audit found a partially filled rejected order")
+                    if event.occurred_at.astimezone(timezone.utc) < previous.occurred_at.astimezone(timezone.utc):
+                        raise OrderJournalError("order audit found backwards lifecycle timestamps")
+                previous = event
+            if previous is not None:
+                states[order_id] = previous.state
+        ambiguous = sorted(order_id for order_id, state in states.items()
+                           if state in {"UNKNOWN", "TIMED_OUT"})
+        body = {"as_of": cutoff.isoformat(), "states": dict(sorted(states.items())),
+                "ambiguous_order_ids": ambiguous, "events": canonical_rows}
+        return {**body, "sha256": hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()}

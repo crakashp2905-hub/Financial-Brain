@@ -53,6 +53,35 @@ def test_out_of_time_report_scores_brier_logloss_and_wilson_reliability_bins():
     assert len(report.policy_sha256) == len(report.evidence_sha256) == 64
 
 
+def test_fixed_seed_randomized_forecasts_separate_calibration_from_costed_expectancy():
+    import random
+
+    from financial_brain.forward_edge.trade_expectancy import CostedTradeOutcome, calculate_trade_expectancy
+
+    rng = random.Random(20261127)
+    outcomes = [int(rng.random() < 0.70) for _ in range(200)]
+    rows = tuple(_row(i, probability=0.70, outcome=outcome) for i, outcome in enumerate(outcomes))
+    report = evaluate_probability_calibration(policy=_policy(), observations=rows,
+                                              evaluation_as_of=AS_OF)
+    assert report.status == "OUT_OF_TIME_EVALUATED"
+    assert report.brier_score == pytest.approx(sum((0.70 - outcome) ** 2 for outcome in outcomes) / len(outcomes))
+    assert report.is_execution_authorization is False
+
+    # Same fixed seed determines the economic outcome stream. Itemized costs flip
+    # gross-positive expectancy to net-negative, independently of probability calibration.
+    gross = [rng.gauss(8.0, 10.0) for _ in outcomes]
+    trades = tuple(CostedTradeOutcome(
+        f"trade-{index}", value, execution_costs_inr=0.0, fees_inr=9.0,
+        taxes_inr=0.0, financing_inr=0.0, other_costs_inr=0.0)
+        for index, value in enumerate(gross))
+    expectancy = calculate_trade_expectancy(trades=trades)
+    assert sum(gross) / len(gross) > 0
+    assert expectancy["expectancy_net_inr_per_resolved_trade"] == pytest.approx(
+        sum(value - 9.0 for value in gross) / len(gross))
+    assert expectancy["net_expectancy_positive"] is False
+    assert report.is_execution_authorization is False
+
+
 def test_low_sample_context_bucket_is_explicitly_uncalibrated():
     rows = tuple(_row(i, context="LOW_COVERAGE_REGIME") for i in range(3))
 
@@ -62,6 +91,18 @@ def test_low_sample_context_bucket_is_explicitly_uncalibrated():
     assert report.status == "UNCALIBRATED_LOW_SAMPLE"
     assert report.reliability_bins[0].status == "UNCALIBRATED_LOW_SAMPLE"
     assert report.reliability_bins[0].sample_count == 3
+
+
+def test_validation_only_or_training_data_cannot_be_reused_as_promotion_holdout():
+    # A row whose outcome was already visible before the nominal prediction is
+    # validation/training leakage, even if its timestamp is relabeled to holdout.
+    from dataclasses import replace
+
+    row = _row(0, outcome=1)
+    leaked = replace(row, outcome_available_at=row.predicted_at - timedelta(seconds=1))
+    with pytest.raises(CalibrationError, match="matured"):
+        evaluate_probability_calibration(policy=_policy(), observations=(leaked,),
+                                         evaluation_as_of=AS_OF)
 
 
 def test_training_overlap_future_maturity_and_model_mismatch_are_rejected():

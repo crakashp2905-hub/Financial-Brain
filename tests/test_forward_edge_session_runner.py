@@ -1,18 +1,27 @@
 from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
 import sqlite3
+import subprocess
+import sys
 
 import duckdb
 import pytest
 
-from financial_brain.forward_edge.market_data import normalize_kite_quote
+from financial_brain.forward_edge.market_data import KiteQuoteNormalizationError, normalize_kite_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
+from financial_brain.forward_edge.durable import DurableJournalError
 from financial_brain.forward_edge.instrument_rules import fixture_rule_book
 from financial_brain.forward_edge.session_runner import (
     ForwardSessionRunner,
     ForwardSessionRunnerError,
 )
+from financial_brain.forward_edge.trader_dashboard import snapshots_from_forward_sessions
 from financial_brain.forward_edge.paper_book_adapter import (
     PaperBookSignal,
     due_exits,
@@ -29,6 +38,7 @@ from financial_brain.kernel.units import BasisPoints, Price, WholeUnits
 from financial_brain.forward_edge.session_state import (
     ForwardRunConfig,
     ForwardSessionStore,
+    SessionStateError,
     SessionState,
 )
 from financial_brain.forward_edge.venue_calendar import Session as VenueSession, VenueCalendar
@@ -44,34 +54,317 @@ READY_PREFLIGHT = {name: True for name in (
 def make_config(*, max_quote_age_ms=None):
     constraints = {"max_positions": 1, "session_phase": "CONTINUOUS",
                    "allow_synthetic_fixture_events": True,
+                   "carry_authorized_instruments": ["NSE:INFY"],
                    "instrument_rules": fixture_rule_book("NSE:INFY"),
                    "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
                                         "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
                                         "effective_from": "2026-11-13", "effective_through": None,
                                         "evidence_ref": "tests/fixture-kite-permission",
-                                        "reviewer": "test-fixture"}]}
+                                        "reviewer": "test-fixture"}],
+                   "reservation_policy": {
+                       "version": "test-paper-reservation-v1",
+                       "frozen_at": "2026-11-12T00:00:00+00:00",
+                       "source_sha256": "b" * 64,
+                       "limits": {"CASH": "1000000000",
+                                  "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
+                                  "OPTION_BUYING_POWER": "1000000000",
+                                  "PAPER_COST_BUFFER": "1000000000",
+                                  "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
+                                  "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
+                   }}
     if max_quote_age_ms is not None:
         constraints["max_quote_age_ms"] = max_quote_age_ms
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
 
+def make_live_paper_config(*, include_prospective_rights=False):
+    from dataclasses import replace
+    from financial_brain.costs.india import CostModel
+
+    base = make_config()
+    parameters = {"lookback_bars": 20, "entry_threshold": "0.75"}
+    risk_limits = {"daily_loss_inr": "2500", "max_order_value_inr": "100000"}
+    constraints = dict(base.constraints)
+    constraints.update({
+        "strategy_parameters": parameters,
+        "strategy_parameters_sha256": hashlib.sha256(json.dumps(
+            parameters, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+        "risk_limits": risk_limits,
+        "signal_interval_seconds": 60,
+        "cost_schedule": {
+            "schedule_id": "test-india", "version": "v1", "effective_from": "2026-01-01",
+            "effective_to": None, "segment": "delivery", "model": CostModel().as_dict(),
+            "source_ref": "test tariff fixture", "source_sha256": "c" * 64,
+        },
+    })
+    if include_prospective_rights:
+        constraints["data_permissions"] = [*constraints["data_permissions"], {
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PROSPECTIVE_PAPER_CAPTURE",
+            "status": "USE_ALLOWED", "effective_from": "2026-11-13", "effective_through": None,
+            "evidence_ref": "test-only-explicit-provider-approval", "reviewer": "test-owner"}]
+    return replace(base, mode="LIVE_PAPER", constraints=constraints)
+
+
 def make_config_with_constraints(constraints):
     constraints = {"session_phase": "CONTINUOUS",
                    "allow_synthetic_fixture_events": True,
+                   "carry_authorized_instruments": ["NSE:INFY"],
                    "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
                                         "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
                                         "effective_from": "2026-11-13", "effective_through": None,
                                         "evidence_ref": "tests/fixture-kite-permission",
                                         "reviewer": "test-fixture"}],
-                   "instrument_rules": fixture_rule_book("NSE:INFY"), **constraints}
+                   "instrument_rules": fixture_rule_book("NSE:INFY"),
+                   "reservation_policy": {
+                       "version": "test-paper-reservation-v1",
+                       "frozen_at": "2026-11-12T00:00:00+00:00",
+                       "source_sha256": "b" * 64,
+                       "limits": {"CASH": "1000000000",
+                                  "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
+                                  "OPTION_BUYING_POWER": "1000000000",
+                                  "PAPER_COST_BUFFER": "1000000000",
+                                  "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
+                                  "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
+                   }, **constraints}
     return ForwardRunConfig(date(2026, 11, 13), "cohort-v1", "a" * 64, "NIFTY50_TRI",
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
+
+
+def make_profiled_config(profile="EQUITY_EXECUTION"):
+    return make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": profile}
+    ]})
+
+
+def test_event_loop_requires_a_profile_for_every_frozen_instrument(tmp_path):
+    runner = make_runner(tmp_path)
+    with pytest.raises(ForwardSessionRunnerError, match="requires an explicit data profile"):
+        runner.run_event_loop(
+            session_id="unprofiled", config=make_config(), events=[],
+            session_open_at=NOW, preflight=READY_PREFLIGHT,
+            consumer_id="strategy:unprofiled", on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: None)
+    with pytest.raises(SessionStateError, match="unknown forward session"):
+        runner.state_store.state("unprofiled")
+    runner.close()
+
+
+def test_market_ingest_rejects_mutated_or_replaced_session_configuration(tmp_path):
+    from dataclasses import replace
+
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event()
+    changed = replace(config, capital=Decimal("200000"))
+    with pytest.raises(ForwardSessionRunnerError, match="differs from the frozen session configuration"):
+        runner.ingest("s", changed, [event])
+    assert runner.records("s")["events"] == []
+    runner.close()
 
 
 def make_event(*, event_id="fixture-1", available_at=NOW, event_time=NOW):
     return MarketEvent(event_id, EventKind.QUOTE, "NSE", "NSE:INFY", event_time,
                        available_at, available_at, {"bid": 100.0, "ask": 100.1}, "FIXTURE")
+
+
+def test_deterministic_event_loop_orders_events_and_checks_exits_after_each(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_profiled_config()
+    later = make_event(event_id="later", available_at=NOW + timedelta(seconds=2),
+                       event_time=NOW + timedelta(seconds=2))
+    earlier = make_event(event_id="earlier", available_at=NOW + timedelta(seconds=1),
+                         event_time=NOW + timedelta(seconds=1))
+    callbacks = []
+    result = runner.run_event_loop(
+        session_id="deterministic", config=config, events=[later, earlier],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:all-events",
+        on_market_event=lambda event, _: callbacks.append(("market", event.event_id)),
+        evaluate_protective_exits=lambda event, _: callbacks.append(("exit", event.event_id)),
+        on_close=lambda _: callbacks.append(("close", "session")),
+        session_close_at=NOW + timedelta(seconds=3), close_complete=True)
+
+    assert callbacks == [("market", "earlier"), ("exit", "earlier"),
+                         ("market", "later"), ("exit", "later"), ("close", "session")]
+    assert result["persisted_event_ids"] == ["earlier", "later"]
+    assert result["processed_event_ids"] == ["earlier", "later"]
+    assert result["status"] == "CLOSED"
+    runner.close()
+
+
+def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
+    config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_base_delay_ms": 0,
+                                           "handler_retry_cap_delay_ms": 0})
+    events = [make_event(event_id=f"restart-{index}",
+                         available_at=NOW + timedelta(seconds=index),
+                         event_time=NOW + timedelta(seconds=index)) for index in range(2)]
+    runner = make_runner(tmp_path)
+    attempted = []
+
+    def fail_on_second(event, _):
+        attempted.append(event.event_id)
+        if event.event_id == "restart-1":
+            raise RuntimeError("simulated crash before cursor acknowledgement")
+
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        runner.run_event_loop(
+            session_id="restartable", config=config, events=events,
+            session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+            consumer_id="strategy:restartable", on_market_event=fail_on_second,
+            evaluate_protective_exits=lambda *_: None)
+    assert runner.state_store.state("restartable") is SessionState.OPEN
+    assert runner.event_cursor("restartable", "strategy:restartable")["event_id"] == "restart-0"
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    replayed = []
+    result = resumed.run_event_loop(
+        session_id="restartable", config=config, events=[],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:restartable",
+        on_market_event=lambda event, _: replayed.append(("market", event.event_id)),
+        evaluate_protective_exits=lambda event, _: replayed.append(("exit", event.event_id)),
+        session_close_at=NOW + timedelta(seconds=3), close_complete=True)
+    assert attempted == ["restart-0", "restart-1"]
+    assert replayed == [("market", "restart-1"), ("exit", "restart-1")]
+    recovery = resumed.records("restartable")["handler_recovery_events"]
+    assert [(row["handler"], row["status"]) for row in recovery] == [
+        ("market", "RETRY_WAIT"), ("market", "RECOVERED")]
+    assert resumed.records("restartable")["operating_mode"] == "DEGRADED"
+    assert result["status"] == "CLOSED"
+    resumed.close()
+
+
+def test_event_loop_defers_retry_without_acknowledging_event(tmp_path):
+    config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_base_delay_ms": 60_000,
+                                           "handler_retry_cap_delay_ms": 60_000})
+    runner = make_runner(tmp_path)
+    event = make_event(event_id="deferred-retry")
+    with pytest.raises(RuntimeError, match="temporary monitor failure"):
+        runner.run_event_loop(
+            session_id="defer", config=config, events=[event], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: (_ for _ in ()).throw(RuntimeError("temporary monitor failure")))
+    with pytest.raises(ForwardSessionRunnerError, match="handler retry deferred until"):
+        runner.run_event_loop(
+            session_id="defer", config=config, events=[], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None, evaluate_protective_exits=lambda *_: None)
+
+    assert runner.event_cursor("defer", "position-monitor") is None
+    assert runner.records("defer")["handler_recovery_events"][0]["status"] == "RETRY_WAIT"
+    assert runner.records("defer")["operating_mode"] == "DEGRADED"
+    runner.close()
+
+
+def test_event_loop_halts_after_handler_retry_budget_is_exhausted(tmp_path):
+    config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_max_attempts": 1,
+                                           "handler_retry_base_delay_ms": 0,
+                                           "handler_retry_cap_delay_ms": 0})
+    runner = make_runner(tmp_path)
+    event = make_event(event_id="halted-handler")
+    with pytest.raises(RuntimeError, match="persistent monitor failure"):
+        runner.run_event_loop(
+            session_id="halt", config=config, events=[event], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: (_ for _ in ()).throw(RuntimeError("persistent monitor failure")))
+
+    assert runner.state_store.state("halt") is SessionState.OPEN
+    assert runner.records("halt")["operating_mode"] == "HALTED"
+    assert runner.event_cursor("halt", "position-monitor") is None
+    with pytest.raises(ForwardSessionRunnerError, match="circuit breaker is HALTED"):
+        runner.run_event_loop(
+            session_id="halt", config=config, events=[], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None, evaluate_protective_exits=lambda *_: None)
+    runner.close()
+
+
+def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks(tmp_path):
+    runner = make_runner(tmp_path)
+    bar_start = datetime.fromisoformat("2026-11-13T10:15:00+05:30")
+    bar_end = datetime.fromisoformat("2026-11-13T10:16:00+05:30")
+    completed = MarketEvent(
+        "completed-bar", EventKind.BAR, "NSE", "NSE:INFY", bar_end,
+        bar_end + timedelta(seconds=1), bar_end + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "complete": True, "interval_seconds": 60,
+         "bar_start_at": bar_start.isoformat(), "bar_end_at": bar_end.isoformat()}, "FIXTURE")
+    partial = MarketEvent(
+        "partial-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=1),
+        NOW + timedelta(seconds=1), NOW + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 10,
+         "complete": False}, "FIXTURE")
+    quote = make_event(event_id="interbar-quote", available_at=NOW, event_time=NOW)
+    market_events = []
+    forecast_bars = []
+    exit_checks = []
+    runner.run_event_loop(
+        session_id="cadence", config=make_profiled_config(), events=[completed, partial, quote],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:cadence",
+        on_market_event=lambda event, _: market_events.append(event.event_id),
+        on_completed_bar=lambda event, _: forecast_bars.append(event.event_id),
+        venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE",
+        evaluate_protective_exits=lambda event, _: exit_checks.append(event.event_id))
+
+    assert market_events == ["interbar-quote", "partial-bar", "completed-bar"]
+    assert forecast_bars == ["completed-bar"]
+    assert exit_checks == market_events
+    runner.close()
+
+
+def test_completed_bar_rejects_interval_not_aligned_to_sourced_session_open(tmp_path):
+    runner = make_runner(tmp_path)
+    start = datetime.fromisoformat("2026-11-13T10:16:00+05:30")
+    end = start + timedelta(minutes=15)
+    event = MarketEvent(
+        "misaligned-15m", EventKind.BAR, "NSE", "NSE:INFY", end,
+        end + timedelta(seconds=1), end + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "complete": True, "interval_seconds": 900,
+         "bar_start_at": start.isoformat(), "bar_end_at": end.isoformat()}, "FIXTURE")
+    with pytest.raises(ForwardSessionRunnerError, match="not aligned to the official exchange session open"):
+        runner.run_event_loop(
+            session_id="misaligned", config=make_profiled_config(), events=[event],
+            session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+            consumer_id="strategy:misaligned", on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: None, on_completed_bar=lambda *_: None,
+            venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE")
+    assert runner.records("misaligned")["events"] == []
+    runner.close()
+
+
+def test_completed_five_minute_bar_is_clock_checked_and_dispatched(tmp_path):
+    runner = make_runner(tmp_path)
+    start = datetime.fromisoformat("2026-11-13T10:15:00+05:30")
+    end = start + timedelta(minutes=5)
+    event = MarketEvent(
+        "completed-5m", EventKind.BAR, "NSE", "NSE:INFY", end,
+        end + timedelta(seconds=1), end + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "complete": True, "interval_seconds": 300,
+         "bar_start_at": start.isoformat(), "bar_end_at": end.isoformat()}, "FIXTURE")
+    completed = []
+    runner.run_event_loop(
+        session_id="five-minute", config=make_profiled_config(), events=[event],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:five-minute", on_market_event=lambda *_: None,
+        on_completed_bar=lambda seen, _: completed.append(seen.event_id),
+        evaluate_protective_exits=lambda *_: None,
+        venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE")
+    assert completed == ["completed-5m"]
+    runner.close()
 
 
 def make_runner(tmp_path):
@@ -112,6 +405,112 @@ def test_fixture_and_kite_adapters_enter_the_same_normalized_runner(tmp_path):
     runner.close()
 
 
+def test_configured_mutual_fund_nav_profile_rejects_quote_feed_event(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": "MUTUAL_FUND_NAV"}
+    ]})
+    opened(runner, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="requires an NAV observation"):
+        runner.ingest("s", config, [make_event()])
+    assert runner.records("s")["events"] == []
+    runner.close()
+
+
+def test_event_offsets_resume_after_restart_without_replaying_acknowledged_prefix(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    events = [make_event(event_id=f"offset-{index}", available_at=NOW + timedelta(seconds=index),
+                         event_time=NOW + timedelta(seconds=index)) for index in range(3)]
+    assert runner.ingest("s", config, events) == {"received": 3, "persisted": 3, "duplicate": 0}
+
+    batch = runner.read_events_after("s", "strategy:momentum", limit=2)
+    assert [row["event_id"] for row in batch] == ["offset-0", "offset-1"]
+    with pytest.raises(ForwardSessionRunnerError, match="exact persisted prefix"):
+        runner.acknowledge_event_offset("s", "strategy:momentum", expected_offset=0,
+                                        through_offset=batch[1]["offset"],
+                                        event_ids=("offset-0",))
+
+    committed = runner.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=0, through_offset=batch[1]["offset"],
+        event_ids=("offset-0", "offset-1"))
+    retried = runner.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=0, through_offset=batch[1]["offset"],
+        event_ids=("offset-0", "offset-1"))
+    assert retried["idempotent"] is True
+    assert retried["cursor_sha256"] == committed["cursor_sha256"]
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.event_cursor("s", "strategy:momentum")["event_offset"] == batch[1]["offset"]
+    remaining = resumed.read_events_after("s", "strategy:momentum")
+    assert [row["event_id"] for row in remaining] == ["offset-2"]
+    resumed.acknowledge_event_offset(
+        "s", "strategy:momentum", expected_offset=batch[1]["offset"],
+        through_offset=remaining[0]["offset"], event_ids=("offset-2",))
+    assert resumed.read_events_after("s", "strategy:momentum") == []
+    resumed.close()
+
+
+def test_end_checkpoint_hashes_event_consumer_offsets(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="checkpoint-offset")
+    runner.ingest("s", config, [event])
+    [record] = runner.read_events_after("s", "strategy:momentum")
+    runner.acknowledge_event_offset("s", "strategy:momentum", expected_offset=0,
+                                    through_offset=record["offset"], event_ids=(event.event_id,))
+    report = runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    assert report["day_end_reconciliation"]["reconciled"] is True
+    assert report["day_end_reconciliation"]["cash_reconciled"] is True
+    assert report["day_end_reconciliation"]["marked_equity_inr"] == "100000"
+    assert report["day_end_reconciliation"]["open_risk_inr"] == "0"
+
+    checkpoint = runner.checkpoint("s", phase="END", now=NOW + timedelta(seconds=2))
+    assert "event_cursors" in checkpoint["record_hashes"]
+    assert runner.verify_checkpoint("s", checkpoint["checkpoint_id"])["current_records_match"] is True
+    runner._con.execute("UPDATE runner_event_cursors SET event_id='tampered' WHERE session_id='s'")
+    runner._con.commit()
+    assert runner.verify_checkpoint("s", checkpoint["checkpoint_id"])["current_records_match"] is False
+    runner.close()
+
+
+def test_dashboard_adapter_consumes_durable_forward_session_close_evidence(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    runner.ingest("s", config, [make_event(event_id="dashboard-quote")])
+    runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    (snapshot,) = snapshots_from_forward_sessions(
+        runner=runner, desks={"SWING": ("s", "FIXTURE", 10.0)})
+    assert snapshot.source_mode == "FIXTURE"
+    assert snapshot.source_sha256 == runner.records("s")["session_reports"][0]["report_sha256"]
+    assert snapshot.newest_quote_age_seconds == 1.0
+    assert snapshot.free_cash_inr == 100000
+    assert snapshot.risk_policy_status == "PASS"
+    runner.close()
+
+
+def test_session_heartbeat_snapshot_tracks_live_producers_and_missing_components(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="heartbeat-quote")
+    runner.ingest("s", config, [event])
+
+    persisted = runner.records("s")["component_heartbeats"]
+    assert persisted["components"]["quote_feed"]["status"] == "RECORDED"
+    assert persisted["components"]["quote_feed"]["last_good_event_id"] == event.event_id
+    assert persisted["components"]["ledger_writer"]["status"] == "RECORDED"
+    health = runner.heartbeat_health("s", now=runner.clock.now())
+    assert health["entry_readiness"] == "NO_ENTRY"
+    assert {"completed_bars", "strategy_process", "clock_sync", "position_monitor"} <= set(
+        health["missing_or_stale"])
+    runner.close()
+
+
 def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_path):
     runner = make_runner(tmp_path)
     config = make_config_with_constraints({"data_permissions": [], "allow_synthetic_fixture_events": False})
@@ -124,6 +523,40 @@ def test_nonfixture_kite_data_requires_current_purpose_scoped_permission(tmp_pat
         runner.ingest("s", config, [observed])
     assert runner.records("s")["events"] == []
     assert runner.records("s")["data_rejections"]
+    runner.close()
+
+
+def test_missing_or_stale_market_data_is_journaled_as_data_unusable_not_tradable(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    assert runner.decide(
+        session_id="s", strategy_id="momentum", decision_id="missing-source",
+        outcome="DATA_UNUSABLE", input_event_ids=(), decided_at=NOW + timedelta(seconds=1),
+        reason_codes=("MISSING_REQUIRED_SOURCE",),
+    )
+
+    stale = make_event(event_id="stale-quality-source", available_at=NOW, event_time=NOW)
+    runner.ingest("s", config, [stale])
+    assert runner.decide(
+        session_id="s", strategy_id="momentum", decision_id="stale-source",
+        outcome="DATA_UNUSABLE", input_event_ids=(stale.event_id,),
+        decided_at=NOW + timedelta(seconds=10), reason_codes=("STALE_SOURCE_DATA",),
+    )
+    decisions = {row["decision_id"]: row for row in runner.records("s")["decisions"]}
+    assert decisions["missing-source"]["outcome"] == "DATA_UNUSABLE"
+    assert decisions["stale-source"]["outcome"] == "DATA_UNUSABLE"
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_data_unusable_without_source_cannot_claim_computed_features(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner)
+    with pytest.raises(ForwardSessionRunnerError, match="without source inputs"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="unverifiable-data-failure",
+                      outcome="DATA_UNUSABLE", input_event_ids=(), decided_at=NOW,
+                      reason_codes=("MISSING_REQUIRED_SOURCE",), feature_ready_at=NOW)
     runner.close()
 
 
@@ -146,6 +579,10 @@ def test_session_records_publish_per_signal_timing_telemetry_and_missing_stages(
     telemetry = runner.records("s")["timing_telemetry"]
     assert telemetry["schema"] == "fb.forward_session_timing_telemetry.v1"
     row = telemetry["signals"][0]
+    assert row["as_of"] == event.available_at.astimezone(timezone.utc).isoformat()
+    assert row["first_executable_after"] is None
+    assert row["expires_at"] is None
+    assert row["execution_method"] == []
     assert row["feature_ready_at"] == feature_ready.isoformat()
     assert row["signal_decision_at"] == decided.isoformat()
     assert row["oms_risk_assessed_at"] == approved.isoformat()
@@ -172,6 +609,48 @@ def test_feature_ready_clock_must_follow_inputs_and_precede_decision(tmp_path):
         runner.decide(session_id="s", strategy_id="momentum", decision_id="late-feature-clock",
                       outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
                       reason_codes=("NO_EDGE",), feature_ready_at=decided + timedelta(milliseconds=1))
+    runner.close()
+
+
+def test_decision_timing_records_feature_inference_and_durable_ledger_clocks(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="stage-clock-input")
+    runner.ingest("s", config, [event])
+    feature_started = NOW + timedelta(milliseconds=1)
+    feature_ready = NOW + timedelta(milliseconds=2)
+    inference_started = NOW + timedelta(milliseconds=3)
+    inference_completed = NOW + timedelta(milliseconds=4)
+    decided = NOW + timedelta(milliseconds=5)
+    runner.decide(session_id="s", strategy_id="momentum", decision_id="stage-clock-decision",
+                  outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=decided,
+                  reason_codes=("NO_EDGE",), feature_started_at=feature_started,
+                  feature_ready_at=feature_ready, model_inference_started_at=inference_started,
+                  model_inference_completed_at=inference_completed)
+
+    signal = runner.records("s")["timing_telemetry"]["signals"][0]
+    assert signal["feature_computation_started_at"] == feature_started.isoformat()
+    assert signal["feature_ready_at"] == feature_ready.isoformat()
+    assert signal["model_inference_started_at"] == inference_started.isoformat()
+    assert signal["model_inference_completed_at"] == inference_completed.isoformat()
+    assert signal["signal_decision_at"] == decided.isoformat()
+    assert signal["decision_ledger_recorded_at"] == decided.isoformat()
+    assert "MODEL_INFERENCE_TIMESTAMPS" not in signal["missing_stages"]
+    runner.close()
+
+
+def test_decide_rejects_model_inference_clock_regression(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event(event_id="invalid-inference-clock-input")
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="completion cannot precede its start"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="invalid-inference-clock",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1),
+                      reason_codes=("NO_EDGE",), model_inference_started_at=NOW + timedelta(milliseconds=5),
+                      model_inference_completed_at=NOW + timedelta(milliseconds=4))
     runner.close()
 
 
@@ -300,6 +779,44 @@ def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(t
     runner.close()
 
 
+def test_paper_execution_is_rejected_at_sourced_exchange_close(tmp_path):
+    config = make_config(max_quote_age_ms=5000)
+    calendar = _calendar(config.exchange_date, closes=time(10, 16))
+    runner = make_runner(tmp_path)
+    assert runner.plan_calendar_day("cutoff", config, venue="NSE", calendar=calendar,
+                                   now=NOW, preflight=READY_PREFLIGHT) is SessionState.OPEN
+    signal = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 20}]},
+    }, received_at=NOW)
+    runner.ingest("cutoff", config, [signal])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="cutoff", strategy_id="momentum", decision_id="cutoff-trade",
+                  outcome="TRADE", input_event_ids=(signal.event_id,), decided_at=decided)
+    record_manifest(runner, session_id="cutoff", decision_id="cutoff-trade", event=signal,
+                    decided_at=decided, quantity=2)
+    runner.record_risk_verdict(session_id="cutoff", decision_id="cutoff-trade", verdict_id="cutoff-risk",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    fill_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:59", "last_price": 100.05, "volume": 100,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 20}]},
+    }, received_at=NOW + timedelta(seconds=59))
+    runner.ingest("cutoff", config, [fill_quote])
+
+    with pytest.raises(ForwardSessionRunnerError, match="outside the sourced exchange session cutoff"):
+        runner.execute_paper_intent(
+            session_id="cutoff", order_id="after-close", decision_id="cutoff-trade",
+            event_id=fill_quote.event_id, side="BUY", quantity=2, limit_price=Decimal("100.1"),
+            tick_size=Decimal("0.05"), freeze_limit=1000, slice_size=100,
+            adverse_slippage_bps=Decimal("0"), latency_ms=10,
+            simulated_at=NOW + timedelta(seconds=60), max_wait_ms=1000)
+    assert runner.records("cutoff")["intents"] == []
+    runner.close()
+
+
 def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(tmp_path):
     calendar = _calendar(date(2026, 11, 13))
     runner = make_runner(tmp_path)
@@ -342,6 +859,211 @@ def test_supervisor_marks_stale_feed_incomplete_and_keeps_fresh_feed_open(tmp_pa
                         "reason": "market feed silent for 91.000s; limit is 90.000s",
                         "stale_seconds": 91.0}]
     runner.close()
+
+
+def test_paper_session_integrated_shock_drill_preserves_exposure_and_order_truth(tmp_path):
+    config = make_config()
+    rules = fixture_rule_book("NSE:INFY", quantity_unit="OPTION_CONTRACTS",
+                              expiry=config.exchange_date)
+    config = replace(config, constraints={**config.constraints, "instrument_rules": rules,
+                                          "carry_authorized_instruments": ["NSE:INFY"],
+                                          "position_accounting": {"NSE:INFY": {
+                                              "asset_class": "OPTION", "currency": "INR",
+                                              "multiplier": "1"}}})
+    runner = make_runner(tmp_path)
+    assert runner.plan_calendar_day(
+        "shock", config, venue="NSE", calendar=_calendar(config.exchange_date), now=NOW,
+        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
+
+    quote_payload = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+                     "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                               "sell": [{"price": 100.05, "quantity": 20}]}}
+    signal_quote = normalize_kite_quote("NSE:INFY", quote_payload, received_at=NOW)
+    runner.ingest("shock", config, [signal_quote])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="shock", strategy_id="shock-drill", decision_id="shock-entry",
+                  outcome="TRADE", input_event_ids=(signal_quote.event_id,), decided_at=decided)
+    record_manifest(runner, session_id="shock", decision_id="shock-entry", event=signal_quote,
+                    decided_at=decided, quantity=2, holding_sessions=1)
+    runner.record_risk_verdict(session_id="shock", decision_id="shock-entry", verdict_id="shock-risk",
+                               allowed=True, policy_id="shock-test-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    event_count_before_skew = len(runner.records("shock")["events"])
+    fill_time = decided + timedelta(milliseconds=100)
+    fill_quote = normalize_kite_quote(
+        "NSE:INFY", quote_payload | {"timestamp": "2026-11-13 10:15:01"}, received_at=fill_time)
+    runner.ingest("shock", config, [fill_quote], ingest_metadata={
+        fill_quote.event_id: (fill_time + timedelta(milliseconds=1), "SHOCK_DRILL_CLOCK")})
+    receipt = runner.execute_paper_intent(
+        session_id="shock", order_id="shock-entry-order", decision_id="shock-entry",
+        event_id=fill_quote.event_id, side="BUY", quantity=2, quantity_unit="OPTION_CONTRACTS",
+        limit_price=Decimal("100.10"), tick_size=Decimal("0.05"), freeze_limit=1000,
+        slice_size=100, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=200))
+    assert receipt["status"] == "FILLED" and receipt["filled_quantity"] == 2
+
+    future_quote = quote_payload | {"timestamp": "2026-11-13 10:15:10"}
+    with pytest.raises(KiteQuoteNormalizationError, match="future-skew tolerance"):
+        normalize_kite_quote("NSE:INFY", future_quote, received_at=NOW + timedelta(seconds=2))
+    assert runner.state_store.state("shock") is SessionState.OPEN
+    assert len(runner.records("shock")["events"]) == event_count_before_skew + 1
+    with pytest.raises(ForwardSessionRunnerError, match="outside frozen universe"):
+        runner.ingest("shock", config, [MarketEvent(
+            "unmapped-token", EventKind.QUOTE, "NSE", "NSE:UNKNOWN", NOW + timedelta(seconds=3),
+            NOW + timedelta(seconds=3), NOW + timedelta(seconds=3),
+            {"bid": 1.0, "ask": 1.1}, "SHOCK_DRILL")])
+    assert runner.records("shock")["data_rejections"][-1]["source_event_ids"] == ["unmapped-token"]
+
+    # Restart the same durable paper session before processing cancellation evidence.
+    runner.close()
+    runner = make_runner(tmp_path)
+    resumed = runner.resume("shock", now=NOW + timedelta(seconds=4))
+    assert resumed["state"] == "OPEN"
+    assert len(resumed["records"]["execution_receipts"]) == 1
+    assert resumed["records"]["accounting"]["positions"] == {"NSE:INFY": 2}
+
+    for order_id in ("shock-stop", "shock-target"):
+        runner._append_paper_order_event(session_id="shock", order_id=order_id, state="CREATED",
+                                         occurred_at=NOW, quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(session_id="shock", order_id=order_id, state="SUBMITTED",
+                                         occurred_at=NOW + timedelta(seconds=1),
+                                         quantity=2, filled_quantity=0)
+    runner.arm_paper_oco(session_id="shock", group_id="shock-position", stop_order_id="shock-stop",
+                         target_order_id="shock-target", occurred_at=NOW + timedelta(seconds=2),
+                         evidence_id="b" * 64)
+    runner._append_paper_order_event(
+        session_id="shock", order_id="shock-stop", state="FILLED", occurred_at=NOW + timedelta(seconds=5),
+        quantity=2, filled_quantity=2, price="99.00", fill_evidence_id="c" * 64)
+    stop_fill_id = runner.order_journal.replay("shock::shock-stop")[-1]["event_id"]
+    cancel_requested = runner.resolve_paper_oco_fill(
+        session_id="shock", group_id="shock-position", triggered_order_id="shock-stop",
+        fill_event_id=stop_fill_id, occurred_at=NOW + timedelta(seconds=6),
+        reconciliation_evidence_id="d" * 64)
+    assert cancel_requested.event == "CANCEL_REQUESTED"
+    runner._append_paper_order_event(
+        session_id="shock", order_id="shock-target", state="CANCELED",
+        occurred_at=NOW + timedelta(seconds=7), quantity=2, filled_quantity=0)
+    cancel_confirmed = runner.resolve_paper_oco_fill(
+        session_id="shock", group_id="shock-position", triggered_order_id="shock-stop",
+        fill_event_id=stop_fill_id, occurred_at=NOW + timedelta(seconds=8),
+        reconciliation_evidence_id="d" * 64)
+    assert cancel_confirmed.event == "CANCEL_CONFIRMED"
+
+    outage = runner.supervise_open_sessions(now=NOW + timedelta(seconds=200),
+                                            max_feed_silence=timedelta(seconds=90))
+    assert outage[0]["session_id"] == "shock" and outage[0]["state"] == "INCOMPLETE"
+    records = runner.records("shock")
+    assert records["session_reports"][0]["status"] == "INCOMPLETE"
+    assert records["accounting"]["positions"] == {"NSE:INFY": 2}
+    assert any(row["disposition"] == "EXPIRY_SETTLEMENT_REQUIRED"
+               for row in records["session_reports"][0]["position_dispositions"])
+    assert any(row["exposure_type"] == "STALE_MARK" for row in records["unresolved_exposures"])
+    assert any(row["exposure_type"] == "MISSING_EXIT" for row in records["unresolved_exposures"])
+    assert records["execution_receipts"][0]["status"] == "FILLED"
+    shock_order_states = {row["paper_order_id"]: row["state"] for row in records["order_events"]
+                          if row["paper_order_id"] in {"shock-stop", "shock-target"}}
+    assert shock_order_states == {"shock-stop": "FILLED", "shock-target": "CANCELED"}
+    runner.close()
+
+
+def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_path):
+    runner, fill_quote, decided = trade_setup(tmp_path)
+    receipt = execute(runner, fill_quote, decided)
+    assert receipt["status"] == "FILLED"
+    runner.close()
+
+    script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
+    proof_dir = Path.cwd() / ".pytest-pa14-proof"
+    proof_dir.mkdir(exist_ok=True)
+    result = subprocess.run(
+        [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
+         "--journal-db", str(tmp_path / "journal.sqlite"), "--date", "2026-11-13",
+         "--proof-dir", str(proof_dir), "--reference-journal-db", str(tmp_path / "journal.sqlite")],
+        cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr + result.stdout
+    report = json.loads(result.stdout)
+    assert report["status"] == "PASS"
+    assert report["session_count"] == 1
+    assert report["decision_count"] == 1
+    assert report["execution_receipt_count"] == 1
+    [session] = report["sessions"]
+    assert session["raw_hash_chain_valid"] is True
+    assert session["decision_quote_lineage_valid"] is True
+    assert session["raw_market_event_count"] == 2
+    assert session["filled_receipt_count"] == 1
+    result_report_comparison = report["replay_comparisons"][0]
+    assert result_report_comparison["matches"] is True
+    assert result_report_comparison["material_mismatch_count"] == 0
+    proof = session["one_page_proof"]
+    assert proof["generated_signal_count"] == 1
+    assert proof["matched_fill_count"] == 1
+    assert proof["missing_fill_count"] == 0
+    assert proof["eligible_count"] is None
+    assert proof["gross_pnl_inr"] is None
+    assert proof["net_pnl_inr"] is None
+    assert proof["performance_dimensions"]["by_strategy"]["momentum"] == {
+        "decision_count": 1,
+        "generated_signal_count": 1,
+        "matched_fill_order_count": 1,
+        "missing_fill_order_count": 0,
+    }
+    assert proof["performance_dimensions"]["by_asset_class"] is None
+    assert proof["operational_checks"]["unaccounted_open_orders_zero"] is True
+    assert proof["operational_checks"]["unsupported_fills_zero"] is True
+    assert proof["operational_checks"]["unauthorized_broker_calls_zero"] is None
+    assert proof["operational_checks"]["source_freshness_pass"] is True
+    assert proof["operational_checks"]["complete_hashed_close_output"] is False
+    proof_path = next(proof_dir.glob("session-*.md"))
+    page = proof_path.read_text(encoding="utf-8")
+    assert "Eligible strategy count | Unknown" in page
+    assert "Matched fills | 1" in page
+    assert "Benchmark comparison | Unknown" in page
+    proof_path.unlink()
+    proof_dir.rmdir()
+    assert session["issues"] == []
+
+
+@pytest.mark.parametrize("tamper,expected_flag", [
+    ("chain", "raw_hash_chain_valid"),
+    ("quote", "decision_quote_lineage_valid"),
+])
+def test_independent_daily_audit_fails_closed_on_raw_log_tampering(tmp_path, tamper, expected_flag):
+    runner, fill_quote, decided = trade_setup(tmp_path)
+    execute(runner, fill_quote, decided)
+    runner.close()
+
+    audit_copy = tmp_path / "tampered-journal.sqlite"
+    shutil.copy2(tmp_path / "journal.sqlite", audit_copy)
+    journal = sqlite3.connect(audit_copy)
+    journal.execute("DROP TRIGGER IF EXISTS runner_audit_no_update")
+    journal.execute("DROP TRIGGER IF EXISTS runner_audit_no_delete")
+    if tamper == "chain":
+        journal.execute("UPDATE runner_audit_log SET event_sha256=? WHERE kind='decision'",
+                        ("f" * 64,))
+    else:
+        receipt_row = journal.execute(
+            "SELECT sequence,record_json FROM runner_audit_log WHERE kind='execution_receipt'"
+        ).fetchone()
+        body = json.loads(receipt_row[1])
+        body["quote_provenance"]["event_sha256"] = "e" * 64
+        journal.execute("UPDATE runner_audit_log SET record_json=? WHERE sequence=?",
+                        (json.dumps(body, sort_keys=True, separators=(",", ":")), receipt_row[0]))
+    journal.commit()
+    journal.close()
+
+    script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
+         "--journal-db", str(audit_copy), "--date", "2026-11-13",
+         "--reference-journal-db", str(tmp_path / "journal.sqlite")],
+        cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2, result.stderr + result.stdout
+    report = json.loads(result.stdout)
+    assert report["status"] == "FAIL"
+    [session] = report["sessions"]
+    assert session[expected_flag] is False
+    assert session["issues"]
+    assert report["replay_comparisons"][0]["matches"] is False
 
 
 def test_supervisor_fails_closed_for_open_sessions_without_calendar_plan(tmp_path):
@@ -469,8 +1191,19 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
     signal_event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
     runner.ingest("s", config, [signal_event])
     decided = NOW + timedelta(milliseconds=decision_offset_ms)
+    decision_payload = None
+    if config.mode == "LIVE_PAPER":
+        decision_payload = {"expected_value_forecast": {
+            "candidate_id": "trade-1", "version": 1, "forecasted_at_utc": decided.isoformat(),
+            "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
+            "expected_net_fraction": "0.009",
+            "forecast": {"p10_fraction": "-0.01", "p50_fraction": "0.01",
+                         "p90_fraction": "0.02", "probability_exceeds_cost": "0.6"},
+            "model_sha256": "2" * 64,
+            "cost_model_sha256": runner._resolved_cost_schedule("s").digest(),
+        }}
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
-                  decided_at=decided, input_event_ids=(signal_event.event_id,))
+                  decided_at=decided, input_event_ids=(signal_event.event_id,), payload=decision_payload)
     if include_manifest:
         record_manifest(runner, session_id="s", decision_id="trade-1", event=signal_event,
                         decided_at=decided, quantity=11)
@@ -513,6 +1246,19 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
                                          "available_at_utc": event.available_at.isoformat()}],
         "no_trade_reasons": [],
     }
+    session_config = runner.state_store.config(session_id)
+    if session_config.mode == "LIVE_PAPER":
+        manifest.update({
+            "strategy_sha256": session_config.strategy_sha256,
+            "universe_sha256": hashlib.sha256(json.dumps(
+                sorted(session_config.instrument_universe), separators=(",", ":")).encode()).hexdigest(),
+            "risk_limits_sha256": hashlib.sha256(json.dumps(
+                session_config.constraints["risk_limits"], sort_keys=True,
+                separators=(",", ":")).encode()).hexdigest(),
+            "cost_model_sha256": runner._resolved_cost_schedule(session_id).digest(),
+            "benchmark_id": session_config.benchmark,
+            "capital_inr": format(session_config.capital, "f"),
+        })
     if persist:
         return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
     return manifest
@@ -589,6 +1335,15 @@ def test_versioned_candidate_runs_through_durable_runner_to_accounting(tmp_path)
     assert [row["state"] for row in records["order_events"]] == ["CREATED", "SUBMITTED", "FILLED"]
     assert records["order_events"][-1]["fill_evidence_id"] is not None
     timing = records["timing_telemetry"]["signals"][0]
+    intent = records["intents"][0]
+    assert intent["as_of"] == signal_event.available_at.astimezone(timezone.utc).isoformat()
+    assert intent["first_executable_after"] == (decided_at + timedelta(milliseconds=100)).isoformat()
+    assert intent["expires_at"] == (decided_at + timedelta(milliseconds=5100)).isoformat()
+    assert intent["last_good_quote_age_ms"] >= 0
+    assert intent["execution_method"] == "MARKETABLE_LIMIT"
+    assert timing["first_executable_after"] == intent["first_executable_after"]
+    assert timing["expires_at"] == intent["expires_at"]
+    assert timing["execution_method"] == ["MARKETABLE_LIMIT"]
     assert timing["orders"][0]["fills"][0]["filled_quantity"] == 2
     assert timing["orders"][0]["simulated_fill_at"] == result.receipt["simulated_at"]
     assert "FEATURE_READY_TIMESTAMP" in timing["missing_stages"]
@@ -627,6 +1382,9 @@ def append_fill_quote(runner, config, signal_event, *, event_id, available_at):
 
 
 def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
     runner, event, decided = trade_setup(tmp_path)
     first = execute(runner, event, decided)
     second = execute(runner, event, decided)
@@ -645,6 +1403,213 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     assert accounting["positions"] == {"NSE:INFY": 2}
     assert accounting["ledger_balanced"] and accounting["cash_reconciled"]
     assert accounting["charges_assessed"] is False and accounting["net_pnl_eligible"] is False
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["cash"]["INR"] == Decimal("-200.40")
+    reservations = DurableReservationLedger(tmp_path / "journal.sqlite")
+    assert reservations.active_amounts("ledger-1") == {
+        "CASH": Decimal("200.60"), "INSTRUMENT_QUANTITY:NSE:INFY": Decimal("2")}
+    assert reservations.verify("ledger-1")["mismatched"] == 0
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM reservation_events WHERE event_kind='POSITION_FILL_RECORDED'"
+    ).fetchone()[0] == 1
+    runner.close()
+
+
+def test_paper_intent_fails_closed_without_frozen_account_reservation_policy(tmp_path):
+    config = make_config()
+    constraints = dict(config.constraints)
+    constraints.pop("reservation_policy")
+    runner, event, decided = trade_setup(
+        tmp_path, config=replace(config, constraints=constraints))
+
+    with pytest.raises(ForwardSessionRunnerError, match="requires a frozen account reservation_policy"):
+        execute(runner, event, decided)
+
+    assert runner.records("s")["intents"] == []
+    assert runner._con.execute("SELECT COUNT(*) FROM paper_intents").fetchone()[0] == 0
+    assert runner._con.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='reservations'"
+    ).fetchone()[0] == 0
+    runner.close()
+
+
+def test_frozen_account_reservation_gates_paper_intent_and_retains_filled_exposure(tmp_path):
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100000", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({"reservation_policy": policy})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided)
+    assert receipt["status"] == "FILLED"
+    ledger = DurableReservationLedger(tmp_path / "journal.sqlite")
+    assert ledger.active_amounts("ledger-1") == {
+        "CASH": Decimal("200.60"), "INSTRUMENT_QUANTITY:NSE:INFY": Decimal("2")}
+    assert ledger.verify("ledger-1")["mismatched"] == 0
+    runner.close()
+
+
+def test_futures_paper_fill_reserves_margin_and_risk_without_notional_cash(tmp_path):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
+    config = make_config_with_constraints({
+        "instrument_rules": fixture_rule_book("NSE:INFY", quantity_unit="FUTURES_CONTRACTS"),
+        "position_accounting": {"NSE:INFY": {
+            "asset_class": "FUTURE", "currency": "INR", "multiplier": "25"}},
+        "reservation_resource_amounts": {"NSE:INFY": {"MARGIN": "100", "RISK_CAPITAL": "50"}},
+    })
+    runner, event, decided = trade_setup(tmp_path, config=config)
+
+    receipt = execute(runner, event, decided, order_id="future-order")
+
+    assert receipt["status"] == "FILLED"
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["asset_class"] == "FUTURE"
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["positions"][0]["multiplier"] == Decimal("25")
+    assert canonical["cash"] == {}
+    active = DurableReservationLedger(tmp_path / "journal.sqlite").active_amounts("ledger-1")
+    assert active["MARGIN"] == Decimal("200")
+    assert active["RISK_CAPITAL"] == Decimal("100")
+    assert "CASH" not in active
+    runner.close()
+
+
+def test_runner_persists_oco_lifecycle_and_blocks_close_until_sibling_cancel(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner, "oco-session")
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-session", order_id=order_id, state="CREATED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(
+            session_id="oco-session", order_id=order_id, state="SUBMITTED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+    armed = runner.arm_paper_oco(
+        session_id="oco-session", group_id="position-1", stop_order_id="stop",
+        target_order_id="target", occurred_at=NOW, evidence_id="a" * 64)
+    assert armed.event == "ARMED"
+    assert runner.arm_paper_oco(
+        session_id="oco-session", group_id="position-1", stop_order_id="stop",
+        target_order_id="target", occurred_at=NOW, evidence_id="a" * 64).event == "REPLAY"
+
+    runner._append_paper_order_event(
+        session_id="oco-session", order_id="stop", state="FILLED", occurred_at=NOW + timedelta(seconds=1),
+        quantity=2, filled_quantity=2, price="99.00", fill_evidence_id="b" * 64)
+    requested = runner.resolve_paper_oco_fill(
+        session_id="oco-session", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-session::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=2), reconciliation_evidence_id="c" * 64)
+    assert requested.event == "CANCEL_REQUESTED"
+    with pytest.raises(ForwardSessionRunnerError, match="unresolved paper order states"):
+        runner.close_session("oco-session", complete=True, now=NOW + timedelta(seconds=3))
+
+    runner._append_paper_order_event(
+        session_id="oco-session", order_id="target", state="CANCELED", occurred_at=NOW + timedelta(seconds=3),
+        quantity=2, filled_quantity=0)
+    confirmed = runner.resolve_paper_oco_fill(
+        session_id="oco-session", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-session::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=4), reconciliation_evidence_id="c" * 64)
+    assert confirmed.event == "CANCEL_CONFIRMED"
+    assert len([row for row in runner.records("oco-session")["order_events"]
+                if row["paper_order_id"] == "oco:position-1"]) == 5
+    report = runner.close_session("oco-session", complete=True, now=NOW + timedelta(seconds=5))
+    assert report["status"] == "CLOSED"
+    runner.close()
+
+
+def test_runner_paper_oco_late_sibling_fill_race_blocks_session_close(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner, "oco-race")
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="CREATED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="SUBMITTED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+    runner.arm_paper_oco(session_id="oco-race", group_id="position-1", stop_order_id="stop",
+                         target_order_id="target", occurred_at=NOW, evidence_id="a" * 64)
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="FILLED",
+            occurred_at=NOW + timedelta(seconds=1), quantity=2, filled_quantity=2,
+            price="99.00", fill_evidence_id=("b" if order_id == "stop" else "d") * 64)
+    result = runner.resolve_paper_oco_fill(
+        session_id="oco-race", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-race::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=2), reconciliation_evidence_id="c" * 64)
+    assert result.event == "SIBLING_FILL_RACE"
+    with pytest.raises(ForwardSessionRunnerError, match="unresolved paper OCO groups"):
+        runner.close_session("oco-race", complete=True, now=NOW + timedelta(seconds=3))
+    runner.close()
+
+
+def test_frozen_account_reservation_rejects_over_budget_without_paper_order(tmp_path):
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({"reservation_policy": policy})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="reservation denied.*budget exceeded"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["order_events"] == []
+    runner.close()
+
+
+def test_optional_reservation_inputs_cannot_override_computed_cash_exposure(tmp_path):
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100000", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({
+        "reservation_policy": policy,
+        "reservation_resource_amounts": {"NSE:INFY": {"CASH": "0.01"}},
+    })
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="cannot override computed CASH"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_index_level_profile_cannot_be_used_as_paper_execution_data(tmp_path):
+    config = make_config_with_constraints({"data_profiles": [
+        {"instrument_id": "NSE:INFY", "profile": "INDEX_LEVEL_ONLY"}
+    ]})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="index level-only profile cannot supply execution"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_sourced_instrument_halt_blocks_fills_until_a_later_resumption(tmp_path):
+    runner, quote, decided = trade_setup(tmp_path)
+    halted_at = decided + timedelta(milliseconds=50)
+    halt = MarketEvent(
+        "instrument-halt", EventKind.HALT, "NSE", quote.instrument_id,
+        halted_at, halted_at, halted_at, {"status": "HALTED"},
+        "KITE_CONNECT_READ_ONLY", evidence_id="d" * 64,
+    )
+    runner.ingest("s", make_config(), [halt])
+    with pytest.raises(ForwardSessionRunnerError, match="instrument is halted"):
+        execute(runner, quote, decided)
+    assert runner.records("s")["execution_receipts"] == []
+
+    resumed_at = decided + timedelta(milliseconds=125)
+    resumed = MarketEvent(
+        "instrument-resumed", EventKind.HALT, "NSE", quote.instrument_id,
+        resumed_at, resumed_at, resumed_at, {"status": "RESUMED"},
+        "KITE_CONNECT_READ_ONLY", evidence_id="e" * 64,
+    )
+    runner.ingest("s", make_config(), [resumed])
+    receipt = execute(runner, quote, decided, execution_offset_ms=150)
+    assert receipt["status"] == "FILLED"
     runner.close()
 
 
@@ -743,6 +1708,10 @@ def test_fill_uses_a_new_executable_quote_received_after_the_decision(tmp_path):
     assert receipt["quote_provenance"]["event_sha256"] == fill_event.sha256()
     assert receipt["quote_provenance"]["exchange"] == "NSE"
     assert receipt["quote_provenance"]["available_at_utc"] == fill_event.available_at.isoformat()
+    assert receipt["quote_provenance"]["bid"] == "100.0"
+    assert receipt["quote_provenance"]["ask"] == "100.1"
+    assert receipt["quote_provenance"]["bid_quantity"] == 20
+    assert receipt["quote_provenance"]["ask_quantity"] == 20
     decision_inputs = runner.records("s")["decisions"][0]["input_event_ids"]
     assert decision_inputs
     assert signal_event.event_id not in decision_inputs
@@ -790,6 +1759,7 @@ def test_stale_quote_is_refused_at_decision_time_by_the_frozen_age_limit(tmp_pat
         runner.decide(session_id="s", strategy_id="momentum", decision_id="stale-trade", outcome="TRADE",
                       input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
     assert runner.records("s")["decisions"] == []
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
     runner.close()
 
 
@@ -811,8 +1781,22 @@ def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tm
     runner, event, decided = trade_setup(tmp_path, max_quote_age_ms=150, decision_offset_ms=100)
     with pytest.raises(ForwardSessionRunnerError, match="paper fill quote exceeds configured maximum age of 150ms"):
         execute(runner, event, decided, execution_offset_ms=500)
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
     assert runner.records("s")["intents"] == []
     assert runner.records("s")["execution_receipts"] == []
+    runner.close()
+
+
+def test_degraded_operating_mode_blocks_risk_increasing_paper_intents(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    runner.set_operating_mode(session_id="s", mode="DEGRADED", event_id="feed-degraded",
+                              reason="quote feed freshness breached", occurred_at=decided)
+
+    with pytest.raises(ForwardSessionRunnerError, match="blocked while operating mode is DEGRADED"):
+        execute(runner, event, decided)
+
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
+    assert runner.records("s")["intents"] == []
     runner.close()
 
 
@@ -836,6 +1820,38 @@ def test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags(tmp_pat
     assert receipt["physical_order_submitted"] is False
     assert calls == []
     runner.close()
+
+
+def test_intended_forward_paper_trades_never_write_to_kite_or_open_network(monkeypatch, tmp_path):
+    import urllib.request
+
+    from financial_brain.execution.oms.kite_broker import KiteBroker
+    from financial_brain.forward_edge import modes
+
+    calls = []
+    def forbidden(*_args, **_kwargs):
+        calls.append("unexpected-write-or-network")
+        raise AssertionError("paper intent attempted a broker write or network request")
+
+    monkeypatch.setattr(KiteBroker, "place", forbidden)
+    monkeypatch.setattr(KiteBroker, "cancel", forbidden)
+    monkeypatch.setattr(KiteBroker, "_request", forbidden)
+    monkeypatch.setattr(urllib.request, "urlopen", forbidden)
+    monkeypatch.setattr(modes, "PHYSICAL_ORDERS_ENABLED", True)
+    monkeypatch.setenv("FB_LIVE_ORDERS", "1")
+    monkeypatch.setenv("KITE_API_KEY", "test-key")
+    monkeypatch.setenv("KITE_ACCESS_TOKEN", "test-token")
+
+    runner, event, decided = trade_setup(tmp_path)
+    try:
+        for side in ("BUY", "SELL"):
+            receipt = execute(runner, event, decided, order_id=f"paper-{side.lower()}")
+            assert receipt["status"] == "FILLED"
+            assert receipt["physical_order_submitted"] is False
+        assert calls == []
+        assert len(runner.records("s")["execution_receipts"]) == 2
+    finally:
+        runner.close()
 
 
 def test_paper_accounting_replays_sell_inventory_and_gross_realized_pnl(tmp_path):
@@ -909,10 +1925,22 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
         freeze_limit=10, slice_size=10, adverse_slippage_bps=Decimal("10"), latency_ms=100,
         simulated_at=decided + timedelta(milliseconds=100))
     assert buy["charges_inr"] > "0"
+    assert buy["cost_fidelity"]["schema"] == "fb.cost_fidelity.v1"
+    assert buy["cost_fidelity"]["quote_source"] == "FIXTURE"
+    assert buy["cost_fidelity"]["provider_clock"] == fill_event.event_time.isoformat()
+    assert buy["cost_fidelity"]["cost_model_version"] == "v1"
+    assert buy["cost_fidelity"]["cost_model_id"] == "test-india"
+    assert buy["cost_fidelity"]["cost_schedule_sha256"] == "c" * 64
+    assert buy["cost_fidelity"]["impact_calibration"] == "UNAVAILABLE"
+    assert "impact_calibration" in buy["cost_fidelity"]["unavailable_fields"]
     assert buy["execution_cost_basis"] == "OBSERVED_DEPTH_WITH_SLIPPAGE_EMBEDDED_IN_FILL_PRICE"
     assert buy["simulated_adverse_selection_cost_inr"] == "0.00"
     assert buy["cost_items"][0]["impact"] == 0
     assert all(item.get("type") != "SIMULATED_ADVERSE_SELECTION" for item in buy["cost_items"])
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+    active_reservations = DurableReservationLedger(tmp_path / "journal.sqlite").active_amounts("ledger-1")
+    assert active_reservations["PAPER_COST_BUFFER"] >= Decimal(buy["charges_inr"])
+    assert active_reservations["CASH"] >= Decimal("200.60") + Decimal(buy["charges_inr"])
     sell = runner.execute_paper_intent(
         session_id="s", order_id="sell", decision_id="trade-1", event_id=fill_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),
@@ -928,6 +1956,11 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
     assert accounting["cash_inr"] == accounting["ledger_cash_inr"]
     assert Decimal(accounting["cash_inr"]) < Decimal("100000") - Decimal("0.70")
     assert all(item["cost_items"][0]["schedule_sha256"] for item in accounting["cost_line_items"])
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["cash"]["INR"] == Decimal(accounting["cash_inr"]) - Decimal("100000")
+    assert sum(1 for row in CanonicalPortfolioLedger(tmp_path / "journal.sqlite").events("ledger-1")
+               if row["event_kind"] == "FEE") == 2
     runner.close()
 
 
@@ -1014,6 +2047,267 @@ def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
     with pytest.raises(ForwardSessionRunnerError, match="explicit persisted allow risk verdict"):
         execute(runner, event, decided)
     assert runner.records("s")["intents"] == []
+    assert runner.paper_kill_switch.active
+    assert runner.paper_kill_switch.active_reasons == ("DAILY_LOSS",)
+    runner.close()
+
+
+def test_live_paper_capture_requires_distinct_provider_permission(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_live_paper_config()
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="prospective_paper_capture.*blocked"):
+        runner.ingest("s", config, [event])
+    assert runner.records("s")["events"] == []
+    runner.close()
+
+
+def test_live_paper_capture_accepts_only_explicit_effective_scoped_permission(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    runner = make_runner(tmp_path)
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    assert runner.ingest("s", config, [event])["persisted"] == 1
+    runner.close()
+
+
+def test_live_paper_manifest_binds_frozen_strategy_benchmark_capital_universe_cost_and_risk(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    runner, _fill_event, decided = trade_setup(tmp_path, config=config, include_manifest=False)
+    decision = json.loads(runner._con.execute(
+        "SELECT record_json FROM runner_decisions WHERE session_id='s' AND decision_id='trade-1'").fetchone()[0])
+    event_json = runner._con.execute(
+        "SELECT event_json FROM runner_events WHERE session_id='s' AND event_id=?",
+        [decision["input_event_ids"][0]]).fetchone()[0]
+    event = MarketEvent.from_dict(json.loads(event_json))
+    manifest = record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                               decided_at=decided, quantity=11, persist=False)
+    digest = runner.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest)
+    assert len(digest) == 64
+    audit_kinds = [row["kind"] for row in runner.durable.audit_records("s")]
+    assert audit_kinds.index("expected_value_forecast") < audit_kinds.index("decision")
+    decision_record = next(row for row in runner.records("s")["decisions"]
+                           if row["decision_id"] == "trade-1")
+    assert decision_record["payload"]["expected_value_forecast"]["expected_net_fraction"] == "0.009"
+    expected_rows = runner.records("s")["expected_value_forecasts"]
+    assert len(expected_rows) == 1 and expected_rows[0]["version"] == 1
+    before_rebuild = runner.records("s")
+    runner.rebuild_materialized_views("s")
+    assert runner.records("s") == before_rebuild
+
+    runner2, _fill_event2, decided2 = trade_setup(tmp_path / "mismatch", config=config, include_manifest=False)
+    decision2 = json.loads(runner2._con.execute(
+        "SELECT record_json FROM runner_decisions WHERE session_id='s' AND decision_id='trade-1'").fetchone()[0])
+    event2_json = runner2._con.execute(
+        "SELECT event_json FROM runner_events WHERE session_id='s' AND event_id=?",
+        [decision2["input_event_ids"][0]]).fetchone()[0]
+    event2 = MarketEvent.from_dict(json.loads(event2_json))
+    manifest2 = record_manifest(runner2, session_id="s", decision_id="trade-1", event=event2,
+                                decided_at=decided2, quantity=11, persist=False)
+    manifest2["benchmark_id"] = "OTHER"
+    with pytest.raises(ForwardSessionRunnerError, match="benchmark differs"):
+        runner2.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest2)
+    runner.close()
+    runner2.close()
+
+
+def test_live_paper_candidate_requires_predecision_expected_value_forecast(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_live_paper_config(include_prospective_rights=True)
+    opened(runner, config=config)
+    event = make_event(event_id="missing-live-forecast")
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="pre-entry expected-value forecast"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="missing-forecast",
+                      outcome="TRADE", input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
+    assert runner.records("s")["decisions"] == []
+    assert not any(row["kind"] == "expected_value_forecast" for row in runner.durable.audit_records("s"))
+    runner.close()
+
+
+def test_expected_value_revisions_are_sequential_new_and_immutable(tmp_path):
+    runner, event, first_decision_at = trade_setup(
+        tmp_path, config=make_live_paper_config(include_prospective_rights=True))
+    cost_sha = runner._resolved_cost_schedule("s").digest()
+
+    def forecast(version, forecast_at):
+        return {"candidate_id": "trade-1", "version": version,
+                "forecasted_at_utc": forecast_at.isoformat(),
+                "predicted_return_fraction": "0.012", "predicted_cost_fraction": "0.001",
+                "expected_net_fraction": "0.011",
+                "forecast": {"p10_fraction": "-0.02", "p50_fraction": "0.012",
+                             "p90_fraction": "0.03", "probability_exceeds_cost": "0.7"},
+                "model_sha256": "2" * 64, "cost_model_sha256": cost_sha}
+
+    revised_at = first_decision_at + timedelta(seconds=1)
+    assert runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-2",
+                         outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=revised_at,
+                         reason_codes=("REVISED_FORECAST_NO_ENTRY",),
+                         payload={"expected_value_forecast": forecast(2, revised_at - timedelta(milliseconds=1))})
+    with pytest.raises(ForwardSessionRunnerError, match="next immutable version"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-4",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,),
+                      decided_at=revised_at + timedelta(milliseconds=10),
+                      reason_codes=("VERSION_GAP",),
+                      payload={"expected_value_forecast": forecast(4, revised_at)})
+    with pytest.raises(ForwardSessionRunnerError, match="published before its decision clock"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-future-forecast",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,),
+                      decided_at=revised_at + timedelta(milliseconds=20),
+                      reason_codes=("FUTURE_FORECAST",),
+                      payload={"expected_value_forecast": forecast(
+                          3, revised_at + timedelta(milliseconds=21))})
+    decisions = runner.records("s")["decisions"]
+    assert [row["payload"].get("expected_value_forecast", {}).get("version") for row in decisions] == [1, 2]
+    runner.close()
+
+
+def test_live_paper_manifest_cannot_revise_published_expected_value(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    runner, _fill_event, decided = trade_setup(tmp_path, config=config, include_manifest=False)
+    decision = runner.records("s")["decisions"][0]
+    event, _digest = runner.source_event("s", decision["input_event_ids"][0])
+    manifest = record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                               decided_at=decided, quantity=11, persist=False)
+    manifest["predicted_return_fraction"] = "0.02"
+    with pytest.raises(ForwardSessionRunnerError, match="forecast differs from the frozen decision"):
+        runner.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest)
+    runner.close()
+
+
+def test_live_paper_execution_clock_must_follow_expected_value_publication(tmp_path):
+    runner, event, decided = trade_setup(
+        tmp_path, config=make_live_paper_config(include_prospective_rights=True))
+    with pytest.raises(ForwardSessionRunnerError, match="must precede the execution clock"):
+        execute(runner, event, decided, execution_offset_ms=0)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
+def test_live_paper_close_cannot_seal_open_inventory_without_risk_policy(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    config = replace(config, constraints={**config.constraints, "liquidity_bucket": "large"})
+    runner, event, decided = trade_setup(
+        tmp_path, config=config)
+    execute(runner, event, decided)
+    with pytest.raises(ForwardSessionRunnerError, match="OPEN_RISK_MISSING_OR_AMBIGUOUS"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="position risk policy is missing")
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["fees_reconciled"] is True
+    assert reconciliation["inventory_reconciled"] is True
+    assert reconciliation["marked_equity_inr"] is not None
+    assert reconciliation["open_risk_inr"] is None
+    assert reconciliation["reconciled"] is False
+    exposures = report["unresolved_exposures"]
+    assert len(exposures) == 1
+    assert exposures[0]["exposure_type"] == "OPEN_RISK_UNKNOWN"
+    assert exposures[0]["loss_inr"] is None
+    assert exposures[0]["pnl_status"] == "UNRECOGNIZED_PENDING_EVIDENCE"
+    runner.close()
+
+
+def test_unresolved_exposure_requires_persisted_evidence_to_resolve(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    exposure_id = runner.record_unresolved_exposure(
+        session_id="s", exposure_type="NO_CONFIRMABLE_QUOTE", exposure_key="mark:NSE:INFY",
+        instrument_id="NSE:INFY", quantity=2,
+        reason="exit mark unavailable during close", occurred_at=decided)
+    assert runner.record_unresolved_exposure(
+        session_id="s", exposure_type="NO_CONFIRMABLE_QUOTE", exposure_key="mark:NSE:INFY",
+        instrument_id="NSE:INFY", quantity=2,
+        reason="exit mark unavailable during close", occurred_at=decided) == exposure_id
+    assert runner.records("s")["unresolved_exposures"][0]["loss_inr"] is None
+    with pytest.raises(ForwardSessionRunnerError, match="not persisted"):
+        runner.resolve_unresolved_exposure(
+            session_id="s", exposure_id=exposure_id, evidence_event_id="missing-event",
+            resolution="FRESH_MARK", reason="attempt without evidence", resolved_at=decided)
+    runner.resolve_unresolved_exposure(
+        session_id="s", exposure_id=exposure_id, evidence_event_id=event.event_id,
+        resolution="FRESH_MARK", reason="journaled quote reviewed", resolved_at=decided + timedelta(seconds=1))
+    assert runner.records("s")["unresolved_exposures"] == []
+    assert any(row["kind"] == "unresolved_exposure_resolution"
+               for row in runner.records("s")["audit_log"])
+    runner.close()
+
+
+def test_stale_position_mark_is_journaled_without_zero_loss_substitution(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    report = runner.close_session("s", complete=True, now=decided + timedelta(seconds=10))
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["marked_equity_inr"] is None
+    [exposure] = [row for row in report["unresolved_exposures"]
+                  if row["exposure_type"] == "STALE_MARK"]
+    assert exposure["valuation_inr"] is None
+    assert exposure["loss_inr"] is None
+    assert exposure["pnl_status"] == "UNRECOGNIZED_PENDING_EVIDENCE"
+    assert "POSITION_MARK_STALE:NSE:INFY" in reconciliation["exceptions"]
+    runner.close()
+
+
+def test_live_paper_flat_close_reconciles_cash_costs_equity_and_zero_open_risk(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_live_paper_config(include_prospective_rights=True)
+    opened(runner, config=config)
+    report = runner.close_session("s", complete=True, now=NOW + timedelta(seconds=2))
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["reconciled"] is True
+    assert reconciliation["oms_reconciled"] is True
+    assert reconciliation["cash_reconciled"] is True
+    assert reconciliation["fees_reconciled"] is True
+    assert reconciliation["inventory_reconciled"] is True
+    assert reconciliation["marked_equity_inr"] == "100000"
+    assert reconciliation["open_risk_inr"] == "0"
+    runner.close()
+
+
+def test_live_paper_session_rejects_missing_frozen_parameters_before_creation(tmp_path):
+    from dataclasses import replace
+
+    runner = make_runner(tmp_path)
+    with pytest.raises(ForwardSessionRunnerError, match="frozen strategy_parameters"):
+        opened(runner, config=replace(make_config(), mode="LIVE_PAPER"))
+    with pytest.raises(SessionStateError, match="unknown forward session"):
+        runner.state_store.state("s")
+    runner.close()
+
+
+def test_risk_breach_latch_persists_across_runner_restart_and_blocks_entries(tmp_path):
+    runner, _event, _decided = trade_setup(tmp_path, risk_allowed=False)
+    assert runner.paper_kill_switch.active
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.paper_kill_switch.active
+    with pytest.raises(ForwardSessionRunnerError, match="paper kill switch is active: DAILY_LOSS"):
+        resumed._require_paper_entries_enabled()
+    resumed.close()
+
+
+@pytest.mark.parametrize("reason", [
+    "DAILY_LOSS", "DRAWDOWN", "STALE_FEED", "RECONCILIATION_MISMATCH",
+    "LOST_HEARTBEAT", "BROKER_STATE_UNKNOWN", "RISK_LIMIT_BREACH",
+])
+def test_persistent_loss_and_operational_latches_cannot_be_overridden_by_entry_callers(tmp_path, reason):
+    runner, event, decided = trade_setup(tmp_path)
+    runner.paper_kill_switch.trip(
+        event_id=f"gate:{reason}", reason=reason, occurred_at=decided,
+        evidence_hash="d" * 64, actor_id="risk-engine", actor_type="system")
+    for _attempt in range(2):  # repeated/reentrant UI or agent requests use the same guarded entry point
+        with pytest.raises(ForwardSessionRunnerError, match=f"paper kill switch is active: {reason}"):
+            execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["execution_receipts"] == []
     runner.close()
 
 
@@ -1044,6 +2338,13 @@ def test_append_only_audit_rebuilds_daily_views_and_records_data_rejection(tmp_p
     assert [item["kind"] for item in baseline["audit_log"]] == [
         "preflight", "market_event", "decision", "decision_manifest", "risk_verdict", "market_event",
         "paper_intent", "execution_receipt"]
+    audit = baseline["audit_log"]
+    assert all(row["event_sha256"] and row["previous_event_sha256"] for row in audit)
+    market_record = next(row["record"] for row in audit if row["kind"] == "market_event")
+    assert market_record["event"]["exchange_at"]
+    assert market_record["event"]["received_at"]
+    assert market_record["event"]["available_at"]
+    assert market_record["ingested_at"] and market_record["ingest_clock_source"]
     with pytest.raises(sqlite3.IntegrityError, match="append-only"):
         runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s'")
     runner.rebuild_materialized_views("s")
@@ -1079,6 +2380,35 @@ def test_trading_audit_rows_bind_source_commit_and_executable_runner(tmp_path):
     runner.close()
 
 
+def test_audit_hash_chain_detects_tampered_record_and_previous_link(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    rows = runner.durable.audit_records("s")
+    assert len(rows) >= 4
+    assert rows[0]["previous_event_sha256"] == "0" * 64
+    assert rows[1]["previous_event_sha256"] == rows[0]["event_sha256"]
+    runner._con.execute("DROP TRIGGER runner_audit_no_update")
+    runner._con.execute("UPDATE runner_audit_log SET record_json='{}' WHERE session_id='s' AND sequence=2")
+    with pytest.raises(DurableJournalError, match="hash chain verification failed"):
+        runner.durable.audit_records("s")
+    runner.close()
+
+
+def test_audit_hash_chain_backfills_legacy_rows_on_reopen(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    runner._con.execute("DROP TRIGGER runner_audit_no_update")
+    runner._con.execute("ALTER TABLE runner_audit_log DROP COLUMN previous_event_sha256")
+    runner._con.execute("ALTER TABLE runner_audit_log DROP COLUMN event_sha256")
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    rows = resumed.durable.audit_records("s")
+    assert rows and rows[0]["previous_event_sha256"] == "0" * 64
+    assert all(row["event_sha256"] for row in rows)
+    resumed.close()
+
+
 def test_lifecycle_event_and_audit_append_roll_back_and_resume_atomically(tmp_path, monkeypatch):
     runner = make_runner(tmp_path)
     record = {"session_id": "s", "occurred_at": NOW.isoformat(), "status": "OPEN"}
@@ -1112,7 +2442,18 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
     runner, buy_quote, buy_decision_at = trade_setup(tmp_path)
     buy_receipt = execute(runner, buy_quote, buy_decision_at, order_id="same-local-order-id", qty=2)
     first_close_at = buy_decision_at + timedelta(seconds=2)
-    runner.close_session("s", complete=True, now=first_close_at)
+    close_report = runner.close_session("s", complete=True, now=first_close_at)
+    assert close_report["position_dispositions"] == [{
+        "instrument_id": "NSE:INFY", "quantity": 2, "quantity_unit": "SHARES", "expiry": None,
+        "disposition": "OVERNIGHT_CARRY_AUTHORIZED", "valuation_status": "OBSERVED_EXECUTABLE_QUOTE",
+        "mark_price_inr": "99.95", "mark_quote_event_id": buy_quote.event_id,
+        "execution_or_settlement_fill_created": False,
+    }]
+    assert close_report["day_end_reconciliation"]["inventory_reconciled"] is True
+    assert close_report["day_end_reconciliation"]["marked_equity_inr"] is not None
+    assert close_report["day_end_reconciliation"]["open_risk_inr"] is None
+    assert "OPEN_RISK_MISSING_OR_AMBIGUOUS:NSE:INFY" in close_report[
+        "day_end_reconciliation"]["exceptions"]
     first_day_accounting = runner.records("s")["accounting"]
     assert first_day_accounting["positions"] == {"NSE:INFY": 2}
     assert buy_receipt["filled_quantity"] == 2
@@ -1164,6 +2505,47 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
 
     # A later session must not mutate an earlier session's frozen account projection.
     assert runner.records("s")["accounting"] == first_day_accounting
+    runner.close()
+
+
+def test_complete_close_requires_explicit_carry_authorization_for_open_inventory(tmp_path):
+    config = make_config()
+    config = replace(config, constraints={**config.constraints, "carry_authorized_instruments": []})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided, order_id="open-position", qty=2)
+    assert receipt["filled_quantity"] == 2
+
+    with pytest.raises(ForwardSessionRunnerError, match="positions requiring flatten or expiry action"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="position not flattened")
+    assert report["position_dispositions"][0]["disposition"] == "INTRADAY_FLATTEN_REQUIRED"
+    assert report["position_dispositions"][0]["execution_or_settlement_fill_created"] is False
+    runner.close()
+
+
+def test_expiring_option_position_is_reported_separately_and_blocks_complete_close(tmp_path):
+    config = make_config()
+    rules = fixture_rule_book("NSE:INFY", quantity_unit="OPTION_CONTRACTS",
+                              expiry=config.exchange_date)
+    config = replace(config, constraints={**config.constraints, "instrument_rules": rules,
+                                          "carry_authorized_instruments": ["NSE:INFY"],
+                                          "position_accounting": {"NSE:INFY": {
+                                              "asset_class": "OPTION", "currency": "INR",
+                                              "multiplier": "1"}}})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided, order_id="expiring-option", qty=2)
+    assert receipt["filled_quantity"] == 2
+
+    with pytest.raises(ForwardSessionRunnerError, match="positions requiring flatten or expiry action"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="expiry settlement evidence unavailable")
+    position = report["position_dispositions"][0]
+    assert position["quantity_unit"] == "OPTION_CONTRACTS"
+    assert position["disposition"] == "EXPIRY_SETTLEMENT_REQUIRED"
+    assert position["valuation_status"] == "OBSERVED_EXECUTABLE_QUOTE"
+    assert position["execution_or_settlement_fill_created"] is False
     runner.close()
 
 
@@ -1359,6 +2741,15 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
                      exchange_date=date(2026, 11, 13), completed_sessions_held={signal.signal_id: 0},
                      instrument_ids={"INFY": "NSE:INFY"},
                      quote_events={"NSE:INFY": entry_quote}) == ()
+    monitor_rows = [row for row in runner.durable.audit_records("s")
+                    if row["kind"] == "position_monitor"]
+    assert len(monitor_rows) == 1
+    assert monitor_rows[0]["record"]["evaluation"] == "HOLD"
+    assert monitor_rows[0]["record"]["quote_event_id"] == entry_quote.event_id
+    assert monitor_rows[0]["record"]["quote_event_sha256"] == entry_quote.sha256()
+    assert monitor_rows[0]["record"]["bid"] == 99.95
+    assert monitor_rows[0]["record"]["ask"] == 100.05
+    assert monitor_rows[0]["record"]["available_at"] == entry_quote.available_at.isoformat()
     runner.close_session("s", complete=True, now=entry_fill_at + timedelta(seconds=2))
 
     exit_day = date(2026, 11, 16)
@@ -1383,6 +2774,22 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
                            instrument_ids={"INFY": "NSE:INFY"},
                            quote_events={"NSE:INFY": stop_quote})
     assert len(time_exits) == 1 and time_exits[0].reason == "TIME"
+    monitor_rows = [row for row in runner.durable.audit_records("s2")
+                    if row["kind"] == "position_monitor"]
+    assert [row["record"]["evaluation"] for row in monitor_rows] == ["STOP", "TIME"]
+    assert all(row["record"]["quote_event_sha256"] == stop_quote.sha256() for row in monitor_rows)
+    assert all(row["record"]["bid"] == 94.95 and row["record"]["ask"] == 95.05
+               for row in monitor_rows)
+    assert all(row["record"]["available_at"] == stop_quote.available_at.isoformat()
+               for row in monitor_rows)
+    assert due_exits(book, runner=runner, session_id="s2", mode="live", version=version,
+                     exchange_date=exit_day,
+                     completed_sessions_held={signal.signal_id: signal.horizon_sessions},
+                     instrument_ids={"INFY": "NSE:INFY"},
+                     quote_events={"NSE:INFY": stop_quote}) == time_exits
+    replayed_monitor_rows = [row for row in runner.durable.audit_records("s2")
+                             if row["kind"] == "position_monitor"]
+    assert len(replayed_monitor_rows) == 2
     book.execute("UPDATE positions SET stop=95 WHERE version=?", [version])
     exit_decision_at = exit_start + timedelta(seconds=1)
     exit_decision_id = f"paper-book-exit:{signal.signal_id}:s2"
@@ -1724,6 +3131,40 @@ def test_restart_rebuilds_terminal_order_state_from_dispatched_receipt(tmp_path,
     recovered.close()
 
 
+def test_paper_receipt_reopens_in_a_distinct_process_without_duplicate_fill(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    first = execute(runner, event, decided)
+    assert first["status"] == "FILLED"
+    assert len(runner.records("s")["execution_receipts"]) == 1
+    runner.close()
+
+    script = """
+import json, os, sys
+from pathlib import Path
+from financial_brain.forward_edge.session_runner import ForwardSessionRunner
+from financial_brain.forward_edge.session_state import ForwardSessionStore
+root = Path(sys.argv[1])
+runner = ForwardSessionRunner(ForwardSessionStore(root / 'state.sqlite'), root / 'journal.sqlite')
+recovery = runner.resume('s')
+records = runner.records('s')
+print(json.dumps({'pid': os.getpid(), 'state': recovery['state'],
+                  'manual_reconciliation_required': recovery['manual_reconciliation_required'],
+                  'receipt_count': len(records['execution_receipts']),
+                  'filled_quantities': [row['filled_quantity'] for row in records['execution_receipts']]}))
+runner.close()
+"""
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(Path.cwd() / "src") + os.pathsep + environment.get("PYTHONPATH", "")
+    result = subprocess.run([sys.executable, "-c", script, str(tmp_path)], cwd=Path.cwd(), env=environment,
+                            check=True, capture_output=True, text=True, timeout=30)
+    recovered = json.loads(result.stdout.strip().splitlines()[-1])
+    assert recovered["pid"] != os.getpid()
+    assert recovered["state"] == "OPEN"
+    assert recovered["manual_reconciliation_required"] is False
+    assert recovered["receipt_count"] == 1
+    assert recovered["filled_quantities"] == [2]
+
+
 def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receipt(tmp_path, monkeypatch):
     from financial_brain.kernel.events import UnknownOutcome
 
@@ -1741,7 +3182,6 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     with pytest.raises(ForwardSessionRunnerError, match="accounting projection is incomplete"):
         execute(runner, event, decided)
     runner.close()
-
     runner = make_runner(tmp_path)
     recovery = runner.resume("s")
     assert recovery["manual_reconciliation_required"] is True
@@ -1754,3 +3194,59 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     assert len(runner.records("s")["execution_receipts"]) == 1
     runner.close()
+
+
+def test_crash_after_quote_before_intent_resumes_without_inventing_order(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 3}]},
+    }, received_at=NOW)
+    runner.ingest("s", config, [quote])
+    assert len(runner.records("s")["events"]) == 1
+    assert runner.records("s")["intents"] == []
+    runner.close()  # process loss after durable observation, before decision/intent
+
+    recovered = make_runner(tmp_path)
+    state = recovered.resume("s")
+    records = state["records"]
+    assert state["state"] == "OPEN"
+    assert len(records["events"]) == 1
+    assert records["intents"] == []
+    assert records["execution_receipts"] == []
+    assert records["accounting"]["positions"] == {}
+    assert recovered._con.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 0
+    recovered.close()
+
+
+def test_crash_after_canonical_fill_booking_reconciles_exactly_once_on_restart(tmp_path, monkeypatch):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+
+    runner, event, decided = trade_setup(tmp_path)
+    record_fill = runner._record_canonical_paper_fill
+
+    def commit_then_crash(**kwargs):
+        record_fill(**kwargs)
+        raise RuntimeError("simulated crash during ledger reconciliation")
+
+    monkeypatch.setattr(runner, "_record_canonical_paper_fill", commit_then_crash)
+    with pytest.raises(RuntimeError, match="ledger reconciliation"):
+        execute(runner, event, decided)
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    state = recovered.resume("s")
+    assert state["manual_reconciliation_required"] is False
+    records = recovered.records("s")
+    assert len(records["execution_receipts"]) == 1
+    assert records["accounting"]["positions"] == {"NSE:INFY": 2}
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["cash"]["INR"] == Decimal("-200.40")
+    assert recovered._con.execute(
+        "SELECT COUNT(*) FROM reservation_events WHERE event_kind='POSITION_FILL_RECORDED'"
+    ).fetchone()[0] == 1
+    recovered.close()

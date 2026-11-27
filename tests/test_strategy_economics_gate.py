@@ -23,11 +23,12 @@ def _plan():
     )
 
 
-def _rule(strategy: str, minimum_rr: str, *, minimum_net: str = "0"):
+def _rule(strategy: str, minimum_rr: str, *, minimum_net: str = "0", safety: str = "0"):
     return StrategyEconomicsRule(
         strategy_id=strategy, strategy_version="v1", minimum_net_reward_to_risk=Decimal(minimum_rr),
         minimum_expected_net_inr=Decimal(minimum_net), calibration_start=date(2020, 1, 1),
         calibration_end=date(2024, 1, 1), evidence_sha256="c" * 64, rule_version="r1",
+        safety_margin_inr=Decimal(safety),
     )
 
 
@@ -73,3 +74,32 @@ def test_rule_requires_version_identity_and_evidence_hash():
             "swing", "v1", Decimal("1"), Decimal(0), date(2020, 1, 1), date(2024, 1, 1),
             "bad", "r1",
         )
+
+
+def test_costs_erasing_quantity_bound_gross_opportunity_fail_closed():
+    economics = estimate_trade_economics(
+        _plan(), TradingCosts(Decimal("100"), Decimal("60"), Decimal("40"), Decimal("20")),
+    )
+    result = evaluate_strategy_economics(
+        _rule("swing", "0", minimum_net="1"), economics,
+        strategy_id="swing", strategy_version="v1", expected_net_inr=Decimal("100"),
+    )
+    assert not result.eligible_for_research
+    assert "QUANTITY_BOUND_GROSS_OPPORTUNITY_ERASED_BY_COSTS" in result.reasons
+
+
+def test_costed_quantity_net_must_clear_safety_margin():
+    economics = estimate_trade_economics(
+        _plan(), TradingCosts(Decimal("50"), Decimal("30"), Decimal("20"), Decimal("10")),
+    )
+    result = evaluate_strategy_economics(
+        _rule("swing", "0", minimum_net="5", safety="110"), economics,
+        strategy_id="swing", strategy_version="v1", expected_net_inr=Decimal("50"),
+    )
+    assert not result.eligible_for_research
+    assert "QUANTITY_BOUND_NET_BELOW_THRESHOLD_AND_SAFETY_MARGIN" in result.reasons
+
+
+def test_negative_safety_margin_is_rejected():
+    with pytest.raises(StrategyEconomicsGateError, match="safety margin"):
+        _rule("swing", "1", safety="-1")

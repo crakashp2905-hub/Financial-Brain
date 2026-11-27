@@ -1,6 +1,6 @@
 # Market-data rights review — evidence and unresolved decisions
 
-**Research snapshot:** 2026-11-21  
+**Research snapshot:** 2026-11-27
 **Checklist item:** FB-0008  
 **Disposition:** `EXTERNAL_BLOCKED` — this repository review is complete; the required account-, product-, and use-specific written approvals are not in the repository.
 
@@ -41,6 +41,10 @@ Send these questions to Zerodha support/compliance and, where necessary, NSE Dat
 5. For each NSE/BSE/AMFI/MoSPI/FRED source, what is permitted for automated retrieval, internal algorithmic/non-display analysis, derived data, storage/archive, and display? What agreement, subscription, attribution, or fee applies?
 6. Does NSE's non-display policy apply to this account's use through a broker feed for automated decision-support and internal research, and is a separate agreement/fee or broker confirmation required?
 7. Is TradingView Advanced Charts eligible for this private personal project? If not, use a personally licensed/open-source chart component; this does not alter the market-data authorization questions.
+
+## Prospective live-paper capture
+
+The exact private paper-trading question remains unresolved under the published Kite terms. See [prospective-live-paper-data-gate.md](prospective-live-paper-data-gate.md). A dedicated PROSPECTIVE_PAPER_CAPTURE permission is now separate from PAPER_SIMULATION and remains UNKNOWN_RIGHTS for all 17 sources; no forward live-paper use is authorized by this repository. The runner rejects LIVE_PAPER event ingestion unless this exact source/use permission is effective.
 
 ## Repository control decision
 

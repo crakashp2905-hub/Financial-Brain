@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import combinations
 from typing import Any
+from typing import cast
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,7 @@ class Candidate:
     momentum_12_1: float
     high_52w_ratio: float
     volatility: float
+    market_cap: float | None = None
 
 
 def matched_controls(events: Sequence[Candidate], pool: Sequence[Candidate]) -> list[dict[str, Any]]:
@@ -61,6 +63,59 @@ def matched_controls(events: Sequence[Candidate], pool: Sequence[Candidate]) -> 
             continue
         used.add(best[1])
         out.append({"event": ev.symbol, "control": pool[best[1]].symbol, "distance": round(best[0], 6)})
+    return out
+
+
+def matched_sector_size_controls(
+    events: Sequence[Candidate], pool: Sequence[Candidate],
+) -> list[dict[str, Any]]:
+    """Match one unique same-sector, similar-size control, accounting for momentum/volatility.
+
+    Market capitalization must be positive and point-in-time for every candidate. The
+    match distance is standardized within the eligible pool and includes log size, 12-1
+    momentum, 52-week-high proximity and volatility. Missing sector/size rows fail closed.
+    """
+    if not events:
+        return []
+    candidates = list(events) + list(pool)
+    if any(not row.sector or row.market_cap is None or not math.isfinite(row.market_cap)
+           or row.market_cap <= 0 for row in candidates):
+        raise ValueError("sector and positive point-in-time market cap are required")
+    dimensions = [
+        [math.log(cast(float, row.market_cap)) for row in candidates],
+        [row.momentum_12_1 for row in candidates],
+        [row.high_52w_ratio for row in candidates],
+        [row.volatility for row in candidates],
+    ]
+    scales = []
+    for values in dimensions:
+        mean = sum(values) / len(values)
+        std = math.sqrt(sum((value - mean) ** 2 for value in values) / max(len(values) - 1, 1)) or 1.0
+        scales.append((mean, std))
+    used: set[str] = set()
+    out = []
+    for event in events:
+        event_vector = (math.log(cast(float, event.market_cap)), event.momentum_12_1,
+                        event.high_52w_ratio, event.volatility)
+        eligible = [candidate for candidate in pool
+                    if candidate.symbol != event.symbol and candidate.symbol not in used
+                    and candidate.sector == event.sector]
+        ranked = sorted(eligible, key=lambda candidate: (
+            math.fsum(((value - target) / std) ** 2
+                for value, target, (mean, std) in zip(
+                    (math.log(cast(float, candidate.market_cap)), candidate.momentum_12_1,
+                     candidate.high_52w_ratio, candidate.volatility), event_vector, scales)),
+            candidate.symbol))
+        control = ranked[0] if ranked else None
+        if control is not None:
+            used.add(control.symbol)
+        out.append({"event": event.symbol, "control": None if control is None else control.symbol,
+                    "sector": event.sector,
+                    "log_size_distance": None if control is None else abs(
+                        math.log(cast(float, control.market_cap))
+                        - math.log(cast(float, event.market_cap))),
+                    "matched_covariates": ["sector", "log_market_cap", "momentum_12_1",
+                                           "high_52w_ratio", "volatility"]})
     return out
 
 

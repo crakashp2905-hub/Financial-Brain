@@ -102,7 +102,7 @@ def evaluate(con, *, isin: str, weight: float, as_of: date,
 
     # ------------------------------------------------------------------- 2. the book alone
     book = exposure.report(con, as_of, window_days=window_days)
-    held = {}
+    held: dict[str, float] = {}
     for p in exposure.positions(con, as_of, window_days=window_days):
         held[p["isin"]] = held.get(p["isin"], 0.0) + (p["weight"] or 0.0)
     d.measured["book"] = {k: book[k] for k in

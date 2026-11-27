@@ -64,12 +64,51 @@ class OptionableIndexRecord:
             raise IndexMarketError("optionability effective interval is inverted")
 
 
+@dataclass(frozen=True)
+class ListedOptionContract:
+    """One observed listed option from a source snapshot; never synthesized from an index."""
+
+    canonical_id: str
+    underlying: str
+    exchange: str
+    tradingsymbol: str
+    instrument_token: int
+    expiry: date
+    strike: float
+    right: str
+    lot_size: int
+    tick_size: float
+    source_snapshot_sha256: str
+
+    def __post_init__(self) -> None:
+        if not all((self.canonical_id, self.underlying, self.exchange, self.tradingsymbol)):
+            raise IndexMarketError("listed contract requires exact source identifiers")
+        if self.instrument_token <= 0 or self.lot_size <= 0:
+            raise IndexMarketError("listed contract token and lot size must be positive")
+        if self.right not in {"CE", "PE"}:
+            raise IndexMarketError("listed contract right must be CE or PE")
+        if not isfinite(self.strike) or self.strike <= 0 or not isfinite(self.tick_size) or self.tick_size <= 0:
+            raise IndexMarketError("listed contract strike and tick must be finite and positive")
+        if len(self.source_snapshot_sha256) != 64 or any(
+                c not in "0123456789abcdef" for c in self.source_snapshot_sha256):
+            raise IndexMarketError("listed contract needs a lowercase SHA-256 source snapshot")
+
+
+@dataclass(frozen=True)
+class OptionResolution:
+    status: str
+    contracts: tuple[ListedOptionContract, ...]
+    reason: str
+
+
 class IndexCatalogue:
     """Separate index forecast coverage from effective-dated option eligibility."""
 
-    def __init__(self, indices: list[IndexRecord], optionable: list[OptionableIndexRecord]):
+    def __init__(self, indices: list[IndexRecord], optionable: list[OptionableIndexRecord],
+                 listed_contracts: list[ListedOptionContract] | None = None):
         self.indices = tuple(indices)
         self.optionable = tuple(optionable)
+        self.listed_contracts = tuple(listed_contracts or ())
         for records, key in ((self.indices, lambda r: (r.canonical_id, r.valid_from)),
                              (self.optionable, lambda r: (r.canonical_id, r.valid_from))):
             if len({key(row) for row in records}) != len(records):
@@ -77,6 +116,16 @@ class IndexCatalogue:
         for record in self.optionable:
             if not any(i.canonical_id == record.canonical_id for i in self.indices):
                 raise IndexMarketError("optionable index must exist in forecast index catalogue")
+        optionable_keys = {(r.canonical_id, r.underlying.upper(), r.exchange.upper())
+                           for r in self.optionable}
+        for contract in self.listed_contracts:
+            option_key = (contract.canonical_id, contract.underlying.upper(), contract.exchange.upper())
+            if option_key not in optionable_keys:
+                raise IndexMarketError("listed contract does not match an effective optionability record")
+        contract_keys = [(r.canonical_id, r.tradingsymbol, r.expiry, r.source_snapshot_sha256)
+                         for r in self.listed_contracts]
+        if len(set(contract_keys)) != len(contract_keys):
+            raise IndexMarketError("duplicate listed option contract in source snapshot")
         self._validate_no_overlap(self.indices)
         self._validate_no_overlap(self.optionable)
 
@@ -99,6 +148,25 @@ class IndexCatalogue:
         return any(r.canonical_id == canonical_id and r.valid_from <= day
                    and (r.valid_to is None or day <= r.valid_to) for r in self.optionable)
 
+    def resolve_options(self, canonical_id: str, day: date) -> OptionResolution:
+        """Resolve only listed, unexpired contracts; absent/unsupported rows mean NO_OPTION_TRADE."""
+        index = self.index_at(canonical_id, day)
+        if index is None:
+            return OptionResolution("NO_OPTION_TRADE", (), "index_not_effective")
+        optionability = next((r for r in self.optionable if r.canonical_id == canonical_id
+                              and r.valid_from <= day and (r.valid_to is None or day <= r.valid_to)), None)
+        if optionability is None:
+            return OptionResolution("NO_OPTION_TRADE", (), "underlying_not_optionable")
+        contracts = tuple(sorted(
+            (r for r in self.listed_contracts if r.canonical_id == canonical_id
+             and r.underlying.upper() == optionability.underlying.upper()
+             and r.exchange.upper() == optionability.exchange.upper() and r.expiry >= day
+             and r.source_snapshot_sha256 == optionability.source_snapshot_sha256),
+            key=lambda r: (r.expiry, r.strike, r.right, r.tradingsymbol)))
+        if not contracts:
+            return OptionResolution("NO_OPTION_TRADE", (), "no_currently_listed_contract_in_source_snapshot")
+        return OptionResolution("CONTRACTS_AVAILABLE", contracts, "source_snapshot_listed_contracts")
+
 
 @dataclass(frozen=True)
 class IndexMinute:
@@ -120,6 +188,27 @@ class IndexBar15m:
     low: float
     close: float
     minute_count: int = 15
+
+
+@dataclass(frozen=True)
+class IndexForwardTarget:
+    """Point-in-time decision row with separate short, medium and session-close labels.
+
+    ``label_end_*`` is retained for purging overlapping outcomes in chronological
+    validation. Missing future bars stay ``None``; horizons are never carried across
+    sessions or inferred from an incomplete session.
+    """
+
+    decision_at: datetime
+    session_date: date
+    return_15m: float | None
+    label_end_15m: datetime | None
+    return_30m: float | None
+    label_end_30m: datetime | None
+    return_60m: float | None
+    label_end_60m: datetime | None
+    return_close: float | None
+    label_end_close: datetime | None
 
 
 def _aware(value: datetime) -> datetime:
@@ -185,6 +274,87 @@ def forward_return(bars: list[IndexBar15m], index: int, *, horizon_bars: int = 1
     if future.end - base.end != horizon_bars * BAR or future.end.date() != base.end.date():
         raise IndexMarketError("target bars must be contiguous and within the same session")
     return future.close / base.close - 1.0
+
+
+def forward_targets(bars: list[IndexBar15m]) -> list[IndexForwardTarget]:
+    """Create 15m/30m/60m and same-session-close targets for each decision bar.
+
+    Short-horizon targets require exact contiguous 15-minute bars. The close target is
+    defined only when that same session has a complete bar ending at 15:30 IST and that
+    bar is strictly after the decision. This keeps 15-minute claims separable from
+    longer-horizon relevance and makes each outcome's end clock available for purging.
+    """
+    by_session: dict[date, list[tuple[int, IndexBar15m]]] = {}
+    for index, bar in enumerate(bars):
+        by_session.setdefault(bar.end.date(), []).append((index, bar))
+
+    targets: list[IndexForwardTarget] = []
+    for index, bar in enumerate(bars):
+        values: dict[int, tuple[float | None, datetime | None]] = {}
+        for horizon in (1, 2, 4):
+            try:
+                outcome = bars[index + horizon]
+                value = forward_return(bars, index, horizon_bars=horizon)
+                values[horizon] = (value, outcome.end)
+            except (IndexError, IndexMarketError):
+                values[horizon] = (None, None)
+
+        close_target: tuple[float | None, datetime | None] = (None, None)
+        session_bars = by_session[bar.end.date()]
+        close_rows = [(i, candidate) for i, candidate in session_bars
+                      if candidate.end.time() == SESSION_CLOSE]
+        if close_rows:
+            _, close_bar = close_rows[-1]
+            if close_bar.end > bar.end:
+                close_target = (close_bar.close / bar.close - 1.0, close_bar.end)
+
+        targets.append(IndexForwardTarget(
+            decision_at=bar.end, session_date=bar.end.date(),
+            return_15m=values[1][0], label_end_15m=values[1][1],
+            return_30m=values[2][0], label_end_30m=values[2][1],
+            return_60m=values[4][0], label_end_60m=values[4][1],
+            return_close=close_target[0], label_end_close=close_target[1]))
+    return targets
+
+
+def summarize_forward_distributions(
+        targets: list[IndexForwardTarget]) -> dict[str, dict[str, float | int | None] | bool]:
+    """Describe realized forward-return samples without treating them as independent.
+
+    Adjacent decision rows have overlapping outcomes. The result is descriptive only;
+    use dependence-aware inference and a frozen out-of-sample manifest for significance.
+    Quantiles use linear interpolation between sorted observations.
+    """
+    fields = {"15m": "return_15m", "30m": "return_30m",
+              "60m": "return_60m", "close": "return_close"}
+    result: dict[str, dict[str, float | int | None] | bool] = {"descriptive_only": True}
+
+    def quantile(values: list[float], probability: float) -> float | None:
+        if not values:
+            return None
+        position = probability * (len(values) - 1)
+        low = int(position)
+        high = min(low + 1, len(values) - 1)
+        weight = position - low
+        return values[low] * (1.0 - weight) + values[high] * weight
+
+    for horizon, field_name in fields.items():
+        values = sorted(float(value) for row in targets
+                        if (value := getattr(row, field_name)) is not None)
+        count = len(values)
+
+        mean = sum(values) / count if count else None
+        stdev = ((sum((value - mean) ** 2 for value in values) / count) ** 0.5
+                 if count and mean is not None else None)
+        result[horizon] = {
+            "n": count, "missing": len(targets) - count, "mean": mean, "stdev": stdev,
+            "q05": quantile(values, 0.05), "q25": quantile(values, 0.25),
+            "median": quantile(values, 0.50), "q75": quantile(values, 0.75),
+            "q95": quantile(values, 0.95),
+            "minimum": values[0] if values else None,
+            "maximum": values[-1] if values else None,
+        }
+    return result
 
 
 def direction_label(realized_return: float, *, noise_threshold: float) -> str:

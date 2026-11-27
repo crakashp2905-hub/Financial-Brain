@@ -10,10 +10,13 @@ from financial_brain.forecasting.index_market import (
     IndexMarketError,
     IndexMinute,
     IndexRecord,
+    ListedOptionContract,
     OptionableIndexRecord,
     build_15m_bars,
     direction_label,
     forward_return,
+    forward_targets,
+    summarize_forward_distributions,
 )
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -47,6 +50,36 @@ def test_catalogue_separates_index_universe_from_optionable_indices() -> None:
     assert catalogue.index_at("NIFTY50", DAY).provider_token == 256265
     assert catalogue.is_optionable_at("NIFTY50", DAY)
     assert not catalogue.is_optionable_at("NIFTY50", date(2025, 1, 1))
+
+
+def test_option_resolution_uses_only_exact_listed_snapshot_contracts_and_fails_closed():
+    source_hash = "a" * 64
+    optionable = OptionableIndexRecord("NIFTY50", "NIFTY", "NFO", source_hash, date(2026, 1, 1))
+    call = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV25000CE", 12345,
+        date(2026, 11, 26), 25000.0, "CE", 25, 0.05, source_hash)
+    expired = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV20000PE", 12346,
+        date(2026, 11, 24), 20000.0, "PE", 25, 0.05, source_hash)
+    catalogue = IndexCatalogue([sample_index()], [optionable], [call, expired])
+
+    resolution = catalogue.resolve_options("NIFTY50", DAY)
+    assert resolution.status == "CONTRACTS_AVAILABLE"
+    assert resolution.contracts == (call,)
+
+    no_listing = IndexCatalogue([sample_index()], [optionable])
+    unavailable = no_listing.resolve_options("NIFTY50", DAY)
+    assert unavailable.status == "NO_OPTION_TRADE"
+    assert unavailable.contracts == ()
+    assert unavailable.reason == "no_currently_listed_contract_in_source_snapshot"
+
+
+def test_option_contract_must_match_an_optionable_underlying_and_source_hash():
+    record = ListedOptionContract(
+        "NIFTY50", "NIFTY", "NFO", "NIFTY26NOV25000CE", 12345,
+        date(2026, 11, 26), 25000.0, "CE", 25, 0.05, "b" * 64)
+    with pytest.raises(IndexMarketError, match="match an effective optionability"):
+        IndexCatalogue([sample_index()], [], [record])
 
 
 def test_catalogue_rejects_overlapping_effective_ranges() -> None:
@@ -88,3 +121,36 @@ def test_invalid_or_noncontiguous_label_inputs_fail_closed() -> None:
         direction_label(0.1, noise_threshold=0)
     with pytest.raises(IndexMarketError, match="contiguous"):
         forward_return([bars[0], bars[2]], 0)
+
+
+def test_forward_targets_separate_intraday_horizons_from_session_close() -> None:
+    bars = build_15m_bars(minute_rows(375),
+                          as_of=datetime(2026, 11, 25, 15, 31, tzinfo=IST))
+    rows = forward_targets(bars)
+    assert len(rows) == 25
+    first = rows[0]
+    assert first.return_15m == pytest.approx(bars[1].close / bars[0].close - 1)
+    assert first.label_end_15m == bars[1].end
+    assert first.return_30m == pytest.approx(bars[2].close / bars[0].close - 1)
+    assert first.label_end_30m == bars[2].end
+    assert first.return_60m == pytest.approx(bars[4].close / bars[0].close - 1)
+    assert first.label_end_60m == bars[4].end
+    assert first.return_close == pytest.approx(bars[-1].close / bars[0].close - 1)
+    assert first.label_end_close == bars[-1].end
+    assert rows[-1].return_close is None
+    assert rows[-1].label_end_close is None
+    distributions = summarize_forward_distributions(rows)
+    assert distributions["descriptive_only"] is True
+    assert distributions["15m"]["n"] == 24
+    assert distributions["close"]["n"] == 24
+    assert distributions["close"]["missing"] == 1
+    assert distributions["close"]["q05"] <= distributions["close"]["median"]
+
+
+def test_close_target_is_missing_when_complete_session_close_bar_is_absent() -> None:
+    bars = build_15m_bars(minute_rows(360),
+                          as_of=datetime(2026, 11, 25, 15, 31, tzinfo=IST))
+    rows = forward_targets(bars)
+    assert rows[0].return_15m is not None
+    assert rows[0].return_close is None
+    assert rows[0].label_end_close is None

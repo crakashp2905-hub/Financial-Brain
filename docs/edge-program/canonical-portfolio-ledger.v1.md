@@ -84,6 +84,11 @@ charge verification and external account reconciliation are also missing. Any ne
 without fill and mark provenance must remain unresolved.
 
 The current projection also does not model settlement calendars, taxes, corporate actions,
-FX conversion, margin, exercise/assignment, option expiry, fund allotment/redemption pending
-states, or external broker reconciliation. It is paper-only infrastructure and must not be
-used as a live-accounting or readiness claim.
+FX conversion, margin, fund allotment/redemption pending states, or external broker
+reconciliation. The option subledger now has an explicit adapter
+for observed leg fills and source-bound expiry: cash-settled options close at intrinsic value;
+physical options close at zero and create sourced strike-delivery plus underlying-mark events.
+This adapter preserves paper-subledger lineage but does not verify contract terms or
+independently authenticate exchange settlement, and it does not add corporate actions, taxes,
+margin, fund allotment/redemption pending states, or broker reconciliation. The projection is
+paper-only infrastructure and must not be used as a live-accounting or readiness claim.

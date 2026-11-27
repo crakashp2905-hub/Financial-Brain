@@ -119,6 +119,32 @@ def execute_candidate(
         if Decimal(str(execution["limit_price"])) != signal.reference_price:
             raise StrategyPipelineError("paper limit must match the candidate's frozen reference price")
 
+    decision_payload = {
+        "candidate_intent": intent.as_dict(),
+        "eligibility": {
+            "status": eligibility.status,
+            "source_ref": eligibility.source_ref,
+            "source_sha256": eligibility.source_sha256,
+            "spec_sha256": eligibility.spec_sha256,
+        },
+    }
+    forecast_fields = {"decision_at_utc", "predicted_return_fraction", "predicted_cost_fraction",
+                       "forecast", "model_sha256", "cost_model_sha256"}
+    if forecast_fields.issubset(manifest):
+        decision_payload["expected_value_forecast"] = {
+            "candidate_id": str(signal.signal_payload.get("candidate_id", signal.decision_id)),
+            "version": signal.signal_payload.get("forecast_version", 1),
+            "forecasted_at_utc": manifest["decision_at_utc"],
+            "predicted_return_fraction": manifest["predicted_return_fraction"],
+            "predicted_cost_fraction": manifest["predicted_cost_fraction"],
+            "expected_net_fraction": str(
+                Decimal(manifest["predicted_return_fraction"]) - Decimal(manifest["predicted_cost_fraction"])
+            ),
+            "forecast": manifest["forecast"],
+            "model_sha256": manifest["model_sha256"],
+            "cost_model_sha256": manifest["cost_model_sha256"],
+        }
+
     runner.decide(
         session_id=session_id,
         strategy_id=spec.strategy_id,
@@ -127,15 +153,7 @@ def execute_candidate(
         input_event_ids=input_event_ids,
         decided_at=decided_at,
         reason_codes=() if allowed else reason_codes,
-        payload={
-            "candidate_intent": intent.as_dict(),
-            "eligibility": {
-                "status": eligibility.status,
-                "source_ref": eligibility.source_ref,
-                "source_sha256": eligibility.source_sha256,
-                "spec_sha256": eligibility.spec_sha256,
-            },
-        },
+        payload=decision_payload,
     )
     runner.record_decision_manifest(
         session_id=session_id, decision_id=signal.decision_id, manifest=manifest

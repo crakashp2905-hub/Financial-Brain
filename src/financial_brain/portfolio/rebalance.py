@@ -64,6 +64,7 @@ def plan_rebalance(
     proportional_cost_rates: Mapping[str, float],
     fixed_charge_inr_per_order: Mapping[str, float],
     expected_improvement_inr: Mapping[str, float],
+    turnover_budget_inr: float | None = None,
 ) -> RebalancePlan:
     """Propose target trades only when outside a band and benefit exceeds all costs.
 
@@ -84,6 +85,10 @@ def plan_rebalance(
     nav = _finite(nav_inr, "nav_inr")
     if nav <= 0:
         raise RebalanceError("nav_inr must be positive")
+    turnover_budget = (_finite(turnover_budget_inr, "turnover_budget_inr")
+                       if turnover_budget_inr is not None else None)
+    if turnover_budget is not None and turnover_budget < 0:
+        raise RebalanceError("turnover_budget_inr must be non-negative")
 
     lines: list[RebalanceLine] = []
     proposed: dict[str, float] = {}
@@ -133,6 +138,30 @@ def plan_rebalance(
             expected_net_improvement_inr=net,
             disposition=disposition,
         ))
+    if turnover_budget is not None and turnover > turnover_budget:
+        proposed = {name: _finite(current_weights.get(name, 0.0), f"current weight {name}")
+                    for name in names}
+        lines = [RebalanceLine(
+            instrument_id=line.instrument_id,
+            current_weight=line.current_weight,
+            target_weight=line.target_weight,
+            band_weight=line.band_weight,
+            trade_weight=line.trade_weight,
+            trade_notional_inr=line.trade_notional_inr,
+            proportional_cost_inr=line.proportional_cost_inr,
+            fixed_charge_inr=line.fixed_charge_inr,
+            total_cost_inr=line.total_cost_inr,
+            expected_improvement_inr=line.expected_improvement_inr,
+            expected_net_improvement_inr=line.expected_net_improvement_inr,
+            disposition=("REJECTED_TURNOVER_BUDGET" if line.disposition == "PAPER_TRADE_PROPOSED"
+                         else line.disposition),
+        ) for line in lines]
+        return RebalancePlan(
+            status="NO_ACTION", nav_inr=nav, turnover_inr=0.0, total_cost_inr=0.0,
+            expected_improvement_inr=0.0, expected_net_improvement_inr=0.0,
+            proposed_weights=proposed, lines=tuple(lines),
+        )
+
     net_total = gross_improvement - total_cost
     status = "PAPER_REBALANCE_PROPOSED" if turnover else "NO_ACTION"
     return RebalancePlan(

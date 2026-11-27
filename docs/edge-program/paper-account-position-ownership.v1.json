@@ -1,0 +1,92 @@
+{
+  "schema": "fb.paper_account_position_ownership.v1",
+  "as_of": "2026-11-27",
+  "policy": {
+    "consolidated_paper_positions_owner": "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
+    "actual_broker_positions_owner": "broker and exchange records; local OMS is a reconciled mirror",
+    "execution_journals_are_not_consolidated_positions": true,
+    "source_events_are_imported_once_by_source_system_and_event_id": true,
+    "missing_or_conflicting_fills_remain_unresolved": true,
+    "no_synthetic_fill_or_exit_is_permitted": true,
+    "physical_orders_are_outside_paper_position_authority": true
+  },
+  "systems": [
+    {
+      "id": "broker_oms",
+      "role": "BROKER_EXECUTION_MIRROR",
+      "owner": "src/financial_brain/execution/oms/engine.py::OMS",
+      "supporting": ["src/financial_brain/execution/oms/journal.py", "src/financial_brain/execution/oms/reconcile.py", "src/financial_brain/execution/oms/kite_broker.py"],
+      "authoritative_for": ["local order lifecycle and broker reconciliation evidence"],
+      "not_authoritative_for": ["consolidated paper positions", "actual broker holdings without broker confirmation"]
+    },
+    {
+      "id": "legacy_intraday_paper",
+      "role": "LEGACY_SOURCE_BOOK",
+      "owner": "src/financial_brain/paper/intraday_runner.py",
+      "supporting": ["src/financial_brain/paper/intraday.py", "src/financial_brain/paper/ledger.py", "src/financial_brain/portfolio/legacy_migration.py"],
+      "authoritative_for": ["recorded legacy intraday paper events until imported and reconciled"],
+      "not_authoritative_for": ["broker holdings", "unrecorded exits", "consolidated paper positions after import"]
+    },
+    {
+      "id": "legacy_swing_paper",
+      "role": "LEGACY_SOURCE_BOOK",
+      "owner": "src/financial_brain/paper/book.py",
+      "supporting": ["src/financial_brain/paper/ledger.py", "src/financial_brain/portfolio/legacy_migration.py"],
+      "authoritative_for": ["recorded legacy swing paper events until imported and reconciled"],
+      "not_authoritative_for": ["broker holdings", "consolidated paper positions after import"]
+    },
+    {
+      "id": "decision_candidate_paper_book",
+      "role": "RESEARCH_DECISION_PAPER_BOOK",
+      "owner": "src/financial_brain/paper/ledger.py::open_trade",
+      "supporting": ["src/financial_brain/paper/engine.py"],
+      "authoritative_for": ["recorded outcome for its own research decision IDs"],
+      "not_authoritative_for": ["broker holdings", "other desk positions", "consolidated paper positions until imported"]
+    },
+    {
+      "id": "mutual_fund_paper_books",
+      "role": "FUND_UNIT_SUBLEDGERS",
+      "owner": "src/financial_brain/paper/mf_account_ledger.py",
+      "supporting": ["src/financial_brain/paper/mf_order_book.py", "src/financial_brain/paper/mf_lot_book.py", "src/financial_brain/paper/mf_folio_book.py", "src/financial_brain/paper/mf_purchase_book.py", "src/financial_brain/paper/mf_redemption_settlement.py"],
+      "authoritative_for": ["recorded fund-order, lot and folio lifecycle in each supported MF subledger"],
+      "not_authoritative_for": ["broker/exchange holdings", "consolidated paper positions until source-bound events are imported"]
+    },
+    {
+      "id": "forward_session_paper",
+      "role": "PROSPECTIVE_SESSION_EXECUTION",
+      "owner": "src/financial_brain/forward_edge/session_runner.py::ForwardSessionRunner",
+      "supporting": ["src/financial_brain/forward_edge/durable.py", "src/financial_brain/forward_edge/session_state.py", "src/financial_brain/forward_edge/market_events.py"],
+      "authoritative_for": ["durable simulated events and state within its prospective session"],
+      "not_authoritative_for": ["consolidated paper positions until source-bound events are imported", "broker orders or holdings"]
+    },
+    {
+      "id": "options_paper_subledger",
+      "role": "DERIVATIVES_EXECUTION_SUBLEDGER",
+      "owner": "src/financial_brain/paper/derivatives_subledger.py::DerivativesSubledger",
+      "supporting": ["src/financial_brain/paper/options_runner.py", "src/financial_brain/paper/options_spread.py"],
+      "authoritative_for": ["recorded simulated option leg fills and supplied expiry settlement events"],
+      "not_authoritative_for": ["broker option positions", "consolidated paper positions until an adapter imports events"]
+    },
+    {
+      "id": "kernel_simulated_oms",
+      "role": "SIMULATION_EVENT_JOURNAL",
+      "owner": "src/financial_brain/kernel/events.py::EventKernel",
+      "supporting": ["src/financial_brain/kernel/fills.py", "src/financial_brain/kernel/exit_protection_ledger.py"],
+      "authoritative_for": ["simulated event lifecycle within its kernel scenario"],
+      "not_authoritative_for": ["broker execution", "consolidated paper positions until source-bound events are imported"]
+    },
+    {
+      "id": "canonical_paper_portfolio",
+      "role": "CONSOLIDATED_PAPER_ACCOUNTING",
+      "owner": "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
+      "supporting": ["src/financial_brain/portfolio/legacy_migration.py", "src/financial_brain/portfolio/legacy_exit_adjudication.py"],
+      "authoritative_for": ["consolidated paper cash, positions, marks, fees, unresolved imports and local P&L projection"],
+      "not_authoritative_for": ["broker/exchange holdings, live orders, missing execution facts, settlement or profitability certification"]
+    }
+  ],
+  "unresolved_domains": [
+    "A source-bound derivatives package adapter exists, but automatic package-wide scheduling/account aggregation is not implemented; forward sessions and kernel scenarios still have no universal import adapter.",
+    "ETF-specific and mutual-fund order/fund-unit source books were not identified in the audited local databases; absence is not proof that no external book exists.",
+    "Current broker holdings and the 51 legacy intraday exits require fresh source snapshots and authenticated broker execution receipts; unresolved records stay outside promoted P&L."
+  ]
+}

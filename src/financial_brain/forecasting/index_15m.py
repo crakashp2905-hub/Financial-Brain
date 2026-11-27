@@ -10,17 +10,21 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, time, timedelta, timezone
 from math import isfinite
+from zoneinfo import ZoneInfo
 
 from financial_brain.forecasting.index_market import (
     BAR,
     IndexBar15m,
+    IndexForwardTarget,
     IndexMarketError,
     IndexMinute,
     build_15m_bars,
     direction_label,
     forward_return,
+    forward_targets,
+    summarize_forward_distributions,
 )
 
 SeriesError = IndexMarketError
@@ -102,6 +106,19 @@ def noise_threshold(train_returns: list[float], quantile: float = 0.33) -> float
     return threshold
 
 
+def cost_aware_flat_band(train_returns: list[float], round_trip_cost_fraction: float,
+                         quantile: float = 0.33) -> float:
+    """Freeze a flat threshold at the larger of training noise and round-trip cost.
+
+    Costs must be expressed as a fraction of underlying notional for the same intended
+    round trip. Call once inside each training fold and reuse unchanged on validation/test.
+    This is a label threshold, not proof that a strategy is profitable after costs.
+    """
+    if (not isfinite(round_trip_cost_fraction) or round_trip_cost_fraction < 0):
+        raise SeriesError("round-trip cost fraction must be finite and nonnegative")
+    return max(noise_threshold(train_returns, quantile), round_trip_cost_fraction)
+
+
 def label(realized_return: float | None, threshold: float) -> str | None:
     """Compatibility label helper with a frozen positive threshold."""
     if realized_return is None:
@@ -129,6 +146,58 @@ def purged_splits(n: int, folds: int, label_steps: int, embargo: int = 1
     return result
 
 
+def purged_time_splits(decision_times: list[datetime], label_end_times: list[datetime], *,
+                       folds: int, embargo: timedelta = timedelta(0)
+                       ) -> list[tuple[list[int], list[int]]]:
+    """Build expanding folds using actual outcome-end clocks, keeping cross-sections intact.
+
+    ``label_end_times[i]`` is the last source clock used to compute row ``i``'s target.
+    Training labels must end strictly before the test decision boundary minus embargo.
+    Repeated decision times form one indivisible test group, including for intraday bars.
+    """
+    if (type(folds) is not int or folds < 2 or len(decision_times) != len(label_end_times)
+            or not isinstance(embargo, timedelta) or embargo < timedelta(0)):
+        raise SeriesError("need aligned decision/label clocks, at least two folds and nonnegative embargo")
+    if not decision_times:
+        raise SeriesError("decision and label clocks cannot be empty")
+
+    def to_utc(value: datetime, name: str) -> datetime:
+        if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+            raise SeriesError(f"{name} timestamps must be timezone-aware")
+        return value.astimezone(timezone.utc)
+
+    decisions = [to_utc(value, "decision") for value in decision_times]
+    ends = [to_utc(value, "label end") for value in label_end_times]
+    if decisions != sorted(decisions):
+        raise SeriesError("decision timestamps must be chronological")
+    if any(end < decision for decision, end in zip(decisions, ends)):
+        raise SeriesError("label end cannot precede its decision timestamp")
+    shared_ends: dict[datetime, set[datetime]] = {}
+    for decision, end in zip(decisions, ends):
+        shared_ends.setdefault(decision, set()).add(end)
+    if any(len(values) != 1 for values in shared_ends.values()):
+        raise SeriesError("shared decision cross-section must use one common label end")
+
+    unique_decisions = list(dict.fromkeys(decisions))
+    if len(unique_decisions) < folds:
+        raise SeriesError("fold count cannot exceed unique decision timestamps")
+    group_size = len(unique_decisions) // folds
+    result: list[tuple[list[int], list[int]]] = []
+    for fold in range(1, folds):
+        test_start_index = fold * group_size
+        test_end_index = min(len(unique_decisions), (fold + 1) * group_size)
+        test_decisions = set(unique_decisions[test_start_index:test_end_index])
+        if not test_decisions:
+            continue
+        cutoff = unique_decisions[test_start_index] - embargo
+        test = [index for index, decision in enumerate(decisions) if decision in test_decisions]
+        train = [index for index, (decision, end) in enumerate(zip(decisions, ends))
+                 if decision < unique_decisions[test_start_index] and end < cutoff]
+        if train and test:
+            result.append((train, test))
+    return result
+
+
 def frequency_baseline(train_labels: list[str]) -> Callable[[], dict[str, float]]:
     """Return a deterministic UP/DOWN/FLAT class-frequency baseline."""
     counts = Counter(value for value in train_labels if value in {"UP", "DOWN", "FLAT"})
@@ -137,6 +206,110 @@ def frequency_baseline(train_labels: list[str]) -> Callable[[], dict[str, float]
         raise SeriesError("training labels contain no supported classes")
     probabilities = {name: counts.get(name, 0) / total for name in ("UP", "DOWN", "FLAT")}
     return lambda: dict(probabilities)
+
+
+def _deterministic_forecast(method: str, expected_return: float, flat_band: float,
+                            predicted_label: str) -> dict[str, float | str]:
+    probabilities = {name: float(name == predicted_label) for name in ("UP", "DOWN", "FLAT")}
+    return {"method": method, "expected_return": expected_return,
+            "flat_band": flat_band, "predicted_label": predicted_label,
+            "p_up": probabilities["UP"], "p_down": probabilities["DOWN"],
+            "p_flat": probabilities["FLAT"]}
+
+
+def random_walk_baseline(flat_band: float) -> dict[str, float | str]:
+    """Zero expected price change, classified with a training-frozen FLAT band."""
+    if not isfinite(flat_band) or flat_band <= 0:
+        raise SeriesError("random-walk baseline needs a positive finite flat band")
+    return _deterministic_forecast("RANDOM_WALK", 0.0, flat_band,
+                                   label(0.0, flat_band) or "FLAT")
+
+
+def volatility_aware_no_direction_baseline(
+        train_returns: list[float], round_trip_cost_fraction: float) -> dict[str, float | str]:
+    """Always abstain directionally; set its expected-move band from training volatility and cost."""
+    band = cost_aware_flat_band(train_returns, round_trip_cost_fraction)
+    variance = sum(value * value for value in train_returns) / len(train_returns)
+    volatility = variance ** 0.5
+    band = max(band, volatility)
+    forecast = _deterministic_forecast("VOLATILITY_AWARE_NO_DIRECTION", 0.0, band, "FLAT")
+    forecast["expected_move_abs"] = volatility
+    return forecast
+
+
+def previous_bar_baseline(previous_return: float, flat_band: float) -> dict[str, float | str]:
+    """Repeat the previous bar's return only when it clears the frozen FLAT band."""
+    if not isfinite(previous_return) or not isfinite(flat_band) or flat_band <= 0:
+        raise SeriesError("previous-bar baseline needs finite return and positive flat band")
+    predicted = previous_return if abs(previous_return) > flat_band else 0.0
+    predicted_label = label(predicted, flat_band) or "FLAT"
+    return _deterministic_forecast("PREVIOUS_BAR", predicted, flat_band, predicted_label)
+
+
+def same_time_of_day_baseline(
+        train_labels_by_bucket: dict[str, list[str]], train_labels: list[str]
+        ) -> Callable[[str], dict[str, float]]:
+    """Use training-only class frequencies for each time bucket, with global fallback."""
+    if not train_labels:
+        raise SeriesError("same-time-of-day baseline needs training labels")
+    fallback = frequency_baseline(train_labels)()
+    by_bucket = {bucket: frequency_baseline(labels)()
+                 for bucket, labels in train_labels_by_bucket.items() if labels}
+
+    def predict(bucket: str) -> dict[str, float]:
+        if not bucket:
+            raise SeriesError("time-of-day bucket is required")
+        return dict(by_bucket.get(bucket, fallback))
+
+    return predict
+
+
+def session_regimes(decision_at: datetime, *, macro_event: bool | None,
+                    expiry_day: bool | None, option_spread_fraction: float | None,
+                    normal_spread_limit: float | None) -> tuple[str, ...]:
+    """Tag session, event, expiry and option-spread regimes from point-in-time inputs.
+
+    Spread limits must be calibrated from prior/training observations. ``None`` inputs
+    remain explicit unknowns rather than silently being treated as normal conditions.
+    """
+    if decision_at.tzinfo is None or decision_at.utcoffset() is None:
+        raise SeriesError("regime decision timestamp must be timezone-aware")
+    local = decision_at.astimezone(ZoneInfo("Asia/Kolkata"))
+    current = local.time()
+    if current < time(9, 15) or current >= time(15, 30):
+        raise SeriesError("regime decision timestamp must be inside the regular NSE session")
+    if macro_event not in (True, False, None) or expiry_day not in (True, False, None):
+        raise SeriesError("event and expiry inputs must be true, false or unknown")
+    if (option_spread_fraction is None) != (normal_spread_limit is None):
+        raise SeriesError("option spread and its prior-data limit must be supplied together")
+    if option_spread_fraction is not None:
+        if (not isfinite(option_spread_fraction) or option_spread_fraction < 0
+                or normal_spread_limit is None or not isfinite(normal_spread_limit)
+                or normal_spread_limit <= 0):
+            raise SeriesError("spread fraction must be nonnegative and its limit positive")
+
+    regimes = []
+    if current < time(9, 30):
+        regimes.append("FIRST_15_MINUTES")
+    elif time(11, 30) <= current < time(13, 30):
+        regimes.append("MIDDAY")
+    elif current >= time(15, 0):
+        regimes.append("PRE_CLOSE")
+    else:
+        regimes.append("REGULAR_SESSION")
+    regimes.append("MACRO_EVENT" if macro_event else
+                    "MACRO_EVENT_UNKNOWN" if macro_event is None else "NO_KNOWN_MACRO_EVENT")
+    regimes.append("EXPIRY_DAY" if expiry_day else
+                    "EXPIRY_STATUS_UNKNOWN" if expiry_day is None else "NON_EXPIRY_DAY")
+    if option_spread_fraction is None:
+        regimes.append("OPTION_SPREAD_UNKNOWN")
+    elif normal_spread_limit is None:  # guarded by the paired-input validation above
+        raise SeriesError("option spread limit is missing")
+    elif option_spread_fraction > normal_spread_limit:
+        regimes.append("UNUSUAL_OPTION_SPREAD")
+    else:
+        regimes.append("NORMAL_OPTION_SPREAD")
+    return tuple(regimes)
 
 
 def check_probabilities(probabilities: dict[str, float], tolerance: float = 1e-9) -> None:
@@ -155,7 +328,11 @@ def brier(probabilities: dict[str, float], actual: str) -> float:
 
 
 __all__ = [
-    "Bar", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
-    "features_at", "forward_return", "frequency_baseline", "label", "leak_check",
-    "noise_threshold", "purged_splits",
+    "Bar", "IndexForwardTarget", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
+    "features_at", "forward_return", "forward_targets", "frequency_baseline", "label", "leak_check",
+    "summarize_forward_distributions",
+    "cost_aware_flat_band", "noise_threshold", "previous_bar_baseline", "random_walk_baseline",
+    "same_time_of_day_baseline", "volatility_aware_no_direction_baseline",
+    "session_regimes",
+    "purged_splits", "purged_time_splits",
 ]

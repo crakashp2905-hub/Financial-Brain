@@ -10,7 +10,7 @@ the LightGBM challenger (``deep_library.walk_forward``: trained on data ending 3
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -70,6 +70,7 @@ def lstm_walk_forward(panel: pd.DataFrame, features: list[str], *, steps: int = 
     """Sequences of each name's last ``steps`` sampled sessions (ranked features); an LSTM trained per test year on
     sequences ending 30 days before it. Returns test rows with ``pred``."""
     import torch
+    from .deep_library import purged_training_mask
     torch.manual_seed(seed)
     p = panel.sort_values(["lineage", "d"]).reset_index(drop=True)
     R = p.groupby("d")[features].rank(pct=True).fillna(0.5).to_numpy(np.float32)
@@ -100,7 +101,8 @@ def lstm_walk_forward(panel: pd.DataFrame, features: list[str], *, steps: int = 
     preds = pd.Series(np.nan, index=p.index)
     for yr in years:
         st = date(yr, 1, 1)
-        tr = seq_idx[(d[seq_idx] < st - timedelta(days=embargo_days)) & np.isfinite(y[seq_idx])]
+        eligible = purged_training_mask(p, test_start=st, embargo_days=embargo_days).to_numpy()
+        tr = seq_idx[eligible[seq_idx] & np.isfinite(y[seq_idx])]
         te = seq_idx[(d[seq_idx] >= st) & (d[seq_idx] < date(yr + 1, 1, 1))]
         if len(tr) < min_train or len(te) == 0:
             continue
@@ -127,10 +129,13 @@ def regime_switch(panel: pd.DataFrame, market: pd.DataFrame, *, years=range(2019
     random forest from market features known that day, trained only on earlier months. Returns per month the chosen
     book's top-quintile return and both books'."""
     from sklearn.ensemble import RandomForestClassifier
+    from .deep_library import purged_training_mask
+    if "label_end_20" not in panel:
+        raise ValueError("regime-switch training requires explicit 20-session label-end dates")
     dates = sorted(panel["d"].unique())[::step]
     rows = []
     for d in dates:
-        x = panel[panel["d"] == d].dropna(subset=["fwd20", "mom_12_1", "roc_20"])
+        x = panel[panel["d"] == d].dropna(subset=["fwd20", "label_end_20", "mom_12_1", "roc_20"])
         if len(x) < 100:
             continue
         k = len(x) // 5
@@ -139,14 +144,15 @@ def regime_switch(panel: pd.DataFrame, market: pd.DataFrame, *, years=range(2019
         m = market.loc[market.index <= d].iloc[-1] if (market.index <= d).any() else None
         if m is None:
             continue
-        rows.append({"d": d, "mom": mom, "rev": rev, **m.to_dict()})
+        rows.append({"d": d, "label_end_20": x["label_end_20"].iloc[0], "mom": mom, "rev": rev, **m.to_dict()})
     df = pd.DataFrame(rows)
     feats = list(market.columns)
     df["label"] = (df["mom"] > df["rev"]).astype(int)
     out = []
     for yr in years:
         st = date(yr, 1, 1)
-        tr = df[df["d"] < st - timedelta(days=30)]
+        train_mask = purged_training_mask(df, test_start=st, embargo_days=30, outcome_col="mom")
+        tr = df[train_mask]
         te = df[(df["d"] >= st) & (df["d"] < date(yr + 1, 1, 1))]
         if len(tr) < 24 or te.empty or tr["label"].nunique() < 2:
             continue

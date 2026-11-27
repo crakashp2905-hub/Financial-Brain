@@ -34,12 +34,17 @@ VERDICT_RANK = {"FAIL": 0, "FAILED": 0, "FAILED_EARLY": 0, "PENDING": 0, "CANDID
                 "CONFIRMED": 2}
 
 SMALL = Limits(max_order_inr=10_000, max_position_inr=10_000, max_daily_notional_inr=50_000, max_gross_inr=50_000,
-               max_orders_per_day=20, max_orders_per_minute=5)
+               max_orders_per_day=20, max_orders_per_minute=5, max_failed_executions_per_day=3,
+               max_market_data_age_seconds=5, max_daily_account_loss_inr=2_500)
 #: ADR-0006: a CANDIDATE_SMALL strategy at TICKET - Rs 25,000 deployed at most, Rs 10,000 an order.
 SMALL_TIER_LIMITS = Limits(max_order_inr=10_000, max_position_inr=10_000, max_daily_notional_inr=25_000,
-                           max_gross_inr=25_000, max_orders_per_day=10, max_orders_per_minute=5)
+                           max_gross_inr=25_000, max_orders_per_day=10, max_orders_per_minute=5,
+                           max_failed_executions_per_day=3, max_market_data_age_seconds=5,
+                           max_daily_account_loss_inr=1_250)
 TICKET_LIMITS = Limits(max_order_inr=25_000, max_position_inr=25_000, max_daily_notional_inr=50_000,
-                       max_gross_inr=50_000, max_orders_per_day=20, max_orders_per_minute=5)
+                       max_gross_inr=50_000, max_orders_per_day=20, max_orders_per_minute=5,
+                       max_failed_executions_per_day=3, max_market_data_age_seconds=5,
+                       max_daily_account_loss_inr=2_500)
 
 #: Entry criteria for each stage, fixed 2026-10-13. Each key is checked against ``evidence`` (see ``unmet``).
 CRITERIA = {

@@ -136,6 +136,15 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
             (instrument,), Decimal("1000000"),
             {"max_positions": 1, "max_quote_age_ms": 5_000, "session_phase": "CONTINUOUS",
              "allow_synthetic_fixture_events": True,
+             "reservation_policy": {
+                 "version": "local-fixture-reservation-v1",
+                 "frozen_at": "1900-01-01T00:00:00+00:00",
+                 "source_sha256": hashlib.sha256(b"local-fixture-reservation-v1").hexdigest(),
+                 "limits": {"CASH": "1000000000000",
+                            "PAPER_COST_BUFFER": "1000000000",
+                            f"INSTRUMENT_QUANTITY:{instrument}": "1000000000",
+                            f"SELLABLE_INVENTORY:{instrument}": "1000000000"},
+             },
              "liquidity_bucket": "large", "cost_schedule": cost_schedule_data,
              "instrument_rules": fixture_rule_book(instrument, tick_size=str(fx["tick"]),
                                                      freeze_quantity=max(1000, quantity))},
@@ -349,8 +358,18 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
                 "net_pnl_eligible": accounting["net_pnl_eligible"],
                 "costs_assessed": accounting["charges_assessed"],
                 "order_ids": order_ids,
-                "unknown_order_ids": accounting["unresolved_order_ids"]}
+                "unknown_order_ids": accounting["unresolved_order_ids"],
+                "decision_trace": [{"decision_id": row["decision_id"], "outcome": row["outcome"],
+                                    "reason_codes": row.get("reason_codes", [])}
+                                   for row in records["decisions"]],
+                "risk_trace": [{"decision_id": row["decision_id"], "allowed": row["allowed"],
+                                "reason_codes": row.get("reason_codes", [])}
+                               for row in records["risk_verdicts"]],
+                "execution_trace": [{"order_id": row.get("order_id"), "status": row.get("status"),
+                                     "reject_reason": row.get("reject_reason")}
+                                    for row in records["execution_receipts"]]}
     finally:
         runner.close()
+        runner.state_store.close()
         if temporary is not None:
             temporary.cleanup()

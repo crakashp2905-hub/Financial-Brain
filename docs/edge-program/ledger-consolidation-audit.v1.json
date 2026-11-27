@@ -1,0 +1,52 @@
+{
+  "schema": "fb.canonical_ledger_consolidation_audit.v1",
+  "as_of": "2026-11-26",
+  "target_owner": "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
+  "canonical_scope": "Append-only source-bound account/sleeve event ledger with deterministic cash/position projection; events require explicit source references and do not infer fills.",
+  "domains": [
+    {
+      "path": "src/financial_brain/forward_edge/paper_accounting.py",
+      "state": "PARTIAL_ADAPTER",
+      "description": "Reconciles forward paper OMS and accounting against ledger cash; does not yet make every forward order/fill lifecycle use the canonical portfolio ledger."
+    },
+    {
+      "path": "src/financial_brain/paper/ledger.py",
+      "state": "LEGACY_PARALLEL",
+      "description": "Legacy intraday paper book/ledger remains active and is not consolidated into CanonicalPortfolioLedger."
+    },
+    {
+      "path": "src/financial_brain/paper/mf_account_ledger.py",
+      "state": "DOMAIN_LEDGER",
+      "description": "Mutual-fund double-entry account ledger supports MF-specific NAV/folio lifecycle; events are not universally projected into canonical portfolio ledger."
+    },
+    {
+      "path": "src/financial_brain/forward_edge/session_runner.py",
+      "state": "SEPARATE_PERSISTENCE",
+      "description": "Durable forward intents and execution receipts coexist with the separate canonical portfolio ledger."
+    },
+    {
+      "path": "src/financial_brain/kernel/oms.py",
+      "state": "SIMULATION_DOMAIN",
+      "description": "Kernel deterministic simulated OMS has a separate scope and account event model."
+    }
+  ],
+  "invariant_status": {
+    "single_capital_owner": "NOT_ENFORCED_REPOSITORY_WIDE",
+    "canonical_migration": "IN_PROGRESS",
+    "unresolved_legacy_positions": "MUST_REMAIN_UNRESOLVED_WITHOUT_SOURCE_EVIDENCE"
+  },
+  "evidence": [
+    "docs/edge-program/capability-ownership.v1.json::canonical_portfolio_ledger, legacy_paper_book_ledger, mf_paper_lot_accounting, forward_paper_oms, legacy_intraday_paper_oms, and kernel_simulated_oms ownership records.",
+    "src/financial_brain/portfolio/canonical_ledger.py::CanonicalPortfolioLedger",
+    "src/financial_brain/forward_edge/paper_accounting.py",
+    "src/financial_brain/paper/ledger.py",
+    "src/financial_brain/paper/mf_account_ledger.py",
+    "src/financial_brain/forward_edge/session_runner.py",
+    "src/financial_brain/kernel/oms.py"
+  ],
+  "remaining_work": [
+    "Define one canonical account identity and capital owner across all paper domains.",
+    "Migrate/refactor legacy equity, MF, kernel simulation and forward runner postings behind one ledger API without inventing historical fills.",
+    "Add cross-domain reconciliation and dual-writer prevention, then integrate each active runner."
+  ]
+}

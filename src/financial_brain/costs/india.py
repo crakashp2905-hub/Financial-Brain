@@ -14,8 +14,10 @@ Everything is expressed as a fraction of turnover unless named ``_flat``.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, fields
 from enum import Enum
+from math import isfinite
+from types import MappingProxyType
 
 
 class Segment(str, Enum):
@@ -73,6 +75,34 @@ class CostModel:
     brokerage_delivery_flat: float = 0.0
 
     impact: dict = field(default_factory=lambda: dict(DEFAULT_IMPACT))
+
+    def __post_init__(self) -> None:
+        rate_fields = (
+            "stt_delivery", "stt_intraday_sell", "stt_futures_sell", "stt_options_sell",
+            "exch_txn_equity", "exch_txn_futures", "exch_txn_options", "sebi_turnover",
+            "stamp_buy_delivery", "stamp_buy_intraday", "gst_rate", "brokerage_rate",
+        )
+        for name in rate_fields:
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                    or not isfinite(value) or not 0 <= value <= 1:
+                raise ValueError(f"{name} must be a finite rate between zero and one")
+        for name in ("dp_charge_flat", "brokerage_cap_flat", "brokerage_delivery_flat"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                    or not isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be a finite non-negative amount")
+        if not isinstance(self.impact, dict) or not self.impact:
+            raise ValueError("impact must be a non-empty bucket-to-rate mapping")
+        normalized: dict[str, float] = {}
+        for bucket, value in self.impact.items():
+            if not isinstance(bucket, str) or not bucket.strip() or isinstance(value, bool) \
+                    or not isinstance(value, (int, float)) or not isfinite(value) or value < 0:
+                raise ValueError("impact rates must have non-empty buckets and finite non-negative values")
+            normalized[bucket] = float(value)
+        if "mid" not in normalized:
+            raise ValueError("impact schedule must define the mid fallback bucket")
+        object.__setattr__(self, "impact", MappingProxyType(normalized))
 
     # ------------------------------------------------------------------ core
     def one_way(self, *, turnover: float, side: Side, segment: Segment = Segment.DELIVERY,
@@ -193,7 +223,8 @@ class CostModel:
 
     def as_dict(self) -> dict:
         """Serialise the schedule so a backtest can record which costs it assumed."""
-        return asdict(self)
+        return {item.name: (dict(self.impact) if item.name == "impact" else getattr(self, item.name))
+                for item in fields(self)}
 
 
 DEFAULT = CostModel()

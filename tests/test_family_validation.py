@@ -24,6 +24,17 @@ def test_on_noise_pbo_averages_a_half_and_spa_rarely_rejects():
     assert rejects <= 3                               # about 5% expected
 
 
+def test_seeded_permuted_strategy_search_does_not_produce_a_promotion_signal():
+    """Repeated search on IID null returns stays inside the pre-set false-positive budget."""
+    false_promotions = 0
+    for seed in range(12):
+        # Each seed represents a fresh strategy family search. All candidates have zero expected alpha.
+        family = _family(k=20, n=160, seed=10_000 + seed)
+        result = FV.reality_check(family, reps=500, seed=20_000 + seed)
+        false_promotions += result["spa_p"] < 0.05
+    assert false_promotions <= 2  # family-wide type-I error should remain near 5%, not 100%
+
+
 def test_one_real_strategy_is_found():
     X = _family(real=0.012, seed=2)                  # Sharpe ~0.6 a period: unmistakable
     rc = FV.reality_check(X, reps=500)

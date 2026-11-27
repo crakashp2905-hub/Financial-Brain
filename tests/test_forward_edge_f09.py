@@ -54,6 +54,17 @@ def test_single_name_gross_and_net_limits_report_reasons() -> None:
     assert v[0]["decision"] == "NO_TRADE" and v[0]["reasons"] == ["GROSS", "NET"]
 
 
+@pytest.mark.parametrize("intent", [
+    {"symbol": "A", "side": "HOLD", "notional": "10"},
+    {"symbol": "A", "side": "BUY", "notional": "NaN"},
+    {"symbol": "A", "side": "SELL", "notional": "-1"},
+    {"symbol": "", "side": "BUY", "notional": "10"},
+])
+def test_batch_rejects_malformed_or_nonfinite_risk_intents(intent: dict[str, object]) -> None:
+    with pytest.raises(P.RiskError):
+        P.check_batch(LIMITS, [intent], {}, SECTORS)
+
+
 # ---- FE-0106 ----
 
 def test_vol_target_cvar_and_concentration_are_deterministic_and_bounded() -> None:

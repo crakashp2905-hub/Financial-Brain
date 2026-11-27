@@ -44,6 +44,8 @@ class CapacityReport:
     recommendation_status: str
     source_hash: str
     report_hash: str
+    break_even_max_notional: float | None = None
+    alpha_assumption: str = "CONSTANT_GROSS_ALPHA_SCENARIO"
 
 
 @dataclass(frozen=True)
@@ -88,8 +90,10 @@ def evaluate_capacity(*, gross_alpha_bps: float, adv_notional: float,
                       observed_quote_coverage: float = 0.0) -> CapacityReport:
     """Interpolate only within observed cost points; never invent costs beyond calibration.
 
-    Gross alpha is held constant as an explicit scenario assumption. A size ceiling is
-    conditional on caller-attested live calibration and visible depth, not an order approval.
+    Gross alpha is held constant as an explicit scenario assumption because no size-linked
+    alpha model is supplied. Break-even size is interpolated only between supported cost
+    points; a size ceiling is conditional on caller-attested live calibration and visible
+    depth, not an order approval.
     """
     for name, value in (("gross_alpha_bps", gross_alpha_bps), ("adv_notional", adv_notional),
                         ("visible_depth_notional", visible_depth_notional),
@@ -142,6 +146,21 @@ def evaluate_capacity(*, gross_alpha_bps: float, adv_notional: float,
                 if scenario.within_visible_depth and scenario.supported_by_calibration
                 and scenario.expected_net_alpha_bps is not None and scenario.expected_net_alpha_bps > 0]
     recommendation = max(eligible) if eligible and owner_attested_live_observations else None
+    break_even = None
+    cost_crossings = [scenario for scenario in scenarios
+                      if scenario.cost_bps is not None and scenario.cost_bps >= gross_alpha_bps]
+    if cost_crossings:
+        first = cost_crossings[0]
+        prior = next((row for row in reversed(scenarios)
+                      if row.notional < first.notional and row.cost_bps is not None
+                      and row.cost_bps < gross_alpha_bps), None)
+        if prior is None or first.cost_bps is None or prior.cost_bps is None:
+            break_even = first.notional
+        else:
+            prior_cost = prior.cost_bps
+            fraction = ((gross_alpha_bps - prior_cost) / (first.cost_bps - prior_cost)
+                        if first.cost_bps != prior_cost else 0.0)
+            break_even = prior.notional + fraction * (first.notional - prior.notional)
     if not owner_attested_live_observations:
         status = "NO_SIZE_RECOMMENDATION_FIXTURE_OR_UNATTESTED_CALIBRATION"
     elif not coverage_ok:
@@ -155,10 +174,12 @@ def evaluate_capacity(*, gross_alpha_bps: float, adv_notional: float,
                             "within_visible_depth": row.within_visible_depth,
                             "supported_by_calibration": row.supported_by_calibration} for row in scenarios],
               "recommended_max_notional": recommendation, "recommendation_status": status,
-              "source_hash": source_hash}
+              "source_hash": source_hash, "break_even_max_notional": break_even,
+              "alpha_assumption": "CONSTANT_GROSS_ALPHA_SCENARIO"}
     digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
                                       allow_nan=False).encode()).hexdigest()
-    return CapacityReport(tuple(scenarios), recommendation, status, source_hash, digest)
+    return CapacityReport(tuple(scenarios), recommendation, status, source_hash, digest,
+                          break_even, "CONSTANT_GROSS_ALPHA_SCENARIO")
 
 
 def report_capacity_universe(*, as_of: datetime, session: date,

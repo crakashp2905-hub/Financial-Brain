@@ -5,6 +5,8 @@ import pytest
 from financial_brain.paper.options import OptionPaperError, Quote
 from financial_brain.paper.options_plan import OptionContract, build_long_option_plan
 from financial_brain.kernel.units import OptionLots
+from financial_brain.forecasting.index_sizing import SizingEligibility
+from financial_brain.costs.india import CostModel
 
 
 NOW = datetime(2026, 11, 22, 5, 0, tzinfo=timezone.utc)
@@ -13,7 +15,8 @@ NOW = datetime(2026, 11, 22, 5, 0, tzinfo=timezone.utc)
 def _contract(option_type="CE"):
     quote = Quote(123, f"NIFTY26NOV25000{option_type}", date(2026, 11, 26), 25,
                   NOW - timedelta(seconds=2), 100, 102, 500, 500)
-    return OptionContract("NIFTY", option_type, 25_000, quote)
+    return OptionContract("NIFTY", option_type, 25_000, quote, expected_lot_size=25,
+                          expected_token=123)
 
 
 def test_call_plan_binds_exact_contract_risk_and_cost_hurdle():
@@ -36,6 +39,19 @@ def test_call_plan_accepts_nominal_option_lots():
                                   lots=OptionLots(2), stop_premium=80, target_premium=140,
                                   max_quote_age=timedelta(seconds=5))
     assert plan["lots"] == 2 and plan["quantity"] == 50
+
+
+def test_confidence_sizing_requires_independent_prospective_evidence_and_scales_risk_cap():
+    args = {"decision_at": NOW, "underlying_price": 25_100, "invalidation_price": 25_000,
+            "lots": 4, "stop_premium": 80, "target_premium": 140,
+            "max_quote_age": timedelta(seconds=5), "calibrated_confidence": .75}
+    with pytest.raises(OptionPaperError, match="requires both"):
+        build_long_option_plan(_contract(), **args)
+    evidence = SizingEligibility(True, "ELIGIBLE", (), "idx-opt", "a" * 64,
+                                 "b" * 64, "VERIFIED")
+    plan = build_long_option_plan(_contract(), sizing_eligibility=evidence, **args)
+    assert plan["lots"] == 3 and plan["quantity"] == 75
+    assert plan["confidence_sizing"]["evidence_sha256"] == "b" * 64
 
 
 def test_put_plan_uses_opposite_underlying_invalidation():
@@ -68,7 +84,7 @@ def test_plan_rejects_stale_quote_and_insufficient_visible_size():
                                target_premium=140, max_quote_age=timedelta(seconds=1))
     thin = OptionContract("NIFTY", "CE", 25_000,
                           Quote(123, "NIFTY26NOV25000CE", date(2026, 11, 26), 25,
-                                NOW, 100, 102, 500, 24))
+                                NOW, 100, 102, 500, 24), expected_lot_size=25, expected_token=123)
     with pytest.raises(OptionPaperError, match="depth"):
         build_long_option_plan(thin, decision_at=NOW, underlying_price=25_100,
                                invalidation_price=25_000, lots=1, stop_premium=80,
@@ -76,8 +92,55 @@ def test_plan_rejects_stale_quote_and_insufficient_visible_size():
 
 
 def test_plan_rejects_tradingsymbol_that_disagrees_with_declared_contract():
-    c = OptionContract("NIFTY", "PE", 24_900, _contract("PE").quote)
+    c = OptionContract("NIFTY", "PE", 24_900, _contract("PE").quote,
+                       expected_lot_size=25, expected_token=123)
     with pytest.raises(OptionPaperError, match="tradingsymbol"):
         build_long_option_plan(c, decision_at=NOW, underlying_price=25_100,
                                invalidation_price=25_000, lots=1, stop_premium=80,
                                target_premium=140, max_quote_age=timedelta(seconds=5))
+
+
+def test_ce_and_pe_candidates_use_the_same_explicit_cost_schedule():
+    costs = CostModel(stt_options_sell=0.002, exch_txn_options=0.0005,
+                      brokerage_rate=0.0001, brokerage_cap_flat=10)
+    plans = [build_long_option_plan(
+        _contract(kind), decision_at=NOW,
+        underlying_price=25_100 if kind == "CE" else 24_900,
+        invalidation_price=25_000, lots=1, stop_premium=80, target_premium=140,
+        max_quote_age=timedelta(seconds=5), costs=costs,
+    ) for kind in ("CE", "PE")]
+    assert {plan["option_type"] for plan in plans} == {"CE", "PE"}
+    assert all(plan["projected_round_trip_charges_inr"] > 0 for plan in plans)
+
+
+@pytest.mark.parametrize("bid,ask", [(0, 101), (-1, 101), (102, 101), (float("nan"), 101),
+                                      (100, float("inf"))])
+def test_mutated_option_quotes_with_zero_negative_crossed_or_nonfinite_prices_fail(bid, ask):
+    q = Quote(123, "NIFTY26NOV25000CE", date(2026, 11, 26), 25,
+              NOW - timedelta(seconds=1), bid, ask, 500, 500)
+    contract = OptionContract("NIFTY", "CE", 25_000, q, expected_lot_size=25)
+    with pytest.raises(OptionPaperError):
+        build_long_option_plan(contract, decision_at=NOW, underlying_price=25_100,
+                               invalidation_price=25_000, lots=1, stop_premium=80,
+                               target_premium=140, max_quote_age=timedelta(seconds=5))
+
+
+def test_expired_contract_wrong_underlying_lot_and_option_right_are_rejected():
+    expired = Quote(123, "NIFTY26NOV25000CE", NOW.date(), 25,
+                    NOW - timedelta(days=1), 100, 102, 500, 500)
+    with pytest.raises(OptionPaperError, match="expired"):
+        build_long_option_plan(OptionContract("NIFTY", "CE", 25_000, expired, 25),
+                               decision_at=NOW, underlying_price=25_100, invalidation_price=25_000,
+                               lots=1, stop_premium=80, target_premium=140,
+                               max_quote_age=timedelta(days=2))
+
+    for contract in (
+        OptionContract("BANKNIFTY", "CE", 25_000, _contract("CE").quote, 25, 123),
+        OptionContract("NIFTY", "CE", 25_000, _contract("CE").quote, 50, 123),
+        OptionContract("NIFTY", "PE", 25_000, _contract("CE").quote, 25, 123),
+        OptionContract("NIFTY", "CE", 25_000, _contract("CE").quote, 25, 999),
+    ):
+        with pytest.raises(OptionPaperError):
+            build_long_option_plan(contract, decision_at=NOW, underlying_price=25_100,
+                                   invalidation_price=25_000, lots=1, stop_premium=80,
+                                   target_premium=140, max_quote_age=timedelta(seconds=5))

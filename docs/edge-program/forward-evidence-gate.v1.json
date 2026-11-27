@@ -1,0 +1,27 @@
+{
+  "schema": "fb.forward-evidence-release-gate.v1",
+  "status": "RED",
+  "release_blocked": true,
+  "trading_authorized": false,
+  "promotion_allowed": false,
+  "benchmark_id": null,
+  "expected_session_count": 0,
+  "observed_expected_session_count": 0,
+  "checks": {
+    "frozen_plan_valid": false,
+    "all_expected_sessions_present_and_clean": false,
+    "all_sessions_independently_attested": false,
+    "attribution_complete_and_reconciled": false,
+    "benchmark_superiority_observed": false,
+    "monetary_invariants_resolved": false
+  },
+  "issues": [
+    "monetary invariant incident register has not been audited",
+    "frozen evidence-window plan is missing",
+    "session evidence cannot qualify without a valid frozen plan",
+    "complete ledger-reconciled attribution for the exact frozen window is missing",
+    "positive independent-forward lower bounds against cash and risk-matched benchmark are missing"
+  ],
+  "report_sha256": "238ccd8a1d231f926bca854c7ab5caee1238acf271ab40abc11211c7db13b7f8",
+  "input_sha256": "970d1f6789e6d1543c9db88d275496a4be6dcb998824ee0810b7fc36b71a3e3f"
+}

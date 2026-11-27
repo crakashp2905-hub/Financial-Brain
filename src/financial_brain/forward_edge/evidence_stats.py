@@ -6,12 +6,24 @@ no single-regime concentration, an adequate predeclared sample design, and an IN
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import sqlite3
 from enum import Enum
-from math import sqrt
+from math import isfinite, sqrt
+from statistics import NormalDist
 
 import numpy as np
 
 from financial_brain.forward_edge.evidence_labels import EvidenceLabelError, classify
+from financial_brain.evaluation.firewall import deflated_sharpe
+from financial_brain.research.inference_registration import (
+    InferenceDisposition,
+    InferenceMethod,
+    InferencePlanRegistry,
+    InferenceRegistrationError,
+)
+from financial_brain.research.look_ledger import ResearchLookError, ResearchLookLedger
 
 
 class StatsError(ValueError):
@@ -227,9 +239,181 @@ def falsification_report(results: dict[str, bool | None]) -> dict:
 
 def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sessions: int, tier: ClaimTier,
                       net_by_cost_multiplier: dict[float, float], best_block: float, sample_design_predeclared: bool,
-                      falsification_status: str, min_sessions: int = 60, lags: int = 5, z: float = 1.96,
-                      max_block_share: float = 0.6) -> dict:
+                      falsification_status: str, null_pass: bool | None = None,
+                      max_drawdown: float | None = None, max_drawdown_limit: float | None = None,
+                      fidelity_pass: bool | None = None,
+                      min_sessions: int = 60, lags: int = 5, z: float = 1.96,
+                      max_block_share: float = 0.6,
+                      inference_registry: InferencePlanRegistry | None = None,
+                      inference_plan_id: str | None = None,
+                      inference_candidate_ids: tuple[str, ...] | None = None,
+                      inference_dataset_sha256: str | None = None,
+                      inference_candidate_returns: dict[str, list[float]] | None = None,
+                      inference_selected_candidate: str | None = None,
+                      inference_method: InferenceMethod | None = None,
+                      research_look_ledger: ResearchLookLedger | None = None,
+                      inference_experiment_id: str | None = None) -> dict:
+    if not isinstance(tier, ClaimTier):
+        raise StatsError("promotion verdict requires a typed ClaimTier")
+    if not isinstance(daily_net_alpha, list) or any(
+        isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value)
+        for value in daily_net_alpha
+    ):
+        raise StatsError("daily net alpha must be a list of finite numeric observations")
+    if type(eligible_independent_sessions) is not int or eligible_independent_sessions < 0:
+        raise StatsError("eligible independent session count must be a nonnegative integer")
+    if inference_method is not None and not isinstance(inference_method, InferenceMethod):
+        raise StatsError("inference method must be a typed preregistered method")
+    if type(min_sessions) is not int or min_sessions < 1:
+        raise StatsError("minimum session requirement must be a positive integer")
+    if type(lags) is not int or lags < 0:
+        raise StatsError("HAC lags must be a nonnegative integer")
+    if not isfinite(z) or z <= 0:
+        raise StatsError("confidence critical value must be finite and positive")
+    if not isfinite(best_block) or not 0 <= best_block <= 1:
+        raise StatsError("best-block concentration must be finite and in [0,1]")
+    if not isfinite(max_block_share) or not 0 < max_block_share <= 1:
+        raise StatsError("maximum block share must be finite and in (0,1]")
+    if type(sample_design_predeclared) is not bool:
+        raise StatsError("sample-design declaration must be an explicit boolean")
+    if falsification_status not in {"NO_FALSIFICATION_FOUND", "FAIL", "INSUFFICIENT_EVIDENCE"}:
+        raise StatsError("falsification status is not a recognized machine-readable disposition")
+    if null_pass is not None and type(null_pass) is not bool:
+        raise StatsError("null gate must be true, false, or explicitly unassessed")
+    if fidelity_pass is not None and type(fidelity_pass) is not bool:
+        raise StatsError("fidelity gate must be true, false, or explicitly unassessed")
+    if not isinstance(net_by_cost_multiplier, dict) or any(
+        isinstance(multiplier, bool) or not isinstance(multiplier, (int, float))
+        or not isfinite(multiplier) or multiplier <= 0
+        or isinstance(value, bool) or not isinstance(value, (int, float)) or not isfinite(value)
+        for multiplier, value in net_by_cost_multiplier.items()
+    ):
+        raise StatsError("cost-stress multipliers and net returns must be finite numeric values")
     reasons: list[str] = []
+    inference_pass = False
+    inference_result_sha256: str | None = None
+    adjusted_candidate_pvalues: dict[str, float] | None = None
+    deflated_sharpe_probabilities: dict[str, float] | None = None
+    look_family_sha256: str | None = None
+    look_family_valid = False
+    if (not isinstance(inference_registry, InferencePlanRegistry)
+            or not isinstance(inference_plan_id, str) or not inference_plan_id.strip()
+            or inference_candidate_ids is None or inference_dataset_sha256 is None):
+        reasons.append("INFERENCE_PREREGISTRATION_REQUIRED")
+    else:
+        if (isinstance(research_look_ledger, ResearchLookLedger)
+                and isinstance(inference_experiment_id, str) and inference_experiment_id.strip()):
+            try:
+                look_family = research_look_ledger.family_snapshot(inference_experiment_id)
+                registered_plan = inference_registry.get_plan(inference_plan_id)
+                look_family_sha256 = str(look_family["source_sha256"])
+                look_family_valid = (
+                    look_family["look_ids"] == inference_candidate_ids
+                    and registered_plan.candidate_ids == inference_candidate_ids
+                    and registered_plan.preregistration_sha256 == look_family_sha256
+                )
+            except (ResearchLookError, InferenceRegistrationError, sqlite3.Error, json.JSONDecodeError):
+                look_family_valid = False
+        if not look_family_valid:
+            reasons.append("INFERENCE_RESEARCH_FAMILY_UNVERIFIED")
+        family = inference_candidate_returns
+        if (isinstance(inference_candidate_ids, tuple) and len(inference_candidate_ids) == 1
+                and family is None):
+            family = {inference_candidate_ids[0]: daily_net_alpha}
+        if inference_selected_candidate is None and isinstance(inference_candidate_ids, tuple) \
+                and len(inference_candidate_ids) == 1:
+            inference_selected_candidate = inference_candidate_ids[0]
+        if (not isinstance(inference_candidate_ids, tuple)
+                or any(not isinstance(candidate, str) or not candidate.strip()
+                       for candidate in inference_candidate_ids)
+                or tuple(sorted(set(inference_candidate_ids))) != inference_candidate_ids
+                or not isinstance(inference_dataset_sha256, str)
+                or len(inference_dataset_sha256) != 64
+                or any(c not in "0123456789abcdef" for c in inference_dataset_sha256)
+                or not isinstance(inference_selected_candidate, str)
+                or inference_selected_candidate not in inference_candidate_ids
+                or not isinstance(family, dict) or set(family) != set(inference_candidate_ids)
+                or not look_family_valid
+                or any(not isinstance(values, list) or len(values) != len(daily_net_alpha)
+                       or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                              or not isfinite(value) for value in values)
+                       for values in family.values())
+                or family.get(inference_selected_candidate) != daily_net_alpha):
+            reasons.append("INFERENCE_REGISTRATION_INPUT_INVALID")
+        else:
+            result_body = {
+                "daily_net_alpha": daily_net_alpha,
+                "eligible_independent_sessions": eligible_independent_sessions,
+                "tier": tier.value,
+                "net_by_cost_multiplier": [[float(multiplier), float(value)]
+                                            for multiplier, value in sorted(net_by_cost_multiplier.items())],
+                "best_block": best_block, "sample_design_predeclared": sample_design_predeclared,
+                "falsification_status": falsification_status, "null_pass": null_pass,
+                "max_drawdown": max_drawdown, "max_drawdown_limit": max_drawdown_limit,
+                "fidelity_pass": fidelity_pass, "min_sessions": min_sessions, "lags": lags,
+                "z": z, "max_block_share": max_block_share,
+                "candidate_returns": [[candidate, family[candidate]] for candidate in inference_candidate_ids],
+                "selected_candidate": inference_selected_candidate,
+                "research_experiment_id": inference_experiment_id,
+                "research_look_family_sha256": look_family_sha256,
+                "inference_method": (inference_method or
+                                     (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                      else InferenceMethod.HAC_NEWEY_WEST_HOLM)).value,
+            }
+            inference_result_sha256 = hashlib.sha256(json.dumps(
+                result_body, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode("utf-8")).hexdigest()
+            try:
+                use = inference_registry.record_result(
+                    inference_plan_id, result_sha256=inference_result_sha256,
+                    expected_dataset_sha256=inference_dataset_sha256,
+                    expected_candidate_ids=inference_candidate_ids,
+                    expected_method=(inference_method or
+                                     (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                      else InferenceMethod.HAC_NEWEY_WEST_HOLM)),
+                    expected_hac_lags=(lags if (inference_method or
+                                       (InferenceMethod.HAC_NEWEY_WEST if len(inference_candidate_ids) == 1
+                                        else InferenceMethod.HAC_NEWEY_WEST_HOLM)) in
+                                       {InferenceMethod.HAC_NEWEY_WEST, InferenceMethod.HAC_NEWEY_WEST_HOLM}
+                                       else None),
+                )
+                expected_alpha = 2 * (1 - NormalDist().cdf(z))
+                if abs(use.plan.alpha - expected_alpha) > 0.001:
+                    reasons.append("INFERENCE_ALPHA_MISMATCH")
+                elif use.disposition is not InferenceDisposition.PRE_REGISTERED:
+                    reasons.append("INFERENCE_PLAN_NOT_PRE_REGISTERED")
+                else:
+                    if use.plan.method is InferenceMethod.DEFLATED_SHARPE:
+                        if use.plan.sharpe_variance is None:
+                            reasons.append("INFERENCE_REGISTRATION_INVALID")
+                        else:
+                            deflated_sharpe_probabilities = {
+                                candidate: deflated_sharpe(values, len(use.plan.candidate_ids),
+                                                           use.plan.sharpe_variance)[1]
+                                for candidate, values in family.items()
+                            }
+                            if deflated_sharpe_probabilities[inference_selected_candidate] < 1 - use.plan.alpha:
+                                reasons.append("DEFLATED_SHARPE_PROBABILITY_FAILED")
+                            else:
+                                inference_pass = True
+                    elif use.plan.method is InferenceMethod.HAC_NEWEY_WEST_HOLM and len(use.plan.candidate_ids) > 1:
+                        candidate_pvalues: dict[str, float] = {}
+                        for candidate, values in family.items():
+                            candidate_se = newey_west_se(values, min(lags, len(values) - 1)) \
+                                if len(values) >= 3 else 0.0
+                            statistic = float(np.mean(values)) / candidate_se if candidate_se > 0 else 0.0
+                            candidate_pvalues[candidate] = 1 - NormalDist().cdf(statistic)
+                        adjusted_candidate_pvalues = holm_adjust(candidate_pvalues)
+                        if adjusted_candidate_pvalues[inference_selected_candidate] > use.plan.alpha:
+                            reasons.append("FAMILYWISE_ADJUSTED_PVALUE_FAILED")
+                        else:
+                            inference_pass = True
+                    elif use.plan.method is InferenceMethod.HAC_NEWEY_WEST and len(use.plan.candidate_ids) == 1:
+                        inference_pass = True
+                    else:
+                        reasons.append("INFERENCE_METHOD_NOT_IMPLEMENTED_IN_PROMOTION_GATE")
+            except InferenceRegistrationError:
+                reasons.append("INFERENCE_REGISTRATION_INVALID")
     n = len(daily_net_alpha)
     mean = float(np.mean(daily_net_alpha)) if n else 0.0
     lcb = None
@@ -245,12 +429,52 @@ def promotion_verdict(*, daily_net_alpha: list[float], eligible_independent_sess
         reasons.append("FALSIFICATION_" + falsification_status)
     if best_block > max_block_share:
         reasons.append("REGIME_CONCENTRATION")
-    if not stress_robust(net_by_cost_multiplier):
+    cost_ok = stress_robust(net_by_cost_multiplier)
+    if not cost_ok:
         reasons.append("FAILS_COST_STRESS")
+    if null_pass is None:
+        reasons.append("NULL_NOT_ASSESSED")
+    elif not null_pass:
+        reasons.append("NULL_FAILED")
+    if fidelity_pass is None:
+        reasons.append("EVIDENCE_FIDELITY_NOT_ASSESSED")
+    elif not fidelity_pass:
+        reasons.append("EVIDENCE_FIDELITY_FAILED")
+    drawdown_ok = False
+    if max_drawdown is None or max_drawdown_limit is None:
+        reasons.append("DRAWDOWN_GATE_NOT_PREDECLARED")
+    elif (not isfinite(max_drawdown) or not 0 <= max_drawdown <= 1
+          or not isfinite(max_drawdown_limit) or not 0 < max_drawdown_limit <= 1):
+        raise StatsError("drawdown and its predeclared limit must be fractions in [0,1]")
+    else:
+        drawdown_ok = max_drawdown <= max_drawdown_limit
+        if not drawdown_ok:
+            reasons.append("MAX_DRAWDOWN_EXCEEDED")
     if lcb is None or lcb <= 0:
         reasons.append("LOWER_BOUND_NOT_POSITIVE")
     if not reasons:
-        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": []}
-    hard_fail = mean <= 0 and n >= 3 or "FAILS_COST_STRESS" in reasons or "FALSIFICATION_FAIL" in reasons
+        return {"verdict": "PROMOTION_GRADE", "mean": mean, "lower_bound": lcb, "reasons": [],
+                "inference_result_sha256": inference_result_sha256,
+                "familywise_adjusted_pvalues": adjusted_candidate_pvalues,
+                "deflated_sharpe_probabilities": deflated_sharpe_probabilities,
+                "gates": {"inference": "PASS", "confidence": "PASS", "cost": "PASS", "null": "PASS", "robustness": "PASS",
+                          "drawdown": "PASS", "fidelity": "PASS"}}
+    hard_fail = (mean <= 0 and n >= 3 or not cost_ok or null_pass is False or not drawdown_ok
+                 or (max_drawdown is not None and max_drawdown_limit is not None
+                     and max_drawdown > max_drawdown_limit) or "FALSIFICATION_FAIL" in reasons)
+    gates = {
+        "inference": "PASS" if inference_pass else "FAIL" if any(
+            reason.startswith("INFERENCE_") and reason != "INFERENCE_PREREGISTRATION_REQUIRED"
+            for reason in reasons) else "UNASSESSED",
+        "confidence": "UNASSESSED" if lcb is None else ("PASS" if lcb > 0 else "FAIL"),
+        "cost": "PASS" if cost_ok else "FAIL",
+        "null": "UNASSESSED" if null_pass is None else ("PASS" if null_pass else "FAIL"),
+        "robustness": "PASS" if best_block <= max_block_share else "FAIL",
+        "drawdown": ("UNASSESSED" if max_drawdown is None or max_drawdown_limit is None
+                     else ("PASS" if drawdown_ok else "FAIL")),
+        "fidelity": "UNASSESSED" if fidelity_pass is None else ("PASS" if fidelity_pass else "FAIL"),
+    }
     return {"verdict": "FAIL" if hard_fail else "INSUFFICIENT_EVIDENCE", "mean": mean, "lower_bound": lcb,
-            "reasons": reasons}
+            "reasons": reasons, "gates": gates, "inference_result_sha256": inference_result_sha256,
+            "familywise_adjusted_pvalues": adjusted_candidate_pvalues,
+            "deflated_sharpe_probabilities": deflated_sharpe_probabilities}

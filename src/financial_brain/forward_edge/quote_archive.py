@@ -12,6 +12,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from typing import Any, Sequence
 from zoneinfo import ZoneInfo
 
 from financial_brain.forward_edge.clock import ClockProvider, SystemClock
@@ -71,7 +72,51 @@ class QuoteArchive:
         if "ingested_at" not in columns:
             # Older archives cannot recover their original write time; NULL preserves that fact.
             self._con.execute("ALTER TABLE market_events ADD COLUMN ingested_at TEXT")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS market_event_fingerprints (
+            fingerprint_sha256 TEXT PRIMARY KEY, event_id TEXT NOT NULL UNIQUE)""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS market_event_revisions (
+            event_id TEXT PRIMARY KEY, semantic_sha256 TEXT NOT NULL, payload_sha256 TEXT NOT NULL,
+            revision INTEGER NOT NULL, supersedes_event_id TEXT)""")
+        self._backfill_event_identity()
         self._con.commit()
+
+    @staticmethod
+    def _event_identity(event: MarketEvent) -> tuple[str, str, str]:
+        """Return semantic key, payload hash and exact-observation fingerprint."""
+        payload_raw = json.dumps(event.payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        payload_hash = hashlib.sha256(payload_raw.encode("utf-8")).hexdigest()
+        source_clock = event.exchange_at or event.source_at or event.event_time
+        semantic = {"venue": event.venue, "instrument_id": event.instrument_id,
+                    "source": event.source, "kind": event.kind.value,
+                    "source_clock": source_clock.isoformat()}
+        semantic_raw = json.dumps(semantic, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        semantic_hash = hashlib.sha256(semantic_raw.encode("utf-8")).hexdigest()
+        fingerprint_raw = f"{semantic_hash}:{payload_hash}"
+        fingerprint = hashlib.sha256(fingerprint_raw.encode("ascii")).hexdigest()
+        return semantic_hash, payload_hash, fingerprint
+
+    def _backfill_event_identity(self) -> None:
+        """Add correction and duplicate lineage to legacy rows without deleting history."""
+        rows = self._con.execute("SELECT event_id, event_json FROM market_events "
+                                 "ORDER BY event_time, received_at, event_id").fetchall()
+        latest: dict[str, tuple[int, str, str]] = {}
+        for event_id, body in rows:
+            event = MarketEvent.from_dict(json.loads(body))
+            semantic_hash, payload_hash, fingerprint = self._event_identity(event)
+            prior = latest.get(semantic_hash)
+            revision = 1 if prior is None else prior[0] + 1
+            supersedes = prior[1] if prior else None
+            if self._con.execute("SELECT 1 FROM market_event_revisions WHERE event_id=?", [event_id]).fetchone():
+                existing = self._con.execute(
+                    "SELECT revision, supersedes_event_id FROM market_event_revisions WHERE event_id=?",
+                    [event_id]).fetchone()
+                revision, supersedes = int(existing[0]), existing[1]
+            else:
+                self._con.execute("INSERT INTO market_event_revisions VALUES (?, ?, ?, ?, ?)",
+                                  [event_id, semantic_hash, payload_hash, revision, supersedes])
+            self._con.execute("INSERT OR IGNORE INTO market_event_fingerprints VALUES (?, ?)",
+                              [fingerprint, event_id])
+            latest[semantic_hash] = (revision, event_id, payload_hash)
 
     def close(self) -> None:
         self._con.close()
@@ -83,25 +128,61 @@ class QuoteArchive:
         ingested_at = ingested_at.astimezone(timezone.utc)
         if ingested_at < event.available_at:
             raise QuoteArchiveError("ingest time cannot precede event availability")
+        try:
+            MarketEvent.from_dict(event.as_dict())
+        except (TypeError, ValueError) as exc:
+            raise QuoteArchiveError("event payload changed or became invalid before archive append") from exc
         body = event.as_dict()
         digest = event.sha256()
-        previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE event_id=?",
-                                     [event.event_id]).fetchone()
-        if previous:
-            if previous[0] != digest:
-                raise QuoteArchiveError("event_id reused with different content")
-            return False
-        self._con.execute("""INSERT INTO market_events (
+        semantic_hash, payload_hash, fingerprint = self._event_identity(event)
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            previous = self._con.execute("SELECT event_sha256 FROM market_events WHERE event_id=?",
+                                         [event.event_id]).fetchone()
+            if previous:
+                if previous[0] != digest:
+                    raise QuoteArchiveError("event_id reused with different content")
+                self._con.commit()
+                return False
+            duplicate = self._con.execute(
+                "SELECT event_id FROM market_event_fingerprints WHERE fingerprint_sha256=?", [fingerprint]
+            ).fetchone()
+            if duplicate:
+                self._con.commit()
+                return False
+            prior = self._con.execute(
+                "SELECT event_id, revision FROM market_event_revisions WHERE semantic_sha256=? "
+                "ORDER BY revision DESC LIMIT 1", [semantic_hash]).fetchone()
+            revision = int(prior[1]) + 1 if prior else 1
+            supersedes = prior[0] if prior else None
+            self._con.execute("""INSERT INTO market_events (
                               event_id, kind, venue, instrument_id, event_time, received_at,
                               available_at, sequence, source, evidence_id, event_sha256, event_json,
                               ingested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                          [event.event_id, event.kind.value, event.venue, event.instrument_id,
-                           event.event_time.isoformat(), event.received_at.isoformat(),
-                           event.available_at.isoformat(), event.sequence, event.source,
-                           event.evidence_id, digest, json.dumps(body, sort_keys=True, separators=(",", ":")),
-                           ingested_at.isoformat()])
-        self._con.commit()
-        return True
+                              [event.event_id, event.kind.value, event.venue, event.instrument_id,
+                               event.event_time.isoformat(), event.received_at.isoformat(),
+                               event.available_at.isoformat(), event.sequence, event.source,
+                               event.evidence_id, digest,
+                               json.dumps(body, sort_keys=True, separators=(",", ":")),
+                               ingested_at.isoformat()])
+            self._con.execute("INSERT INTO market_event_fingerprints VALUES (?, ?)",
+                              [fingerprint, event.event_id])
+            self._con.execute("INSERT INTO market_event_revisions VALUES (?, ?, ?, ?, ?)",
+                              [event.event_id, semantic_hash, payload_hash, revision, supersedes])
+            self._con.commit()
+            return True
+        except Exception:
+            self._con.rollback()
+            raise
+
+    def revision_lineage(self, event_id: str) -> dict[str, object]:
+        """Return immutable correction lineage for an event; late distinct clocks remain separate."""
+        row = self._con.execute("""SELECT semantic_sha256, payload_sha256, revision, supersedes_event_id
+            FROM market_event_revisions WHERE event_id=?""", [event_id]).fetchone()
+        if row is None:
+            raise KeyError(event_id)
+        return {"event_id": event_id, "semantic_sha256": row[0], "payload_sha256": row[1],
+                "revision": int(row[2]), "supersedes_event_id": row[3]}
 
     def ingest_time(self, event_id: str) -> datetime | None:
         """Return the original archive append clock; legacy rows remain explicitly unknown."""
@@ -292,6 +373,72 @@ class QuoteArchive:
         return PriceWindow(start.astimezone(timezone.utc), end.astimezone(timezone.utc), len(mids),
                            volatility, (mids[-1] / mids[0]) - 1.0)
 
+    def replay_markouts(self, *, venue: str, instrument_id: str, side: str,
+                        execution_price: float, execution_at: datetime, as_of: datetime,
+                        authorized_use: bool, horizons: tuple[timedelta, ...] =
+                        (timedelta(seconds=5), timedelta(seconds=30), timedelta(minutes=1),
+                         timedelta(minutes=15))) -> dict[str, object]:
+        """Measure side-adjusted quote markout at exact standard horizons when lawful.
+
+        ``authorized_use`` must be backed by the caller's reviewed source/use permission;
+        false or unknown use fails closed. The archive itself never establishes legal rights.
+        A quote after the target horizon is not substituted for a missing exact/late horizon.
+        Positive bps means favorable movement for the position side.
+        """
+        if not authorized_use:
+            raise QuoteArchiveError("markout replay requires affirmative reviewed data-use authorization")
+        if (side not in {"BUY", "SELL"} or not math.isfinite(execution_price) or execution_price <= 0
+                or not venue.strip() or not instrument_id.strip() or
+                any(value.tzinfo is None or value.utcoffset() is None for value in (execution_at, as_of))):
+            raise QuoteArchiveError("markout requires side, positive fill price, identity and aware clocks")
+        if as_of < execution_at or not horizons or any(h <= timedelta(0) for h in horizons):
+            raise QuoteArchiveError("markout horizons and report cutoff must follow execution")
+        if len(set(horizons)) != len(horizons):
+            raise QuoteArchiveError("markout horizons must be unique")
+        rows = self._con.execute("""SELECT event_json, event_sha256 FROM market_events
+            WHERE venue=? AND instrument_id=? AND kind='quote' AND available_at<=?
+              AND event_time>=? ORDER BY event_time, available_at, event_id""",
+            [venue.upper(), instrument_id, as_of.astimezone(timezone.utc).isoformat(),
+             execution_at.astimezone(timezone.utc).isoformat()]).fetchall()
+        events = [(MarketEvent.from_dict(json.loads(raw)), digest) for raw, digest in rows]
+        reports = []
+        for horizon in sorted(horizons):
+            target = execution_at.astimezone(timezone.utc) + horizon
+            match = next(((event, digest) for event, digest in events
+                          if event.event_time.astimezone(timezone.utc) >= target), None)
+            if match is None:
+                reports.append({"horizon_seconds": horizon.total_seconds(), "status": "UNAVAILABLE",
+                                "reason": "NO_QUOTE_AT_OR_AFTER_HORIZON_BY_CUTOFF",
+                                "markout_bps": None, "event_sha256": None})
+                continue
+            event, digest = match
+            payload = event.payload
+            bid, ask = payload.get("bid"), payload.get("ask")
+            if (not isinstance(bid, (int, float)) or not isinstance(ask, (int, float))
+                    or isinstance(bid, bool) or isinstance(ask, bool)
+                    or not math.isfinite(float(bid)) or not math.isfinite(float(ask))
+                    or not 0 < float(bid) <= float(ask)):
+                reports.append({"horizon_seconds": horizon.total_seconds(), "status": "UNAVAILABLE",
+                                "reason": "INVALID_TWO_SIDED_QUOTE", "markout_bps": None,
+                                "event_sha256": digest})
+                continue
+            mark = (float(bid) + float(ask)) / 2
+            markout = ((mark - execution_price) if side == "BUY" else (execution_price - mark)) \
+                / execution_price * 10_000
+            reports.append({"horizon_seconds": horizon.total_seconds(), "status": "MEASURED",
+                            "event_id": event.event_id, "event_sha256": digest,
+                            "event_time": event.event_time.astimezone(timezone.utc).isoformat(),
+                            "available_at": event.available_at.astimezone(timezone.utc).isoformat(),
+                            "source": event.source, "mark_price": mark, "markout_bps": markout})
+        body = {"schema": "fb.replay_markout.v1", "venue": venue.upper(),
+                "instrument_id": instrument_id, "side": side, "execution_price": execution_price,
+                "execution_at": execution_at.astimezone(timezone.utc).isoformat(),
+                "as_of": as_of.astimezone(timezone.utc).isoformat(),
+                "evidence_tier": "HISTORICAL_REPLAY", "horizons": reports}
+        body["report_sha256"] = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                                                allow_nan=False).encode()).hexdigest()
+        return body
+
     def count(self) -> int:
         return int(self._con.execute("SELECT count(*) FROM market_events").fetchone()[0])
 
@@ -300,13 +447,37 @@ class QuoteArchive:
         return [dict(zip(names, row, strict=True)) for row in self._con.execute(
             "SELECT * FROM market_events ORDER BY received_at, event_id").fetchall()]
 
+    def instrument_day_quality_report(
+        self,
+        *,
+        venue: str,
+        instrument_id: str,
+        session_day: date,
+        as_of: datetime,
+        expected_event_count: int | None,
+        max_lateness_ms: int = 1_000,
+        max_quote_age_ms: int = 5_000,
+        strike_selection_evidence: Sequence[dict[str, Any]] = (),
+        require_strike_selection: bool = False,
+    ) -> dict[str, Any]:
+        """Build a point-in-time data-quality report over this archive's sourced events."""
+        from financial_brain.forward_edge.market_quality import build_instrument_day_quality_report
+
+        events = self.events_for_session(session_day, venue=venue)
+        return build_instrument_day_quality_report(
+            events, venue=venue, instrument_id=instrument_id, session_day=session_day, as_of=as_of,
+            expected_event_count=expected_event_count, max_lateness_ms=max_lateness_ms,
+            max_quote_age_ms=max_quote_age_ms, strike_selection_evidence=strike_selection_evidence,
+            require_strike_selection=require_strike_selection,
+        )
+
     def coverage(self, *, expected_sessions: set[str],
                  intents: dict[tuple[str, str], float], as_of: datetime) -> CoverageReport:
         """Measure session/name/notional quote and depth coverage against explicit denominators.
 
         `intents` keys are `(session_id, instrument_id)` and values are requested INR notional.
-        Source values equal to `kite` or `exchange` are treated as live labels; this report does
-        not authenticate them, so independent evidence is still required for formal claims.
+        Kite Connect and exchange source labels are treated as observed-feed classes; this report
+        does not authenticate them, so independent evidence is still required for formal claims.
         """
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("as_of must be timezone aware")
@@ -340,7 +511,9 @@ class QuoteArchive:
                 missing.append(f"{session_id}:{instrument_id}:QUOTE")
             if not depth_ok:
                 missing.append(f"{session_id}:{instrument_id}:DEPTH")
-            sources.update("live" if source.lower() in {"kite", "exchange", "zerodha_kite"} else "fixture"
+            sources.update("live" if source.lower() in {
+                "kite", "kite_connect_read_only", "exchange", "zerodha_kite"
+            } else "fixture"
                            for _, _, _, source in quote)
         expected_name_keys = [(s, name) for s in expected_sessions
                               for session, name in intents if session == s]

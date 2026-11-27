@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 731,
+  "source_count": 820,
   "sources": [
     {
       "capability_ids": [],
@@ -169,7 +169,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/attribution/pipeline.py",
-      "source_sha256": "16b3cbed0140d1ca6fb23620566e6767dc5fdd32412ab3a7aa82ee4353bb09c9",
+      "source_sha256": "31becf4b87882d33220c827b76605fd0eda4da8bd56d3a24ca834760b691e2bd",
       "test_paths": []
     },
     {
@@ -233,6 +233,7 @@
         "costs",
         "costs.india",
         "costs.tax",
+        "dataclasses",
         "datetime",
         "decimal",
         "decisions",
@@ -247,6 +248,7 @@
         "forward_edge.cli",
         "forward_edge.manual_paper_decisions",
         "graph",
+        "hashlib",
         "ingest",
         "ingest.announcements",
         "ingest.job",
@@ -271,6 +273,8 @@
         "pathlib",
         "pit.observations",
         "portfolio",
+        "portfolio.canonical_ledger",
+        "portfolio.equity_reconciliation",
         "providers",
         "providers.kite",
         "providers.kite_login_server",
@@ -294,7 +298,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "4a9e2354c476341fcab9dc054193c786642dedad3053997e56221226ce6e1662",
+      "source_sha256": "1fd71a577e21270669ec92748f88c2c4085d42d3c2377227e31337ebdde2f452",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -631,13 +635,15 @@
       "imports": [
         "__future__",
         "dataclasses",
-        "enum"
+        "enum",
+        "math",
+        "types"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/costs/india.py",
-      "source_sha256": "fd5a1588ce75ef56be5e2e71d98ee9ef53969de3e1a696b1202ce9cc4aed73c6",
+      "source_sha256": "606c1b47f00bf6df3c388b97c7ac6a2739f6bec422a09948208f8e9bad0c9575",
       "test_paths": []
     },
     {
@@ -1208,6 +1214,25 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
+        "dataclasses",
+        "enum",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/evaluation/baseline_controls.py",
+      "source_sha256": "f2b95bc35fdd44ab69978a79861d215f3fdebd81f3254c5fdce5355704363b81",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "datetime",
         "numpy",
         "pandas"
@@ -1360,13 +1385,14 @@
         "lightgbm",
         "numpy",
         "pandas",
-        "scipy.stats"
+        "scipy.stats",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/deep_library.py",
-      "source_sha256": "c27febbd3633827d186998db115601bd54c59a91d1220a2b587629525dd455ff",
+      "source_sha256": "5ca06e817ab06dfb303104a37a81aef2d5b80119be1bdc0c1cf687fbfdd327e3",
       "test_paths": []
     },
     {
@@ -1437,6 +1463,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "statistics",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/evaluation/event_pricing_controls.py",
+      "source_sha256": "8b507a371886d7c274ddf401a9275bf36142de26f58df166d63361882c109271",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "datetime",
         "numpy",
         "pandas"
@@ -1446,6 +1490,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/event_response.py",
       "source_sha256": "d12b477112b8c4bdc11e69c02797fa954451f0f4c13a19be593b4dbcec567249",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/evaluation/event_to_trade.py",
+      "source_sha256": "f107dcfaa211a167f9d2b907f0c638665826dc02255d1943d7125d66dc571791",
       "test_paths": []
     },
     {
@@ -1495,6 +1556,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/executable.py",
       "source_sha256": "18ecc828f7e9234d91af7ed03f997b43b8a9d65dd21a110917c1df0e19ebaef8",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "executable",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/evaluation/executable_ledger.py",
+      "source_sha256": "15155b482d407bb98ee77643b50881ac909f1f0aa16898343b3f7d2f657a19f7",
       "test_paths": []
     },
     {
@@ -1731,13 +1812,14 @@
         "collections",
         "events.classify",
         "json",
-        "pathlib"
+        "pathlib",
+        "research.sealed_dataset"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/labels.py",
-      "source_sha256": "c7e9d3957cd87e7dd5cf9dfc73e39d5eda9e057238412e803570cf8c55125bde",
+      "source_sha256": "3a42e89a791c3148f43c35817b5e979e27d5bf2296d16fe36e4ffd35d476e658",
       "test_paths": []
     },
     {
@@ -1761,7 +1843,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/learned_model.py",
-      "source_sha256": "bead34ddefe126e84109370907de736495f24caf2589581233d67eac2bd8d859",
+      "source_sha256": "d443438fd0e0f46666f587c781d743269d21cf8104522d885947cf1220329727",
       "test_paths": []
     },
     {
@@ -1770,6 +1852,7 @@
       "imports": [
         "__future__",
         "datetime",
+        "deep_library",
         "numpy",
         "pandas",
         "sklearn.ensemble",
@@ -1781,7 +1864,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/learners.py",
-      "source_sha256": "3b3f3ef9786094c972e12b923bd91fc867feefeae93d862cb2421982198be0f1",
+      "source_sha256": "6a105fe8eaabc83c81a28e3c31e85dd38dd5b243ec8704efe7ebbe5f0b41fd46",
       "test_paths": []
     },
     {
@@ -1827,13 +1910,15 @@
         "itertools",
         "json",
         "llm",
-        "pathlib"
+        "pathlib",
+        "research.sealed_dataset",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/models.py",
-      "source_sha256": "6877a7660de117dce57734011737cead35f95ca16698190f0ce66d42fc0b1c6f",
+      "source_sha256": "e64f6457a8d8c2a4bdb921a856a366f06f96edea2f83389e8d6c97547160c074",
       "test_paths": []
     },
     {
@@ -1883,7 +1968,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/neutral.py",
-      "source_sha256": "111993f1a0e7f5ec372142cc4cb1932505acf9b4ca7a13656b5d5f1d02ab9ac4",
+      "source_sha256": "c14881ee33bd7eeeeba1b7b34f155cafe67b7a6dcf8e31e50a4f4a26993df2f6",
       "test_paths": []
     },
     {
@@ -2539,6 +2624,25 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "financial_brain.costs.india",
+        "financial_brain.execution.ticket",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/execution/account_size_sweep.py",
+      "source_sha256": "5b21dbafaf9c74544fe68153228e5bd7eb5c85c5c4607e7601de947c09304324",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "numpy"
       ],
       "maturity": "unassessed",
@@ -2583,6 +2687,7 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
         "itertools",
         "typing"
       ],
@@ -2590,7 +2695,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/broker.py",
-      "source_sha256": "a2a698f01b0786bb7a4c3bc74aad1705e1eb914cc7a328a583c2f261204c0fd4",
+      "source_sha256": "359a9b6b856a2be47446a284f27c0ef2c74ca001f13dac5a00dc186074f0975d",
       "test_paths": []
     },
     {
@@ -2602,13 +2707,14 @@
         "__future__",
         "broker",
         "dataclasses",
-        "datetime"
+        "datetime",
+        "typing"
       ],
       "maturity": "locally_mapped",
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/engine.py",
-      "source_sha256": "75f7e9aa8a55574b577fbfc2bde0f6c2b6bf27c77fb9c3d57cd545658bb4304c",
+      "source_sha256": "e4f3a099b1e77b60439bc5446bc5bc5074bea4b979034153d112ec111e825579",
       "test_paths": [
         "tests/test_oms.py",
         "tests/test_oms_shortfall_contract.py"
@@ -2671,6 +2777,7 @@
       "imports": [
         "__future__",
         "broker",
+        "datetime",
         "json",
         "order_policy",
         "os",
@@ -2679,13 +2786,14 @@
         "time",
         "urllib.error",
         "urllib.parse",
-        "urllib.request"
+        "urllib.request",
+        "zoneinfo"
       ],
       "maturity": "locally_mapped",
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/kite_broker.py",
-      "source_sha256": "0fcedcbfe9eafbc7b3601d216da70a4bc407e702e90a35bc163c18f8e0cc68a0",
+      "source_sha256": "5aa40765648f4dd687c817aaaa75aa67a5e59b42279aa8a73a9e335615766a00",
       "test_paths": [
         "tests/test_forward_edge_f00.py"
       ]
@@ -2703,6 +2811,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/model.py",
       "source_sha256": "8f65ed7c826d59d5f953f36e0c55e01cd647099060252b85250d7786cc8c0d83",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.order_journal",
+        "hashlib",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/execution/oms/oco.py",
+      "source_sha256": "b79f98af17ecb311ff5640aca8166743b8634c8fbd79003a0ec735618c4e883d",
       "test_paths": []
     },
     {
@@ -2757,7 +2883,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/risk_gate.py",
-      "source_sha256": "1054fdacaba4bdf61fd1939e4a545705f03452dee660fd5e4d463e78bb20c5c4",
+      "source_sha256": "cb0d53aca8c483bd1e4853c13d5013df1be7ee2e3113e70cec8ed5ffa32fc3fa",
       "test_paths": []
     },
     {
@@ -2774,7 +2900,7 @@
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/oms/rollout.py",
-      "source_sha256": "d8954c3dc67e0a4ac383d9fff80413420bfe89e087497eed3d5ee077169b24ed",
+      "source_sha256": "fdc2b367a14ad00d60d32dbfa3c8b655e0ec423d088a6895a871beee7fa9864a",
       "test_paths": []
     },
     {
@@ -2813,6 +2939,24 @@
       "capability_ids": [],
       "human_owner": null,
       "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/execution/oms/stops.py",
+      "source_sha256": "e9cfb4052b757e8413cee48f1877226c743db871b39a9e2bbc671020923ef913",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
         "__future__"
       ],
       "maturity": "unassessed",
@@ -2843,13 +2987,14 @@
       "imports": [
         "__future__",
         "costs.india",
-        "datetime"
+        "datetime",
+        "math"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/execution/ticket.py",
-      "source_sha256": "46d5500f1b58ca1c11940994f7a23327f1824682299ce122425509b8d66ca448",
+      "source_sha256": "e7c44d273b6870faeae1a3d007f0d22ec99a27199f8debf9edc0de5ca00e0a02",
       "test_paths": []
     },
     {
@@ -2973,7 +3118,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/features/etf_bars.py",
-      "source_sha256": "138a228bea82879c9c837eb14d7e20a2fd15f6e49bf07d2fe0dd1256957ca846",
+      "source_sha256": "1a00f2758fd3f8c1ec68d83e4bd20ddf62c03d8db69338d565e3f1fd321daf0c",
       "test_paths": [
         "tests/test_etf_bars.py",
         "tests/test_etf_intraday_screen.py",
@@ -3400,13 +3545,92 @@
         "dataclasses",
         "datetime",
         "financial_brain.forecasting.index_market",
-        "math"
+        "math",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/forecasting/index_15m.py",
-      "source_sha256": "afc787e72179b4c201bca6d663fdfc0a94b5654675173d7b63bca087ae2b4e4c",
+      "source_sha256": "dea83d4d633ff5b453ff91d06447f2df0586ba581b167405d2fd8dbceb204d0d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "index_15m",
+        "json",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_abstention.py",
+      "source_sha256": "008e91f26859f2aeb3095fc28d8c8c72dd66d335a7e417bd0536234305a91d5b",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "index_metrics",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_coverage.py",
+      "source_sha256": "b9bbef7c6d9ab40ed1c4a2150c3412424941b0de601204ef7ecca650225fb485",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "index_market",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_features.py",
+      "source_sha256": "f6ae8722aea3c8809c52e6d50f361bd8e60c206462d740d353c78ba9353d9a0f",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "index_15m",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_journal.py",
+      "source_sha256": "5c91ce82ea7b280d41b94ccf702a68eba4ce1e00734ee1d87198cc3d9b7d4ee9",
       "test_paths": []
     },
     {
@@ -3423,7 +3647,136 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/forecasting/index_market.py",
-      "source_sha256": "0c405d80ae429cfab90f7ce93eeef978c44811ba7a1a61ea2d0c23325f5bf9b7",
+      "source_sha256": "6ce93e1eb9cff118676d151fc7b6489f3377b93409ac3a1cfa7669454cd966f7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "index_15m",
+        "math",
+        "random",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_metrics.py",
+      "source_sha256": "a9e6ab1a47c80cc931b6f259fab6eb83acf6e8e854851b539371731b75dd64f7",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "math",
+        "sklearn.ensemble",
+        "sklearn.linear_model",
+        "sklearn.pipeline",
+        "sklearn.preprocessing",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_models.py",
+      "source_sha256": "463232592544ad42f657640b850fc1caaf0028c77067ee3aa174e7c14f984827",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_no_action.py",
+      "source_sha256": "17f2647eaa98927b236d5485881b54c6eb05077f70750980fd924d33d5d0ad6c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "index_15m",
+        "index_market",
+        "re",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_preflight.py",
+      "source_sha256": "ada5a9a18d6591b808fdf320d457a952c638bbdbe7e52c76ecb32125aba880a3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.claim_tier",
+        "financial_brain.forward_edge.custody",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_sizing.py",
+      "source_sha256": "d329d942465ced5017f3628729b24538aacb3d7ef34578d2f69e18b18dd2d332",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "index_15m",
+        "math",
+        "random",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_skill.py",
+      "source_sha256": "3d8df94f5bc94b82f625e7d73904e05135666e9d5bf5e433d37318631a6723ed",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "index_15m",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forecasting/index_validation.py",
+      "source_sha256": "01a6e502c5c12f3c7109fb5e672590f392288fe56f7ed1c52720b53cfafc5a02",
       "test_paths": []
     },
     {
@@ -3518,6 +3871,51 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/abstention.py",
+      "source_sha256": "c5e9fd037d6bf650bc81ac54fd1ecb1c2a2a42f758bce0dbe67ef2a8af73a213",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "custody",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/account_evidence_report.py",
+      "source_sha256": "ebd14d3800873ffe21a0cda27b14740601fc55e5d4a00585bf3524b69cf88217",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "dataclasses",
+        "datetime",
         "hashlib",
         "json",
         "math"
@@ -3525,8 +3923,8 @@
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
-      "source": "src/financial_brain/forward_edge/abstention.py",
-      "source_sha256": "45ac5b1f6a65071c86b192c7f4e211536ff5cedc70b528272eb563698c095f7c",
+      "source": "src/financial_brain/forward_edge/account_period_report.py",
+      "source_sha256": "35db82cd99a2291a23c8774d77edbdad777b5e36a00b50aa6c00a4d90cabddfc",
       "test_paths": []
     },
     {
@@ -3561,7 +3959,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/approvals.py",
-      "source_sha256": "c34082c319781bae068cfbc22adf8b6cfcd929d80da75670ed501fe0e717d445",
+      "source_sha256": "f529ed843669a6f324e9b3a1b26cce243859bd262378b6c85e972ce1f6076db9",
       "test_paths": []
     },
     {
@@ -3677,7 +4075,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/capacity.py",
-      "source_sha256": "e19570deca3a12fe7389e4a7b00b8c87b27b7e2f91b1eb8f09091496b8ab55c7",
+      "source_sha256": "eda67f32d6f041790ca75ba077ecb401efbe76579c1311516797cfeec4d8608d",
       "test_paths": []
     },
     {
@@ -3858,7 +4256,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/cli.py",
-      "source_sha256": "95298b02934a00bda067b3b64aeed353e7fca03908429198ada75f88efb281ef",
+      "source_sha256": "5f37fcc9642df4b174d98299cf8131489a4a5ee4b6381bce53fadbaeba8b0f37",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
@@ -3891,13 +4289,15 @@
         "hashlib",
         "json",
         "math",
-        "statistics"
+        "numpy",
+        "statistics",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/cluster_attribution.py",
-      "source_sha256": "beff8693466fa1b14bcb559d24942d1706536136598e63fb84575bfcb93fe7cd",
+      "source_sha256": "f1612862f501ad2c966424f863801557b744b9dc9f9d5455ccb98f3f35162e4a",
       "test_paths": []
     },
     {
@@ -3966,6 +4366,23 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "decimal",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/cohort_separation.py",
+      "source_sha256": "05271f8db7ff53ea03617d578ad468fb4fb45e19db4ea5d175285fd5f89fab41",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "datetime",
         "hashlib",
         "json",
@@ -4004,14 +4421,18 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "datetime",
+        "decimal",
         "financial_brain.costs.india",
+        "financial_brain.forward_edge.market_events",
+        "math",
         "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/cost_sensitivity.py",
-      "source_sha256": "f91c40d267141d1e6908d893efd3f0ec71699015337e929692b665c60fd59003",
+      "source_sha256": "77e4796e02340b7b897635136050952aaa5f9fe40945770b2e7d4264bb3f0756",
       "test_paths": []
     },
     {
@@ -4085,7 +4506,25 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/data_permissions.py",
-      "source_sha256": "f09f618cf8e6f10f68e333e7f4596bcd0e32627bec41fe8bdf4c0e42a187fd05",
+      "source_sha256": "2c730da632ec1f7a0604139563e43fcf6bc3f86ccb8ef3d8d5c5e7a244b15c66",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "enum",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/data_profiles.py",
+      "source_sha256": "431040b39ae5848d4a3e9ed6f6f44169d3c4dd3610a32de7a1b69c3b0344c78b",
       "test_paths": []
     },
     {
@@ -4170,6 +4609,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/discretion_evaluation.py",
+      "source_sha256": "47ef2b6f005fb88d2c0d6a0d06e0368d50ef8c29f3fd869cc14b118afcc31ee0",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "contextlib",
         "duckdb",
@@ -4221,7 +4678,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/durable.py",
-      "source_sha256": "bf53f38d068cd0b53195ab08f21e93f888c19c2d2d92ffa59ec32f4dafca91e8",
+      "source_sha256": "13e10555ac4bff791653279bc7001144dd508c0c8453e048d5fe9253510e414f",
       "test_paths": []
     },
     {
@@ -4288,15 +4745,22 @@
       "imports": [
         "__future__",
         "enum",
+        "financial_brain.evaluation.firewall",
         "financial_brain.forward_edge.evidence_labels",
+        "financial_brain.research.inference_registration",
+        "financial_brain.research.look_ledger",
+        "hashlib",
+        "json",
         "math",
-        "numpy"
+        "numpy",
+        "sqlite3",
+        "statistics"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/evidence_stats.py",
-      "source_sha256": "62d0f541d209c857962da010a82095f7d593de146451c2342424e4be36088f44",
+      "source_sha256": "ae4d942f00bae4929739052cdc6ca6603e34f5843155e84486b0dc1298980501",
       "test_paths": []
     },
     {
@@ -4352,6 +4816,22 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/execution_scenario.py",
       "source_sha256": "876d60d0163773fa0310c821603640667e72c0371ebe6349056795c4757466e6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/execution_shortfall.py",
+      "source_sha256": "21a99ded6d6aa7ab533741f38151955fa6f83f7448163ada5fc10794a2765e9c",
       "test_paths": []
     },
     {
@@ -4450,7 +4930,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/fixture_adapter.py",
-      "source_sha256": "b1a85109e7edc320a30562b2af5b57492a96234ef8a7c80949810b35ec4a944f",
+      "source_sha256": "8000424c882087dd76f15d3c00f3570f05676614ee81649274471890651b4360",
       "test_paths": []
     },
     {
@@ -4465,6 +4945,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/fixtures.py",
       "source_sha256": "6c8e4d3e9095c05654cf92b2bac1476687d1cb03b6e4e26f6caeb44246af5011",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "financial_brain.forward_edge.custody",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/forward_evidence_gate.py",
+      "source_sha256": "cdb8ee440a5e6f5616e0d9b17e623fd38f2d4132a69c7b5f831ca229ec8ca074",
       "test_paths": []
     },
     {
@@ -4538,6 +5038,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/heartbeats.py",
+      "source_sha256": "6dd004d5301aff90eaa25202396522ba38b6698641035ad8396efaf3f21e3c7a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "hashlib",
@@ -4550,6 +5068,44 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/horizon_freeze.py",
       "source_sha256": "e60c53e6e9cfef4db68a0aaecaa09f335272d7f243bb6edd37bb3d9fe4f8cc77",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.quote_archive",
+        "statistics",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/impact_calibration.py",
+      "source_sha256": "01ef5f1a3cc639ccc4353c6af150db2542ac96255bc06cf7a1de406240a179c4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/incident_evidence.py",
+      "source_sha256": "d18dcec4b00d0472d6a73406829c86b8d8ae311bebada04a8bbe97983b712e53",
       "test_paths": []
     },
     {
@@ -4628,8 +5184,10 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
         "dataclasses",
         "datetime",
+        "decimal",
         "hashlib",
         "json",
         "typing"
@@ -4638,7 +5196,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/lookahead.py",
-      "source_sha256": "3137710e27241d4e11be3fe6b0951716b3283c0484f00d60fd98c05d0eab88d7",
+      "source_sha256": "9cfebed17de39d13ddb5dac15d2cfc5d72d5c66be381b3f3b8430102dd17ef09",
       "test_paths": []
     },
     {
@@ -4710,7 +5268,29 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/market_events.py",
-      "source_sha256": "e14b54137372eccaf85fd35004f824ed5d6dca3a5b67de14fc4994e565fcf6c0",
+      "source_sha256": "0be8f943a4e9c9ee2fff3be8b890d1dd6c445ace8c7b049c28280094c63e5ce3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "decimal",
+        "financial_brain.forward_edge.market_data",
+        "financial_brain.forward_edge.market_events",
+        "hashlib",
+        "json",
+        "math",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/market_quality.py",
+      "source_sha256": "12c04dd98aa35ddb1b851d8aada5ff9bc561ca1db01f5ddf0c57584feeaa2a99",
       "test_paths": []
     },
     {
@@ -4727,6 +5307,21 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/marketable_limit.py",
       "source_sha256": "7a5b3ccd5b785cea0ff662b83cf213db335630f5fc7b42629adb0f5e225fdad6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/matched_benchmark.py",
+      "source_sha256": "6faec0ef6cca7998c43f51f201bd5e0ab5921501169d24c4382409e35d68f9b2",
       "test_paths": []
     },
     {
@@ -4755,6 +5350,42 @@
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
       ]
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "financial_brain.risk.signed_policy",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/nifty_delta.py",
+      "source_sha256": "f8dc26409192197e38675a0d481903fa9cbc6a76c42f640c601fbf84c852c2d1",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/operating_mode.py",
+      "source_sha256": "78e52e5790f31c7b4d5f7796585142327e1c9760dbde41661cc389fe930f4bdf",
+      "test_paths": []
     },
     {
       "capability_ids": [],
@@ -4796,7 +5427,41 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/option_surface.py",
-      "source_sha256": "47127c3d49bf57f9726286ca55ac5abcf40d9e239ae0985d962011cc7c367deb",
+      "source_sha256": "d56d30312c12bea76e19298ab3fb23d966493f1b20dee26c1f7ac5358f3009d0",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/options_attribution.py",
+      "source_sha256": "512a04311a07828fc6f5dc3e5ba499f42f584978085790636e8d4ba70d9b0193",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/options_portfolio_stress.py",
+      "source_sha256": "c331f1c37f7bec481b06154d13c69a1c9bbb1f7626b9b9d465175fb51dbd6fbd",
       "test_paths": []
     },
     {
@@ -4811,7 +5476,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/options_risk.py",
-      "source_sha256": "51cf07fe8a26cd634a9647ac4b7c5b4c9b874d5cceccd25f0a27415aa94570a1",
+      "source_sha256": "a4370f461a7826bd1853596c231a9ba955a1efc401f37838e413b7ea90eaa1fc",
       "test_paths": []
     },
     {
@@ -4824,13 +5489,14 @@
         "hashlib",
         "json",
         "math",
-        "options_risk"
+        "options_risk",
+        "statistics"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/options_spread.py",
-      "source_sha256": "114e263a3a74e7f045f2b5941351cd6d37ac8a702a270b0743bb9ea5220b4d52",
+      "source_sha256": "4b13b1e3b071973e065a13045bf9b162dc24b1eb2f195d8b716ac53af50baf30",
       "test_paths": []
     },
     {
@@ -4869,7 +5535,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/order_journal.py",
-      "source_sha256": "2f1981131f1fc69bcc572d80a088d5eab837d3901458b567fb123234cdaeaab5",
+      "source_sha256": "5bdbd20c167148d65f2014c3cd394a3d9353e03e805400d578af9b548016205b",
       "test_paths": []
     },
     {
@@ -5001,7 +5667,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/paper_book_adapter.py",
-      "source_sha256": "e957947480e7aa9798b5997128bb14d2dee5e43c195ef7331258ce0efece4360",
+      "source_sha256": "9b0a5cf5c61828eb9c6404350b1ae376ff0f7711dfcec05a9171df6b430a00d0",
       "test_paths": []
     },
     {
@@ -5069,19 +5735,60 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/pause_criteria.py",
+      "source_sha256": "ede2c186e03d4904114dd34fb1c2fe078fb16893950b1295559b7d5bd811061e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "itertools",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/performance_report.py",
+      "source_sha256": "023ccb3a0f2bb387d9b497833cdef0b0cc2575fde38c8967975601d2e475305a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "approvals",
         "dataclasses",
         "datetime",
         "hashlib",
         "json",
         "pathlib",
-        "sqlite3"
+        "sqlite3",
+        "threading"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/persistent_killswitch.py",
-      "source_sha256": "cc8c6f99326b6abac5e0f66b972291bad0c52d960dbe78f798993e8ee650de2f",
+      "source_sha256": "8d2f2cc28f9ca6b784950f5955c053af394c32e38fe10f25cdcf41d35acd8866",
       "test_paths": []
     },
     {
@@ -5124,7 +5831,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/pnl_dashboard.py",
-      "source_sha256": "e84d25fd395475dcc59d658216f1743134d8ff265c67994289ebb0a563cbdf92",
+      "source_sha256": "ba278b0c9371fde4b22cb9f4062e370242d0ab6bbab33dafca39a64e2f0a24a7",
       "test_paths": []
     },
     {
@@ -5163,7 +5870,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/portfolio_risk.py",
-      "source_sha256": "393357504bd4f6c6da9b02a4a77d4774956eaa66b860387c991dada6d35c7f0e",
+      "source_sha256": "9e2f5b965458c504d29f2797b103b68ba17a793684246ed023c16eed88217ed3",
       "test_paths": []
     },
     {
@@ -5182,6 +5889,44 @@
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/precision_gate.py",
       "source_sha256": "03e0f4b41bfca9ec6c2297afda9d7ee812f9501f07d585d48e92d8a6ad38a16b",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "financial_brain.evaluation.riskadjusted",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/profit_robustness.py",
+      "source_sha256": "69e72d1978fe84ac1935a70cee24d7341c50bdf8fa933fb0426710392c6748ef",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/prospective_pnl.py",
+      "source_sha256": "36ecde03b0aba85f8ae885282306a09d7e3363fdafea23e4fee301f825c35a50",
       "test_paths": []
     },
     {
@@ -5213,18 +5958,20 @@
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.data_distribution",
         "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.market_quality",
         "hashlib",
         "json",
         "math",
         "pathlib",
         "sqlite3",
+        "typing",
         "zoneinfo"
       ],
       "maturity": "locally_mapped",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/quote_archive.py",
-      "source_sha256": "f92b642bb1f139621829323690546980b1fe2bb92b3445f5d9c5744d3781eda2",
+      "source_sha256": "db79a91ae8c369b7b148c9bf45e76616d210ea8c50df847c4e5e85f5972e6063",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5438,6 +6185,24 @@
       "test_paths": []
     },
     {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "datetime",
+        "hashlib",
+        "json",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/session_recovery.py",
+      "source_sha256": "51c7d784083213f042a089b40f6c17f99623835736f6677fccd53f558e19b1fa",
+      "test_paths": []
+    },
+    {
       "capability_ids": [
         "live-paper-mode"
       ],
@@ -5448,28 +6213,37 @@
         "decimal",
         "financial_brain.costs.india",
         "financial_brain.evidence.decision_manifest",
+        "financial_brain.execution.oms.oco",
         "financial_brain.forward_edge.clock",
         "financial_brain.forward_edge.cost_schedule",
         "financial_brain.forward_edge.data_distribution",
         "financial_brain.forward_edge.data_permissions",
+        "financial_brain.forward_edge.data_profiles",
         "financial_brain.forward_edge.durable",
         "financial_brain.forward_edge.execution_scenario",
+        "financial_brain.forward_edge.heartbeats",
         "financial_brain.forward_edge.instrument_rules",
         "financial_brain.forward_edge.intent_timing",
         "financial_brain.forward_edge.market_data",
         "financial_brain.forward_edge.market_events",
+        "financial_brain.forward_edge.operating_mode",
         "financial_brain.forward_edge.order_journal",
         "financial_brain.forward_edge.paper_accounting",
         "financial_brain.forward_edge.provenance",
         "financial_brain.forward_edge.quote_archive",
         "financial_brain.forward_edge.session_ops",
+        "financial_brain.forward_edge.session_recovery",
         "financial_brain.forward_edge.session_state",
         "financial_brain.forward_edge.venue_calendar",
         "financial_brain.kernel.events",
         "financial_brain.kernel.units",
+        "financial_brain.portfolio.canonical_ledger",
+        "financial_brain.portfolio.durable_reservations",
         "hashlib",
         "json",
+        "logging",
         "pathlib",
+        "persistent_killswitch",
         "re",
         "sqlite3",
         "typing",
@@ -5480,7 +6254,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/session_runner.py",
-      "source_sha256": "d1604c4a8adbad09374c5c87bbf467b2b821af600cd65217d2c31c85c3b2d8bc",
+      "source_sha256": "26f5c7908cb56bac592b17342de5573e685e87fcea9490b0b07d126bfb0a8084",
       "test_paths": [
         "tests/test_forward_edge_f00.py",
         "tests/test_forward_edge_session_runner.py"
@@ -5556,6 +6330,25 @@
         "dataclasses",
         "datetime",
         "hashlib",
+        "json",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/signal_ablation.py",
+      "source_sha256": "65c886aade8a1b9aff431e50b3faad475ec2d152eeba9dd442db9d5513a9702d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
         "html",
         "json",
         "math",
@@ -5605,7 +6398,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/strategy_attribution.py",
-      "source_sha256": "fcd0d0549a6c5798dbd011629dacef494a0f61a15ea78dc728b6c77d07e2122a",
+      "source_sha256": "e58716c1e2b27cd71d0432c67a41a5bf631e9bc8571c87b8eef51c9ce2cc2843",
       "test_paths": []
     },
     {
@@ -5645,7 +6438,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/strategy_pipeline.py",
-      "source_sha256": "f21e6637872d2f36379a3c481591dfe864ce74770d685f7a84e24f3764848ce3",
+      "source_sha256": "9bb8a5dd38149a9569ec6c01942ccfffb2558fa02089cc80f5eb4b261fc6d7af",
       "test_paths": []
     },
     {
@@ -5699,7 +6492,67 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/forward_edge/tracker.py",
-      "source_sha256": "b1876d551b05984c73d861644408433f01a277da6b00f15397f351ac46aa1427",
+      "source_sha256": "4db9ba0d2f519c5f2ab16170a3bc0c3decac41c16699a8efd7413f4aa336c4dd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/trade_expectancy.py",
+      "source_sha256": "f5d54f95ff8eb2b26ab6ad05ff16aa58869c93288d69effa1b7e99519aabf590",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/trade_loss_review.py",
+      "source_sha256": "7f4a67527075475e2e9e5c2750eeef2f9e51ca8d32dbcd3e81f51959ecbe2e3e",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "html",
+        "json",
+        "math",
+        "pathlib",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/forward_edge/trader_dashboard.py",
+      "source_sha256": "3dd22a4aaa2e9e500f58451750842f4bd959ca7ca613007e808bcc320d8770be",
       "test_paths": []
     },
     {
@@ -6482,7 +7335,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/options_audit.py",
-      "source_sha256": "4ad9dc5f28808e9b4a526b74093e91b6f0d47484bd0a18b9bac69dd470b5fada",
+      "source_sha256": "4c988e916d996bd072313059c519cd100babe6c120142244b6dae295709a6047",
       "test_paths": []
     },
     {
@@ -6493,6 +7346,8 @@
         "datetime",
         "duckdb",
         "json",
+        "kite_fno",
+        "math",
         "os",
         "pathlib"
       ],
@@ -6500,7 +7355,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/ingest/options_quotes.py",
-      "source_sha256": "4081787c4d5b87c9115aa5bf55f92fb35e55db368a937bec8a3a32d09986e42d",
+      "source_sha256": "ec4e1d8eb998641b8ad1d703b6573018db2ba196d4504a794d84f58ac98697e4",
       "test_paths": []
     },
     {
@@ -7340,7 +8195,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/closures_p.py",
-      "source_sha256": "a334ae3d75f4b178198d5d5e42d11704e9db4c344b99ae3176f1cba30aa89968",
+      "source_sha256": "7eb44bb617f7845c7aceae7c58d09229e45527faf78eb142d36864de7d625a24",
       "test_paths": []
     },
     {
@@ -7408,6 +8263,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/closures_s.py",
       "source_sha256": "b5ed5b05797919a56306a0cb0154ac9e5c1eadca3a15152be41d090fff8cfcb9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "probability_calibration"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/contextual_calibration.py",
+      "source_sha256": "bf85c6e14817b8c339bc87f5833b691a2b85befb7cbb3b36829efd8859a3b6d1",
       "test_paths": []
     },
     {
@@ -7586,6 +8459,21 @@
       "imports": [
         "__future__",
         "dataclasses",
+        "decimal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/kernel/exit_accounting.py",
+      "source_sha256": "36d0120661ff0d27e61ae1893e5c47ba01504ff3b8192d5bdb5fab128d38f083",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
         "decimal",
         "enum",
         "hashlib",
@@ -7607,6 +8495,7 @@
         "dataclasses",
         "datetime",
         "decimal",
+        "exit_accounting",
         "exit_policy",
         "financial_brain.forward_edge.durable",
         "hashlib",
@@ -7619,7 +8508,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/exit_protection_ledger.py",
-      "source_sha256": "f0cfc099f1718c72afab260ea070a036d4ac2f5f52a17749d0fbf6a95644234d",
+      "source_sha256": "d9a31bd96696bb27b109f9701093316a6b1c8bf1565919c3f70f8bfd89595f6b",
       "test_paths": []
     },
     {
@@ -7829,7 +8718,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/instruments.py",
-      "source_sha256": "8fa6c3f0f750f168ae69ad876c59143db081196588d34c5b77e9f0a3902d760f",
+      "source_sha256": "7556ad20093668c175367747b89d608b7ef4700888ea97acf3023a3ff6855e47",
       "test_paths": []
     },
     {
@@ -8211,7 +9100,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/options.py",
-      "source_sha256": "7add7d2c861bdf9a56c8b4f752b5af8a3519030fe13547021a1e9f121e695af4",
+      "source_sha256": "48da08363e50281b3bb703ae7ce17dd56d93381451b060411bfe1484f45a07c6",
       "test_paths": []
     },
     {
@@ -8327,7 +9216,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/portfolio_exit_guard.py",
-      "source_sha256": "03d752946693fc01bddd326b8b9718dea07eaaba46183071dd0fc7636b3e8daa",
+      "source_sha256": "81f702c06637add2d41c3e1d2625dde2777aa0ca68f92481e36d98489d20559e",
       "test_paths": []
     },
     {
@@ -8613,7 +9502,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/kernel/strategy_economics_gate.py",
-      "source_sha256": "8cf4000e9d8a403ae2513d2104160dd1dafe8b2440269a3754e04ee4736cc996",
+      "source_sha256": "5ae46c89d08028d2e577600a982c5bbd06e142e6ff8487910088f5f3d86f5ba1",
       "test_paths": []
     },
     {
@@ -9484,6 +10373,28 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/derivatives_subledger.py",
+      "source_sha256": "32996db96e86e6e155fc36af29c2d66e6656cfde12e2ce3c2d9e48dfba394c52",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "costs",
         "costs.india",
         "dataclasses",
@@ -9500,7 +10411,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/engine.py",
-      "source_sha256": "d5122ffe2144797bf590dcf47bfb80b741393bff3ba486a77fb6a5f84fa4b49a",
+      "source_sha256": "dffab55d59b59698ef7114ed4cd596b1afadd475e91f15ac23c5d5044a9d3d73",
       "test_paths": []
     },
     {
@@ -9545,7 +10456,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday.py",
-      "source_sha256": "05b305dc34c4ffe4df0cb6a765817e65d83e7f46349320a492b70cfb17bef599",
+      "source_sha256": "2d63bfb2f5efe220202a687b032e3e2c1635bb80b4640cd5eccc72fab6706192",
       "test_paths": []
     },
     {
@@ -9582,7 +10493,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday_runner.py",
-      "source_sha256": "8aed3d8846b1dde8c710a6d0fe03dc8f542aeaf8ccb663a11a3d72ae8fffdb1e",
+      "source_sha256": "7e5b95ab5aa9525fbae58604bef76cc6b600ab0929ff170a19f2f9612939cf2c",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
@@ -10033,6 +10944,66 @@
       "imports": [
         "__future__",
         "costs.india",
+        "datetime",
+        "hashlib",
+        "ingest.options_quotes",
+        "json",
+        "options",
+        "re",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/option_counterfactuals.py",
+      "source_sha256": "be2c667b3d9a13690308794e672f2df7d0d169c5934145e064a6702219d8f1f6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
+        "dataclasses",
+        "math",
+        "options"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/option_payoff_risk.py",
+      "source_sha256": "f637265b8b10c718c574cf562d9ef0a12cc836c85ab9e53c23681a0c4bde23af",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "kernel.options",
+        "math",
+        "options",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/option_ranker.py",
+      "source_sha256": "438e011a2e4231ebe07bfb7793a879f5337353c65ac574ff30232d700054bfe8",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
         "dataclasses",
         "datetime",
         "decimal",
@@ -10043,7 +11014,27 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options.py",
-      "source_sha256": "a5e6bdb2eb01088ad282318f1068e315c944566c06fa613966e92c227c789f65",
+      "source_sha256": "79b61720c73ea63287ea18621985243c62ad32026849d2f95764fd77d8eebed4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "options"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/options_exit.py",
+      "source_sha256": "a48f06c1681934002d39bd9eadd1c5c43ad05b04fbfcb295fe8a3fc1b7749dc7",
       "test_paths": []
     },
     {
@@ -10065,7 +11056,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_forward.py",
-      "source_sha256": "b79f776d17fe6baef6f11d2ce1fd5b2d74e4a38abb863c3b03db776ddea9fda0",
+      "source_sha256": "55d29bd288ab7bbd7a50373d450c2d8ca4740d1c3530c3d23bbc8dea5e26013f",
       "test_paths": []
     },
     {
@@ -10073,8 +11064,10 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "costs.india",
         "dataclasses",
         "datetime",
+        "forecasting.index_sizing",
         "kernel.units",
         "math",
         "options",
@@ -10084,7 +11077,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_plan.py",
-      "source_sha256": "1fa3dc5b50360cbc36720a34c5dd4925701009e275f62acc8d273db0438aabc1",
+      "source_sha256": "bfd808c675c6acbbb5dd30c596f4e15cd226b3d1a78660503b559383687d9468",
       "test_paths": []
     },
     {
@@ -10093,17 +11086,19 @@
       "imports": [
         "__future__",
         "collections",
+        "collections.abc",
         "dataclasses",
         "datetime",
         "financial_brain.forward_edge.evidence_labels",
         "kernel.units",
+        "math",
         "options"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_runner.py",
-      "source_sha256": "ac8775aecdbde27718cc94b7253c3bbe015573593d9eb850a3fb1377f8a64121",
+      "source_sha256": "a9b3c63e58dcb36593158fc54230b38d5640d26b7c9f49fd7fb50f5065b88fc9",
       "test_paths": []
     },
     {
@@ -10120,6 +11115,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/paper/options_spread.py",
       "source_sha256": "0c3d935c38e67a26c897b95f1127cc342c2377f2321602275cc66fb9b3501fcd",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "costs.india",
+        "dataclasses",
+        "datetime",
+        "options",
+        "options_spread"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Paper",
+      "parse_status": "ok",
+      "source": "src/financial_brain/paper/options_spread_execution.py",
+      "source_sha256": "a51bea2b31a51274a6f3b2bfb0d65e7c9e384e94ed15e81329e7b0d193e3d526",
       "test_paths": []
     },
     {
@@ -10266,7 +11279,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/workstation.py",
-      "source_sha256": "d3f0915f9ebc6d1209a0c5f1c7d9d7dbf1aff6f496047ec75303d684da570528",
+      "source_sha256": "22cc69f8a48728e987bd946e63322a4d468b81b3994fc2e8f3cb57b15524116d",
       "test_paths": []
     },
     {
@@ -10289,7 +11302,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/zoo.py",
-      "source_sha256": "c32586be0ea0c4e61cfd33a773a5b4b5d3355abcf4c8a564d908500020da5cba",
+      "source_sha256": "c227e9faedfe7dd00d8923903f56a37fdb6423e1670d0910fdb208339bbc4e79",
       "test_paths": []
     },
     {
@@ -10297,22 +11310,30 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections",
+        "costs.india",
         "datetime",
         "decisions",
         "evaluation",
+        "execution.ticket",
         "features",
+        "hashlib",
         "json",
+        "math",
         "numpy",
         "pandas",
         "pathlib",
         "providers",
-        "warnings"
+        "re",
+        "typing",
+        "warnings",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/zoo_edges.py",
-      "source_sha256": "a36534103683714450c990fb57853aad976b159a602031a824dfdb69a631ec35",
+      "source_sha256": "b5b5fd2bc66f9b10665a39dddea2e76aae84c93ab9c95a2f3f208abe9b935415",
       "test_paths": []
     },
     {
@@ -10890,6 +11911,53 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "financial_brain.forward_edge.order_journal",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "re",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/aggregate_risk_budget.py",
+      "source_sha256": "bc2b9e5d1b32e7097011a6afe66afc72c9a70ffbfffd9d49d95502f90427e3a9",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "statistics",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/allocator_benchmarks.py",
+      "source_sha256": "1714834dad5100b832c6bc6a5e01d699cef9be7e432c9b6099755b113cc63ca0",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "numpy",
         "pandas"
       ],
@@ -10898,6 +11966,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/behaviour_review.py",
       "source_sha256": "187c2908871f911ec045ebd49ef02facd6f497899163ead5de2f1ecf58749ff2",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "financial_brain.kernel.position_signals",
+        "hashlib",
+        "json",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/cadence.py",
+      "source_sha256": "43855107de6fb81911ff954a76d6b12be217334162b0c0a599a6b546404b78e9",
       "test_paths": []
     },
     {
@@ -10921,7 +12009,30 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "147906a0a134875a6386e34cfb3674662a49fee13cbf75469557aef56a9267d9",
+      "source_sha256": "a5cb8d585fe42a5975b314be342687b3d993cb30768ddc16bf75977d8b713131",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "numpy",
+        "re",
+        "scipy.optimize",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/capacity_optimizer.py",
+      "source_sha256": "a9557747f2e992ee518bbfc2e04b12217509b10c75e5a6d9951a6b152ab4152e",
       "test_paths": []
     },
     {
@@ -10948,6 +12059,25 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "canonical_ledger",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "hashlib",
+        "json"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/capital_efficiency.py",
+      "source_sha256": "d4d3af2300576257fdb05c98ca9de1228b1d04c6e975a2a290718e93808143a6",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "math",
         "numpy"
       ],
@@ -10956,6 +12086,30 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/constraints.py",
       "source_sha256": "2bd3ecf0659b1ac69d5053b3a822cc181e3c44b48915611660bae4853a62bdf5",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "hashlib",
+        "json",
+        "math",
+        "re",
+        "scipy.stats",
+        "statistics",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/contextual_sleeves.py",
+      "source_sha256": "6f3c597d3bf5e90ffb8b8afe5cf77d06cf9cade36b45072eed73700567c6dc71",
       "test_paths": []
     },
     {
@@ -11000,6 +12154,125 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/daily_budgets.py",
+      "source_sha256": "a1801ee4eab9800ec02d25f0cb021b1e7613bb4f4e5cb8e8556265c2104ad501",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "canonical_ledger",
+        "financial_brain.paper.derivatives_subledger",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/derivatives_adapter.py",
+      "source_sha256": "7a4ef03e2860823cfdf33f15ee2564d44ca04cfadbb4e4022eda0406d2a96016",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/drawdown_cap.py",
+      "source_sha256": "35ff674fdfdc08059c99441759da426f49ca0db5819404a735418c5d9887f5f4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "enum",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/durable_reservations.py",
+      "source_sha256": "f9c8e5c3c765a66b3814fc7943e42991a4f2f3ea3181b99c8692153d1fa0f269",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections.abc",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/equity_reconciliation.py",
+      "source_sha256": "3b555fe833ba5a16bf5296c76996740cefa7f7d569adf14dc9e2748705df33ad",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "decimal",
+        "enum",
+        "re",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/exit_coverage.py",
+      "source_sha256": "c7a58d63789f7d8493ff3a7d179383aa66e8b0f94b2a8003f34da4b3df0d800d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decisions",
         "risk"
       ],
@@ -11007,7 +12280,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/gate.py",
-      "source_sha256": "8c47993f8d750a84fa14adf1a67cec3b94e83e3d5f94c33c6bfba74918a1ac25",
+      "source_sha256": "444e543c4b598f5dbc8af685f8f9a5269ef57d3c0d21c877d245daaf23cc6aeb",
       "test_paths": []
     },
     {
@@ -11025,6 +12298,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/journal.py",
       "source_sha256": "0f3fd5dd25dd1e60cde0da0c16e8216bf153fbb8a4fb392e7a0932b794fddbf3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "canonical_ledger",
+        "dataclasses",
+        "enum",
+        "hashlib",
+        "json",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/legacy_exit_adjudication.py",
+      "source_sha256": "70c63e57675402b87dab440405e68f04f9f11ad005a652de82c51b2e53e4df79",
       "test_paths": []
     },
     {
@@ -11062,6 +12354,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/marginal.py",
       "source_sha256": "4c270eeefd6a360208251fedae5afc60be8f0669d2d9f135fe1b26bd368e5186",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "canonical_ledger",
+        "datetime",
+        "decimal",
+        "financial_brain.paper.mf_account_ledger",
+        "re",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/mutual_fund_adapter.py",
+      "source_sha256": "55600c34ef90aacd74ec085ce5f85f02c99ca35cd59c567cee2651b88482a330",
       "test_paths": []
     },
     {
@@ -11131,7 +12443,31 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/rebalance.py",
-      "source_sha256": "3233e7333a0dad42845ec0d392b2db05ed032201c3a8b06d8977a73e2dab3cb2",
+      "source_sha256": "cf8214f3a3b26bca3b5b0f01f4b4f5fbae6fb101929cc0a3915d6ce8777a37a4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "numpy",
+        "re",
+        "scipy.optimize",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/scenario_optimizer.py",
+      "source_sha256": "f6c8a3965e07df656ccc7cfa9a3641e7a1a5dc26b0b26096d07a7c1f8f784771",
       "test_paths": []
     },
     {
@@ -11369,13 +12705,18 @@
       "imports": [
         "__future__",
         "csv",
+        "dataclasses",
         "datetime",
+        "hashlib",
         "io",
         "json",
         "kite_login",
+        "math",
         "os",
+        "random",
         "threading",
         "time",
+        "typing",
         "urllib.error",
         "urllib.parse",
         "urllib.request"
@@ -11384,7 +12725,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/kite_data.py",
-      "source_sha256": "51e17fe81826dd389fa53c36c007ff10e6bae1f0829a23afb5a73a0f3e35a486",
+      "source_sha256": "372f3578746a0889769f150e662bae22e3c86ab72668022c06a1212c42d5bacf",
       "test_paths": [
         "tests/test_forward_edge_kite_market_data.py",
         "tests/test_forward_edge_session_runner.py"
@@ -11448,7 +12789,7 @@
       "owner_role_hint": "Integration",
       "parse_status": "ok",
       "source": "src/financial_brain/providers/kite_stream.py",
-      "source_sha256": "a607b6e1c438e573ed2409d59c5aa481099e4ef3fb33c8128a61ac1aab2e7fed",
+      "source_sha256": "4af6fcc5d4c1e42e7d39df981f1e86947bc830cc85697bfa0c96d9addd966c3d",
       "test_paths": []
     },
     {
@@ -11724,6 +13065,26 @@
       "capability_ids": [],
       "human_owner": null,
       "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/alpha_hypothesis_ledger.py",
+      "source_sha256": "97d6bfd3af0bb21e2866fe2ce8c7abface6cc70f0fd8b93123d3ae37007be55a",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
         "__future__"
       ],
       "maturity": "unassessed",
@@ -11763,6 +13124,21 @@
       "parse_status": "ok",
       "source": "src/financial_brain/research/causal_regime.py",
       "source_sha256": "846f39bdc5730382a241f4905a75f09e5c980f3040b82338d08b31880261d406",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/chronological_split.py",
+      "source_sha256": "2f0b1c6449669b40f40447da75bf72dd424e9b6548081029a7a7b7f1d78bdd26",
       "test_paths": []
     },
     {
@@ -11843,6 +13219,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/dual_skill_report.py",
+      "source_sha256": "c12950901478e5b8ae2d92812948196b943581dea5306733c0de7a4c417248fb",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "numpy",
         "pandas",
         "scipy.optimize"
@@ -11859,6 +13253,21 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "enum"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/evaluation_tiers.py",
+      "source_sha256": "643113b4681f9e7dcf808c80f1d567a6081505054441ccbb5138e294c7d1057c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "execution.algos",
         "numpy"
       ],
@@ -11867,6 +13276,25 @@
       "parse_status": "ok",
       "source": "src/financial_brain/research/execution_compare.py",
       "source_sha256": "9268d71b454b167fb0b738d4443767f6975533bbecd5df2c1f007e8a88a48806",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/experiment_spec.py",
+      "source_sha256": "c4fe483ad5c1fe5398b05511f58e91a535e7a9d36eb64cf7a28b9a57c87ccfaa",
       "test_paths": []
     },
     {
@@ -11906,6 +13334,67 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing",
+        "uuid"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/family_registration.py",
+      "source_sha256": "4e6c665bcb996f916a3e6cb58a46d6c6da24dac7542b361e403b7ba3e141eb63",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/family_registry.py",
+      "source_sha256": "2f770542338d45cf64a46139aad2b5a2d7a5eb9721c2481de9f5eb798d6af5bf",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "collections",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/fragility.py",
+      "source_sha256": "e53759fa5ba1e2aa42151d65bd4f7daca2dbb6d33b136656bfe40c3761e68431",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "inverse_strategy"
       ],
       "maturity": "unassessed",
@@ -11913,6 +13402,52 @@
       "parse_status": "ok",
       "source": "src/financial_brain/research/history_audit.py",
       "source_sha256": "ce9fa92bca14e2ef54e11feec7f5ec39552e8036ed99275172687c8ef7a05860",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base64",
+        "cryptography.exceptions",
+        "cryptography.hazmat.primitives.asymmetric.ed25519",
+        "dataclasses",
+        "datetime",
+        "financial_brain.forward_edge.approvals",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/holdout_access.py",
+      "source_sha256": "a0c1514b73ef0d568120d272ded486165586d459f4c6c90fdf4992e74ac131b3",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "enum",
+        "hashlib",
+        "json",
+        "math",
+        "pathlib",
+        "sqlite3",
+        "typing",
+        "uuid"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/inference_registration.py",
+      "source_sha256": "8dcc88e1d6e8e005ccc310121d91612447bcd8bf45f5d63bcb32d1d959155652",
       "test_paths": []
     },
     {
@@ -11972,6 +13507,26 @@
         "__future__",
         "dataclasses",
         "datetime",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/look_ledger.py",
+      "source_sha256": "e0abe02c13d21f5e2c8ea513f5ac3624d69ef5137c0d9f6c16e1c4676cb90241",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
         "decimal"
       ],
       "maturity": "unassessed",
@@ -12013,6 +13568,24 @@
       "parse_status": "ok",
       "source": "src/financial_brain/research/mf_return_accounting.py",
       "source_sha256": "93ed087e1df01fc31069543c8bd3c73c0d4b8b432dcdf2e20ddb89edb5e7e0e4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/parameter_sensitivity.py",
+      "source_sha256": "52d593c13298a7d030fce5862b35603782e33811afbb01c1c3504b0a52e47353",
       "test_paths": []
     },
     {
@@ -12107,6 +13680,26 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "datetime",
+        "financial_brain.forward_edge.approvals",
+        "financial_brain.research.holdout_access",
+        "hashlib",
+        "json",
+        "pathlib",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Research",
+      "parse_status": "ok",
+      "source": "src/financial_brain/research/sealed_dataset.py",
+      "source_sha256": "81a8daf4dccae372d6875b5b52e9fab8a0b16bed3442772c75378abf4d03334c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "numpy"
@@ -12175,13 +13768,38 @@
       "imports": [
         "__future__",
         "dataclasses",
-        "numpy"
+        "datetime",
+        "financial_brain.risk.audited_forward_kelly",
+        "numpy",
+        "typing"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Execution",
       "parse_status": "ok",
       "source": "src/financial_brain/risk/allocator.py",
-      "source_sha256": "1056324397b6a99b37d000b6478613eef0471fd7d4f198ed07cfc109c5baeac6",
+      "source_sha256": "685dcb15c48f89d6c4193fd25d9addcf6ddc33a06adaa36e9bbe8f575b1dd2ee",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base64",
+        "cryptography.exceptions",
+        "cryptography.hazmat.primitives.asymmetric.ed25519",
+        "dataclasses",
+        "datetime",
+        "hashlib",
+        "json",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/risk/audited_forward_kelly.py",
+      "source_sha256": "5e569e2692ba200a6cb50b0830600973cc54b46339d2188fa2cb6de9ccab8e8d",
       "test_paths": []
     },
     {
@@ -12225,6 +13843,23 @@
       "parse_status": "ok",
       "source": "src/financial_brain/risk/degradation.py",
       "source_sha256": "2093d548a226b099777467ad27eb2295168921292cb9f37521ecca4d7048ae6c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "re"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/risk/evidence_aware_sizing.py",
+      "source_sha256": "d7f935aae2fa73e551abb854baa648b4e2933fe42979a0554c96aedd6c7f73b3",
       "test_paths": []
     },
     {
@@ -12300,6 +13935,42 @@
       "parse_status": "ok",
       "source": "src/financial_brain/risk/linalg.py",
       "source_sha256": "8582538457e2e39fdad1656213646379a75434e224dcb5d0e9bab8ff30ccd19f",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/risk/scenario_loss.py",
+      "source_sha256": "63f0678887b27d6e1c1c3d45b5db2c145a45b41ca5249f379d338ff35dfed815",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "base64",
+        "cryptography.exceptions",
+        "cryptography.hazmat.primitives.asymmetric.ed25519",
+        "dataclasses",
+        "datetime",
+        "json",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Execution",
+      "parse_status": "ok",
+      "source": "src/financial_brain/risk/signed_policy.py",
+      "source_sha256": "8f4221dce15db1327db69b5026eea0289f165789d3daa46ab4170642cec3a1cc",
       "test_paths": []
     },
     {
@@ -12517,13 +14188,15 @@
         "execution.oms",
         "execution.oms.kite_broker",
         "pathlib",
-        "providers"
+        "providers",
+        "typing",
+        "zoneinfo"
       ],
       "maturity": "unassessed",
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/services/trading.py",
-      "source_sha256": "49df0f0c43bbe277d02b4e5075b7c42e6569e02d133102150845a928603d4775",
+      "source_sha256": "f613153b69cdae23c6221bb6768f646259f9c19847d8b392a3931bca17d5185a",
       "test_paths": []
     },
     {
@@ -12644,6 +14317,39 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "four_node.nodes",
+        "math"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/confirmed_fibonacci.py",
+      "source_sha256": "f9aaf8c88c0da7076b0c6cac12e4989910b91635b7347147ab162803132cea60",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "four_node.indicators",
+        "four_node.nodes",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/continuation_pullback.py",
+      "source_sha256": "c5be8148e014bf2ac611b2241903875560638d5e2d0685576788bd74959091cb",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "itertools",
@@ -12654,7 +14360,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/strategies/evaluation_controls.py",
-      "source_sha256": "4669b43a766547e7a6484b95bdb463e63541238d20ff71e1117e7961229a9875",
+      "source_sha256": "0dba5569b1fa21ef853c23df32e7c48a7a956538ebb2d1230d4332ec69673280",
       "test_paths": []
     },
     {
@@ -12919,6 +14625,24 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "price_action_gaps",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/liquidity_sweeps.py",
+      "source_sha256": "e2b6de3aa7a57aeec87c6238344d50faf64a540b1ed1c37c667cf640fd53b63c",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "dataclasses",
         "financial_brain.strategies.specs",
@@ -12936,6 +14660,40 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/opening_range_breakout.py",
+      "source_sha256": "737fad504af6012ea6f8da82471fb5f4571ee850f807ae97a832fa48bad3f388",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "math",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/price_action_gaps.py",
+      "source_sha256": "f24330caa289502da327289c89fb5ec693a00c39ffb734754f07919763ddaa7d",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "collections.abc",
         "typing"
       ],
@@ -12944,6 +14702,21 @@
       "parse_status": "ok",
       "source": "src/financial_brain/strategies/reports.py",
       "source_sha256": "552e86f8b897666233f1fc90f1cbecbe5f2482149a1c22b401a163d9ea240329",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "decimal"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/strategies/risk_scaled_intents.py",
+      "source_sha256": "a6b12b869baf11cb17cd0ed397d0ade42dedf8ce6890a17242fb786753c6f695",
       "test_paths": []
     },
     {
@@ -13095,6 +14868,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 701,
-  "unassigned_role_count": 434
+  "unassessed_count": 790,
+  "unassigned_role_count": 482
 }

@@ -25,6 +25,8 @@ class OptionLegQuote:
     ask: float
     bid_qty: int
     ask_qty: int
+    underlying_price: float | None = None
+    implied_volatility: float | None = None
 
     def validate(self, *, as_of: datetime, quantity: int) -> None:
         if self.side not in {"BUY", "SELL"} or self.token <= 0 or not self.symbol or not self.underlying:
@@ -73,8 +75,17 @@ def evaluate_defined_risk_legs(*, legs: tuple[OptionLegQuote, ...], quantity: in
     entry_debit = -sum(cash_flows)
     strikes = sorted({leg.strike for leg in legs})
     defined_width = strikes[-1] - strikes[0] if len(strikes) > 1 else None
-    if defined_width is not None and entry_debit <= 0:
-        raise OptionsRiskError("defined-risk debit structure must have positive entry debit")
+    if defined_width is not None:
+        if len(legs) != 2 or {leg.side for leg in legs} != {"BUY", "SELL"}:
+            raise OptionsRiskError("only two-leg debit vertical spreads are supported")
+        long_leg = next(leg for leg in legs if leg.side == "BUY")
+        short_leg = next(leg for leg in legs if leg.side == "SELL")
+        correctly_oriented = (long_leg.strike < short_leg.strike if anchor.option_type == "CE"
+                              else long_leg.strike > short_leg.strike)
+        if not correctly_oriented:
+            raise OptionsRiskError("debit vertical option legs are inverted")
+        if entry_debit <= 0:
+            raise OptionsRiskError("defined-risk debit structure must have positive entry debit")
     max_loss = entry_debit if defined_width is not None else None
     expiry_pnl = None
     settlement_status = "NOT_MODELLED"

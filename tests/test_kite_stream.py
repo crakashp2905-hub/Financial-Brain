@@ -96,6 +96,49 @@ def test_kite_stream_fails_closed_without_effective_paper_permission():
         )
 
 
+def test_kite_stream_closes_socket_and_discards_ticks_after_permission_expiry():
+    class MutableClock:
+        value = NOW
+
+        def now(self):
+            return self.value
+
+    clock = MutableClock()
+    grant = DataPermission(
+        source_id="KITE_CONNECT_READ_ONLY", use=DataUse.PAPER_SIMULATION,
+        status=PermissionStatus.USE_ALLOWED, effective_from=date(2026, 11, 24),
+        effective_through=date(2026, 11, 24), evidence_ref="tests/fixture-kite-paper-grant",
+        reviewer="test-fixture",
+    )
+    tickers = []
+
+    def factory(*credentials):
+        ticker = FakeTicker(*credentials)
+        tickers.append(ticker)
+        return ticker
+
+    stream = KiteTickerStream(
+        token_to_instrument={11: "NSE:INFY", 22: "NFO:INFY26NOV100CE"},
+        underlying_tokens={11}, option_tokens={22}, permission=grant,
+        clock=clock, ticker_factory=factory,
+        credentials_provider=lambda: ("key", "token"),
+    )
+    stream.start()
+    assert tickers[0].connected
+
+    # 2026-11-25 00:00 UTC is after midnight IST and beyond the grant's final date.
+    clock.value = datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc)
+    tickers[0].on_ticks(tickers[0], [quote_tick(11, clock.value)])
+
+    assert not tickers[0].connected
+    assert stream.drain_fresh_events(
+        decision_time=clock.value, max_quote_age=timedelta(seconds=5)) == []
+    health = stream.health()
+    assert health["state"] == "RIGHTS_BLOCKED"
+    assert health["entry_readiness"] == "NO_ENTRY"
+    assert "data_permission_expired" in health["no_entry_reasons"]
+
+
 def test_kite_stream_discards_stale_source_quotes_even_when_locally_receipted_now():
     stream = KiteTickerStream(
         token_to_instrument={11: "NSE:INFY", 22: "NFO:INFY26NOV100CE"},

@@ -1,0 +1,64 @@
+{
+  "schema": "fb.canonical_merge_sequence.v1",
+  "repository": "crakashp2905-hub/Financial-Brain",
+  "provenance_capture_at_utc": "2026-11-26T17:32:24.777Z",
+  "baseline_main_sha": "74f7c19a4d90dc51c509f03b792c688af3ab5ad8",
+  "sequence": [
+    {
+      "order": 1,
+      "source": "PR-37",
+      "head_sha": "0c84878395ca8eb7b1a672980bb1e9b30f0704d4",
+      "precondition": "Hosted checks and review policy must pass on exact current head."
+    },
+    {
+      "order": 2,
+      "source": "PR-36",
+      "head_sha": "d33c84895c347f2f19733608009eec90251254f3",
+      "precondition": "Merge only after PR-37 exact head is incorporated; current declared base is PR-37 head."
+    },
+    {
+      "order": 3,
+      "source": "PR-38",
+      "head_sha": "ad8e32a0fd684d982623bdd0850e1618d1c23007",
+      "precondition": "Merge only after PR-36 exact head is incorporated; current declared base is PR-36 head."
+    }
+  ],
+  "independent_or_hold": [
+    {
+      "source": "PR-34",
+      "head_sha": "93f24c341c65647ddf77a96bda54ba0031fa9e97",
+      "disposition": "independent sequence; no graph dependency recorded in the capture."
+    },
+    {
+      "source": "PR-39",
+      "head_sha": "fd4a8751c9480a2d7b804a0e9591f9ebf0234143",
+      "disposition": "hold for explicit rebase/reimplementation decision; snapshot records divergence from current main (2 ahead, 12 behind)."
+    }
+  ],
+  "already_merged": {
+    "source": "PR-40",
+    "disposition": "merge commit is an ancestor of captured main per GitHub compare API."
+  },
+  "verified_dependency_edges": [
+    {
+      "from": "PR-37",
+      "to": "PR-36",
+      "basis": "PR-36 declared base SHA equals PR-37 exact head SHA",
+      "verified": true
+    },
+    {
+      "from": "PR-36",
+      "to": "PR-38",
+      "basis": "PR-38 declared base SHA equals PR-36 exact head SHA",
+      "verified": true
+    },
+    {
+      "from": "PR-40",
+      "to": "main",
+      "basis": "GitHub compare says merge commit is an ancestor of current main",
+      "verified": true
+    }
+  ],
+  "merge_execution_status": "PLAN_ONLY_NOT_MERGED",
+  "canonical_sha256": "8d9294ddcbb8a0a40225b0c516428ce9bd1e666c65482930fca47ceb286237f3"
+}

@@ -38,7 +38,7 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
         raise LearnedModelError("training version and non-negative embargo are required")
     if not features or len(features) != len(set(features)):
         raise LearnedModelError("feature names must be non-empty and unique")
-    missing = set(["d", "fwd20", *features]) - set(panel.columns)
+    missing = set(["d", "fwd20", "label_end_20", *features]) - set(panel.columns)
     if missing:
         raise LearnedModelError(f"training panel is missing columns: {sorted(missing)}")
     if any(not pd.api.types.is_numeric_dtype(panel[name]) for name in features):
@@ -50,10 +50,11 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     if p.empty or not np.isfinite(p["fwd20"].to_numpy(dtype=float)).all():
         raise LearnedModelError("training outcomes must contain finite matured labels")
     cutoff = p["d"].max() - timedelta(days=embargo_days)
-    p = p[p["d"] <= cutoff]
+    training_mask = DL.purged_training_mask(p, test_start=cutoff, embargo_days=0)
+    p = p[training_mask]
     if p.empty:
-        raise LearnedModelError("embargo leaves no training rows")
-    sort_columns = ["d", *features, "fwd20"] + (["lineage"] if "lineage" in p.columns else [])
+        raise LearnedModelError("label-end embargo leaves no training rows")
+    sort_columns = ["d", "label_end_20", *features, "fwd20"] + (["lineage"] if "lineage" in p.columns else [])
     p = p.sort_values(sort_columns, kind="mergesort", na_position="last").reset_index(drop=True)
     if np.isinf(p[features].to_numpy(dtype=float)).any():
         raise LearnedModelError("training features cannot contain infinite values")
@@ -62,11 +63,12 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     X = x_ranked.to_numpy(np.float32)
     y = y_ranked.to_numpy(np.float64)
     training_data_sha256 = hashlib.sha256(
-        p[["d", *features, "fwd20"]].to_json(orient="split", index=False,
+        p[["d", "label_end_20", *features, "fwd20"]].to_json(orient="split", index=False,
                                                  date_format="iso", double_precision=15).encode("utf-8")
     ).hexdigest()
     schema = {"features": [{"name": name, "dtype": str(p[name].dtype)} for name in features],
               "target": {"name": "fwd20", "dtype": str(p["fwd20"].dtype)},
+              "target_end": {"name": "label_end_20", "dtype": str(p["label_end_20"].dtype)},
               "transform": "cross_sectional_average_percentile_rank_by_decision_date",
               "embargo_days": embargo_days}
     feature_schema_sha256 = hashlib.sha256(json.dumps(
@@ -86,7 +88,8 @@ def train_final(panel: pd.DataFrame, features: list[str], *, embargo_days: int =
     try:
         model.booster_.save_model(model_tmp)
         model_sha256 = hashlib.sha256(Path(model_tmp).read_bytes()).hexdigest()
-        meta = {"version": version, "features": features, "trained_through": str(cutoff),
+        meta = {"version": version, "features": features, "trained_through": str(p["d"].max()),
+                "label_end_cutoff_exclusive": str(cutoff),
                 "rows": int(len(p)), "params": params, "schema": schema,
                 "feature_schema_sha256": feature_schema_sha256,
                 "training_data_sha256": training_data_sha256, "model_sha256": model_sha256,

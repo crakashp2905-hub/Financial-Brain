@@ -6,6 +6,7 @@ import json
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from statistics import NormalDist
 
 from .options_risk import OptionLegQuote
 
@@ -22,6 +23,176 @@ class ExpiryScenario:
     def __post_init__(self) -> None:
         if not self.scenario_id.strip() or not math.isfinite(float(self.underlying_price)) or self.underlying_price < 0:
             raise OptionsSpreadError("expiry scenario requires an ID and finite non-negative underlying price")
+
+
+@dataclass(frozen=True)
+class OptionMarketStress:
+    scenario_id: str
+    minutes_to_expiry: float
+    underlying_return: float
+    iv_change: float
+    spread_multiplier: float
+    liquidity_multiplier: float
+    skew_shift_per_1pct_moneyness: float = 0.0
+
+    def __post_init__(self) -> None:
+        if (not self.scenario_id.strip() or not math.isfinite(self.minutes_to_expiry)
+                or self.minutes_to_expiry <= 0 or not math.isfinite(self.underlying_return)
+                or self.underlying_return <= -1 or not math.isfinite(self.iv_change)
+                or not math.isfinite(self.spread_multiplier) or self.spread_multiplier < 1
+                or not math.isfinite(self.liquidity_multiplier)
+                or not 0 < self.liquidity_multiplier <= 1
+                or not math.isfinite(self.skew_shift_per_1pct_moneyness)):
+            raise OptionsSpreadError("invalid option-market stress dimensions")
+
+
+def _theoretical_option_value(spot: float, strike: float, years: float,
+                              volatility: float, option_type: str) -> float:
+    if years <= 0 or volatility <= 1e-8:
+        return max(0.0, spot - strike) if option_type == "CE" else max(0.0, strike - spot)
+    root_t = math.sqrt(years)
+    d1 = (math.log(spot / strike) + volatility * volatility * years / 2) / (volatility * root_t)
+    d2 = d1 - volatility * root_t
+    cdf = NormalDist().cdf
+    if option_type == "CE":
+        return spot * cdf(d1) - strike * cdf(d2)
+    return strike * cdf(-d2) - spot * cdf(-d1)
+
+
+def stress_option_market(*, legs: tuple[OptionLegQuote, ...], lots: int, as_of: datetime,
+                         fees_inr: float, scenarios: tuple[OptionMarketStress, ...],
+                         minimum_liquidity_contracts: int = 1) -> dict[str, object]:
+    """Stress executable option-spread values under explicit expiry/news assumptions.
+
+    Theoretical marks and liquidity haircuts are uncalibrated scenarios, not fill forecasts.
+    Every leg must carry observed spot and IV; requested lots must remain within shocked
+    displayed size or the scenario has no executable exit P&L.
+    """
+    if (not legs or lots < 1 or as_of.tzinfo is None or not math.isfinite(fees_inr)
+            or fees_inr < 0 or type(minimum_liquidity_contracts) is not int
+            or minimum_liquidity_contracts < 1 or not scenarios):
+        raise OptionsSpreadError("legs, lots, aware as_of, fees, liquidity and stress scenarios are required")
+    if len({leg.leg_id for leg in legs}) != len(legs):
+        raise OptionsSpreadError("stress option legs must have unique identities")
+    entry_cash = 0.0
+    for leg in legs:
+        leg.validate(as_of=as_of, quantity=lots)
+        if (leg.underlying_price is None or not math.isfinite(leg.underlying_price)
+                or leg.underlying_price <= 0 or leg.implied_volatility is None
+                or not math.isfinite(leg.implied_volatility) or leg.implied_volatility <= 0):
+            raise OptionsSpreadError("stress requires positive observed spot and implied volatility per leg")
+        entry_cash += (-leg.ask if leg.side == "BUY" else leg.bid) * lots * leg.lot_size
+    outputs = []
+    for scenario in scenarios:
+        exit_cash = 0.0
+        unavailable: list[str] = []
+        leg_marks: list[dict[str, object]] = []
+        for leg in legs:
+            spot0, iv0 = leg.underlying_price, leg.implied_volatility
+            if spot0 is None or iv0 is None:
+                raise OptionsSpreadError("stress requires observed spot and implied volatility per leg")
+            spot = spot0 * (1 + scenario.underlying_return)
+            moneyness_pct = (leg.strike / spot - 1) * 100
+            volatility = max(0.0, iv0 + scenario.iv_change
+                             + scenario.skew_shift_per_1pct_moneyness * moneyness_pct)
+            years = scenario.minutes_to_expiry / (365 * 24 * 60)
+            mark = _theoretical_option_value(spot, leg.strike, years, volatility, leg.option_type)
+            half_spread = (leg.ask - leg.bid) / 2 * scenario.spread_multiplier
+            bid, ask = max(0.0, mark - half_spread), mark + half_spread
+            available = math.floor(min(leg.bid_qty, leg.ask_qty) * scenario.liquidity_multiplier)
+            leg_marks.append({"leg_id": leg.leg_id, "underlying_price": spot,
+                              "implied_volatility": volatility,
+                              "theoretical_premium": mark, "shocked_bid": bid,
+                              "shocked_ask": ask, "displayed_contracts": available})
+            if available < lots or available < minimum_liquidity_contracts:
+                unavailable.append(leg.leg_id)
+                continue
+            exit_cash += (bid if leg.side == "BUY" else -ask) * lots * leg.lot_size
+        can_exit = not unavailable
+        outputs.append({"scenario_id": scenario.scenario_id,
+                        "near_atm": any(leg.underlying_price is not None and
+                                        abs(leg.underlying_price - leg.strike) / leg.underlying_price <= 0.02
+                                        for leg in legs),
+                        "minutes_to_expiry": scenario.minutes_to_expiry,
+                        "spread_multiplier": scenario.spread_multiplier,
+                        "iv_change": scenario.iv_change,
+                        "skew_shift_per_1pct_moneyness": scenario.skew_shift_per_1pct_moneyness,
+                        "liquidity_multiplier": scenario.liquidity_multiplier,
+                        "leg_marks": leg_marks,
+                        "exit_available": can_exit, "unavailable_legs": unavailable,
+                        "estimated_net_pnl_inr": entry_cash + exit_cash - fees_inr if can_exit else None,
+                        "evidence_tier": "UNCALIBRATED_SCENARIO"})
+    body = {"entry_cash_flow_inr": entry_cash, "fees_inr": fees_inr, "scenarios": outputs,
+            "calibrated": False, "pricing_model": "BLACK_SCHOLES_ZERO_RATE_SCENARIO"}
+    body["report_hash"] = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"),
+                                          allow_nan=False).encode()).hexdigest()
+    return body
+
+
+def option_premium_pnl_distribution(*, stress_report: dict[str, object],
+                                    scenario_probabilities: dict[str, float]) -> dict[str, object]:
+    """Summarize probability-weighted option-premium P&L from explicit stress scenarios.
+
+    Weights are supplied by the caller and are never inferred from delta or index-point
+    returns. Because scenario marks are not fitted to a verified empirical distribution,
+    the result remains a research diagnostic until that calibration is independently done.
+    """
+    raw_scenarios = stress_report.get("scenarios")
+    if not isinstance(raw_scenarios, list) or not raw_scenarios or not scenario_probabilities:
+        raise OptionsSpreadError("stress scenarios and explicit probabilities are required")
+    if any(not isinstance(key, str) or not math.isfinite(value) or value < 0
+           for key, value in scenario_probabilities.items()):
+        raise OptionsSpreadError("scenario probabilities must be finite and non-negative")
+    if not math.isclose(sum(scenario_probabilities.values()), 1.0, rel_tol=0, abs_tol=1e-9):
+        raise OptionsSpreadError("scenario probabilities must sum to one")
+    rows: list[tuple[float, float, str]] = []
+    seen: set[str] = set()
+    for row in raw_scenarios:
+        if not isinstance(row, dict) or not isinstance(row.get("scenario_id"), str):
+            raise OptionsSpreadError("stress report contains a malformed scenario")
+        scenario_id = row["scenario_id"]
+        if scenario_id in seen:
+            raise OptionsSpreadError("stress report scenario IDs must be unique")
+        seen.add(scenario_id)
+        probability = scenario_probabilities.get(scenario_id)
+        value = row.get("estimated_net_pnl_inr")
+        if probability is None or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise OptionsSpreadError("each weighted scenario needs an executable finite premium P&L")
+        rows.append((float(value), probability, scenario_id))
+    if seen != set(scenario_probabilities):
+        raise OptionsSpreadError("probabilities must cover exactly the stress scenarios")
+    ordered = sorted(rows)
+    expected = sum(value * probability for value, probability, _ in rows)
+
+    def weighted_quantile(alpha: float) -> float:
+        cumulative = 0.0
+        for value, probability, _ in ordered:
+            cumulative += probability
+            if cumulative + 1e-12 >= alpha:
+                return value
+        return ordered[-1][0]
+
+    loss_probability = sum(probability for value, probability, _ in rows if value < 0)
+    tail_probability = 0.05
+    remaining = tail_probability
+    tail_loss = 0.0
+    for value, probability, _ in ordered:
+        take = min(probability, remaining)
+        tail_loss += value * take
+        remaining -= take
+        if remaining <= 1e-12:
+            break
+    return {"schema": "fb.option-premium-pnl-distribution.v1",
+            "unit": "INR_NET_PREMIUM_PNL", "expected_net_pnl_inr": expected,
+            "loss_probability": loss_probability,
+            "p05_net_pnl_inr": weighted_quantile(0.05),
+            "p50_net_pnl_inr": weighted_quantile(0.50),
+            "p95_net_pnl_inr": weighted_quantile(0.95),
+            "worst_5pct_mean_net_pnl_inr": tail_loss / tail_probability,
+            "scenario_probabilities": dict(sorted(scenario_probabilities.items())),
+            "scenario_net_pnl_inr": {scenario_id: value for value, _, scenario_id in rows},
+            "calibrated": False,
+            "expected_pnl_basis": "REPRICED_OPTION_PREMIUM_WITH_STRESSED_BID_ASK_FEES_AND_DEPTH"}
 
 
 def evaluate_executable_spread(*, entry_legs: tuple[OptionLegQuote, ...],

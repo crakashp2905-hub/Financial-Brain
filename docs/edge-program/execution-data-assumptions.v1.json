@@ -1,0 +1,37 @@
+{
+  "schema": "fb.execution_data_assumptions.v1",
+  "purpose": "Separate simulation assumptions from broker semantics and connect quote fixtures to source-specific rights records. This manifest documents assumptions; it does not grant rights or enable broker orders.",
+  "market_data_rights_register": "docs/edge-program/data-permissions.v1.json",
+  "fixture_sources": [
+    {
+      "fixture": "docs/forward-edge/fixtures/session-cases.v1.json",
+      "source_class": "SYNTHETIC_FIXTURE",
+      "rights_permission_source_id": null,
+      "rights_status": "NOT_APPLICABLE_SYNTHETIC",
+      "retention": "repository_fixture",
+      "redistribution": "repository_controlled"
+    }
+  ],
+  "execution_assumptions": {
+    "paper_exchange": {
+      "queue_position": "UNKNOWN_UNMODELED",
+      "order_arrival": "decision_time_plus_configured_latency",
+      "partial_fills": "capped_by_observed_visible_depth_or_explicit_volume_participation",
+      "cancel_request": "does_not_cancel_until_cancel_confirmation_event",
+      "cancel_acknowledgement": "simulated_exchange_event; not broker calibrated"
+    },
+    "broker": {
+      "cancel_endpoint": "Kite DELETE /orders/regular/{order_id}",
+      "runtime_policy": "PHYSICALLY_DISABLED",
+      "cancel_acceptance": "unknown until broker order-state reconciliation confirms terminal state",
+      "cancel_latency": "unmeasured",
+      "cancel_fill_race": "order can fill while cancellation is pending"
+    },
+    "multi_leg": {
+      "atomic_exchange_combo_order": "NOT_ASSUMED",
+      "legging_modes": ["COMPLETE_ALL_LEGS", "CANCEL_REMAINDER", "UNWIND_FILLED_LEGS"],
+      "intermediate_exposure": "must be modeled and risk checked before any live authorization",
+      "broker_margin": "unverified unless sourced reconciliation evidence is attached"
+    }
+  }
+}

@@ -211,6 +211,9 @@ def record_signal_decision(*, runner: ForwardSessionRunner, session_id: str,
                 or selection[0]["symbol"] != signal.instrument_id
                 or selection[0]["quantity"] != signal.shares):
             raise PaperBookAdapterError("manifest selection or horizon differs from the paper-book signal")
+        if config.mode == "LIVE_PAPER":
+            payload["expected_value_forecast"] = _expected_value_forecast(
+                manifest, candidate_id=decision_id, version=1)
         runner.decide(session_id=session_id, strategy_id=signal.version, decision_id=decision_id,
                       outcome="TRADE", input_event_ids=(quote_event_id,), decided_at=decided_at,
                       payload=payload)
@@ -362,6 +365,43 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
         marks.append((signal, held, event, last, reason))
         if reason is not None:
             output.append(PaperBookExit(signal, reason, held, event.event_id, bid))
+    # Persist sourced per-position evaluations before updating the legacy book projection. If a
+    # process stops between these stores, replaying the same observation is idempotent and can
+    # safely reapply the mark; the audit never represents an exit fill.
+    for signal, held, event, last, reason in marks:
+        quote = executable_quote(event)
+        assert quote is not None  # validated above for every mark
+        monitor_record = {
+            "session_id": session_id,
+            "signal_id": signal.signal_id,
+            "book_version": version,
+            "book_mode": mode,
+            "exchange_date": exchange_date.isoformat(),
+            "instrument_id": event.instrument_id,
+            "quote_event_id": event.event_id,
+            "quote_source": event.source,
+            "quote_venue": event.venue,
+            "exchange_at": event.exchange_at.isoformat() if event.exchange_at else None,
+            "received_at": event.received_at.isoformat(),
+            "available_at": event.available_at.isoformat(),
+            "bid": float(quote["bid"]),
+            "ask": float(quote["ask"]),
+            "bid_quantity": quote["bid_quantity"],
+            "ask_quantity": quote["ask_quantity"],
+            "bid_levels": [[str(price), amount] for price, amount in quote["bid_levels"]],
+            "ask_levels": [[str(price), amount] for price, amount in quote["ask_levels"]],
+            "quote_event_sha256": event.sha256(),
+            "last_price": last,
+            "stop_price": cast(float, signal.stop_price),
+            "completed_sessions_held": held,
+            "horizon_sessions": signal.horizon_sessions,
+            "evaluation": reason or "HOLD",
+        }
+        identity = json.dumps(monitor_record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        monitor_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        runner.record_position_monitor_sample(
+            session_id=session_id, monitor_id=monitor_id,
+            occurred_at=event.available_at, record=monitor_record)
     book.execute("BEGIN TRANSACTION")
     try:
         for signal, held, _event, last, _ in marks:
@@ -372,6 +412,15 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
     except Exception:
         book.execute("ROLLBACK")
         raise
+    latest_mark = max(marks, key=lambda row: (row[2].available_at, row[2].event_id), default=None)
+    heartbeat_at = runner.clock.now()
+    runner.record_component_heartbeat(
+        session_id=session_id, component="position_monitor",
+        heartbeat_id=(f"position-monitor:{exchange_date.isoformat()}:{heartbeat_at.isoformat()}"
+                      f":{latest_mark[2].event_id if latest_mark else 'empty'}"),
+        occurred_at=heartbeat_at,
+        last_good_event_id=latest_mark[2].event_id if latest_mark else None,
+        last_good_event_at=latest_mark[2].available_at if latest_mark else None)
     return tuple(output)
 
 
@@ -412,11 +461,30 @@ def record_exit_decision(*, runner: ForwardSessionRunner, session_id: str, exit_
     payload = signal.payload() | {"side": "SELL", "exit_reason": exit_signal.reason,
                                   "completed_sessions_held": exit_signal.completed_sessions_held,
                                   "exit_bid_price": exit_signal.bid_price}
+    if config.mode == "LIVE_PAPER":
+        payload["expected_value_forecast"] = _expected_value_forecast(
+            manifest, candidate_id=decision_id, version=1)
     runner.decide(session_id=session_id, strategy_id=signal.version, decision_id=decision_id,
                   outcome="TRADE", input_event_ids=(exit_signal.quote_event_id,),
                   decided_at=decided_at, payload=payload)
     runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
     return decision_id
+
+
+def _expected_value_forecast(manifest: dict[str, Any], *, candidate_id: str, version: int) -> dict[str, Any]:
+    """Copy the canonical, dated EV fields into the decision before publishing its manifest."""
+    try:
+        gross = Decimal(manifest["predicted_return_fraction"])
+        costs = Decimal(manifest["predicted_cost_fraction"])
+    except (KeyError, InvalidOperation, TypeError) as exc:
+        raise PaperBookAdapterError("LIVE_PAPER book candidate manifest needs expected-value fields") from exc
+    return {"candidate_id": candidate_id, "version": version,
+            "forecasted_at_utc": manifest["decision_at_utc"],
+            "predicted_return_fraction": manifest["predicted_return_fraction"],
+            "predicted_cost_fraction": manifest["predicted_cost_fraction"],
+            "expected_net_fraction": str(gross - costs), "forecast": manifest["forecast"],
+            "model_sha256": manifest["model_sha256"],
+            "cost_model_sha256": manifest["cost_model_sha256"]}
 
 
 def reconcile_exit_receipt(*, book: Any, runner: ForwardSessionRunner, session_id: str,

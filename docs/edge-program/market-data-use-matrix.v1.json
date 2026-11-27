@@ -1,0 +1,1262 @@
+{
+  "schema": "fb.market_data_use_matrix.v1",
+  "as_of": "2026-11-26",
+  "source_registry_sha256": "9405e33fc1a4620e0fce931f5d7b072f0a30887e379d223a10ad1955e93a14b1",
+  "permission_register_sha256": "5c896615d53afbc433cc2d6171767e1b5e3007ef0e09e5ff26b29040c977436e",
+  "rights_review_sha256": "4509e8af78877e60f231d376bbed35bf04b5826f9a876975c38e352a7a6ef41c",
+  "dimension_definitions": {
+    "private_research": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "retained_history": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "real_time_algorithmic_use": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "derivatives_depth": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "synthetic_or_replay": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "paper_simulation": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "redistribution": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
+    "permitted_retention_period": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced."
+  },
+  "source_count": 17,
+  "synthetic_fixture_rows_are_not_provider_sources": true,
+  "sources": [
+    {
+      "source_id": "amfi_mutual_fund_nav",
+      "provider": "AMFI NAV publication",
+      "category": "fund_nav",
+      "products": [
+        "daily mutual-fund scheme NAV and identifiers"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "amfi_mutual_fund_nav",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "bse_announcements_actions_filings",
+      "provider": "BSE corporate disclosures and archive",
+      "category": "issuer_fundamental_and_event_data",
+      "products": [
+        "announcements",
+        "corporate actions",
+        "filing attachments"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "bse_announcements_actions_filings",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "bse_equity_bhavcopy",
+      "provider": "BSE archive",
+      "category": "exchange_eod_prices",
+      "products": [
+        "daily equity OHLCV and BSE security codes"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "bse_equity_bhavcopy",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "expired_options_history_and_chain",
+      "provider": "No provider configured",
+      "category": "derivatives_history",
+      "products": [
+        "historical option chains, expired contracts, and historical option depth"
+      ],
+      "source_access_status": "MISSING",
+      "permission_source_id": "expired_options_history_and_chain",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "No product-specific derivatives depth entitlement or use permission is recorded."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "fred_macro_series",
+      "provider": "Federal Reserve Bank of St. Louis FRED",
+      "category": "macro_context",
+      "products": [
+        "USD/INR, crude, rates, CPI, reserves, credit, and commodity series"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "fred_macro_series",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "kite_connect_quotes_history_instruments",
+      "provider": "Zerodha Kite Connect",
+      "category": "broker_api_market_data",
+      "products": [
+        "live LTP/OHLC/full quotes and visible top-of-book",
+        "historical candles",
+        "instrument master"
+      ],
+      "source_access_status": "LICENSED",
+      "permission_source_id": "KITE_CONNECT_READ_ONLY",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "No product-specific derivatives depth entitlement or use permission is recorded."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "local_kite_quote_archive",
+      "provider": "Local archive populated from Kite Connect quote snapshots",
+      "category": "local_market_data_archive",
+      "products": [
+        "normalized historical quote observations"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "local_kite_quote_archive",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "moneycontrol_news_headlines",
+      "provider": "Moneycontrol",
+      "category": "news_and_sentiment_context",
+      "products": [
+        "headline and limited article metadata for links referenced by filings"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "moneycontrol_news_headlines",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "mospi_cpi_iip",
+      "provider": "Ministry of Statistics and Programme Implementation API",
+      "category": "macro_context",
+      "products": [
+        "CPI and IIP series"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "mospi_cpi_iip",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nifty_indices_tri_and_constituents",
+      "provider": "NSE Indices / niftyindices.com",
+      "category": "benchmark_and_constituent_data",
+      "products": [
+        "total-return index history",
+        "current constituent snapshots"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "nifty_indices_tri_and_constituents",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nse_delivery_mto",
+      "provider": "NSE archive",
+      "category": "exchange_eod_market_activity",
+      "products": [
+        "daily security-wise delivery quantities and delivery percentage"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "nse_delivery_mto",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nse_equity_bhavcopy",
+      "provider": "NSE archive",
+      "category": "exchange_eod_prices",
+      "products": [
+        "daily equity OHLCV and security reference fields"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "nse_equity_bhavcopy",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nse_financial_results_xbrl",
+      "provider": "NSE corporate filings and archive hosts",
+      "category": "issuer_fundamental_and_event_data",
+      "products": [
+        "financial-results filing index",
+        "XBRL instances",
+        "dissemination timestamps"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "nse_financial_results_xbrl",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nse_licensed_realtime_depth",
+      "provider": "NSE commercial market-data products",
+      "category": "licensed_realtime_market_depth",
+      "products": [
+        "licensed L1/L2/L3 and tick/order-book data"
+      ],
+      "source_access_status": "MISSING",
+      "permission_source_id": "nse_licensed_realtime_depth",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "No product-specific derivatives depth entitlement or use permission is recorded."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "nse_reference_and_fno_files",
+      "provider": "NSE archive",
+      "category": "exchange_reference_and_risk_data",
+      "products": [
+        "index closes and valuation fields",
+        "equity security list",
+        "F&O market lots",
+        "F&O ban list"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "nse_reference_and_fno_files",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "No product-specific derivatives depth entitlement or use permission is recorded."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "screener_company_ratios",
+      "provider": "Screener.in",
+      "category": "third_party_fundamentals",
+      "products": [
+        "company headline ratios and summary fields"
+      ],
+      "source_access_status": "UNVERIFIED",
+      "permission_source_id": "screener_company_ratios",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "us_equity_market_data",
+      "provider": "No provider configured",
+      "category": "international_equity_market_data",
+      "products": [
+        "US equity/index prices and cross-market reference data"
+      ],
+      "source_access_status": "MISSING",
+      "permission_source_id": "us_equity_market_data",
+      "uses": {
+        "private_research": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "retained_history": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "real_time_algorithmic_use": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "permission_use": null,
+          "evidence_ref": null,
+          "scope_gap": "This source/product does not provide derivatives depth."
+        },
+        "synthetic_or_replay": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "RESEARCH+RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "Replay of provider history inherits source retention/research restrictions; generated synthetic fixtures are separately listed."
+        },
+        "paper_simulation": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "PAPER_SIMULATION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "redistribution": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "permission_use": "REDISTRIBUTION",
+          "evidence_ref": "docs/edge-program/market-data-sources.v1.json",
+          "scope_gap": "No source-specific approved-use evidence is recorded."
+        },
+        "permitted_retention_period": {
+          "status": "UNKNOWN_RIGHTS",
+          "blocks_operational_use": true,
+          "period": null,
+          "permission_use": "RETENTION",
+          "evidence_ref": "docs/edge-program/data-permissions.v1.json",
+          "scope_gap": "No permission period, expiry, purge rule or post-subscription retention duration is recorded."
+        }
+      }
+    },
+    {
+      "source_id": "LOCAL_DETERMINISTIC_SYNTHETIC_FIXTURES",
+      "provider": "Financial Brain test fixtures",
+      "category": "synthetic_test_data",
+      "products": [
+        "deterministic synthetic prices/events; no observed exchange records"
+      ],
+      "source_access_status": "LOCAL_FIXTURE",
+      "permission_source_id": null,
+      "uses": {
+        "private_research": {
+          "status": "SYNTHETIC_ONLY_ALLOWED",
+          "blocks_operational_use": false,
+          "scope_gap": "Local deterministic software-test fixtures only; not market evidence or a live-paper data source."
+        },
+        "retained_history": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "scope_gap": "Synthetic fixtures do not grant provider data rights or represent live executable quotes."
+        },
+        "real_time_algorithmic_use": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "scope_gap": "Synthetic fixtures do not grant provider data rights or represent live executable quotes."
+        },
+        "derivatives_depth": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "scope_gap": "Synthetic fixtures do not grant provider data rights or represent live executable quotes."
+        },
+        "synthetic_or_replay": {
+          "status": "SYNTHETIC_ONLY_ALLOWED",
+          "blocks_operational_use": false,
+          "scope_gap": "Local deterministic software-test fixtures only; not market evidence or a live-paper data source."
+        },
+        "paper_simulation": {
+          "status": "SYNTHETIC_ONLY_ALLOWED",
+          "blocks_operational_use": false,
+          "scope_gap": "Local deterministic software-test fixtures only; not market evidence or a live-paper data source."
+        },
+        "redistribution": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "scope_gap": "Synthetic fixtures do not grant provider data rights or represent live executable quotes."
+        },
+        "permitted_retention_period": {
+          "status": "NOT_APPLICABLE",
+          "blocks_operational_use": true,
+          "scope_gap": "Synthetic fixtures do not grant provider data rights or represent live executable quotes."
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "This is an operational deny-by-default matrix, not legal advice or a permission grant.",
+    "Paid subscription, public download and technical accessibility do not imply rights for a listed use.",
+    "Real-time algorithmic/non-display use and derivatives depth need explicit, source-specific contract scope.",
+    "Only generated deterministic fixtures are marked synthetic-only allowed; historic/provider-data replay inherits provider restrictions."
+  ]
+}

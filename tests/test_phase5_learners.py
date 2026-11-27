@@ -14,8 +14,10 @@ def panel(n_dates=150, n=150, seed=0):
     rows = []
     for k in range(n_dates):
         d = date(2018, 1, 1) + timedelta(days=14 * k)
+        label_end_20 = d + timedelta(days=280)
         a = rng.normal(0, 1, n)
-        rows.append(pd.DataFrame({"d": d, "lineage": [f"L{i}" for i in range(n)], "adv20": 1e9, "a": a,
+        rows.append(pd.DataFrame({"d": d, "label_end_20": label_end_20,
+                                  "lineage": [f"L{i}" for i in range(n)], "adv20": 1e9, "a": a,
                                   "b": rng.normal(0, 1, n), "mom_12_1": a, "roc_20": rng.normal(0, 1, n),
                                   "fwd20": 0.02 * a + rng.normal(0, 0.05, n)}))
     return pd.concat(rows, ignore_index=True)

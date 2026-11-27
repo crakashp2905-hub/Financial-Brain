@@ -856,12 +856,12 @@
       "wave": "F05",
       "status": "PARTIAL",
       "tests": [
-        "test_sensitivity_reports_required_multipliers_and_net_profit_survival",
-        "test_unobserved_assumptions_are_marked_uncalibrated",
+        "test_sensitivity_builds_independent_cost_and_slippage_grid",
+        "test_depth_must_be_best_to_worst_and_uncalibrated_without_quote",
         "test_missing_or_invalid_estimates_fail_closed"
       ],
       "blockers": [],
-      "note": "Reports net P&L under fixed 1x/1.5x/2x slippage and impact multipliers including existing statutory/broker fees. Calibration is provenance-labeled; actual observed base estimates and attachment to profit claims remain outstanding."
+      "note": "Reports net outcomes across independent cost and slippage stress grids, with observed quote spread/depth establishing an execution floor. Calibration is provenance-labeled; prospective size/time impact and attachment to profit claims remain outstanding."
     },
     {
       "id": "FE-0062",

@@ -39,3 +39,38 @@ def test_prefix_output_survives_future_perturbations_and_detects_leakage() -> No
     leaky = lambda xs: [x + xs[-1] for x in xs]
     with pytest.raises(LookaheadError, match="future data perturbation"):
         assert_prefix_invariant(values, leaky, split=3, perturbation=[400, -500])
+
+
+def test_future_mutation_preserves_combined_feature_and_intended_order_bytes() -> None:
+    rows = [
+        {"close": 100.0, "available_at": NOW.isoformat()},
+        {"close": 101.0, "available_at": (NOW + timedelta(minutes=1)).isoformat()},
+        {"close": 99.0, "available_at": (NOW + timedelta(minutes=2)).isoformat()},
+        {"close": 103.0, "available_at": (NOW + timedelta(minutes=3)).isoformat()},
+    ]
+
+    def evaluate(source):
+        features = [{"return": row["close"] / source[max(index - 1, 0)]["close"] - 1}
+                    for index, row in enumerate(source)]
+        orders = [{"side": "BUY" if feature["return"] > 0 else "HOLD"}
+                  for feature in features]
+        return {"features": features, "intended_orders": orders}
+
+    assert_prefix_invariant(rows, evaluate, split=2,
+                            perturbation=[{"close": -999.0, "available_at": "future-a"},
+                                          {"close": 5000.0, "available_at": "future-b"}])
+
+    def uses_future(source):
+        result = evaluate(source)
+        result["features"][0]["future_close"] = source[-1]["close"]
+        return result
+
+    with pytest.raises(LookaheadError, match="future data perturbation"):
+        assert_prefix_invariant(rows, uses_future, split=2,
+                                perturbation=[{"close": -999.0, "available_at": "future-a"},
+                                              {"close": 5000.0, "available_at": "future-b"}])
+
+
+def test_prefix_comparison_rejects_non_finite_outputs() -> None:
+    with pytest.raises(LookaheadError, match="deterministic finite JSON"):
+        assert_prefix_invariant([1, 2], lambda _: [float("nan"), 2], split=1, perturbation=[3])

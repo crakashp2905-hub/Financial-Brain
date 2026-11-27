@@ -21,13 +21,25 @@ class DurableSessionJournal:
             sequence INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL,
             record_id TEXT NOT NULL, kind TEXT NOT NULL, occurred_at TEXT NOT NULL,
             record_sha256 TEXT NOT NULL, record_json TEXT NOT NULL,
+            previous_event_sha256 TEXT NOT NULL DEFAULT '', event_sha256 TEXT NOT NULL DEFAULT '',
             UNIQUE(session_id, record_id))""")
-        self.connection.executescript("""
+        columns = {row[1] for row in self.connection.execute("PRAGMA table_info(runner_audit_log)")}
+        # Older journals remain readable, but backfill a deterministic chain before writes.
+        if "previous_event_sha256" not in columns:
+            self.connection.execute("ALTER TABLE runner_audit_log ADD COLUMN previous_event_sha256 TEXT NOT NULL DEFAULT ''")
+        if "event_sha256" not in columns:
+            self.connection.execute("ALTER TABLE runner_audit_log ADD COLUMN event_sha256 TEXT NOT NULL DEFAULT ''")
+        # Existing databases may already have immutability triggers from the older schema.
+        self.connection.executescript("DROP TRIGGER IF EXISTS runner_audit_no_update; DROP TRIGGER IF EXISTS runner_audit_no_delete;")
+        try:
+            self._backfill_hash_chains()
+        finally:
+            self.connection.executescript("""
             CREATE TRIGGER IF NOT EXISTS runner_audit_no_update
             BEFORE UPDATE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
             CREATE TRIGGER IF NOT EXISTS runner_audit_no_delete
             BEFORE DELETE ON runner_audit_log BEGIN SELECT RAISE(ABORT, 'audit log is append-only'); END;
-        """)
+            """)
 
     @staticmethod
     def canonical(record: dict[str, Any]) -> tuple[str, str]:
@@ -36,6 +48,31 @@ class DurableSessionJournal:
         except (TypeError, ValueError) as exc:
             raise DurableJournalError(f"record is not canonical JSON: {exc}") from exc
         return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _chain_hash(previous: str, sequence: int, session_id: str, record_id: str,
+                    kind: str, occurred_at: str, record_sha256: str) -> str:
+        body = json.dumps({"sequence": sequence, "session_id": session_id, "record_id": record_id,
+                           "kind": kind, "occurred_at": occurred_at, "record_sha256": record_sha256,
+                           "previous_event_sha256": previous}, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    def _backfill_hash_chains(self) -> None:
+        sessions = self.connection.execute("SELECT DISTINCT session_id FROM runner_audit_log").fetchall()
+        for (session_id,) in sessions:
+            previous = "0" * 64
+            rows = self.connection.execute(
+                "SELECT sequence,record_id,kind,occurred_at,record_sha256,previous_event_sha256,event_sha256 "
+                "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()
+            for sequence, record_id, kind, occurred_at, record_sha, prior, event_hash in rows:
+                expected = self._chain_hash(previous, sequence, session_id, record_id, kind, occurred_at, record_sha)
+                if event_hash and (prior != previous or event_hash != expected):
+                    raise DurableJournalError(f"audit hash chain is corrupt for session {session_id} sequence {sequence}")
+                if not event_hash:
+                    self.connection.execute(
+                        "UPDATE runner_audit_log SET previous_event_sha256=?,event_sha256=? WHERE sequence=?",
+                        [previous, expected, sequence])
+                previous = expected
 
     def append_audit(self, *, session_id: str, kind: str, record_id: str,
                      occurred_at: datetime, record: dict[str, Any]) -> bool:
@@ -52,11 +89,18 @@ class DurableSessionJournal:
             if previous[0] != digest:
                 raise DurableJournalError("append-only audit record conflicts with prior evidence")
             return False
+        head_row = self.connection.execute(
+            "SELECT event_sha256 FROM runner_audit_log WHERE session_id=? ORDER BY sequence DESC LIMIT 1",
+            [session_id]).fetchone()
+        chain_previous = head_row[0] if head_row else "0" * 64
+        occurred = occurred_at.astimezone(timezone.utc).isoformat()
+        sequence = int(self.connection.execute("SELECT COALESCE(MAX(sequence),0)+1 FROM runner_audit_log").fetchone()[0])
+        event_hash = self._chain_hash(chain_previous, sequence, session_id, stable_id, kind, occurred, digest)
         self.connection.execute(
             "INSERT INTO runner_audit_log "
-            "(session_id, record_id, kind, occurred_at, record_sha256, record_json) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [session_id, stable_id, kind, occurred_at.astimezone(timezone.utc).isoformat(), digest, canonical])
+            "(session_id, record_id, kind, occurred_at, record_sha256, record_json, previous_event_sha256, event_sha256) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [session_id, stable_id, kind, occurred, digest, canonical, chain_previous, event_hash])
         return True
 
     def append_lifecycle_record(self, *, session_id: str, kind: str, event_id: str,
@@ -91,10 +135,26 @@ class DurableSessionJournal:
 
     def audit_records(self, session_id: str) -> list[dict[str, Any]]:
         rows = self.connection.execute(
-            "SELECT sequence, record_id, kind, occurred_at, record_sha256, record_json "
+            "SELECT sequence, record_id, kind, occurred_at, record_sha256, record_json, "
+            "previous_event_sha256,event_sha256 "
             "FROM runner_audit_log WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()
-        return [{"kind": row[2], "record_id": row[1], "occurred_at": row[3],
-                 "record_sha256": row[4], "record": json.loads(row[5])} for row in rows]
+        result = []
+        previous = "0" * 64
+        for row in rows:
+            sequence, record_id, kind, occurred, record_sha, record_json, prior, event_hash = row
+            try:
+                payload = json.loads(record_json)
+            except json.JSONDecodeError as exc:
+                raise DurableJournalError("audit record JSON is corrupt") from exc
+            _, actual_record_sha = self.canonical(payload)
+            expected = self._chain_hash(previous, sequence, session_id, record_id, kind, occurred, record_sha)
+            if actual_record_sha != record_sha or prior != previous or event_hash != expected:
+                raise DurableJournalError(f"audit hash chain verification failed for sequence {sequence}")
+            result.append({"kind": kind, "record_id": record_id, "occurred_at": occurred,
+                           "record_sha256": record_sha, "previous_event_sha256": prior,
+                           "event_sha256": event_hash, "record": payload})
+            previous = event_hash
+        return result
 
 
 __all__ = ["DurableJournalError", "DurableSessionJournal"]

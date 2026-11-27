@@ -36,6 +36,7 @@ class StrategyEconomicsRule:
     calibration_end: date
     evidence_sha256: str
     rule_version: str
+    safety_margin_inr: Decimal = Decimal(0)
 
     def __post_init__(self) -> None:
         for name in ("strategy_id", "strategy_version", "rule_version"):
@@ -43,14 +44,18 @@ class StrategyEconomicsRule:
                 raise StrategyEconomicsGateError(f"{name} is required")
         ratio = _decimal("minimum_net_reward_to_risk", self.minimum_net_reward_to_risk)
         expected = _decimal("minimum_expected_net_inr", self.minimum_expected_net_inr)
+        safety = _decimal("safety_margin_inr", self.safety_margin_inr)
         if ratio < 0:
             raise StrategyEconomicsGateError("minimum_net_reward_to_risk cannot be negative")
+        if expected < 0 or safety < 0:
+            raise StrategyEconomicsGateError("net threshold and safety margin cannot be negative")
         if self.calibration_start >= self.calibration_end:
             raise StrategyEconomicsGateError("calibration period must have positive duration")
         if not _SHA256.fullmatch(self.evidence_sha256):
             raise StrategyEconomicsGateError("evidence_sha256 must be lowercase SHA-256")
         object.__setattr__(self, "minimum_net_reward_to_risk", ratio)
         object.__setattr__(self, "minimum_expected_net_inr", expected)
+        object.__setattr__(self, "safety_margin_inr", safety)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,9 +78,14 @@ def evaluate_strategy_economics(
         raise StrategyEconomicsGateError("rule does not match strategy identity/version")
     expected = _decimal("expected_net_inr", expected_net_inr)
     reasons: list[str] = []
+    required_net = rule.minimum_expected_net_inr + rule.safety_margin_inr
     if economics.estimated_net_reward_to_risk < rule.minimum_net_reward_to_risk:
         reasons.append("NET_REWARD_RISK_BELOW_STRATEGY_THRESHOLD")
-    if expected < rule.minimum_expected_net_inr:
+    if economics.estimated_net_reward_inr <= 0:
+        reasons.append("QUANTITY_BOUND_GROSS_OPPORTUNITY_ERASED_BY_COSTS")
+    elif economics.estimated_net_reward_inr < required_net:
+        reasons.append("QUANTITY_BOUND_NET_BELOW_THRESHOLD_AND_SAFETY_MARGIN")
+    if expected < required_net:
         reasons.append("EXPECTED_NET_BELOW_STRATEGY_THRESHOLD")
     return StrategyEconomicsDecision(not reasons, tuple(reasons))
 

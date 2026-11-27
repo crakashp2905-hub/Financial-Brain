@@ -150,10 +150,16 @@ def fundamental_factors(earnings_yield: float, roe: float, eps_growth: float) ->
 # FB-0354: dividend adjustment of a price series. The price before each ex-date is scaled by (1 - dividend/price).
 def adjust_for_dividends(prices: Sequence[float], dividends: Mapping[int, float]) -> list[float]:
     adjusted = list(prices)
+    if any(not math.isfinite(price) or price <= 0 for price in adjusted):
+        raise ValueError("prices must be finite and positive")
     for idx in sorted(dividends, reverse=True):
-        if not 0 < idx < len(prices):
+        if type(idx) is not int or not 0 < idx < len(prices):
             raise ValueError("ex-date index out of range")
-        factor = 1.0 - dividends[idx] / prices[idx]
+        dividend = dividends[idx]
+        previous_close = prices[idx - 1]
+        if not math.isfinite(dividend) or not 0 < dividend < previous_close:
+            raise ValueError("dividend must be finite, positive, and below the prior close")
+        factor = 1.0 - dividend / previous_close
         for i in range(idx):
             adjusted[i] *= factor
     return adjusted

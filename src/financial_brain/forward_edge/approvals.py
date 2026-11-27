@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 APPROVAL_KINDS = frozenset({
     "STRATEGY_ENROLLMENT", "ACCOUNT", "VENUE", "LEVERAGE", "CAPITAL", "LIVE_CASH_ENABLE",
     "PROTECTED_TRIAL", "TRIAL_BUDGET_AMENDMENT", "Q1_PROTOCOL_AMENDMENT",
-    "MICRO_RISK_BUDGET", "DISARM_RESET", "DATA_EXCLUSION_REVIEW",
+    "MICRO_RISK_BUDGET", "DISARM_RESET", "DATA_EXCLUSION_REVIEW", "HOLDOUT_ACCESS",
 })
 #: Actor identifiers that name software, not a person. Matched case-insensitively at the start of the id.
 _AGENT_ID = re.compile(r"^(agent|ai|llm|bot|claude|gpt|assistant|system|automation|cron|ci|script|model)([:/_\- ]|$)",
@@ -35,6 +35,7 @@ class Approval:
     approved_at_utc: datetime
     expires_at_utc: datetime
     adr_ref: str | None = None
+    signature_b64: str | None = None
 
 
 def is_agent_actor(actor_id: str, actor_type: str) -> bool:

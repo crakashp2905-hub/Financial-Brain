@@ -4,6 +4,7 @@
   "product": "Financial-Brain",
   "purpose": "Support trader research and decision-making through evidence-labelled signals, risk controls, paper execution and honest net-economic evaluation.",
   "success_criteria": [
+    "Positive expected and realized prospective risk-adjusted net value after full applicable costs; historical results are not substitutes, and daily positive P&L or signal frequency is not a success criterion.",
     "Risk-aware net economic results are evaluated on future observations after realistic costs.",
     "NO_TRADE and CASH are valid outcomes; the system does not force a recommendation.",
     "Historical replay, deterministic fixture, local paper, prospective observation and independent attestation remain distinct evidence classes."
@@ -17,42 +18,85 @@
   "desks": [
     {
       "desk": "SWING",
-      "products": ["EQUITY"],
+      "products": [
+        "EQUITY"
+      ],
       "clock": "EXCHANGE_SESSION_AND_MULTI_SESSION_HOLDING",
-      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "permitted_paper_actions": [
+        "BUY",
+        "SELL_EXISTING_POSITION",
+        "NO_TRADE",
+        "CASH"
+      ],
       "execution_mechanics": "Exchange-traded share quantities and executable quote assumptions.",
       "implementation_claim": "SCOPE_ONLY"
     },
     {
       "desk": "INTRADAY",
-      "products": ["EQUITY"],
+      "products": [
+        "EQUITY"
+      ],
       "clock": "EXCHANGE_SESSION_INTRADAY",
-      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "permitted_paper_actions": [
+        "BUY",
+        "SELL_EXISTING_POSITION",
+        "NO_TRADE",
+        "CASH"
+      ],
       "execution_mechanics": "Exchange-traded share quantities, session-aware quotes, fees and simulated fills.",
       "implementation_claim": "SCOPE_ONLY"
     },
     {
       "desk": "OPTIONS",
-      "products": ["OPTION"],
+      "products": [
+        "OPTION"
+      ],
       "clock": "CONTRACT_EXPIRY_AND_EXCHANGE_SESSION",
-      "permitted_paper_actions": ["BUY_CALL", "BUY_PUT", "DEFINED_RISK_DEBIT_SPREAD", "CLOSE", "NO_TRADE", "CASH"],
+      "permitted_paper_actions": [
+        "BUY_CALL",
+        "BUY_PUT",
+        "DEFINED_RISK_DEBIT_SPREAD",
+        "CLOSE",
+        "NO_TRADE",
+        "CASH"
+      ],
       "execution_mechanics": "Contract- and lot-aware multi-leg simulation with executable leg prices and explicit expiry/settlement risk.",
-      "prohibited_until_separately_modelled": ["NAKED_OPTION_WRITING", "UNMODELLED_PHYSICAL_SETTLEMENT", "UNBOUNDED_RISK"],
+      "prohibited_until_separately_modelled": [
+        "NAKED_OPTION_WRITING",
+        "UNMODELLED_PHYSICAL_SETTLEMENT",
+        "UNBOUNDED_RISK"
+      ],
       "implementation_claim": "SCOPE_ONLY"
     },
     {
       "desk": "ETF",
-      "products": ["ETF"],
+      "products": [
+        "ETF"
+      ],
       "clock": "EXCHANGE_SESSION_WITH_OPTIONAL_MULTI_SESSION_HOLDING",
-      "permitted_paper_actions": ["BUY", "SELL_EXISTING_POSITION", "NO_TRADE", "CASH"],
+      "permitted_paper_actions": [
+        "BUY",
+        "SELL_EXISTING_POSITION",
+        "NO_TRADE",
+        "CASH"
+      ],
       "execution_mechanics": "Exchange-traded whole units; executable market prices are distinct from NAV and underlying index values.",
       "implementation_claim": "SCOPE_ONLY"
     },
     {
       "desk": "MUTUAL_FUND",
-      "products": ["CONVENTIONAL_OPEN_ENDED_MUTUAL_FUND"],
+      "products": [
+        "CONVENTIONAL_OPEN_ENDED_MUTUAL_FUND"
+      ],
       "clock": "SCHEME_BUSINESS_DAY_CUTOFF_NAV_PUBLICATION_AND_SETTLEMENT",
-      "permitted_paper_actions": ["SUBSCRIBE", "REDEEM", "SWITCH", "HOLD", "NO_TRADE", "CASH"],
+      "permitted_paper_actions": [
+        "SUBSCRIBE",
+        "REDEEM",
+        "SWITCH",
+        "HOLD",
+        "NO_TRADE",
+        "CASH"
+      ],
       "execution_mechanics": "NAV- and cutoff-based order lifecycle; never exchange ticks, intraday matching or assumed same-day fills.",
       "implementation_claim": "SCOPE_ONLY"
     }
@@ -67,5 +111,18 @@
     "Automatic physical broker orders",
     "Guaranteed returns or forced daily recommendations",
     "Treating exchange prices and mutual-fund NAV as interchangeable execution prices"
-  ]
+  ],
+  "business_objective": {
+    "objective": "Seek positive expected and realized prospective risk-adjusted net value after all applicable transaction, financing, slippage, tax and operating costs, measured on frozen prospective observations against a defined benchmark and risk budget.",
+    "evaluation_requirements": [
+      "Expected value and realized prospective value are reported separately and both must be positive after full costs for a success claim.",
+      "Risk adjustment, benchmark, evaluation window, cost model and uncertainty method are fixed before the prospective observation window.",
+      "Historical replay and historical paper results can inform hypotheses but cannot substitute for prospective realization."
+    ],
+    "non_objectives": [
+      "Positive P&L on every day or every trade.",
+      "Trading every signal or maximizing trade frequency.",
+      "Treating a declaration of this objective as evidence that profitability has been achieved."
+    ]
+  }
 }

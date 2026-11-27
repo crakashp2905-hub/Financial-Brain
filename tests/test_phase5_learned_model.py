@@ -13,8 +13,10 @@ def panel(n_dates=120, n=200, seed=0):
     rows = []
     for k in range(n_dates):
         d = date(2020, 1, 1) + timedelta(days=7 * k)
+        label_end_20 = d + timedelta(days=140)
         a = rng.normal(0, 1, n)
-        rows.append(pd.DataFrame({"d": d, "lineage": [f"L{i}" for i in range(n)], "a": a, "b": rng.normal(0, 1, n),
+        rows.append(pd.DataFrame({"d": d, "label_end_20": label_end_20,
+                                  "lineage": [f"L{i}" for i in range(n)], "a": a, "b": rng.normal(0, 1, n),
                                   "fwd20": 0.01 * a + rng.normal(0, 0.05, n)}))
     return pd.concat(rows, ignore_index=True)
 
@@ -23,7 +25,8 @@ def test_train_saves_the_model_with_its_feature_list_and_embargo(tmp_path):
     p = panel()
     meta = LM.train_final(p, ["a", "b"], model_path=tmp_path / "m.txt", meta_path=tmp_path / "m.json")
     assert meta["features"] == ["a", "b"]
-    assert meta["trained_through"] == str(p["d"].max() - timedelta(days=30))
+    assert pd.Timestamp(meta["label_end_cutoff_exclusive"]).date() == p["d"].max() - timedelta(days=30)
+    assert pd.Timestamp(meta["trained_through"]).date() < pd.Timestamp(meta["label_end_cutoff_exclusive"]).date()
     booster, m2 = LM.load(tmp_path / "m.txt", tmp_path / "m.json")
     day = p[p["d"] == p["d"].max()].reset_index(drop=True)
     s = LM.score_frame(day, booster, m2["features"])

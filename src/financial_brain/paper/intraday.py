@@ -114,6 +114,8 @@ class Trade:
     entry_vwap: float | None = None             #: the day's VWAP when the entry filled
     exit_vwap: float | None = None              #: the day's VWAP when the exit filled
     entry_walk_bp: float | None = None          #: extra cost had the order walked the visible book, bp of the touch
+    entry_price_basis: str | None = None        #: observed two-sided quote or explicitly research-only estimate
+    exit_price_basis: str | None = None         #: observed two-sided quote or explicitly research-only estimate
 
     @property
     def is_open(self) -> bool:
@@ -127,13 +129,15 @@ class Trade:
 class DayEngine:
     def __init__(self, day: str, *, account: float = ACCOUNT_INR, risk: float = RISK_PER_TRADE,
                  costs: CostModel | None = None, strategies=STRATEGIES, half_spread: dict | None = None,
-                 rules: dict[str, StrategyRule] | None = None):
+                 rules: dict[str, StrategyRule] | None = None,
+                 require_observed_quote: bool = False):
         self.day = day
         self.account = account
         self.risk = risk
         self.costs = costs or CostModel()
         self.strategies = tuple(strategies)
         self.rules = dict(rules or {})
+        self.require_observed_quote = require_observed_quote
         unknown = set(self.strategies) - set(STRATEGIES) - set(self.rules)
         if unknown:
             raise EngineError(f"unregistered paper strategies: {', '.join(sorted(unknown))}")
@@ -143,7 +147,7 @@ class DayEngine:
         self.closed_for_day = False
         #: When no live bid/ask is available (a replay), fills pay this assumed half-spread by bucket, in bp.
         self.half_spread = half_spread or {"mega": 2.0, "large": 4.0, "mid": 8.0, "small": 20.0}
-        self.quotes: dict[str, tuple] = {}          # symbol -> (bid, ask), the latest live top of book
+        self.quotes: dict[str, tuple[float, float, datetime]] = {}  # symbol -> bid, ask, observation time
         self.last: dict[str, float] = {}            # symbol -> latest price, for the market's move since the open
         self.daily_up: bool | None = None           # set by the runner from the previous close; context only
         self.market: dict[str, dict] = {}           # symbol -> {"vwap", "depth_buy", "depth_sell"}: execution context
@@ -172,9 +176,9 @@ class DayEngine:
         if self.closed_for_day or symbol not in self.symbols or price <= 0:
             return []
         if bid and ask and 0 < bid <= ask:
-            self.quotes[symbol] = (float(bid), float(ask))
+            self.quotes[symbol] = (float(bid), float(ask), ts)
         s = self.symbols[symbol]
-        if s.open is None:
+        if s.open is None or s.day_hi is None or s.day_lo is None:
             return []
         s.day_hi, s.day_lo = max(s.day_hi, price), min(s.day_lo, price)
         self.last[symbol] = price
@@ -182,8 +186,8 @@ class DayEngine:
         for t in [t for t in self.trades if t.is_open and t.symbol == symbol]:
             why = self._exit_reason(t, price, ts)
             if why:
-                self._close(t, ts, price, why)
-                changed.append(t)
+                if self._close(t, ts, price, why):
+                    changed.append(t)
         clock = ts.time()
         if OR_END <= clock <= TRIGGER_END:
             for strat in self.strategies:
@@ -201,8 +205,8 @@ class DayEngine:
         for t in self.trades:
             if t.is_open:
                 px = prices.get(t.symbol) or t.entry_px
-                self._close(t, ts, px, "time")
-                out.append(t)
+                if self._close(t, ts, px, "time"):
+                    out.append(t)
         self.closed_for_day = True
         return out
 
@@ -221,16 +225,20 @@ class DayEngine:
                 raise EngineError(f"{strat}: invalid paper signal")
             return signal
         if strat == "ORB":
+            if s.or_hi is None or s.or_lo is None:
+                return None
             if price > s.or_hi:
                 return ("long", s.or_lo)
             if price < s.or_lo:
                 return ("short", s.or_hi)
             return None
         if strat == "GAP":
+            if s.open is None:
+                return None
             gap = s.open / s.prev_close - 1.0
-            if gap >= GAP_MIN and price < s.open:
+            if gap >= GAP_MIN and price < s.open and s.day_hi is not None:
                 return ("short", s.day_hi)
-            if gap <= -GAP_MIN and price > s.open:
+            if gap <= -GAP_MIN and price > s.open and s.day_lo is not None:
                 return ("long", s.day_lo)
             if abs(gap) < GAP_MIN:
                 s.done.add("GAP")          # no gap today: nothing to fade
@@ -242,18 +250,41 @@ class DayEngine:
         otherwise the last price moved by the bucket's assumed half-spread."""
         q = self.quotes.get(symbol)
         if q:
-            bid, ask = q
+            bid, ask = q[:2]
             mid = (bid + ask) / 2
             return (ask if buying else bid), ((ask - bid) / mid * 1e4 if mid > 0 else None)
         hs = self.half_spread.get(self.symbols[symbol].bucket, 8.0) / 1e4
         return (price * (1 + hs) if buying else price * (1 - hs)), 2 * hs * 1e4
+
+    def fill_at(self, symbol: str, price: float, *, buying: bool, ts: datetime
+                ) -> tuple[float, float | None, str] | None:
+        """Use this event's observed touch, or an explicitly research-only spread estimate.
+
+        Live mode cannot consume a previous poll's quote or a synthetic half-spread as a
+        fill. Replays may use the labeled estimate when tick/depth history is unavailable.
+        """
+        quote = self.quotes.get(symbol)
+        if quote is not None and quote[2] == ts:
+            bid, ask = quote[:2]
+            mid = (bid + ask) / 2
+            return (ask if buying else bid), ((ask - bid) / mid * 1e4 if mid > 0 else None), \
+                "OBSERVED_TWO_SIDED_QUOTE"
+        if self.require_observed_quote:
+            return None
+        estimated, spread = self.fill(symbol, price, buying=buying)
+        return estimated, spread, "RESEARCH_ONLY_BUCKET_HALF_SPREAD_ESTIMATE"
 
     def _open(self, strat: str, s: SymbolDay, sig, ts: datetime, price: float):
         side, stop = sig[:2]
         if not isinstance(stop, (int, float)) or not 0 < stop < float("inf"):
             raise EngineError(f"{strat}: invalid stop")
         decision = price
-        price, spread = self.fill(s.symbol, decision, buying=(side == "long"))
+        execution = self.fill_at(s.symbol, decision, buying=(side == "long"), ts=ts)
+        if execution is None:
+            self.skipped.append({"symbol": s.symbol, "strategy": strat,
+                                 "why": "no current two-sided quote; executable paper entry refused"})
+            return None
+        price, spread, price_basis = execution
         per_share = (price - stop) if side == "long" else (stop - price)
         if per_share <= 0:
             s.done.add(strat)
@@ -290,7 +321,8 @@ class DayEngine:
             return None
         t = Trade(trade_id=f"{self.day}-{strat}-{s.symbol}", day=self.day, strategy=strat, symbol=s.symbol,
                   side=side, qty=qty, entry_ts=ts.isoformat(), entry_px=price, stop=stop, target=target,
-                  bucket=s.bucket, entry_decision_px=decision, spread_bp=spread, **self.context(s, ts))
+                  bucket=s.bucket, entry_decision_px=decision, spread_bp=spread,
+                  entry_price_basis=price_basis, **self.context(s, ts))
         mk = self.market.get(s.symbol) or {}
         t.entry_vwap = mk.get("vwap")
         t.entry_walk_bp = self.walk_cost_bp(mk.get("depth_sell" if side == "long" else "depth_buy"), qty)
@@ -322,13 +354,16 @@ class DayEngine:
     def market_since_open(self) -> float | None:
         """Equal-weighted return of every name with an open, from its open to its latest price - only prices
         already seen, so it is known at the moment of a decision."""
-        r = [self.last[k] / v.open - 1.0 for k, v in self.symbols.items() if v.open and k in self.last]
+        r = [self.last[k] / v.open - 1.0 for k, v in self.symbols.items()
+             if v.open is not None and k in self.last]
         return float(sum(r) / len(r)) if r else None
 
     def context(self, s: SymbolDay, ts: datetime) -> dict:
+        opening = s.open
         return {"mkt_ret": self.market_since_open(), "daily_up": self.daily_up,
-                "gap": s.open / s.prev_close - 1.0 if s.open and s.prev_close else None,
-                "or_width": (s.or_hi - s.or_lo) / s.open if s.open else None,
+                "gap": opening / s.prev_close - 1.0 if opening and s.prev_close else None,
+                "or_width": (s.or_hi - s.or_lo) / opening
+                if opening and s.or_hi is not None and s.or_lo is not None else None,
                 "entry_minute": ts.hour * 60 + ts.minute}
 
     @staticmethod
@@ -347,10 +382,17 @@ class DayEngine:
                 return "target"
         return None
 
-    def _close(self, t: Trade, ts: datetime, price: float, why: str) -> None:
+    def _close(self, t: Trade, ts: datetime, price: float, why: str) -> bool:
         decision = price
-        price, _ = self.fill(t.symbol, decision, buying=(t.side == "short"))
+        execution = self.fill_at(t.symbol, decision, buying=(t.side == "short"), ts=ts)
+        if execution is None:
+            self.skipped.append({"symbol": t.symbol, "strategy": t.strategy,
+                                 "why": "no current two-sided quote; executable paper exit refused",
+                                 "position_unresolved": True})
+            return False
+        price, _, price_basis = execution
         t.exit_decision_px = decision
+        t.exit_price_basis = price_basis
         t.exit_vwap = (self.market.get(t.symbol) or {}).get("vwap")
         t.exit_ts, t.exit_px, t.exit_reason = ts.isoformat(), price, why
         sign = 1 if t.side == "long" else -1
@@ -360,14 +402,16 @@ class DayEngine:
                                    include_impact=False)
         t.costs = rt["total"]
         sign = 1 if t.side == "long" else -1
-        slip = sign * ((t.entry_px - t.entry_decision_px) + (t.exit_decision_px - t.exit_px)) if t.entry_decision_px else 0.0
+        entry_decision = t.entry_decision_px
+        slip = sign * ((t.entry_px - entry_decision) + (decision - price)) if entry_decision is not None else 0.0
         t.shortfall_bp = slip / t.entry_px * 1e4 if t.entry_px else 0.0
         t.net_pnl = t.gross_pnl - t.costs
         t.r_multiple = t.gross_pnl / t.risk_inr if t.risk_inr else 0.0
+        return True
 
     # ----------------------------------------------------------------- summary
     def summary(self) -> dict:
-        out = {}
+        out: dict[str, dict[str, object]] = {}
         for strat in self.strategies:
             ts = [t for t in self.trades if t.strategy == strat and not t.is_open]
             if not ts:

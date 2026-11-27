@@ -10,12 +10,19 @@ from financial_brain.forecasting.index_15m import (
     brier,
     check_probabilities,
     completed_before,
+    cost_aware_flat_band,
     features_at,
     frequency_baseline,
     label,
     leak_check,
     noise_threshold,
+    previous_bar_baseline,
     purged_splits,
+    purged_time_splits,
+    random_walk_baseline,
+    same_time_of_day_baseline,
+    session_regimes,
+    volatility_aware_no_direction_baseline,
 )
 from financial_brain.forecasting.index_market import IndexMinute, build_15m_bars, forward_return
 
@@ -75,6 +82,34 @@ def test_purged_splits_reject_invalid_parameters(args):
         purged_splits(*args)
 
 
+def test_timestamp_purge_uses_actual_label_ends_and_keeps_cross_sections_together():
+    decisions = [OPEN + timedelta(minutes=15 * i) for i in range(16) for _ in range(2)]
+    ends = [decision + timedelta(minutes=(30 if int((decision - OPEN).total_seconds() // 900) % 2 else 15))
+            for decision in decisions]
+    folds = purged_time_splits(decisions, ends, folds=4, embargo=timedelta(minutes=15))
+    assert folds
+    for train, test in folds:
+        test_start = decisions[test[0]]
+        assert test
+        assert len(test) % 2 == 0
+        assert all(decisions[index] < test_start and ends[index] < test_start - timedelta(minutes=15)
+                   for index in train)
+        assert len({decisions[index] for index in test}) * 2 == len(test)
+
+
+def test_timestamp_purge_rejects_invalid_clocks_and_shared_label_mismatch():
+    decisions = [OPEN, OPEN, OPEN + timedelta(minutes=15), OPEN + timedelta(minutes=30)]
+    ends = [OPEN + timedelta(minutes=15), OPEN + timedelta(minutes=30),
+            OPEN + timedelta(minutes=30), OPEN + timedelta(minutes=45)]
+    with pytest.raises(SeriesError, match="common label end"):
+        purged_time_splits(decisions, ends, folds=2)
+    with pytest.raises(SeriesError, match="timezone-aware"):
+        purged_time_splits([OPEN.replace(tzinfo=None)] * 2, [OPEN] * 2, folds=2)
+    with pytest.raises(SeriesError, match="precede"):
+        purged_time_splits([OPEN, OPEN + timedelta(minutes=15)], [OPEN - timedelta(minutes=1),
+                           OPEN + timedelta(minutes=30)], folds=2)
+
+
 def test_training_noise_threshold_and_probabilities_fail_closed():
     assert noise_threshold([0.001, -0.002, 0.003]) == 0.001
     with pytest.raises(SeriesError, match="training returns"):
@@ -83,3 +118,54 @@ def test_training_noise_threshold_and_probabilities_fail_closed():
         noise_threshold([0.0, 0.0])
     with pytest.raises(SeriesError, match="sum to one"):
         check_probabilities({"UP": 0.5, "DOWN": 0.6, "FLAT": 0.0})
+
+
+def test_cost_aware_flat_band_uses_training_noise_or_all_in_cost_floor():
+    returns = [0.01, -0.02, 0.03]
+    assert cost_aware_flat_band(returns, 0.005) == 0.01
+    assert cost_aware_flat_band(returns, 0.02) == 0.02
+    with pytest.raises(SeriesError, match="finite and nonnegative"):
+        cost_aware_flat_band(returns, -0.001)
+
+
+def test_index_forecast_hard_baselines_are_explicit_and_training_only():
+    walk = random_walk_baseline(0.01)
+    assert walk["method"] == "RANDOM_WALK"
+    assert walk["expected_return"] == 0.0
+    assert walk["predicted_label"] == "FLAT"
+
+    no_direction = volatility_aware_no_direction_baseline([0.01, -0.02, 0.03], 0.005)
+    assert no_direction["method"] == "VOLATILITY_AWARE_NO_DIRECTION"
+    assert no_direction["predicted_label"] == "FLAT"
+    assert no_direction["flat_band"] >= no_direction["expected_move_abs"]
+
+    previous = previous_bar_baseline(0.04, 0.01)
+    assert previous["method"] == "PREVIOUS_BAR"
+    assert previous["predicted_label"] == "UP"
+    assert previous["expected_return"] == 0.04
+    assert previous_bar_baseline(0.005, 0.01)["predicted_label"] == "FLAT"
+
+    climatology = same_time_of_day_baseline(
+        {"open": ["UP", "UP", "FLAT"]}, ["UP", "DOWN", "FLAT", "FLAT"])
+    assert climatology("open") == {"UP": 2 / 3, "DOWN": 0.0, "FLAT": 1 / 3}
+    assert climatology("midday") == {"UP": 0.25, "DOWN": 0.25, "FLAT": 0.5}
+    with pytest.raises(SeriesError, match="training labels"):
+        same_time_of_day_baseline({}, [])
+
+
+def test_session_regimes_cover_time_events_expiry_and_spread_unknowns():
+    first_open = OPEN
+    assert "FIRST_15_MINUTES" in session_regimes(
+        first_open, macro_event=True, expiry_day=True,
+        option_spread_fraction=.05, normal_spread_limit=.02)
+    assert "MIDDAY" in session_regimes(
+        OPEN.replace(hour=12), macro_event=False, expiry_day=False,
+        option_spread_fraction=.01, normal_spread_limit=.02)
+    close = OPEN.replace(hour=15, minute=10)
+    regimes = session_regimes(close, macro_event=None, expiry_day=None,
+                              option_spread_fraction=None, normal_spread_limit=None)
+    assert {"PRE_CLOSE", "MACRO_EVENT_UNKNOWN", "EXPIRY_STATUS_UNKNOWN",
+            "OPTION_SPREAD_UNKNOWN"}.issubset(regimes)
+    with pytest.raises(SeriesError, match="session"):
+        session_regimes(OPEN.replace(hour=8), macro_event=False, expiry_day=False,
+                        option_spread_fraction=None, normal_spread_limit=None)

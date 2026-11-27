@@ -11,6 +11,14 @@ from typing import Mapping
 import numpy as np
 
 
+PNL_EVIDENCE_CLASSES = {
+    "HISTORICAL",
+    "HISTORICAL_PAPER",
+    "LOCAL_PROSPECTIVE",
+    "INDEPENDENTLY_AUDITABLE_FORWARD",
+}
+
+
 class StrategyAttributionError(ArithmeticError):
     """Strategy P&L components fail to reconcile or risk inputs are invalid."""
 
@@ -28,10 +36,13 @@ class StrategyPnlComponents:
     financing: float
     other_charges: float
     ledger_net_pnl: float
+    pnl_evidence_class: str
 
     def __post_init__(self) -> None:
         if not self.strategy_id.strip():
             raise StrategyAttributionError("strategy_id is required")
+        if self.pnl_evidence_class not in PNL_EVIDENCE_CLASSES:
+            raise StrategyAttributionError("P&L evidence class must be explicitly classified")
         values = (self.realized_gross_pnl, self.unrealized_pnl_change, self.cash_yield,
                   self.slippage, self.fees, self.taxes, self.financing,
                   self.other_charges, self.ledger_net_pnl)
@@ -50,6 +61,7 @@ class StrategyPnlComponents:
 @dataclass(frozen=True)
 class StrategyAttributionReport:
     session: date
+    pnl_evidence_class: str
     strategy_rows: tuple[dict[str, object], ...]
     portfolio_net_pnl: float
     portfolio_volatility: float
@@ -67,6 +79,10 @@ def attribute_strategy_pnl(*, session: date,
         raise StrategyAttributionError("strategy components must be non-empty and unique")
     if any(row.session != session for row in components):
         raise StrategyAttributionError("all component rows must share the requested session")
+    evidence_classes = {row.pnl_evidence_class for row in components}
+    if len(evidence_classes) != 1:
+        raise StrategyAttributionError("all strategy P&L rows must use one evidence class")
+    evidence_class = next(iter(evidence_classes))
     strategy_ids = tuple(sorted(row.strategy_id for row in components))
     if set(strategy_weights) != set(strategy_ids):
         raise StrategyAttributionError("weights must include every and only every strategy")
@@ -104,16 +120,18 @@ def attribute_strategy_pnl(*, session: date,
                             "financing": row.financing, "other_charges": row.other_charges,
                             "calculated_net_pnl": row.calculated_net_pnl,
                             "ledger_net_pnl": row.ledger_net_pnl,
+                            "pnl_evidence_class": row.pnl_evidence_class,
                             "ledger_difference": difference, "reconciled": match,
                             "weight": float(weight_vector[index]),
                             "risk_contribution": float(risk_contribution)})
     total_net = sum(row.calculated_net_pnl for row in components)
-    fields = {"session": session.isoformat(), "strategy_rows": result_rows,
+    fields = {"session": session.isoformat(), "pnl_evidence_class": evidence_class,
+              "strategy_rows": result_rows,
               "portfolio_net_pnl": total_net, "portfolio_volatility": portfolio_vol,
               "ledger_reconciled": reconciled}
     digest = hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":"),
                                       allow_nan=False).encode()).hexdigest()
-    return StrategyAttributionReport(session, tuple(result_rows), total_net,
+    return StrategyAttributionReport(session, evidence_class, tuple(result_rows), total_net,
                                      portfolio_vol, reconciled, digest)
 
 

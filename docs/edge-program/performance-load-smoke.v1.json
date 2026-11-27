@@ -1,0 +1,34 @@
+{
+  "latency_ms": {
+    "forecast": {
+      "median": 0.0183000084,
+      "p95": 0.0320000108
+    },
+    "options_chain_proxy": {
+      "median": 0.0158000039,
+      "p95": 0.0292999903
+    },
+    "protective_exit": {
+      "median": 0.0531999976,
+      "p95": 0.083299994
+    }
+  },
+  "measured_at_utc": "2026-11-27T13:59:25+00:00",
+  "measurement_note": "Single developer workstation measurement from pytest run. Python threads mostly serialize CPU-bound work under the GIL; do not interpret as production capacity.",
+  "report_sha256": "8416dcb3e06fd235811b3c1c0b61daa8d71940d97a5b71341caac885dc302a44",
+  "schema": "fb.concurrent_paper_load_smoke.v1",
+  "workload": {
+    "broker_write_attempts": 0,
+    "concurrency": 12,
+    "iterations": 240,
+    "network_attempts": 0,
+    "operations": [
+      "15m_point_in_time_features_and_baseline_forecast",
+      "defined_risk_option_vertical",
+      "observed_quote_protective_exit"
+    ],
+    "physical_orders_enabled_was_forged_true": true,
+    "scope": "local synthetic smoke benchmark; not a production SLA",
+    "wall_seconds": 0.0295491
+  }
+}

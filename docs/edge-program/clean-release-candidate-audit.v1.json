@@ -1,0 +1,22 @@
+{
+  "schema": "fb.clean_release_candidate_audit.v1",
+  "as_of": "2026-11-26",
+  "ci_clean_checkout": {
+    "workflow": ".github/workflows/ci.yml",
+    "test_job": "actions/checkout@v4 with fetch-depth 0; installs `.[dev]` from pyproject and runs test/invariant matrix in clean GitHub runner checkout",
+    "reproducibility_job": "installs requirements-lock.txt with --no-deps project install and runs fingerprint checks"
+  },
+  "current_worktree": {
+    "branch": "codex/v3-pa04-07-legacy-trade-reconciliation",
+    "head_sha": "a58bf3a49cbb6373315a8b4c84c81a48b4f2b6fa",
+    "state": "DIRTY",
+    "release_candidate_status": "NOT_VERIFIED"
+  },
+  "result": "PARTIAL",
+  "gaps": [
+    "Current worktree has uncommitted changes; no fresh clone can represent those changes as a candidate commit.",
+    "No hosted Windows/Linux CI artifacts exist for the current uncommitted source state.",
+    "No no-developer-path release candidate has been designated.",
+    "Missing external prerequisites must be retained as explicit blockers when the candidate is assembled."
+  ]
+}

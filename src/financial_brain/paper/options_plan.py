@@ -10,8 +10,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
+from ..costs.india import CostModel
 from .options import OptionPaperError, Quote, cost_hurdle, option_lot_count
 from ..kernel.units import OptionLots
+from ..forecasting.index_sizing import (SizingEligibility,
+                                         confidence_adjusted_paper_lots)
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,8 @@ class OptionContract:
     option_type: str
     strike: float
     quote: Quote
+    expected_lot_size: int | None = None
+    expected_token: int | None = None
 
 
 def build_long_option_plan(
@@ -32,6 +37,9 @@ def build_long_option_plan(
     stop_premium: float,
     target_premium: float,
     max_quote_age: timedelta,
+    calibrated_confidence: float | None = None,
+    sizing_eligibility: SizingEligibility | None = None,
+    costs: CostModel | None = None,
 ) -> dict[str, Any]:
     """Return a complete contract-qualified BUY plan or fail closed.
 
@@ -43,14 +51,39 @@ def build_long_option_plan(
     q.validate()
     if not contract.underlying.strip() or contract.option_type not in {"CE", "PE"}:
         raise OptionPaperError("underlying and CE/PE option type are required")
+    if not q.symbol.upper().startswith(contract.underlying.strip().upper()):
+        raise OptionPaperError("tradingsymbol does not match the declared underlying")
+    if contract.expected_lot_size is not None and (
+            type(contract.expected_lot_size) is not int or contract.expected_lot_size <= 0
+            or q.lot_size != contract.expected_lot_size):
+        raise OptionPaperError("quote lot size does not match the frozen contract lot size")
+    if contract.expected_token is not None and (
+            type(contract.expected_token) is not int or contract.expected_token <= 0
+            or q.token != contract.expected_token):
+        raise OptionPaperError("quote instrument token does not match the frozen contract identity")
     if not math.isfinite(contract.strike) or contract.strike <= 0:
         raise OptionPaperError("strike must be finite and positive")
     strike_text = f"{contract.strike:g}"
     if not q.symbol.endswith(f"{strike_text}{contract.option_type}"):
         raise OptionPaperError("tradingsymbol does not match the declared strike and CE/PE type")
     lot_count = option_lot_count(lots)
+    confidence_evidence = None
+    if calibrated_confidence is not None or sizing_eligibility is not None:
+        if calibrated_confidence is None or sizing_eligibility is None:
+            raise OptionPaperError("confidence sizing requires both calibrated confidence and eligible evidence")
+        sized = confidence_adjusted_paper_lots(
+            base_risk_capped_lots=lot_count, calibrated_confidence=calibrated_confidence,
+            eligibility=sizing_eligibility)
+        if sized["status"] != "PAPER_SIZE":
+            raise OptionPaperError(f"confidence sizing refused: {sized['reason']}")
+        lot_count = int(sized["lots"])
+        confidence_evidence = {"confidence": calibrated_confidence,
+                               "evidence_sha256": sized["evidence_sha256"],
+                               "method": "calibrated_confidence_times_risk_capped_lots"}
     if decision_at.tzinfo is None or decision_at.utcoffset() is None:
         raise OptionPaperError("decision timestamp must be timezone-aware")
+    if decision_at.date() >= q.expiry:
+        raise OptionPaperError("expired option contract cannot be planned")
     if not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
         raise OptionPaperError("maximum quote age must be non-negative")
     values = (underlying_price, invalidation_price, stop_premium, target_premium)
@@ -67,7 +100,8 @@ def build_long_option_plan(
     if contract.option_type == "PE" and invalidation_price <= underlying_price:
         raise OptionPaperError("put thesis invalidation must be above the underlying decision price")
 
-    hurdle = cost_hurdle(contract.quote, lots=lot_count, expected_exit_bid=target_premium)
+    hurdle = cost_hurdle(contract.quote, lots=lot_count, expected_exit_bid=target_premium,
+                         costs=costs)
     if not hurdle["passes"]:
         raise OptionPaperError("target premium does not clear estimated round-trip charges")
     return {
@@ -81,6 +115,7 @@ def build_long_option_plan(
         "token": q.token,
         "lot_size": q.lot_size,
         "lots": lot_count,
+        "confidence_sizing": confidence_evidence or {"status": "NOT_USED"},
         "quantity": lot_count * q.lot_size,
         "entry_premium_band": {"bid": q.bid, "ask": q.ask},
         "entry_price_reference": "observed_ask",

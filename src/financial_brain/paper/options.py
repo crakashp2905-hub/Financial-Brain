@@ -65,6 +65,8 @@ class Quote:
             raise OptionPaperError("invalid or crossed option quote")
         if self.observed_at.tzinfo is None or self.observed_at.date() >= self.expiry:
             raise OptionPaperError("option quote needs an aware timestamp before expiry")
+        if type(self.bid_qty) is not int or type(self.ask_qty) is not int or self.bid_qty < 0 or self.ask_qty < 0:
+            raise OptionPaperError("option quote depth must be non-negative integer contracts")
 
 
 def _premium_float(value: float | Decimal | OptionPremiumPerUnit, label: str) -> float:

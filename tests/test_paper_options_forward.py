@@ -5,7 +5,9 @@ import pytest
 
 from financial_brain.ingest.options_quotes import SCHEMA as QUOTE_SCHEMA
 from financial_brain.paper.options import OptionPaperError
-from financial_brain.paper.options_forward import SCHEMA, audit, record_intent, record_outcome
+from financial_brain.paper.options_forward import (
+    SCHEMA, audit, cohort_report, record_intent, record_outcome,
+)
 from financial_brain.paper.options_runner import Intent
 
 
@@ -14,7 +16,8 @@ DECIDED = datetime(2026, 10, 29, 10, tzinfo=IST)
 
 
 def intent():
-    return Intent("forward-1", "cohort-a", "v1", 123, DECIDED,
+    return Intent("option-forward-1", "direction-forward-1", "a" * 64, "b" * 64,
+                  "cohort-a", "v1", 123, DECIDED,
                   DECIDED + timedelta(minutes=5), 110.0)
 
 
@@ -51,8 +54,8 @@ def test_forward_outcome_preserves_missing_quote_and_is_immutable():
     with pytest.raises(OptionPaperError, match="already recorded"):
         record_outcome(paper, quotes, i, now=DECIDED + timedelta(minutes=8))
     assert audit(paper)["outcomes"] == 1
-    paper.execute("UPDATE outcomes SET result = '{}' WHERE signal_id = 'forward-1'")
-    assert audit(paper)["invalid_outcomes"] == [("cohort-a", "v1", "forward-1")]
+    paper.execute("UPDATE outcomes SET result = '{}' WHERE signal_id = 'option-forward-1'")
+    assert audit(paper)["invalid_outcomes"] == [("cohort-a", "v1", "option-forward-1")]
 
 
 def test_forward_fill_needs_observed_fresh_quotes_after_registration():
@@ -69,3 +72,23 @@ def test_forward_fill_needs_observed_fresh_quotes_after_registration():
     assert result["status"] == "CLOSED" and result["net_pnl_inr"] > 0
     assert result["evidence_class"] == "LOCAL_PAPER" and result["independently_attested"] is False
     assert audit(paper)["external_timestamp_attested"] is False
+
+
+def test_cohort_report_reconciles_pending_and_no_fill_denominator():
+    paper, quotes = ledgers()
+    first = intent()
+    second = Intent("option-forward-2", "direction-forward-2", "c" * 64, "d" * 64,
+                    "cohort-a", "v1", 123, DECIDED,
+                    DECIDED + timedelta(minutes=5), 110.0)
+    record_intent(paper, first, now=DECIDED + timedelta(seconds=1))
+    record_intent(paper, second, now=DECIDED + timedelta(seconds=2))
+    record_outcome(paper, quotes, first, now=DECIDED + timedelta(minutes=7))
+
+    report = cohort_report(paper, cohort="cohort-a", rule_version="v1")
+
+    assert report["intents"] == 2
+    assert report["closed"] == report["no_entry"] == 1
+    assert report["pending"] == 1
+    assert report["invalid"] == []
+    assert report["evidence_class"] == "LOCAL_PAPER"
+    assert report["independently_attested"] is False

@@ -81,6 +81,33 @@ def test_option_greek_breach_scales_option_positions_and_respects_visible_depth(
     assert "EQ" not in by_id
 
 
+def test_option_theta_cap_uses_gross_signed_inr_per_day_exposure():
+    result = evaluate_portfolio_exit_guard(
+        positions=(
+            _position("SHORT-THETA", asset_class="OPTION", quantity="4",
+                      option_theta_exposure_inr_per_day="-800"),
+            _position("LONG-THETA", asset_class="OPTION", quantity="4",
+                      option_theta_exposure_inr_per_day="200"),
+        ),
+        limits=ExitGuardLimits(max_open_stop_risk_inr="10000",
+                               max_gross_option_theta_inr_per_day="500"),
+    )
+
+    by_id = {row.position_id: row for row in result.proposals}
+    assert result.gross_option_exposure_inr["theta"] == Decimal("1000")
+    assert by_id["SHORT-THETA"].requested_quantity == Decimal("2")
+    assert by_id["LONG-THETA"].requested_quantity == Decimal("2")
+    assert all("OPTION_THETA_LIMIT" in row.reason_codes for row in result.proposals)
+
+
+def test_option_theta_is_rejected_for_non_option_positions():
+    with pytest.raises(PortfolioExitGuardError, match="only valid for option"):
+        evaluate_portfolio_exit_guard(
+            positions=(_position("EQ", option_theta_exposure_inr_per_day="1"),),
+            limits=ExitGuardLimits(max_open_stop_risk_inr="1000"),
+        )
+
+
 def test_mf_risk_reduction_is_a_nav_review_not_an_intraday_fill():
     result = evaluate_portfolio_exit_guard(
         positions=(_position("MF", instrument_id="INF000000001", asset_class="MUTUAL_FUND",
@@ -94,6 +121,20 @@ def test_mf_risk_reduction_is_a_nav_review_not_an_intraday_fill():
     assert proposal.requested_quantity == Decimal("5.500")
     assert proposal.executable_quantity == 0
     assert "NAV_BASED_EXECUTION_ONLY" in proposal.reason_codes
+
+
+def test_futures_positions_are_eligible_for_exchange_exit_risk_reduction():
+    result = evaluate_portfolio_exit_guard(
+        positions=(_position("NIFTY-FUT", instrument_id="NFO:NIFTY-FUT", asset_class="FUTURE",
+                             quantity="50", quantity_step="25", current_pnl_inr="-900",
+                             visible_exit_quantity="50"),),
+        limits=ExitGuardLimits(max_open_stop_risk_inr="2500"),
+    )
+
+    proposal = result.proposals[0]
+    assert proposal.asset_class == "FUTURE"
+    assert proposal.action == "PAPER_EXIT_REVIEW"
+    assert proposal.requested_quantity == Decimal("25")
 
 
 def test_missing_quote_and_depth_fail_closed_for_exchange_exits():

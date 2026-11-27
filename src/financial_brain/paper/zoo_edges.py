@@ -21,10 +21,14 @@ the month before - one session's shift); state between evenings is kept in ``zoo
 from __future__ import annotations
 
 import json
-from datetime import date
+import hashlib
+from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
+
+from ..costs.india import CostModel, Segment, Side
 
 VERDICT = {"edge_p1_residual_mom": "failed (t -0.3 / +1.8)", "edge_p2_volmanaged_mom": "failed (t +2.3 / +1.2; halves drawdown)",
            "edge_p3_frog_in_pan": "failed (t +3.3 / +1.7)", "edge_s1_no_news_reversal": "failed (t -4.3 / -0.6)",
@@ -47,40 +51,837 @@ def _panel(rcon, day: date):
     return P
 
 
+MONTHLY_BOOKS = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan",
+                 "edge_h003_riskadj_mom", "edge_h005_industry_mom")
+
+
+def size_monthly_candidate(*, strategy: str, targets: dict[str, float],
+                           lineage_to_ticker: dict[str, str], prices: dict[str, float],
+                           capital_inr: float, min_order_inr: float = 5_000.0,
+                           costs: CostModel | None = None) -> dict:
+    """Convert one frozen monthly target set to whole-share, cost-aware paper quantities.
+
+    This reuses the human-review ticket sizer. It does not submit or persist orders.
+    Missing instrument mappings and prices are retained as explicit skipped rows; no
+    unresolved lineage is silently dropped.
+    """
+    from ..execution.ticket import size_book
+
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    normalized: dict[str, float] = {}
+    for lineage, raw_weight in targets.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(raw_weight, bool) or not isinstance(raw_weight, (int, float)) \
+                or not np.isfinite(raw_weight) or not 0 <= raw_weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized[lineage] = float(raw_weight)
+    if sum(normalized.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    book: list[dict] = []
+    lineage_by_ticker: dict[str, str] = {}
+    skipped: list[dict] = []
+    for lineage, weight in sorted(normalized.items()):
+        ticker = lineage_to_ticker.get(lineage)
+        if not isinstance(ticker, str) or not ticker.strip():
+            skipped.append({"lineage": lineage, "why": "no point-in-time ticker mapping"})
+            continue
+        if ticker in lineage_by_ticker:
+            raise ValueError(f"multiple target lineages map to ticker {ticker}")
+        lineage_by_ticker[ticker] = lineage
+        book.append({"ticker": ticker, "weight": weight})
+
+    sized = size_book(book, capital_inr=capital_inr, prices=prices,
+                      min_order_inr=min_order_inr, costs=costs)
+    positions = [{**row, "lineage": lineage_by_ticker[row["ticker"]]}
+                 for row in sized["positions"]]
+    skipped.extend({**row, "lineage": lineage_by_ticker[row["ticker"]]}
+                   for row in sized["skipped"])
+    return {
+        "strategy": strategy,
+        "target_hash": monthly_target_hashes({strategy: normalized})[strategy],
+        "status": ("NO_CANDIDATES" if not normalized else
+                   "SIZED" if positions else "NO_EXECUTABLE_POSITIONS"),
+        "capital_inr": sized["capital"],
+        "positions": positions,
+        "skipped": skipped,
+        "deployed_inr": sized["deployed"],
+        "cash_committed_inr": sized["cash_committed"],
+        "cash_inr": sized["cash"],
+        "entry_fees_inr": sized["entry_fees_total"],
+        "expected_round_trip_fees_inr": sized["fees_total"],
+        "physical_orders_submitted": False,
+    }
+
+
+def plan_monthly_rebalance(*, strategy: str, targets: dict[str, float],
+                           current_shares: dict[str, int], lineage_to_ticker: dict[str, str],
+                           prices: dict[str, float], liquidity_bucket_by_ticker: dict[str, str],
+                           capital_inr: float, free_cash_inr: float,
+                           decision_date: date, next_session_date: date,
+                           turnover_budget_inr: float, cash_reserve_fraction: float = 0.05,
+                           min_order_inr: float = 5_000.0,
+                           costs: CostModel | None = None) -> dict:
+    """Plan next-session monthly paper rebalance with explicit cash and turnover gates.
+
+    Sale proceeds are treated as unsettled and cannot fund buys in this plan. Outputs
+    are reviewable paper intents only; no fill or broker action is simulated here.
+    """
+    if next_session_date <= decision_date:
+        raise ValueError("next executable session must follow the signal date")
+    if not np.isfinite(capital_inr) or capital_inr <= 0:
+        raise ValueError("capital_inr must be finite and positive")
+    if not np.isfinite(free_cash_inr) or not 0 <= free_cash_inr <= capital_inr:
+        raise ValueError("free_cash_inr must be finite and within account capital")
+    if not np.isfinite(turnover_budget_inr) or turnover_budget_inr < 0:
+        raise ValueError("turnover_budget_inr must be finite and non-negative")
+    if not np.isfinite(cash_reserve_fraction) or not 0 <= cash_reserve_fraction < 1:
+        raise ValueError("cash_reserve_fraction must be finite and in [0, 1)")
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    for lineage, shares in current_shares.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("current position lineages must be non-empty strings")
+        if isinstance(shares, bool) or not isinstance(shares, int) or shares < 0:
+            raise ValueError(f"{lineage}: current shares must be a non-negative whole number")
+
+    normalized_targets: dict[str, float] = {}
+    for lineage, weight in targets.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) \
+                or not np.isfinite(weight) or not 0 <= weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized_targets[lineage] = float(weight)
+    if sum(normalized_targets.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    if not normalized_targets:
+        return {"strategy": strategy, "status": "NO_CANDIDATE_TARGETS",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(), "orders": [],
+                "rejected": [{"why": "no candidate targets; existing positions are retained"}],
+                "physical_orders_submitted": False}
+    lineages = set(normalized_targets) | {key for key, shares in current_shares.items() if shares}
+    lineage_tickers: dict[str, str] = {}
+    ticker_lineages: dict[str, str] = {}
+    missing: list[dict[str, str]] = []
+    model = costs or CostModel()
+    for lineage in sorted(lineages):
+        ticker = lineage_to_ticker.get(lineage)
+        if not isinstance(ticker, str) or not ticker.strip():
+            missing.append({"lineage": lineage, "why": "no point-in-time ticker mapping"})
+            continue
+        if ticker in ticker_lineages and ticker_lineages[ticker] != lineage:
+            raise ValueError(f"multiple position lineages map to ticker {ticker}")
+        ticker_lineages[ticker] = lineage
+        lineage_tickers[lineage] = ticker
+        price = prices.get(ticker)
+        if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                or not np.isfinite(price) or price <= 0:
+            missing.append({"lineage": lineage, "why": "no finite positive next-session reference price"})
+        bucket = liquidity_bucket_by_ticker.get(ticker)
+        if not isinstance(bucket, str) or bucket not in model.impact:
+            missing.append({"lineage": lineage, "why": "missing or unknown liquidity cost bucket"})
+    if missing:
+        return {"strategy": strategy, "status": "INCOMPLETE_INPUTS",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(), "orders": [],
+                "rejected": missing, "physical_orders_submitted": False}
+
+    current_market_value = sum(current_shares.get(lineage, 0) * float(prices[lineage_tickers[lineage]])
+                               for lineage in lineages)
+    if not np.isclose(free_cash_inr + current_market_value, capital_inr, rtol=0.0, atol=0.01):
+        raise ValueError("free cash plus current marked positions must reconcile to capital_inr")
+
+    reserve = capital_inr * cash_reserve_fraction
+    desired = size_monthly_candidate(
+        strategy=strategy, targets=normalized_targets, lineage_to_ticker=lineage_tickers,
+        prices={ticker: float(prices[ticker]) for ticker in ticker_lineages},
+        capital_inr=capital_inr - reserve, min_order_inr=min_order_inr, costs=model,
+    )
+    desired_shares = {row["lineage"]: row["shares"] for row in desired["positions"]}
+    candidate_order_rows: list[dict] = []
+    for lineage in sorted(lineages):
+        delta = desired_shares.get(lineage, 0) - current_shares.get(lineage, 0)
+        if delta:
+            candidate_order_rows.append({"lineage": lineage, "ticker": lineage_tickers[lineage],
+                                         "side": "BUY" if delta > 0 else "SELL",
+                                         "requested_shares": abs(delta),
+                                         "reference_price": float(prices[lineage_tickers[lineage]]),
+                                         "target_weight": normalized_targets.get(lineage, 0.0)})
+    requested_turnover = sum(row["requested_shares"] * row["reference_price"]
+                             for row in candidate_order_rows)
+    if requested_turnover > turnover_budget_inr + 1e-9:
+        return {"strategy": strategy, "status": "REJECTED_TURNOVER_BUDGET",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(),
+                "requested_turnover_inr": requested_turnover,
+                "turnover_budget_inr": turnover_budget_inr, "orders": [],
+                "rejected": [{**row, "why": "aggregate turnover exceeds frozen budget"}
+                             for row in candidate_order_rows],
+                "physical_orders_submitted": False}
+
+    reserve_available_cash = max(0.0, free_cash_inr - reserve)
+    cash_for_buys = reserve_available_cash
+    orders: list[dict] = []
+    rejected = list(desired["skipped"])
+    estimated_costs = 0.0
+    executed_turnover = 0.0
+    for row in sorted(candidate_order_rows,
+                      key=lambda item: (item["side"] != "SELL", -item["target_weight"], item["lineage"])):
+        side = Side.BUY if row["side"] == "BUY" else Side.SELL
+        price = row["reference_price"]
+        bucket = liquidity_bucket_by_ticker[row["ticker"]]
+        quantity = row["requested_shares"]
+        if side is Side.BUY:
+            low, high = 0, quantity
+            while low < high:
+                candidate = (low + high + 1) // 2
+                notional = candidate * price
+                fee = model.one_way(turnover=notional, side=side, segment=Segment.DELIVERY,
+                                    bucket=bucket, include_impact=True)["total"]
+                if notional + fee <= cash_for_buys + 1e-9:
+                    low = candidate
+                else:
+                    high = candidate - 1
+            quantity = low
+            if quantity == 0:
+                rejected.append({**row, "why": "cash reserve leaves insufficient funds for one share and costs"})
+                continue
+            if quantity < row["requested_shares"]:
+                rejected.append({**row, "why": "cash reserve reduced requested quantity to whole shares",
+                                 "accepted_shares": quantity})
+        notional = quantity * price
+        fee = model.one_way(turnover=notional, side=side, segment=Segment.DELIVERY,
+                            bucket=bucket, include_impact=True)
+        orders.append({**row, "shares": quantity, "notional_inr": notional,
+                       "estimated_cost_inr": fee["total"], "cost_components": fee,
+                       "status": "PAPER_REVIEW_REQUIRED"})
+        estimated_costs += fee["total"]
+        executed_turnover += notional
+        if side is Side.BUY:
+            cash_for_buys -= notional + fee["total"]
+
+    return {
+        "strategy": strategy,
+        "status": "READY_FOR_PAPER_REVIEW" if orders else "NO_ACTION",
+        "decision_date": decision_date.isoformat(),
+        "next_session_date": next_session_date.isoformat(),
+        "target_hash": desired["target_hash"],
+        "capital_inr": capital_inr,
+        "cash_reserve_inr": reserve,
+        "free_cash_inr": free_cash_inr,
+        "cash_available_for_buys_inr": reserve_available_cash,
+        "cash_after_buy_intents_inr": free_cash_inr - sum(
+            row["notional_inr"] + row["estimated_cost_inr"]
+            for row in orders if row["side"] == "BUY"),
+        "unsettled_sell_proceeds_inr": sum(
+            row["notional_inr"] - row["estimated_cost_inr"]
+            for row in orders if row["side"] == "SELL"),
+        "requested_turnover_inr": requested_turnover,
+        "planned_turnover_inr": executed_turnover,
+        "turnover_budget_inr": turnover_budget_inr,
+        "estimated_costs_inr": estimated_costs,
+        "orders": orders,
+        "rejected": rejected,
+        "physical_orders_submitted": False,
+    }
+
+
+def _capture_target(name: str, compute, targets: dict[str, dict], errors: dict[str, str]) -> None:
+    """Isolate one paper book's data/selection failure and preserve its prior targets upstream."""
+    try:
+        targets[name] = compute()
+    except Exception as exc:  # noqa: BLE001 - one desk's missing data must not skip other books
+        errors[name] = f"{type(exc).__name__}: {str(exc)}"[:200]
+
+
+def _equal_weight_pick(pick, name: str) -> dict[str, float]:
+    if len(pick) == 0:
+        raise ValueError(f"{name} has no eligible holdings at this rebalance")
+    return {str(lineage): 1.0 / len(pick) for lineage in pick}
+
+
+def record_monthly_paper_snapshot(z, *, strategy: str, session: date,
+                                  target_weights: dict[str, float],
+                                  fills: list[dict], marks: dict[str, float],
+                                  opening_cash_inr: float) -> dict:
+    """Persist one reconciled monthly-book close from actual paper fills.
+
+    ``fills`` are simulated fill/order receipts, not planned quantities. A zero-fill row
+    must carry a reason so rejected or missed opportunities remain visible. Replaying the
+    same canonical input is idempotent; a different payload for the same book/date fails.
+    """
+    import math
+
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    if not isinstance(session, date):
+        raise ValueError("session must be a date")
+    if isinstance(opening_cash_inr, bool) or not isinstance(opening_cash_inr, (int, float)) \
+            or not np.isfinite(opening_cash_inr) or opening_cash_inr < 0:
+        raise ValueError("opening_cash_inr must be finite and non-negative")
+    normalized_targets: dict[str, float] = {}
+    for lineage, weight in target_weights.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) \
+                or not np.isfinite(weight) or not 0 <= weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized_targets[lineage] = float(weight)
+    if sum(normalized_targets.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    from typing import Any
+
+    normalized_fills: list[dict[str, Any]] = []
+    for index, raw in enumerate(fills):
+        fill_lineage, fill_side = raw.get("lineage"), raw.get("side")
+        if not isinstance(fill_lineage, str) or not fill_lineage.strip() \
+                or fill_side not in ("BUY", "SELL"):
+            raise ValueError(f"fill {index}: valid lineage and BUY/SELL side required")
+        requested, filled = raw.get("requested_shares"), raw.get("filled_shares")
+        if (isinstance(requested, bool) or not isinstance(requested, int) or requested < 0
+                or isinstance(filled, bool) or not isinstance(filled, int) or filled < 0):
+            raise ValueError(f"fill {index}: requested and filled shares must be non-negative integers")
+        if filled > requested:
+            raise ValueError(f"fill {index}: filled shares cannot exceed requested shares")
+        price, fee = raw.get("fill_price"), raw.get("cost_inr")
+        normalized_price: float | None = None
+        if filled:
+            if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                    or not np.isfinite(price) or price <= 0:
+                raise ValueError(f"fill {index}: positive finite fill_price required")
+            normalized_price = float(price)
+        elif not raw.get("reason"):
+            raise ValueError(f"fill {index}: zero fills require a rejection/no-fill reason")
+        if isinstance(fee, bool) or not isinstance(fee, (int, float)) \
+                or not np.isfinite(fee) or fee < 0:
+            raise ValueError(f"fill {index}: cost_inr must be finite and non-negative")
+        normalized_fills.append({
+            "lineage": fill_lineage, "side": fill_side, "requested_shares": requested,
+            "filled_shares": filled, "fill_price": normalized_price,
+            "cost_inr": float(fee), "reason": str(raw.get("reason", "")),
+            "order_id": str(raw.get("order_id", f"{index}")),
+        })
+
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_snapshots (
+        strategy VARCHAR, session DATE, target_hash VARCHAR, opening_cash DOUBLE,
+        closing_cash DOUBLE, holdings_value DOUBLE, equity DOUBLE, payload_hash VARCHAR,
+        PRIMARY KEY (strategy, session))""")
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_positions (
+        strategy VARCHAR, session DATE, lineage VARCHAR, target_weight DOUBLE,
+        target_shares BIGINT, actual_shares BIGINT, mark_price DOUBLE, market_value DOUBLE,
+        actual_weight DOUBLE, drift DOUBLE, entry_shares BIGINT, exit_shares BIGINT,
+        reason VARCHAR, PRIMARY KEY (strategy, session, lineage))""")
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_orders (
+        strategy VARCHAR, session DATE, order_id VARCHAR, lineage VARCHAR, side VARCHAR,
+        requested_shares BIGINT, filled_shares BIGINT, fill_price DOUBLE, cost_inr DOUBLE,
+        reason VARCHAR, PRIMARY KEY (strategy, session, order_id))""")
+
+    prior = z.execute("""SELECT session, closing_cash FROM zoo_monthly_book_snapshots
+                         WHERE strategy = ? AND session < ? ORDER BY session DESC LIMIT 1""",
+                      [strategy, session]).fetchone()
+    if prior and not math.isclose(float(prior[1]), float(opening_cash_inr), rel_tol=0, abs_tol=0.01):
+        raise ValueError("opening cash does not reconcile to previous monthly snapshot")
+    previous_rows = (z.execute("""SELECT lineage, actual_shares FROM zoo_monthly_book_positions
+                                  WHERE strategy = ? AND session = ?""", [strategy, prior[0]]).fetchall()
+                     if prior else [])
+    shares = {lineage: int(quantity) for lineage, quantity in previous_rows}
+    opening_shares = dict(shares)
+    cash = float(opening_cash_inr)
+    for row in normalized_fills:
+        qty = row["filled_shares"]
+        notional = qty * (row["fill_price"] or 0.0)
+        if row["side"] == "BUY":
+            cash -= notional + row["cost_inr"]
+            shares[row["lineage"]] = shares.get(row["lineage"], 0) + qty
+        else:
+            if qty > shares.get(row["lineage"], 0):
+                raise ValueError(f"{row['lineage']}: sell fill exceeds paper holdings")
+            cash += notional - row["cost_inr"]
+            shares[row["lineage"]] = shares.get(row["lineage"], 0) - qty
+    if cash < -0.01:
+        raise ValueError("fills would create negative paper cash")
+    shares = {lineage: quantity for lineage, quantity in shares.items() if quantity}
+    for lineage, price in marks.items():
+        if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                or not np.isfinite(price) or price <= 0:
+            raise ValueError(f"{lineage}: marks must be finite and positive")
+    missing_marks = sorted(set(shares) - set(marks))
+    if missing_marks:
+        raise ValueError(f"missing marks for held lineages: {missing_marks}")
+
+    target_hash = monthly_target_hashes({strategy: normalized_targets})[strategy]
+    holdings_value = sum(quantity * float(marks[lineage]) for lineage, quantity in shares.items())
+    equity = cash + holdings_value
+    union = sorted(set(shares) | set(opening_shares) | set(normalized_targets))
+    positions = []
+    for lineage in union:
+        quantity = shares.get(lineage, 0)
+        mark = float(marks[lineage]) if lineage in marks else 0.0
+        value = quantity * mark
+        actual_weight = value / equity if equity else 0.0
+        target_weight = normalized_targets.get(lineage, 0.0)
+        target_shares = int(target_weight * equity / mark) if mark else 0
+        bought = sum(x["filled_shares"] for x in normalized_fills
+                     if x["lineage"] == lineage and x["side"] == "BUY")
+        sold = sum(x["filled_shares"] for x in normalized_fills
+                   if x["lineage"] == lineage and x["side"] == "SELL")
+        if quantity and not opening_shares.get(lineage):
+            reason = "ENTRY_FILLED"
+        elif opening_shares.get(lineage) and not quantity:
+            reason = "EXIT_FILLED"
+        elif bought or sold:
+            reason = "POSITION_ADJUSTED"
+        elif target_weight and not quantity:
+            reason = "NO_FILL_OR_REJECTED"
+        elif quantity and abs(actual_weight - target_weight) > 1e-9:
+            reason = "WEIGHT_DRIFT"
+        else:
+            reason = "NO_TRADE"
+        positions.append({"lineage": lineage, "target_weight": target_weight,
+                          "target_shares": target_shares, "actual_shares": quantity,
+                          "mark_price": mark, "market_value": value,
+                          "actual_weight": actual_weight,
+                          "drift": actual_weight - target_weight,
+                          "entry_shares": bought, "exit_shares": sold, "reason": reason})
+
+    payload = {"strategy": strategy, "session": session.isoformat(), "target_hash": target_hash,
+               "opening_cash_inr": float(opening_cash_inr), "closing_cash_inr": cash,
+               "holdings_value_inr": holdings_value, "equity_inr": equity,
+               "positions": positions, "fills": normalized_fills}
+    payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                                allow_nan=False).encode()).hexdigest()
+    existing = z.execute("SELECT payload_hash FROM zoo_monthly_book_snapshots WHERE strategy=? AND session=?",
+                         [strategy, session]).fetchone()
+    if existing:
+        if existing[0] == payload_hash:
+            return {**payload, "payload_hash": payload_hash, "idempotent_replay": True}
+        raise ValueError("conflicting monthly paper snapshot already exists")
+    z.execute("BEGIN TRANSACTION")
+    try:
+        z.execute("INSERT INTO zoo_monthly_book_snapshots VALUES (?,?,?,?,?,?,?,?)",
+                  [strategy, session, target_hash, float(opening_cash_inr), cash,
+                   holdings_value, equity, payload_hash])
+        z.executemany("INSERT INTO zoo_monthly_book_positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      [(strategy, session, row["lineage"], row["target_weight"],
+                        row["target_shares"], row["actual_shares"], row["mark_price"],
+                        row["market_value"], row["actual_weight"], row["drift"],
+                        row["entry_shares"], row["exit_shares"], row["reason"])
+                       for row in positions])
+        z.executemany("INSERT INTO zoo_monthly_book_orders VALUES (?,?,?,?,?,?,?,?,?,?)",
+                      [(strategy, session, row["order_id"], row["lineage"], row["side"],
+                        row["requested_shares"], row["filled_shares"], row["fill_price"],
+                        row["cost_inr"], row["reason"]) for row in normalized_fills])
+        z.execute("COMMIT")
+    except Exception:
+        z.execute("ROLLBACK")
+        raise
+    return {**payload, "payload_hash": payload_hash, "idempotent_replay": False}
+
+
+def gate_monthly_plan_to_owner_sleeve(*, plan: dict, owner_id: str,
+                                       approval_reference: str,
+                                       approved_risk_sleeve_inr: float,
+                                       available_risk_capital_inr: float,
+                                       expected_gross_alpha_inr: float | None,
+                                       alpha_evidence_sha256: str | None) -> dict:
+    """Fail closed on monthly paper intents without an owner-approved capital sleeve.
+
+    A plan remains a paper-review artifact. The expected gross alpha is consumed as an
+    evidence-backed estimate; this function does not estimate alpha or grant approval.
+    Costs equal to or above expected gross alpha produce a CASH outcome with no intents.
+    """
+    import re
+
+    if not owner_id.strip() or not approval_reference.strip():
+        raise ValueError("owner identity and explicit sleeve approval reference are required")
+    for name, value in (("approved_risk_sleeve_inr", approved_risk_sleeve_inr),
+                        ("available_risk_capital_inr", available_risk_capital_inr)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or not np.isfinite(value) or value <= 0:
+            raise ValueError(f"{name} must be finite and positive")
+    if available_risk_capital_inr > approved_risk_sleeve_inr:
+        raise ValueError("available risk capital cannot exceed the owner-approved sleeve")
+    plan_capital = plan.get("capital_inr")
+    if isinstance(plan_capital, bool) or not isinstance(plan_capital, (int, float)) \
+            or not np.isfinite(plan_capital) or plan_capital <= 0:
+        raise ValueError("plan must include finite positive capital_inr")
+    if plan_capital > approved_risk_sleeve_inr or plan_capital > available_risk_capital_inr:
+        return {"status": "REJECTED_CAPITAL_LIMIT", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "monthly plan exceeds approved or currently available risk capital",
+                "physical_orders_submitted": False}
+    if (expected_gross_alpha_inr is None or isinstance(expected_gross_alpha_inr, bool)
+            or not isinstance(expected_gross_alpha_inr, (int, float))
+            or not np.isfinite(expected_gross_alpha_inr)
+            or not isinstance(alpha_evidence_sha256, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", alpha_evidence_sha256)):
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "evidence-backed expected gross alpha is unavailable",
+                "physical_orders_submitted": False}
+    estimated_costs = plan.get("estimated_costs_inr")
+    if isinstance(estimated_costs, bool) or not isinstance(estimated_costs, (int, float)) \
+            or not np.isfinite(estimated_costs) or estimated_costs < 0:
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital, "orders": [],
+                "reason": "realistic estimated transaction costs are unavailable",
+                "physical_orders_submitted": False}
+    if expected_gross_alpha_inr <= estimated_costs:
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital,
+                "expected_gross_alpha_inr": expected_gross_alpha_inr,
+                "estimated_costs_inr": estimated_costs,
+                "alpha_evidence_sha256": alpha_evidence_sha256, "orders": [],
+                "reason": "expected gross alpha does not exceed estimated costs",
+                "physical_orders_submitted": False}
+    if plan.get("status") != "READY_FOR_PAPER_REVIEW" or not plan.get("orders"):
+        return {"status": "CASH_NO_TRADE", "owner_id": owner_id,
+                "approval_reference": approval_reference,
+                "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+                "available_risk_capital_inr": available_risk_capital_inr,
+                "requested_capital_inr": plan_capital,
+                "expected_gross_alpha_inr": expected_gross_alpha_inr,
+                "estimated_costs_inr": estimated_costs,
+                "alpha_evidence_sha256": alpha_evidence_sha256, "orders": [],
+                "reason": "monthly plan has no actionable paper intents",
+                "physical_orders_submitted": False}
+    return {"status": "READY_FOR_PAPER_REVIEW", "owner_id": owner_id,
+            "approval_reference": approval_reference,
+            "approved_risk_sleeve_inr": approved_risk_sleeve_inr,
+            "available_risk_capital_inr": available_risk_capital_inr,
+            "requested_capital_inr": plan_capital,
+            "expected_gross_alpha_inr": expected_gross_alpha_inr,
+            "estimated_costs_inr": estimated_costs,
+            "alpha_evidence_sha256": alpha_evidence_sha256,
+            "orders": plan["orders"], "reason": "within owner sleeve and expected gross edge covers costs",
+            "physical_orders_submitted": False}
+
+
+def monthly_book_diversification_report(z, *, strategies: tuple[str, ...] = MONTHLY_BOOKS,
+                                       start: date | None = None, end: date | None = None,
+                                       industry_by_lineage: dict[str, str] | None = None,
+                                       min_common_sessions: int = 60) -> dict:
+    """Describe overlap, concentration, drawdowns and equal-risk-free combination value.
+
+    Uses recorded ``zoo_targets`` and net ``zoo_pnl``. Missing/incomplete return rows are
+    excluded from the aligned comparison and reported as coverage gaps, never zero-filled.
+    Industry concentration is computed only from a caller-supplied as-of-valid map; without
+    one it is explicitly unavailable. Combined-book statistics are descriptive, not a
+    capital allocation or strategy promotion decision.
+    """
+    import math
+    from collections import defaultdict
+
+    if not strategies or len(set(strategies)) != len(strategies):
+        raise ValueError("strategies must be non-empty and unique")
+    invalid = sorted(set(strategies) - set(MONTHLY_BOOKS))
+    if invalid:
+        raise ValueError(f"unsupported monthly strategies: {invalid}")
+    if min_common_sessions < 2:
+        raise ValueError("min_common_sessions must be at least two")
+    if start and end and start > end:
+        raise ValueError("start must not follow end")
+    target_filter = " AND day >= ?" if start else ""
+    target_filter += " AND day <= ?" if end else ""
+    target_params = ([start] if start else []) + ([end] if end else [])
+    target_rows = z.execute(
+        "SELECT strategy, day, key, weight FROM zoo_targets WHERE strategy IN (SELECT UNNEST(?))"
+        + target_filter + " ORDER BY day, strategy, key",
+        [list(strategies), *target_params]).fetchall()
+    targets: dict[str, dict[date, dict[str, float]]] = {s: defaultdict(dict) for s in strategies}
+    for strategy, day, lineage, weight in target_rows:
+        targets[strategy][day][lineage] = float(weight)
+
+    pnl_filter = " AND day >= ?" if start else ""
+    pnl_filter += " AND day <= ?" if end else ""
+    pnl_params = ([start] if start else []) + ([end] if end else [])
+    pnl_rows = z.execute(
+        "SELECT strategy, day, net FROM zoo_pnl WHERE strategy IN (SELECT UNNEST(?))"
+        + pnl_filter + " ORDER BY day, strategy", [list(strategies), *pnl_params]).fetchall()
+    returns: dict[str, dict[date, float]] = {s: {} for s in strategies}
+    return_days: dict[str, set[date]] = {s: set() for s in strategies}
+    for strategy, day, net in pnl_rows:
+        if net is not None and np.isfinite(float(net)):
+            returns[strategy][day] = float(net)
+            return_days[strategy].add(day)
+
+    overlap_rows = []
+    for i, left in enumerate(strategies):
+        for right in strategies[i + 1:]:
+            dates = sorted(set(targets[left]) & set(targets[right]))
+            values = []
+            for day in dates:
+                a, b = targets[left][day], targets[right][day]
+                denom = sum(max(abs(a.get(k, 0.0)), abs(b.get(k, 0.0)))
+                            for k in set(a) | set(b))
+                if denom:
+                    values.append(sum(min(abs(a.get(k, 0.0)), abs(b.get(k, 0.0)))
+                                      for k in set(a) | set(b)) / denom)
+            overlap_rows.append({"left": left, "right": right,
+                                 "common_target_dates": len(dates),
+                                 "mean_weighted_jaccard": float(np.mean(values)) if values else None})
+
+    concentration: dict[str, dict] = {}
+    industry_concentration: dict[str, dict] = {}
+    for strategy in strategies:
+        hhis, top_weights, industry_hhis = [], [], []
+        for _day, weights in targets[strategy].items():
+            long_weights = [abs(w) for w in weights.values()]
+            total = sum(long_weights)
+            if total <= 0:
+                continue
+            normalized = [w / total for w in long_weights]
+            hhis.append(sum(w * w for w in normalized))
+            top_weights.append(max(normalized))
+            if industry_by_lineage is not None:
+                grouped: dict[str, float] = defaultdict(float)
+                for lineage, weight in weights.items():
+                    industry = industry_by_lineage.get(lineage)
+                    if industry:
+                        grouped[industry] += abs(weight)
+                covered = sum(grouped.values())
+                if covered:
+                    industry_weights = [v / covered for v in grouped.values()]
+                    industry_hhis.append(sum(v * v for v in industry_weights))
+        concentration[strategy] = {
+            "target_dates": len(hhis), "mean_stock_hhi": float(np.mean(hhis)) if hhis else None,
+            "mean_top_stock_weight": float(np.mean(top_weights)) if top_weights else None,
+        }
+        industry_concentration[strategy] = {
+            "status": "AS_OF_MAP_SUPPLIED" if industry_by_lineage is not None else "UNAVAILABLE_NO_AS_OF_INDUSTRY_MAP",
+            "mapped_dates": len(industry_hhis),
+            "mean_industry_hhi": float(np.mean(industry_hhis)) if industry_hhis else None,
+        }
+
+    aligned_days = sorted(set.intersection(*(return_days[s] for s in strategies))) if strategies else []
+    coverage = {s: {"valid_net_sessions": len(returns[s]), "missing_or_incomplete_sessions":
+                    len(set.union(*(return_days[k] for k in strategies)) - return_days[s])}
+                for s in strategies}
+    correlation = {}
+    for i, left in enumerate(strategies):
+        for right in strategies[i + 1:]:
+            common = sorted(return_days[left] & return_days[right])
+            corr = (float(np.corrcoef([returns[left][d] for d in common],
+                                      [returns[right][d] for d in common])[0, 1])
+                    if len(common) >= 2 and np.std([returns[left][d] for d in common]) > 0
+                    and np.std([returns[right][d] for d in common]) > 0 else None)
+            correlation[f"{left}|{right}"] = {"common_sessions": len(common), "net_return_correlation": corr}
+
+    def drawdown(values: list[float]) -> float | None:
+        if not values:
+            return None
+        nav, peak, worst = 1.0, 1.0, 0.0
+        for value in values:
+            nav *= 1.0 + value
+            peak = max(peak, nav)
+            worst = min(worst, nav / peak - 1.0)
+        return worst
+
+    aligned_matrix = {s: [returns[s][d] for d in aligned_days] for s in strategies}
+    combined = [float(np.mean([aligned_matrix[s][j] for s in strategies]))
+                for j in range(len(aligned_days))]
+    combined_cumulative = float(np.prod([1 + value for value in combined]) - 1) if combined else None
+    individual_cumulative = {s: float(np.prod([1 + aligned_matrix[s][j]
+                                                for j in range(len(aligned_days))]) - 1)
+                             for s in strategies}
+    best_single = max(individual_cumulative.values()) if individual_cumulative else None
+    combined_vol = float(np.std(combined, ddof=1) * math.sqrt(250)) if len(combined) > 1 else None
+    combined_sharpe = (float(np.mean(combined)) / float(np.std(combined, ddof=1)) * math.sqrt(250)
+                       if len(combined) > 1 and np.std(combined, ddof=1) > 0 else None)
+    return {
+        "status": "SUFFICIENT_COMMON_HISTORY" if len(aligned_days) >= min_common_sessions
+                  else "INSUFFICIENT_COMMON_HISTORY",
+        "strategies": list(strategies), "common_net_return_sessions": len(aligned_days),
+        "minimum_common_sessions": min_common_sessions, "return_coverage": coverage,
+        "target_weighted_overlap": overlap_rows, "net_return_correlation": correlation,
+        "stock_concentration": concentration, "industry_concentration": industry_concentration,
+        "common_drawdown": {"combined_equal_weight_max_drawdown": drawdown(combined),
+                            "individual_max_drawdown": {s: drawdown(aligned_matrix[s]) for s in strategies}},
+        "combination_diagnostic": {
+            "method": "equal capital per strategy; aligned complete net sessions only",
+            "combined_cumulative_net_return": combined_cumulative,
+            "best_single_cumulative_net_return": best_single,
+            "incremental_cumulative_return_vs_best_single": (
+                combined_cumulative - best_single if combined_cumulative is not None and best_single is not None else None),
+            "combined_annualized_volatility": combined_vol, "combined_annualized_sharpe": combined_sharpe,
+            "not_a_promotion_or_allocation_decision": True,
+        },
+    }
+
+
+def monthly_candidate_subperiod_report(con, *, feature: str, start: date, end: date,
+                                      direction: int = 1, rebalance: int = 20,
+                                      max_positions: int = 40, min_adv: float = 1e7,
+                                      capital_inr: float = 10_000_000.0,
+                                      eligible_lineages: set[str] | None = None) -> dict:
+    """Run fixed-parameter descriptive subperiods without selecting a winner.
+
+    Reports 2024, the second half of the supplied history, and the final ~36 months.
+    The same engine, universe, sizing and cost settings are used in every window. These
+    overlapping diagnostics are not independent holdouts and must not be fed into tuning,
+    promotion, or repeated candidate selection.
+    """
+    from datetime import timedelta
+    from . import engine
+
+    if not isinstance(feature, str) or not feature.replace("_", "").isalnum():
+        raise ValueError("feature must be a simple feature column name")
+    if direction not in (-1, 1):
+        raise ValueError("direction must be -1 or 1")
+    if rebalance <= 0 or max_positions <= 0 or min_adv < 0 or capital_inr <= 0:
+        raise ValueError("rebalance, positions, capital and ADV settings are invalid")
+    calendar = engine._calendar(con, start, end)
+    if not calendar:
+        return {"status": "NO_SESSIONS", "feature": feature, "periods": {}}
+    midpoint = calendar[len(calendar) // 2]
+    last_36_start = max(calendar[0], calendar[-1] - timedelta(days=365 * 3 + 1))
+    requested = {
+        "2024": (max(start, date(2024, 1, 1)), min(end, date(2024, 12, 31))),
+        "recent_half": (midpoint, calendar[-1]),
+        "last_36_months": (last_36_start, calendar[-1]),
+    }
+    periods = {}
+    for label, (lo, hi) in requested.items():
+        if lo > hi:
+            periods[label] = {"status": "NO_DATA_IN_WINDOW", "start": lo.isoformat(),
+                              "end": hi.isoformat()}
+            continue
+        try:
+            run = engine.run(
+                con, feature=feature, start=lo, end=hi, direction=direction,
+                rebalance=rebalance, max_positions=max_positions, min_adv=min_adv,
+                capital_inr=capital_inr, eligible_lineages=eligible_lineages,
+                simulate_fills=False, charge_costs=True,
+                universe_label=f"fixed subperiod diagnostic {label}")
+        except engine.PaperError as exc:
+            periods[label] = {"status": "INSUFFICIENT_DATA", "start": lo.isoformat(),
+                              "end": hi.isoformat(), "reason": str(exc)}
+            continue
+        summary = run.summary()
+        periods[label] = {
+            "status": "DESCRIPTIVE_ONLY", "requested_start": lo.isoformat(),
+            "requested_end": hi.isoformat(), "first_session": str(summary["first"]),
+            "last_session": str(summary["last"]), "sessions": summary["sessions"],
+            "net_return": summary["total_return"],
+            "matched_universe_return": summary["universe_return"],
+            "excess_over_matched_universe": summary["excess_over_universe"],
+            "benchmark": summary["benchmark"],
+            "benchmark_variant": summary["benchmark_variant"],
+            "excess_over_market_index": summary["excess_over_benchmark"],
+            "max_drawdown": summary["max_drawdown"],
+            "cost_drag": summary["cost_drag"], "trades": summary["trades"],
+        }
+    return {
+        "status": "DESCRIPTIVE_NOT_FOR_SELECTION",
+        "feature": feature, "direction": direction, "rebalance_sessions": rebalance,
+        "max_positions": max_positions, "capital_inr": capital_inr,
+        "input_history": [str(calendar[0]), str(calendar[-1])],
+        "periods": periods,
+        "selection_warning": "These fixed, overlapping subperiod diagnostics are descriptive. "
+            "Do not use them to repeatedly retune, promote, or choose the reported candidate.",
+        "fills_note": "Historical fills use the engine's close-price fallback; these are not "
+            "prospective execution results.",
+    }
+
+
+def monthly_target_hashes(targets: dict[str, dict]) -> dict[str, str]:
+    """Stable per-book hashes for intended-versus-persisted monthly target audits."""
+    hashes = {}
+    for book in MONTHLY_BOOKS:
+        target = targets.get(book, {})
+        payload = json.dumps({str(key): float(value) for key, value in sorted(target.items())},
+                             sort_keys=True, separators=(",", ":"), allow_nan=False)
+        hashes[book] = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return hashes
+
+
+def monthly_rebalance_audit(day: date, scheduled_signal_date: date, state: dict,
+                            intended_targets: dict[str, dict]) -> dict | None:
+    """Describe a missed first-session rebalance without rewriting its signal or target history."""
+    if day <= scheduled_signal_date or state.get("set") == str(scheduled_signal_date):
+        return None
+    intended = monthly_target_hashes(intended_targets)
+    actual = monthly_target_hashes(state.get("targets", {}))
+    unresolved = sorted(intended_targets.get("_errors", {}).keys())
+    return {
+        "status": "MISSED_OR_STALE",
+        "signal_date": str(scheduled_signal_date),
+        "detected_on": str(day),
+        "last_actual_signal_date": state.get("set"),
+        "intended_hashes": intended,
+        "actual_hashes": actual,
+        "mismatched_books": [book for book in MONTHLY_BOOKS if intended[book] != actual[book]],
+        "unresolved_intended_books": unresolved,
+    }
+
+
 def monthly_targets(rcon, day: date) -> dict[str, dict]:
     """P1, P2, P3 targets on ``day``'s close (equal weight; P2 scaled)."""
     from ..evaluation import edges as E
-    P = _panel(rcon, day)
-    last = P["C"].index[-1]
     out: dict[str, dict] = {}
-    mom = E.momentum_scores(P)
-    res = E.residual_scores(P)
-    idd = E.info_discreteness(P)
-    uni = P["U"].loc[last][P["U"].loc[last]].index
-    for name, s in (("edge_p1_residual_mom", res.loc[last, uni]),):
-        pick = s.dropna().nlargest(20).index
-        out[name] = {k: 1.0 / len(pick) for k in pick}
-    m = mom.loc[last, uni].dropna()
-    low = idd.loc[last, m.index] <= idd.loc[last, uni].median()
-    pick = m[low.fillna(False)].nlargest(20).index
-    out["edge_p3_frog_in_pan"] = {k: 1.0 / len(pick) for k in pick}
-    out.update(h_targets(rcon, P))
-    # P2: the plain momentum book's monthly net history decides the scale
-    # A P2 failure must not block the other books: on 2026-11-02 a gap in P2's history
-    # (2023-11-30, INE509F01029) raised here and every monthly book kept October's targets.
-    # When P2 cannot be computed it is left out, and the caller keeps P2's previous targets.
+    errors: dict[str, str] = {}
     try:
+        P = _panel(rcon, day)
+    except Exception as exc:  # noqa: BLE001 - record shared source failure for each book
+        message = f"{type(exc).__name__}: {str(exc)}"[:200]
+        return {"_errors": {name: message for name in MONTHLY_BOOKS}}
+
+    last = P["C"].index[-1]
+    uni = P["U"].loc[last][P["U"].loc[last]].index
+
+    def p1_target():
+        residual = E.residual_scores(P)
+        return _equal_weight_pick(residual.loc[last, uni].dropna().nlargest(20).index,
+                                  "P1 residual momentum")
+
+    def p3_target():
+        momentum = E.momentum_scores(P)
+        discreteness = E.info_discreteness(P)
+        scores = momentum.loc[last, uni].dropna()
+        low_discreteness = discreteness.loc[last, scores.index] <= discreteness.loc[last, uni].median()
+        return _equal_weight_pick(scores[low_discreteness.fillna(False)].nlargest(20).index,
+                                  "P3 frog-in-pan")
+
+    _capture_target("edge_p1_residual_mom", p1_target, out, errors)
+    _capture_target("edge_p3_frog_in_pan", p3_target, out, errors)
+    h = h_targets(rcon, P)
+    h_errors = h.pop("_errors", {})
+    out.update(h)
+    errors.update(h_errors)
+
+    # Compute P2 weights separately so a missing return in its training history cannot
+    # suppress P1/P3/H003/H005. The stored scale remains the existing volatility policy.
+    def p2_scaled_target():
+        mom = E.momentum_scores(P)
         picks = E.top_picks(P, mom)
+        m = mom.loc[last, uni].dropna()
         picks[last] = list(m.nlargest(20).index)
         hist = E.monthly_selection(P, picks)["net"]
-    except ValueError as e:
-        out["_errors"] = {"edge_p2_volmanaged_mom": str(e)[:200]}
-        return out
-    vol = hist.tail(6).std(ddof=1) * np.sqrt(12) if len(hist) >= 6 else np.nan
-    w = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
-    top = m.nlargest(20).index
-    out["edge_p2_volmanaged_mom"] = {k: w / len(top) for k in top}
-    return out
+        vol = hist.tail(6).std(ddof=1) * np.sqrt(12) if len(hist) >= 6 else np.nan
+        weight = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
+        top = m.nlargest(20).index
+        return {str(lineage): weight / len(top) for lineage in top}
+
+    _capture_target("edge_p2_volmanaged_mom", p2_scaled_target, out, errors)
+    return out | ({"_errors": errors} if errors else {})
 
 
 VERDICT.update({
@@ -89,7 +890,14 @@ VERDICT.update({
 
 
 def _industries(rcon, lineages, as_of: date) -> pd.Series:
-    """Resolve each lineage's latest NIFTY 500 industry known on the decision date."""
+    """Resolve NIFTY 500 industry rows effective and observed by the decision-date close.
+
+    The daily rebalance job runs after the NSE close. A membership row ingested later
+    than 23:59:59 IST on the signal date cannot affect that date's candidate ranking.
+    """
+    available_by = datetime.combine(as_of, time.max, tzinfo=ZoneInfo("Asia/Kolkata")).astimezone(
+        timezone.utc
+    )
     df = rcon.execute("""WITH security_asof AS (
                             SELECT lineage, isin,
                                    ROW_NUMBER() OVER (PARTITION BY lineage ORDER BY business_date DESC) AS rn
@@ -101,9 +909,10 @@ def _industries(rcon, lineages, as_of: date) -> pd.Series:
                                                       ORDER BY m.as_of DESC, m.observed_at DESC) AS rn
                             FROM security_asof s JOIN index_membership m USING (isin)
                             WHERE s.rn = 1 AND m.index_name = 'NIFTY 500' AND m.as_of <= ?
+                              AND m.observed_at <= ?
                         )
                         SELECT lineage, industry FROM membership_asof WHERE rn = 1""",
-                       [as_of, list(lineages), as_of]).df()
+                       [as_of, list(lineages), as_of, available_by]).df()
     return df.drop_duplicates("lineage").set_index("lineage")["industry"].reindex(list(lineages))
 
 
@@ -116,19 +925,25 @@ def h_targets(rcon, P: dict) -> dict[str, dict]:
     mom = C.shift(21) / C.shift(252) - 1
     vol = C.pct_change(fill_method=None).rolling(250, min_periods=200).std()
     out: dict[str, dict] = {}
-    s = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
-    pick = s.nlargest(20).index
-    out["edge_h003_riskadj_mom"] = {k: 1.0 / len(pick) for k in pick}
-    ind = _industries(rcon, C.columns, last.date())
-    r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
-    g = r6.groupby(ind).mean().dropna()
-    cnt = u.groupby(ind).sum()
-    g = g[cnt.reindex(g.index) >= 8]
-    best = set(g.nlargest(3).index)
-    s = mom.loc[last].where(u & ind.isin(best)).dropna()
-    pick = s.nlargest(20).index
-    out["edge_h005_industry_mom"] = {k: 1.0 / len(pick) for k in pick}
-    return out
+    errors: dict[str, str] = {}
+
+    def h003_target() -> dict[str, float]:
+        scores = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
+        return _equal_weight_pick(scores.nlargest(20).index, "H003 risk-adjusted momentum")
+
+    def h005_target() -> dict[str, float]:
+        ind = _industries(rcon, C.columns, last.date())
+        r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
+        industry_return = r6.groupby(ind).mean().dropna()
+        industry_count = u.groupby(ind).sum()
+        industry_return = industry_return[industry_count.reindex(industry_return.index) >= 8]
+        best = set(industry_return.nlargest(3).index)
+        scores = mom.loc[last].where(u & ind.isin(best)).dropna()
+        return _equal_weight_pick(scores.nlargest(20).index, "H005 industry momentum")
+
+    _capture_target("edge_h003_riskadj_mom", h003_target, out, errors)
+    _capture_target("edge_h005_industry_mom", h005_target, out, errors)
+    return out | ({"_errors": errors} if errors else {})
 
 
 def s1_targets(rcon, day: date, uni: list[str], bars_close: pd.DataFrame) -> dict:

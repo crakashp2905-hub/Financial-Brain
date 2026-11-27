@@ -63,6 +63,152 @@ def test_cross_asset_fills_cash_marks_and_realized_unrealized_pnl_replay(tmp_pat
     assert snapshot["projection_complete"] is False  # other open holdings still need explicit marks
 
 
+def test_valuation_mark_cannot_carry_sell_semantics_or_realize_pnl(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "valuation-only.sqlite")
+    ledger.append(event("buy", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                        instrument_id="NSE:INFY", side="BUY", quantity="10", price="100"))
+    with pytest.raises(CanonicalLedgerError, match="execution side/action"):
+        ledger.append(event("forged-mark", EventKind.MARK, asset_class=AssetClass.EQUITY,
+                            instrument_id="NSE:INFY", price="90", side="SELL"))
+    ledger.append(event("last-good-mark", EventKind.MARK, asset_class=AssetClass.EQUITY,
+                        instrument_id="NSE:INFY", price="90"))
+    position = ledger.snapshot("paper-main")["positions"][0]
+    assert position["quantity"] == Decimal("10")
+    assert position["realized_pnl"] == Decimal("0")
+    assert position["unrealized_pnl"] == Decimal("-100")
+
+
+def test_futures_notional_is_not_booked_as_cash_and_variation_margin_is(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "futures.sqlite")
+    ledger.import_events([event(
+        "future-buy", EventKind.FILL, asset_class=AssetClass.FUTURE,
+        instrument_id="NFO:NIFTY-2026-12-31-FUT", side="BUY", position_action="BUY",
+        quantity="50", price="22000", multiplier="25"),
+        event("future-vm", EventKind.CASH_FLOW, cash_delta="12500",
+              occurred_at="2026-11-20T10:01:00+05:30",
+              metadata={"cash_flow_type": "FUTURES_VARIATION_MARGIN", "settlement_id": "vm-1"})])
+
+    snapshot = ledger.snapshot("paper-main")
+
+    assert snapshot["positions"][0]["asset_class"] == "FUTURE"
+    assert snapshot["positions"][0]["quantity"] == Decimal("50")
+    assert snapshot["positions"][0]["multiplier"] == Decimal("25")
+    assert snapshot["cash"]["INR"] == Decimal("12500")
+
+
+def test_sourced_split_adjusts_units_and_basis_without_fabricating_cash_or_mark(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "split.sqlite")
+    split_events = [
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="5000"),
+        event("etf-buy", EventKind.FILL, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", side="BUY", quantity="10", price="500",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("pre-split-mark", EventKind.MARK, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", price="510",
+              occurred_at="2026-11-20T15:00:00+05:30"),
+        event("two-for-one", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="2",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-1",
+                        "source_reference": "NSE:CA:2026-11-21:ABC"}),
+    ]
+    assert ledger.import_events(split_events) == {"received": 4, "added": 4, "already_present": 0}
+    assert ledger.import_events(split_events) == {"received": 4, "added": 0, "already_present": 4}
+
+    snapshot = ledger.snapshot("paper-main")
+    position = snapshot["positions"][0]
+    assert position["quantity"] == Decimal("20")
+    assert position["average_cost"] == Decimal("250")
+    assert position["mark"] is None  # pre-split price must not be reused as a current mark
+    assert position["unrealized_pnl"] is None
+    assert position["realized_pnl"] == Decimal(0)
+    assert snapshot["cash"]["INR"] == Decimal(0)
+
+
+def test_split_adjustment_rejects_missing_position_and_invalid_ratio_atomically(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "bad-split.sqlite")
+    split = event("orphan-split", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.EQUITY,
+                  instrument_id="NSE:INFY", quantity="2",
+                  metadata={"action_type": "SPLIT", "action_id": "exchange-action-2",
+                            "source_reference": "NSE:CA:2026-11-21:INFY"})
+    with pytest.raises(CanonicalLedgerError, match="existing open position"):
+        ledger.append(split)
+    assert ledger.event_count() == 0
+
+    with pytest.raises(CanonicalLedgerError, match="non-unit positive ratio"):
+        event("unit-split", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", quantity="1",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-3",
+                        "source_reference": "NSE:CA:2026-11-21:INFY"}).normalized()
+
+
+def test_one_account_split_adjusts_matching_positions_across_sleeves_once(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "multi-sleeve-split.sqlite")
+    ledger.import_events([
+        event("swing-buy", EventKind.FILL, sleeve_id="swing", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="3", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("intraday-buy", EventKind.FILL, sleeve_id="intraday", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="2", price="100",
+              occurred_at="2026-11-20T09:01:00+05:30"),
+        event("account-split", EventKind.POSITION_ADJUSTMENT, sleeve_id="corporate-actions",
+              asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY", quantity="2",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-multi",
+                        "source_reference": "NSE:CA:2026-11-21:INFY"}),
+    ])
+    positions = {row["sleeve_id"]: row for row in ledger.snapshot("paper-main")["positions"]}
+    assert positions["swing"]["quantity"] == Decimal("6")
+    assert positions["intraday"]["quantity"] == Decimal("4")
+
+
+def test_source_bound_cash_distribution_reconciles_entitlement_withholding_and_cash(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "distribution.sqlite")
+    ledger.import_events([
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="1000"),
+        event("holding", EventKind.FILL, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", side="BUY", quantity="10", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("dividend-payment", EventKind.CASH_DISTRIBUTION, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="10", price="2", cash_delta="18",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "CASH_DISTRIBUTION", "action_id": "exchange-dividend-1",
+                        "source_reference": "NSE:CA:2026-11-21:NIFTYBEES", "gross_amount": "20",
+                        "withholding_amount": "2"}),
+    ])
+    snapshot = ledger.snapshot("paper-main")
+    assert snapshot["cash"]["INR"] == Decimal("18") + Decimal("1000") - Decimal("1000")
+    assert snapshot["positions"][0]["quantity"] == Decimal("10")
+
+    with pytest.raises(CanonicalLedgerError, match="must reconcile"):
+        event("forged-dividend", EventKind.CASH_DISTRIBUTION, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="10", price="2", cash_delta="19",
+              metadata={"action_type": "CASH_DISTRIBUTION", "action_id": "exchange-dividend-2",
+                        "source_reference": "NSE:CA:2026-11-21:NIFTYBEES", "gross_amount": "20",
+                        "withholding_amount": "2"}).normalized()
+
+
+def test_receivable_cannot_become_spendable_cash_without_observed_payout_evidence():
+    with pytest.raises(CanonicalLedgerError, match="observed payout evidence"):
+        event("unverified-payout", EventKind.CASH_RECEIVABLE, cash_delta="10",
+              metadata={"action": "SETTLE", "receivable_id": "redemption-1", "amount": "10"}
+              ).normalized()
+
+
+def test_receivable_payout_cannot_exceed_claim_and_batch_rolls_back(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "overpaid-receivable.sqlite")
+    recognize = event("recognize-10", EventKind.CASH_RECEIVABLE, cash_delta="-10",
+                      metadata={"action": "RECOGNIZE", "receivable_id": "redemption-1",
+                                "amount": "10"})
+    settle = event("settle-11", EventKind.CASH_RECEIVABLE, cash_delta="11",
+                   occurred_at="2026-11-21T10:00:00+05:30", evidence_class="OBSERVED_PAYOUT_EVIDENCE",
+                   metadata={"action": "SETTLE", "receivable_id": "redemption-1", "amount": "11",
+                             "source_id": "RTA", "source_reference": "rta:payout:1"})
+    with pytest.raises(CanonicalLedgerError, match="exceeds an outstanding claim"):
+        ledger.import_events([recognize, settle])
+    assert ledger.event_count() == 0
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,
@@ -141,7 +287,7 @@ def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_pat
               instrument_id="NSE:INFY", side="BUY", quantity="5", price="100",
               occurred_at="2026-11-20T09:00:00+05:30"),
         event("desk-b-sell", EventKind.FILL, sleeve_id="intraday", asset_class=AssetClass.EQUITY,
-              instrument_id="NSE:INFY", side="SELL", quantity="3", price="105",
+              instrument_id="NSE:INFY", side="SELL", position_action="SELL_SHORT", quantity="3", price="105",
               occurred_at="2026-11-20T09:30:00+05:30"),
         event("shared-mark", EventKind.MARK, sleeve_id="market-data", asset_class=AssetClass.EQUITY,
               instrument_id="NSE:INFY", price="110", occurred_at="2026-11-20T15:30:00+05:30"),
@@ -158,6 +304,92 @@ def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_pat
     assert consolidated["gross_abs_quantity"] == Decimal("8")
     assert consolidated["average_cost"] is None  # long/short basis must not be collapsed
     assert consolidated["unrealized_pnl"] == Decimal("35")
+
+
+def test_explicit_short_open_and_buy_to_cover_preserve_direction_and_realized_pnl(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="10000"),
+        event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="SELL", position_action="SELL_SHORT", quantity="10", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("cover-partial", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="BUY", position_action="BUY_TO_COVER", quantity="4", price="90",
+              occurred_at="2026-11-20T10:00:00+05:30"),
+        event("short-mark", EventKind.MARK, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              price="90", occurred_at="2026-11-20T15:30:00+05:30"),
+    ])
+
+    snapshot = ledger.snapshot("paper-main")
+    position, = snapshot["positions"]
+    assert position["quantity"] == Decimal("-6")
+    assert position["average_cost"] == Decimal("100")
+    assert position["realized_pnl"] == Decimal("40")
+    assert position["unrealized_pnl"] == Decimal("60")
+    assert snapshot["cash"]["INR"] == Decimal("10640")
+    actions = {row["source_event_id"]: row["position_action"] for row in ledger.events("paper-main")}
+    assert actions["short-entry"] == "SELL_SHORT"
+    assert actions["cover-partial"] == "BUY_TO_COVER"
+
+
+def test_explicit_long_close_cannot_open_or_cross_into_a_short(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    with pytest.raises(CanonicalLedgerError, match="SELL must close no more than an existing long"):
+        ledger.append(event("short-with-sell", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                           instrument_id="NSE:INFY", side="SELL", position_action="SELL",
+                           quantity="1", price="100"))
+    assert ledger.event_count() == 0  # the invalid close never becomes durable
+
+
+def test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory(tmp_path):
+    crossed = CanonicalPortfolioLedger(tmp_path / "crossed.sqlite")
+    with pytest.raises(CanonicalLedgerError, match="SELL_SHORT cannot increase or cross"):
+        crossed.import_events([
+            event("long-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="BUY", position_action="BUY", quantity="5", price="100",
+                  occurred_at="2026-11-20T09:00:00+05:30"),
+            event("crossing-short", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="SELL", position_action="SELL_SHORT", quantity="6", price="100",
+                  occurred_at="2026-11-20T09:01:00+05:30"),
+        ])
+    assert crossed.event_count() == 0  # batch rejection is atomic across the valid first row
+
+    overcovered = CanonicalPortfolioLedger(tmp_path / "overcovered.sqlite")
+    with pytest.raises(CanonicalLedgerError, match="BUY_TO_COVER must not exceed"):
+        overcovered.import_events([
+            event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="SELL", position_action="SELL_SHORT", quantity="5", price="100",
+                  occurred_at="2026-11-20T09:00:00+05:30"),
+            event("excess-cover", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="BUY", position_action="BUY_TO_COVER", quantity="6", price="90",
+                  occurred_at="2026-11-20T09:01:00+05:30"),
+        ])
+    assert overcovered.event_count() == 0
+
+
+def test_same_broker_trade_receipt_cannot_be_booked_under_two_source_systems(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    receipt = PortfolioEvent(
+        account_id="paper-main", sleeve_id="intraday", source_system="BROKER_EXECUTION_RECEIPT",
+        source_event_id="broker-trade-777", source_sha256=HASH, event_kind=EventKind.FILL,
+        occurred_at="2026-11-20T10:00:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+        evidence_class="BROKER_EXECUTION_RECEIPT",
+        metadata={"broker_order_id": "order-777", "broker_trade_id": "broker-trade-777"},
+    )
+    assert ledger.append(receipt)
+    duplicated_ingest = PortfolioEvent(
+        account_id="paper-main", sleeve_id="intraday", source_system="SECOND_BROKER_IMPORT",
+        source_event_id="broker-trade-777", source_sha256=HASH, event_kind=EventKind.FILL,
+        occurred_at="2026-11-20T10:00:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+        evidence_class="BROKER_EXECUTION_RECEIPT",
+        metadata={"broker_order_id": "order-777", "broker_trade_id": "broker-trade-777"},
+    )
+
+    with pytest.raises(CanonicalLedgerError, match="broker trade receipt ID is duplicated"):
+        ledger.append(duplicated_ingest)
+    assert ledger.event_count() == 1
 
 
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):
@@ -273,4 +505,24 @@ def test_events_refuse_missing_provenance_naive_time_and_bad_trade_fields(tmp_pa
         ledger.append(event("naive", EventKind.CASH_FLOW, cash_delta="1", occurred_at="2026-11-20T10:00:00"))
     with pytest.raises(CanonicalLedgerError, match="fill needs"):
         ledger.append(event("not-fill", EventKind.FILL, side="BUY", quantity="1", price="10"))
+
+
+def test_zero_value_expiry_is_option_only_and_closes_without_synthetic_cashflow(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("option-open", EventKind.FILL, asset_class=AssetClass.OPTION,
+              instrument_id="NIFTY-100-CE", side="BUY", quantity="50", price="10"),
+        event("option-expiry", EventKind.EXPIRY_SETTLEMENT, asset_class=AssetClass.OPTION,
+              instrument_id="NIFTY-100-CE", side="SELL", quantity="50", price="0"),
+    ])
+    state = ledger.snapshot("paper-main")
+    option = next(row for row in state["positions"] if row["instrument_id"] == "NIFTY-100-CE")
+    assert option["quantity"] == 0
+    assert option["realized_pnl"] == Decimal("-500")
+    assert state["cash"] == {"INR": Decimal("-500")}
+
+    with pytest.raises(CanonicalLedgerError, match="expiry settlement events must close an option"):
+        ledger.append(event("equity-expiry", EventKind.EXPIRY_SETTLEMENT,
+                            asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                            side="SELL", quantity="1", price="0"))
 

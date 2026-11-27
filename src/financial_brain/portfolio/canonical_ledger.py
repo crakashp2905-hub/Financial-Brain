@@ -27,12 +27,17 @@ class AssetClass(StrEnum):
     EQUITY = "EQUITY"
     ETF = "ETF"
     OPTION = "OPTION"
+    FUTURE = "FUTURE"
     MUTUAL_FUND = "MUTUAL_FUND"
 
 
 class EventKind(StrEnum):
     CASH_FLOW = "CASH_FLOW"
+    CASH_DISTRIBUTION = "CASH_DISTRIBUTION"
+    CASH_RECEIVABLE = "CASH_RECEIVABLE"
     FILL = "FILL"
+    EXPIRY_SETTLEMENT = "EXPIRY_SETTLEMENT"
+    POSITION_ADJUSTMENT = "POSITION_ADJUSTMENT"
     FEE = "FEE"
     MARK = "MARK"
     UNRESOLVED_POSITION = "UNRESOLVED_POSITION"
@@ -79,6 +84,7 @@ class PortfolioEvent:
     cash_delta: Decimal | str | int | None = None
     evidence_class: str = "LOCAL_PAPER"
     metadata: dict[str, object] | None = None
+    position_action: str | None = None
 
     def normalized(self) -> dict[str, object]:
         if not all(isinstance(value, str) and value.strip() for value in
@@ -105,6 +111,7 @@ class PortfolioEvent:
             "asset_class": AssetClass(self.asset_class).value if self.asset_class is not None else None,
             "instrument_id": self.instrument_id.strip() if self.instrument_id else None,
             "side": self.side.upper() if self.side else None,
+            "position_action": self.position_action.upper() if self.position_action else None,
             "quantity": format(_decimal(self.quantity, "quantity"), "f") if self.quantity is not None else None,
             "price": format(_decimal(self.price, "price"), "f") if self.price is not None else None,
             "multiplier": format(_decimal(self.multiplier, "multiplier"), "f"),
@@ -116,19 +123,90 @@ class PortfolioEvent:
             raise CanonicalLedgerError("metadata must be an object")
 
         kind = EventKind(str(row["event_kind"]))
-        if kind is EventKind.FILL:
+        if kind in {EventKind.FILL, EventKind.EXPIRY_SETTLEMENT}:
             if not row["asset_class"] or not row["instrument_id"] or row["side"] not in {"BUY", "SELL"}:
                 raise CanonicalLedgerError("a fill needs asset class, instrument id and BUY/SELL side")
+            action = row["position_action"]
+            if action is not None and action not in {"BUY", "SELL", "SELL_SHORT", "BUY_TO_COVER"}:
+                raise CanonicalLedgerError("position_action must be BUY, SELL, SELL_SHORT or BUY_TO_COVER")
+            if action in {"BUY", "BUY_TO_COVER"} and row["side"] != "BUY":
+                raise CanonicalLedgerError("buy position actions require BUY execution side")
+            if action in {"SELL", "SELL_SHORT"} and row["side"] != "SELL":
+                raise CanonicalLedgerError("sell position actions require SELL execution side")
             quantity = _required_decimal(self.quantity, "quantity")
             price = _required_decimal(self.price, "price")
             multiplier = _decimal(self.multiplier, "multiplier")
-            if quantity <= 0 or price <= 0 or multiplier <= 0 or self.cash_delta is not None:
-                raise CanonicalLedgerError("fill quantity, price and multiplier must be positive; omit cash_delta")
+            price_invalid = price < 0 if kind is EventKind.EXPIRY_SETTLEMENT else price <= 0
+            if quantity <= 0 or price_invalid or multiplier <= 0 or self.cash_delta is not None:
+                raise CanonicalLedgerError("fill quantity and multiplier must be positive; price must be positive "
+                                           "except for zero-value expiry settlement; omit cash_delta")
+            if kind is EventKind.EXPIRY_SETTLEMENT and AssetClass(str(row["asset_class"])) is not AssetClass.OPTION:
+                raise CanonicalLedgerError("expiry settlement events must close an option position")
         elif kind is EventKind.MARK:
             if not row["asset_class"] or not row["instrument_id"] or _required_decimal(self.price, "price") <= 0:
                 raise CanonicalLedgerError("a mark needs asset class, instrument id and positive price")
-            if self.quantity is not None or self.cash_delta is not None:
-                raise CanonicalLedgerError("a mark cannot change quantity or cash")
+            if (self.quantity is not None or self.cash_delta is not None
+                    or row["side"] is not None or row["position_action"] is not None):
+                raise CanonicalLedgerError("a mark cannot carry execution side/action, quantity or cash")
+        elif kind is EventKind.POSITION_ADJUSTMENT:
+            metadata = row["metadata"]
+            ratio = _required_decimal(self.quantity, "quantity")
+            if (not row["asset_class"] or AssetClass(str(row["asset_class"])) not in
+                    {AssetClass.EQUITY, AssetClass.ETF} or not row["instrument_id"]):
+                raise CanonicalLedgerError("a split adjustment needs an equity or ETF instrument")
+            if (not isinstance(metadata, dict) or metadata.get("action_type") != "SPLIT"
+                    or ratio <= 0 or ratio == 1):
+                raise CanonicalLedgerError("a split adjustment needs a non-unit positive ratio")
+            if not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                       for key in ("action_id", "source_reference")):
+                raise CanonicalLedgerError("a split adjustment needs source action identity and reference")
+            if row["side"] is not None or row["position_action"] is not None \
+                    or self.price is not None or self.cash_delta is not None:
+                raise CanonicalLedgerError("a split adjustment cannot carry execution price, side or cash")
+        elif kind is EventKind.CASH_DISTRIBUTION:
+            metadata = row["metadata"]
+            gross = _required_decimal(metadata.get("gross_amount") if isinstance(metadata, dict) else None,
+                                      "gross_amount")
+            withholding = _decimal(metadata.get("withholding_amount", "0")
+                                   if isinstance(metadata, dict) else "0", "withholding_amount")
+            quantity = _required_decimal(self.quantity, "quantity")
+            rate = _required_decimal(self.price, "price")
+            net = _required_decimal(self.cash_delta, "cash_delta")
+            if (not row["asset_class"] or AssetClass(str(row["asset_class"])) not in
+                    {AssetClass.EQUITY, AssetClass.ETF} or not row["instrument_id"]):
+                raise CanonicalLedgerError("a cash distribution needs an equity or ETF instrument")
+            if (not isinstance(metadata, dict) or metadata.get("action_type") != "CASH_DISTRIBUTION"
+                    or gross < 0 or withholding < 0 or withholding > gross
+                    or quantity <= 0 or rate <= 0 or gross != quantity * rate
+                    or net != gross - withholding):
+                raise CanonicalLedgerError("cash distribution gross, withholding, entitlement and net must reconcile")
+            if not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                       for key in ("action_id", "source_reference")):
+                raise CanonicalLedgerError("a cash distribution needs source action identity and reference")
+            if row["side"] is not None or row["position_action"] is not None:
+                raise CanonicalLedgerError("a cash distribution is not an execution fill")
+        elif kind is EventKind.CASH_RECEIVABLE:
+            metadata = row["metadata"]
+            amount = _required_decimal(metadata.get("amount") if isinstance(metadata, dict) else None,
+                                       "receivable amount")
+            action = metadata.get("action") if isinstance(metadata, dict) else None
+            receivable_id = metadata.get("receivable_id") if isinstance(metadata, dict) else None
+            cash_delta = _required_decimal(self.cash_delta, "cash_delta")
+            if (action not in {"RECOGNIZE", "SETTLE"} or not isinstance(receivable_id, str)
+                    or not receivable_id.strip() or amount <= 0):
+                raise CanonicalLedgerError("cash receivable needs an action, identity and positive amount")
+            expected_delta = -amount if action == "RECOGNIZE" else amount
+            if cash_delta != expected_delta:
+                raise CanonicalLedgerError("cash receivable transfer does not reconcile to its amount")
+            if action == "SETTLE" and (
+                row["evidence_class"] != "OBSERVED_PAYOUT_EVIDENCE"
+                or not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                           for key in ("source_id", "source_reference"))
+            ):
+                raise CanonicalLedgerError("receivable settlement needs observed payout evidence")
+            if self.quantity is not None or self.price is not None or self.instrument_id is not None \
+                    or row["side"] is not None or row["position_action"] is not None:
+                raise CanonicalLedgerError("cash receivable cannot contain instrument or execution fields")
         elif kind in {EventKind.CASH_FLOW, EventKind.FEE}:
             amount = _required_decimal(self.cash_delta, "cash_delta")
             if self.quantity is not None or self.price is not None or self.instrument_id is not None:
@@ -248,7 +326,7 @@ class CanonicalPortfolioLedger:
             con.close()
 
     def append(self, event: PortfolioEvent) -> bool:
-        """Append an event; identical source replays are no-ops, conflicting replays are refused."""
+        """Append an event after validating its account transition in the same transaction."""
         row = event.normalized()
         body = json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False)
         payload_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
@@ -266,6 +344,7 @@ class CanonicalPortfolioLedger:
                 VALUES (?,?,?,?,?,?,?)""",
                         (row["account_id"], row["sleeve_id"], row["source_system"], row["source_event_id"],
                          row["source_sha256"], payload_hash, body))
+            self._validate_position_transitions(con, str(row["account_id"]))
         return True
 
     def import_events(self, events: list[PortfolioEvent]) -> dict[str, int]:
@@ -274,6 +353,7 @@ class CanonicalPortfolioLedger:
         payloads = [json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False) for row in normalized]
         hashes = [hashlib.sha256(body.encode("utf-8")).hexdigest() for body in payloads]
         added = 0
+        changed_accounts: set[str] = set()
         with self._connection() as con:
             con.execute("BEGIN IMMEDIATE")
             for row, body, payload_hash in zip(normalized, payloads, hashes):
@@ -290,7 +370,92 @@ class CanonicalPortfolioLedger:
                             (row["account_id"], row["sleeve_id"], row["source_system"], row["source_event_id"],
                              row["source_sha256"], payload_hash, body))
                 added += 1
+                changed_accounts.add(str(row["account_id"]))
+            for account_id in sorted(changed_accounts):
+                self._validate_position_transitions(con, account_id)
         return {"received": len(events), "added": added, "already_present": len(events) - added}
+
+    @staticmethod
+    def _validate_position_transitions(con: sqlite3.Connection, account_id: str) -> None:
+        """Reject state-invalid explicit position actions before their transaction commits.
+
+        Snapshot projection repeats these checks defensively. Running them against the
+        transaction's candidate state first prevents a bad fill from becoming durable.
+        Legacy rows without position_action retain their documented v1 projection rules.
+        """
+        rows = con.execute(
+            "SELECT event_json FROM portfolio_events WHERE account_id=? "
+            "ORDER BY json_extract(event_json, '$.occurred_at'), sequence", (account_id,)
+        ).fetchall()
+        positions: dict[tuple[str, str, str], tuple[Decimal, str, Decimal]] = {}
+        receivables: dict[tuple[str, str], Decimal] = {}
+        broker_trade_ids: set[str] = set()
+        for stored in rows:
+            row = json.loads(stored[0])
+            kind = row.get("event_kind")
+            if kind == EventKind.CASH_RECEIVABLE.value:
+                metadata = row["metadata"]
+                receivable_key = (str(row["currency"]), str(metadata["receivable_id"]))
+                amount = Decimal(str(metadata["amount"]))
+                if metadata["action"] == "RECOGNIZE":
+                    if receivable_key in receivables:
+                        raise CanonicalLedgerError("cash receivable was recognized more than once")
+                    receivables[receivable_key] = amount
+                else:
+                    outstanding = receivables.get(receivable_key, Decimal(0))
+                    if outstanding <= 0 or amount > outstanding:
+                        raise CanonicalLedgerError("cash receivable settlement exceeds an outstanding claim")
+                    receivables[receivable_key] = outstanding - amount
+                continue
+            if kind == EventKind.POSITION_ADJUSTMENT.value:
+                identity = (str(row["asset_class"]), str(row["instrument_id"]))
+                matched = [key for key, value in positions.items()
+                           if key[:2] == identity and value[0] != 0]
+                if not matched:
+                    raise CanonicalLedgerError("split adjustment requires an existing open position")
+                ratio = Decimal(str(row["quantity"]))
+                for key in matched:
+                    old_quantity, old_currency, old_multiplier = positions[key]
+                    if old_currency != row["currency"] or old_multiplier != Decimal(str(row["multiplier"])):
+                        raise CanonicalLedgerError("split adjustment position identity does not match")
+                    positions[key] = (old_quantity * ratio, old_currency, old_multiplier)
+                continue
+            if kind not in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
+                continue
+            metadata = row.get("metadata")
+            if row.get("evidence_class") == "BROKER_EXECUTION_RECEIPT":
+                trade_id = metadata.get("broker_trade_id") if isinstance(metadata, dict) else None
+                order_id = metadata.get("broker_order_id") if isinstance(metadata, dict) else None
+                if (row.get("event_kind") != EventKind.FILL.value or not isinstance(trade_id, str)
+                        or not trade_id.strip() or trade_id != row.get("source_event_id")
+                        or not isinstance(order_id, str) or not order_id.strip()):
+                    raise CanonicalLedgerError("broker execution fill needs matching trade and order receipt IDs")
+                if trade_id in broker_trade_ids:
+                    raise CanonicalLedgerError("broker trade receipt ID is duplicated within the account")
+                broker_trade_ids.add(trade_id)
+            key = (str(row["asset_class"]), str(row["instrument_id"]), str(row["sleeve_id"]))
+            quantity = Decimal(str(row["quantity"]))
+            multiplier = Decimal(str(row["multiplier"]))
+            old_quantity, old_currency, old_multiplier = positions.get(
+                key, (Decimal(0), str(row["currency"]), multiplier))
+            if old_currency != row["currency"]:
+                raise CanonicalLedgerError("one instrument position cannot mix currencies")
+            if old_multiplier != multiplier:
+                raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
+            action = row.get("position_action")
+            if action is None:
+                action = str(row["side"])
+            if action == "SELL_SHORT" and old_quantity > 0:
+                raise CanonicalLedgerError("SELL_SHORT cannot increase or cross an open long position")
+            if action == "BUY_TO_COVER" and (old_quantity >= 0 or quantity > abs(old_quantity)):
+                raise CanonicalLedgerError("BUY_TO_COVER must not exceed an existing short position")
+            if action == "SELL" and row.get("position_action") is not None \
+                    and (old_quantity <= 0 or quantity > old_quantity):
+                raise CanonicalLedgerError("SELL must close no more than an existing long position")
+            if action == "BUY" and row.get("position_action") is not None and old_quantity < 0:
+                raise CanonicalLedgerError("BUY cannot cover an existing short; use BUY_TO_COVER")
+            signed = quantity if action in {"BUY", "BUY_TO_COVER"} else -quantity
+            positions[key] = (old_quantity + signed, old_currency, old_multiplier)
 
     def events(self, account_id: str, *, as_of: str | None = None) -> list[dict[str, object]]:
         """Read immutable source events up to an optional timezone-aware as-of timestamp."""
@@ -373,14 +538,33 @@ class CanonicalPortfolioLedger:
         events = self.events(account_id, as_of=as_of)
         resolved_unresolved_ids = _resolved_legacy_event_ids(events)
         cash: dict[str, Decimal] = {}
+        receivables: dict[tuple[str, str], Decimal] = {}
         positions: dict[tuple[str, str, str], _Position] = {}
         marks: dict[tuple[str, str], tuple[Decimal, str, str]] = {}
         unresolved: list[dict[str, object]] = []
         for event in events:
             currency = str(event["currency"])
             kind = EventKind(str(event["event_kind"]))
-            if kind is EventKind.CASH_FLOW or kind is EventKind.FEE:
+            if kind in {EventKind.CASH_FLOW, EventKind.CASH_DISTRIBUTION, EventKind.FEE}:
                 cash[currency] = cash.get(currency, Decimal(0)) + Decimal(str(event["cash_delta"]))
+                continue
+            if kind is EventKind.CASH_RECEIVABLE:
+                metadata = event["metadata"]
+                if not isinstance(metadata, dict):
+                    raise CanonicalLedgerError("cash receivable metadata must be an object")
+                receivable_key = (currency, str(metadata["receivable_id"]))
+                amount = Decimal(str(metadata["amount"]))
+                if metadata["action"] == "RECOGNIZE":
+                    if receivable_key in receivables:
+                        raise CanonicalLedgerError("cash receivable was recognized more than once")
+                    receivables[receivable_key] = amount
+                    cash[currency] = cash.get(currency, Decimal(0)) - amount
+                else:
+                    outstanding = receivables.get(receivable_key, Decimal(0))
+                    if outstanding <= 0 or amount > outstanding:
+                        raise CanonicalLedgerError("cash receivable settlement exceeds an outstanding claim")
+                    receivables[receivable_key] = outstanding - amount
+                    cash[currency] = cash.get(currency, Decimal(0)) + amount
                 continue
             if kind is EventKind.UNRESOLVED_POSITION:
                 if str(event["source_event_id"]) not in resolved_unresolved_ids:
@@ -396,6 +580,20 @@ class CanonicalPortfolioLedger:
                     raise CanonicalLedgerError("one instrument mark cannot mix currencies")
                 marks[mark_key] = mark_value
                 continue
+            if kind is EventKind.POSITION_ADJUSTMENT:
+                identity = (str(event["asset_class"]), str(event["instrument_id"]))
+                matched = [pos for key, pos in positions.items()
+                           if key[:2] == identity and pos.quantity != 0]
+                if not matched:
+                    raise CanonicalLedgerError("split adjustment requires an existing open position")
+                ratio = Decimal(str(event["quantity"]))
+                for pos in matched:
+                    pos.quantity *= ratio
+                    pos.average_cost /= ratio
+                # A pre-action mark is no longer an observed comparable price. Wait for a
+                # post-action quote/mark instead of manufacturing one from the split ratio.
+                marks.pop(identity, None)
+                continue
             sleeve = str(event["sleeve_id"])
             key = (asset_class, instrument, sleeve)
             multiplier_value = Decimal(str(event["multiplier"]))
@@ -403,16 +601,32 @@ class CanonicalPortfolioLedger:
                                                        Decimal(0), None, None, currency, multiplier_value, {sleeve}))
             if pos.currency != currency:
                 raise CanonicalLedgerError("one instrument position cannot mix currencies")
-            if kind is EventKind.FILL and pos.multiplier != multiplier_value:
+            if kind in {EventKind.FILL, EventKind.EXPIRY_SETTLEMENT} and pos.multiplier != multiplier_value:
                 raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
             pos.sleeves.add(sleeve)
             quantity = Decimal(str(event["quantity"]))
             price = Decimal(str(event["price"]))
-            signed = quantity if event["side"] == "BUY" else -quantity
             old_qty = pos.quantity
             old_cost = pos.average_cost
+            action = event.get("position_action")
+            explicit_action = action is not None
+            if action is None:
+                action = str(event["side"])  # v1 source-event compatibility
+            if explicit_action:
+                if action == "SELL_SHORT" and old_qty > 0:
+                    raise CanonicalLedgerError("SELL_SHORT cannot increase or cross an open long position")
+                if action == "BUY_TO_COVER" and (old_qty >= 0 or quantity > abs(old_qty)):
+                    raise CanonicalLedgerError("BUY_TO_COVER must not exceed an existing short position")
+                if action == "SELL" and (old_qty <= 0 or quantity > old_qty):
+                    raise CanonicalLedgerError("SELL must close no more than an existing long position")
+                if action == "BUY" and old_qty < 0:
+                    raise CanonicalLedgerError("BUY cannot cover an existing short; use BUY_TO_COVER")
+            signed = quantity if action in {"BUY", "BUY_TO_COVER"} else -quantity
             new_qty = old_qty + signed
-            cash[currency] = cash.get(currency, Decimal(0)) - signed * price * multiplier_value
+            # Futures are margined contracts: notional is never exchanged on entry or
+            # close. Variation-margin cash must arrive as its own sourced cash event.
+            if asset_class != AssetClass.FUTURE.value:
+                cash[currency] = cash.get(currency, Decimal(0)) - signed * price * multiplier_value
             if old_qty == 0 or old_qty * signed > 0:
                 pos.average_cost = ((abs(old_qty) * old_cost + abs(signed) * price) / abs(new_qty)
                                     if new_qty else Decimal(0))
@@ -478,6 +692,10 @@ class CanonicalPortfolioLedger:
         if not has_opening_balance:
             pnl_promotion_blockers.append("OPENING_BALANCE_MISSING")
         return {"account_id": account_id, "as_of": as_of, "cash": cash,
+                "cash_receivables": [
+                    {"currency": currency, "receivable_id": receivable_id, "amount": amount}
+                    for (currency, receivable_id), amount in sorted(receivables.items()) if amount
+                ],
                 "opening_balance_supplied": has_opening_balance,
                 "cash_scope": "COMPLETE_WITH_OPENING_BALANCE" if has_opening_balance
                 else "NET_EVENT_FLOWS_ONLY_NO_OPENING_BALANCE",

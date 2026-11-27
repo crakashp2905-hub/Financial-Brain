@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import InvalidOperation, ROUND_HALF_EVEN, Decimal
+from decimal import InvalidOperation, ROUND_CEILING, ROUND_HALF_EVEN, Decimal
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from zoneinfo import ZoneInfo
 
 from financial_brain.evidence.decision_manifest import ManifestError, canonical_bytes
@@ -18,7 +19,22 @@ from financial_brain.forward_edge.execution_scenario import (
     evaluate_depth_scenario,
     evaluate_passive_scenario,
 )
+from financial_brain.forward_edge.data_profiles import (
+    DataProfileError,
+    profiles_from_constraints,
+    validate_profile_event,
+)
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
+from financial_brain.forward_edge.heartbeats import SessionHeartbeatLedger
+from financial_brain.forward_edge.operating_mode import (
+    OperatingMode,
+    OperatingModeError,
+    OperatingModeLedger,
+)
+from financial_brain.forward_edge.session_recovery import (
+    RecoveryLedgerError,
+    SessionRecoveryLedger,
+)
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.forward_edge.data_distribution import DistributionThresholds, compare_windows
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
@@ -35,11 +51,18 @@ from financial_brain.forward_edge.session_state import (
     SessionState,
 )
 from financial_brain.kernel.units import BasisPoints, Price, UnitError, WholeUnits
+from financial_brain.portfolio.durable_reservations import (
+    DurableReservationLedger,
+    ReservationError,
+    ReservationPolicy,
+    ReservationRequest,
+)
 from financial_brain.forward_edge.session_ops import REQUIRED_PREFLIGHT
 from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
 IST = ZoneInfo("Asia/Kolkata")
 DEFAULT_MAX_QUOTE_AGE_MS = 5_000
+log = logging.getLogger("forward_session_runner")
 
 
 def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
@@ -53,6 +76,7 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
     order_events: dict[str, list[dict[str, Any]]] = {}
     for row in records["order_events"]:
         order_events.setdefault(row["paper_order_id"], []).append(row)
+    audit_times = {(row["kind"], row["record_id"]): row["occurred_at"] for row in records["audit_log"]}
 
     signals = []
     for decision in records["decisions"]:
@@ -78,10 +102,21 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             order_timing.append({
                 "order_id": order_id,
                 "intent_at": intent.get("simulated_at"),
+                "as_of": intent.get("as_of"),
+                "first_executable_after": intent.get("first_executable_after"),
+                "expires_at": intent.get("expires_at"),
+                "last_good_quote_age_ms": intent.get("last_good_quote_age_ms"),
+                "execution_method": intent.get("execution_style"),
+                "intent_ledger_recorded_at": audit_times.get(("paper_intent", f"paper_intent:{order_id}")),
+                "simulated_arrival_earliest_at": intent.get("earliest_fill_time"),
                 "oms_states": [{"state": event["state"], "occurred_at": event["occurred_at"]}
                                for event in history],
+                "simulated_arrival_submitted_at": next(
+                    (event["occurred_at"] for event in history if event["state"] == "SUBMITTED"), None),
                 "execution_status": receipt.get("status") if receipt else "NO_RECEIPT",
                 "simulated_fill_at": fills[0]["occurred_at"] if fills else None,
+                "execution_ledger_recorded_at": audit_times.get(
+                    ("execution_receipt", f"execution_receipt:{order_id}")),
                 "fills": fills,
             })
         payload = decision.get("payload") or {}
@@ -101,12 +136,20 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
             missing.append("LOCAL_RECEIPT_TIMESTAMP")
         if not decision.get("feature_ready_at"):
             missing.append("FEATURE_READY_TIMESTAMP")
+        if not decision.get("feature_started_at"):
+            missing.append("FEATURE_COMPUTATION_START_TIMESTAMP")
+        if not decision.get("model_inference_started_at") or not decision.get("model_inference_completed_at"):
+            missing.append("MODEL_INFERENCE_TIMESTAMPS")
         if decision["outcome"] == "TRADE" and not risk_record:
             missing.append("OMS_RISK_ASSESSMENT_TIMESTAMP")
         if decision["outcome"] == "TRADE" and not order_timing:
             missing.append("SIMULATED_ORDER_OR_FILL")
         if decision["outcome"] == "TRADE" and not any(row["fills"] for row in order_timing):
             missing.append("SIMULATED_FILL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not any(row["simulated_arrival_submitted_at"] for row in order_timing):
+            missing.append("SIMULATED_ORDER_ARRIVAL_TIMESTAMP")
+        if decision["outcome"] == "TRADE" and not any(row["execution_ledger_recorded_at"] for row in order_timing):
+            missing.append("EXECUTION_LEDGER_RECORD_TIMESTAMP")
         if decision["outcome"] == "TRADE":
             missing.append("RISK_STOP_TRIGGER_TIMESTAMP")
         if decision["outcome"] == "TRADE":
@@ -114,9 +157,22 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
         signals.append({
             "decision_id": decision_id, "strategy_id": decision["strategy_id"],
             "outcome": decision["outcome"], "source_clocks": source_clocks,
+            "as_of": decision.get("as_of"),
+            "first_executable_after": min((row["first_executable_after"] for row in order_timing
+                                            if row["first_executable_after"]), default=None),
+            "expires_at": min((row["expires_at"] for row in order_timing if row["expires_at"]), default=None),
+            "last_good_quote_age_ms": decision.get("last_good_quote_age_ms"),
+            "execution_method": sorted({row["execution_method"] for row in order_timing
+                                        if row["execution_method"]}),
+            "feature_computation_started_at": decision.get("feature_started_at"),
             "feature_ready_at": decision.get("feature_ready_at"),
+            "model_inference_started_at": decision.get("model_inference_started_at"),
+            "model_inference_completed_at": decision.get("model_inference_completed_at"),
             "signal_decision_at": decision["decided_at"],
+            "decision_ledger_recorded_at": audit_times.get(("decision", f"decision:{decision_id}")),
             "oms_risk_assessed_at": risk_record.get("assessed_at"),
+            "risk_ledger_recorded_at": audit_times.get(
+                ("risk_verdict", f"risk_verdict:{risk_record['verdict_id']}")) if risk_record else None,
             "oms_risk_allowed": risk_record.get("allowed"),
             "orders": order_timing, "risk_stop_triggered_at": None,
             "caller_declared_risk_stop_at_unverified": declared_risk_stop,
@@ -133,6 +189,129 @@ def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
 
 class ForwardSessionRunnerError(ValueError):
     """Session runner rejected an event, decision or lifecycle operation."""
+
+
+def _validate_completed_bar(event: MarketEvent, session_open_at: datetime,
+                            session_close_at: datetime) -> None:
+    """Require a complete bar to fit an official session-relative interval."""
+    payload = event.payload
+    try:
+        if (session_open_at.tzinfo is None or session_open_at.utcoffset() is None or
+                session_close_at.tzinfo is None or session_close_at.utcoffset() is None):
+            raise ValueError("sourced session bounds must be timezone-aware")
+        interval = payload.get("interval_seconds")
+        if type(interval) is not int or interval not in {60, 300, 900}:
+            raise ValueError("bar interval must be 60, 300 or 900 seconds")
+        raw_start, raw_end = payload.get("bar_start_at"), payload.get("bar_end_at")
+        if not isinstance(raw_start, str) or not isinstance(raw_end, str):
+            raise ValueError("bar start and end timestamps are required")
+        start, end = datetime.fromisoformat(raw_start), datetime.fromisoformat(raw_end)
+        if (start.tzinfo is None or start.utcoffset() is None or
+                end.tzinfo is None or end.utcoffset() is None):
+            raise ValueError("bar start and end timestamps must include timezone offsets")
+        start, end = start.astimezone(timezone.utc), end.astimezone(timezone.utc)
+        opens = session_open_at.astimezone(timezone.utc)
+        closes = session_close_at.astimezone(timezone.utc)
+        interval_delta = timedelta(seconds=interval)
+        if end - start != interval_delta or event.event_time != end:
+            raise ValueError("bar timestamps do not match the declared complete interval")
+        if start < opens or end > closes:
+            raise ValueError("bar interval is outside the official exchange session")
+        elapsed = start - opens
+        if elapsed % interval_delta != timedelta(0):
+            raise ValueError("bar interval is not aligned to the official exchange session open")
+        if event.received_at < end or event.available_at < end:
+            raise ValueError("completed bar arrived before its interval ended")
+    except (TypeError, ValueError) as exc:
+        raise ForwardSessionRunnerError(f"completed bar rejected: {exc}") from exc
+
+
+def _canonical_sha256(value: object) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+                         ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _validate_expected_value_forecast(value: object, *, decision_at: datetime) -> dict[str, Any]:
+    """Validate the immutable EV snapshot published before its decision/execution clock."""
+    fields = {"candidate_id", "version", "forecasted_at_utc", "predicted_return_fraction",
+              "predicted_cost_fraction", "expected_net_fraction", "forecast", "model_sha256",
+              "cost_model_sha256"}
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ForwardSessionRunnerError("candidate requires a complete expected-value forecast snapshot")
+    if not isinstance(value["candidate_id"], str) or not value["candidate_id"].strip():
+        raise ForwardSessionRunnerError("expected-value forecast candidate_id is required")
+    if type(value["version"]) is not int or value["version"] < 1:
+        raise ForwardSessionRunnerError("expected-value forecast version must be a positive integer")
+    for label in ("model_sha256", "cost_model_sha256"):
+        if re.fullmatch(r"[0-9a-f]{64}", str(value[label])) is None:
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be SHA-256")
+    try:
+        forecasted_at = datetime.fromisoformat(str(value["forecasted_at_utc"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ForwardSessionRunnerError("expected-value forecast timestamp must be ISO-8601") from exc
+    if forecasted_at.tzinfo is None or forecasted_at.utcoffset() is None:
+        raise ForwardSessionRunnerError("expected-value forecast timestamp must include a timezone")
+    forecasted_at = forecasted_at.astimezone(timezone.utc)
+    if forecasted_at > decision_at.astimezone(timezone.utc):
+        raise ForwardSessionRunnerError("expected-value forecast must be published before its decision clock")
+    decimal_fields = ("predicted_return_fraction", "predicted_cost_fraction", "expected_net_fraction")
+    numbers: dict[str, Decimal] = {}
+    for label in decimal_fields:
+        raw = value[label]
+        if not isinstance(raw, str):
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be a decimal string")
+        try:
+            number = Decimal(raw)
+        except InvalidOperation as exc:
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} is invalid") from exc
+        if not number.is_finite():
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be finite")
+        numbers[label] = number
+    if numbers["predicted_cost_fraction"] < 0 or numbers["predicted_cost_fraction"] >= 1:
+        raise ForwardSessionRunnerError("expected-value forecast cost must be in [0, 1)")
+    if numbers["expected_net_fraction"] != (
+            numbers["predicted_return_fraction"] - numbers["predicted_cost_fraction"]):
+        raise ForwardSessionRunnerError("expected-value forecast net value must equal gross forecast less costs")
+    distribution = value["forecast"]
+    expected_distribution_fields = {"p10_fraction", "p50_fraction", "p90_fraction", "probability_exceeds_cost"}
+    if not isinstance(distribution, dict) or set(distribution) != expected_distribution_fields:
+        raise ForwardSessionRunnerError("expected-value forecast distribution is incomplete")
+    parsed: dict[str, Decimal] = {}
+    for label, raw in distribution.items():
+        if not isinstance(raw, str):
+            raise ForwardSessionRunnerError("expected-value forecast distribution values must be decimal strings")
+        try:
+            parsed[label] = Decimal(raw)
+        except InvalidOperation as exc:
+            raise ForwardSessionRunnerError("expected-value forecast distribution contains an invalid value") from exc
+        if not parsed[label].is_finite():
+            raise ForwardSessionRunnerError("expected-value forecast distribution must be finite")
+    if (parsed["p10_fraction"] > parsed["p50_fraction"] or
+            parsed["p50_fraction"] > parsed["p90_fraction"] or
+            not Decimal(0) <= parsed["probability_exceeds_cost"] <= Decimal(1)):
+        raise ForwardSessionRunnerError("expected-value forecast distribution is not ordered or calibrated")
+    return {**value, "forecasted_at_utc": forecasted_at.isoformat(),
+            "forecast": dict(sorted(distribution.items()))}
+
+
+def _validate_live_paper_freeze(config: ForwardRunConfig) -> None:
+    """Require a complete, hash-bound strategy and policy snapshot before LIVE_PAPER opens."""
+    constraints = config.constraints
+    parameters = constraints.get("strategy_parameters")
+    parameter_sha = constraints.get("strategy_parameters_sha256")
+    risk_limits = constraints.get("risk_limits")
+    interval = constraints.get("signal_interval_seconds")
+    if not isinstance(parameters, dict) or not parameters:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires frozen strategy_parameters")
+    if parameter_sha != _canonical_sha256(parameters):
+        raise ForwardSessionRunnerError("LIVE_PAPER strategy parameter hash differs from frozen parameters")
+    if not isinstance(risk_limits, dict) or not risk_limits:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires explicit frozen risk_limits")
+    if type(interval) is not int or interval not in {60, 300, 900}:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires a supported frozen signal_interval_seconds")
+    if not isinstance(constraints.get("cost_schedule"), dict):
+        raise ForwardSessionRunnerError("LIVE_PAPER requires a versioned frozen cost_schedule")
 
 
 class ForwardSessionRunner:
@@ -153,6 +332,10 @@ class ForwardSessionRunner:
         self._con = sqlite3.connect(str(self.journal_path))
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
+        from .persistent_killswitch import PersistentKillSwitch
+
+        self.paper_kill_switch = PersistentKillSwitch(
+            self.journal_path, switch_id="forward-paper-entry", connection=self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_events (
             session_id TEXT NOT NULL, event_id TEXT NOT NULL, kind TEXT NOT NULL,
             available_at TEXT NOT NULL, ingested_at TEXT, ingest_clock_source TEXT,
@@ -178,6 +361,9 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, rejection_id TEXT NOT NULL, record_sha256 TEXT NOT NULL,
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
         self.durable = DurableSessionJournal(self._con)
+        self.heartbeats = SessionHeartbeatLedger(self._con)
+        self.operating_modes = OperatingModeLedger(self._con)
+        self.recovery = SessionRecoveryLedger(self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -185,6 +371,10 @@ class ForwardSessionRunner:
             session_id TEXT NOT NULL, checkpoint_id TEXT NOT NULL, phase TEXT NOT NULL,
             checkpoint_sha256 TEXT NOT NULL, checkpoint_json TEXT NOT NULL,
             PRIMARY KEY(session_id, checkpoint_id))""")
+        self._con.execute("""CREATE TABLE IF NOT EXISTS runner_event_cursors (
+            session_id TEXT NOT NULL, consumer_id TEXT NOT NULL, event_offset INTEGER NOT NULL,
+            event_id TEXT NOT NULL, updated_at TEXT NOT NULL, cursor_sha256 TEXT NOT NULL,
+            PRIMARY KEY(session_id, consumer_id))""")
         self._con.execute("""CREATE TABLE IF NOT EXISTS paper_intents (
             session_id TEXT NOT NULL, order_id TEXT NOT NULL, decision_id TEXT NOT NULL,
             event_id TEXT NOT NULL, request_sha256 TEXT NOT NULL, request_json TEXT NOT NULL,
@@ -253,14 +443,212 @@ class ForwardSessionRunner:
         return value
 
     def close(self) -> None:
+        self.paper_kill_switch.close()
         self._con.close()
+
+    def record_component_heartbeat(self, *, session_id: str, component: str, heartbeat_id: str,
+                                  occurred_at: datetime | None = None,
+                                  last_good_event_id: str | None = None,
+                                  last_good_event_at: datetime | None = None) -> bool:
+        """Accept an explicit component heartbeat; missing producers remain degraded in records()."""
+        try:
+            self.state_store.state(session_id)
+        except (OrderJournalError, ValueError) as exc:
+            raise ForwardSessionRunnerError("heartbeat requires a known forward session") from exc
+        now = occurred_at or capture_local_time(self.clock, label="component heartbeat time")
+        try:
+            return self.heartbeats.record(
+                session_id=session_id, component=component, heartbeat_id=heartbeat_id,
+                occurred_at=now, last_good_event_id=last_good_event_id,
+                last_good_event_at=last_good_event_at)
+        except ValueError as exc:
+            raise ForwardSessionRunnerError(f"component heartbeat rejected: {exc}") from exc
         self.state_store.close()
+
+    def record_position_monitor_sample(self, *, session_id: str, monitor_id: str,
+                                       occurred_at: datetime, record: dict[str, Any]) -> bool:
+        """Persist a replay-idempotent position-monitor evaluation in session audit evidence."""
+        try:
+            self.state_store.state(session_id)
+        except (OrderJournalError, ValueError) as exc:
+            raise ForwardSessionRunnerError("position monitor requires a known forward session") from exc
+        if not monitor_id.strip() or record.get("session_id") != session_id:
+            raise ForwardSessionRunnerError("position monitor sample identity is invalid")
+        try:
+            inserted = self.durable.append_audit(session_id=session_id, kind="position_monitor",
+                                                 record_id=monitor_id, occurred_at=occurred_at,
+                                                 record=record)
+            self._con.commit()
+            return inserted
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+
+    def record_unresolved_exposure(self, *, session_id: str, exposure_type: str,
+                                   exposure_key: str, reason: str, occurred_at: datetime,
+                                   instrument_id: str | None = None, order_id: str | None = None,
+                                   quantity: int | None = None) -> str:
+        """Append an unresolved exposure without converting unknown loss to zero P&L."""
+        allowed = {"STALE_MARK", "MISSING_EXIT", "NO_CONFIRMABLE_QUOTE", "FILL_AMBIGUITY",
+                   "OPEN_RISK_UNKNOWN", "LEDGER_MISMATCH"}
+        if exposure_type not in allowed or not exposure_key.strip() or not reason.strip():
+            raise ForwardSessionRunnerError("unresolved exposure type, key and reason are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("unresolved exposure timestamp must be timezone aware")
+        if quantity is not None and (type(quantity) is not int or quantity == 0):
+            raise ForwardSessionRunnerError("unresolved exposure quantity must be a non-zero whole number")
+        try:
+            self.state_store.state(session_id)
+        except (OrderJournalError, ValueError) as exc:
+            raise ForwardSessionRunnerError("unresolved exposure requires a known session") from exc
+        identity_key = self._sha256({"session_id": session_id, "type": exposure_type,
+                                     "exposure_key": exposure_key})
+        audit_rows = self.durable.audit_records(session_id)
+        prior_exposures = [row["record"] for row in audit_rows
+                           if row.get("kind") == "unresolved_exposure" and
+                           row["record"].get("identity_key") == identity_key]
+        resolved_ids = {row["record"]["exposure_id"] for row in audit_rows
+                        if row.get("kind") == "unresolved_exposure_resolution"}
+        active = [row for row in prior_exposures if row["exposure_id"] not in resolved_ids]
+        if active:
+            return active[-1]["exposure_id"]
+        occurrence = len(prior_exposures)
+        stable_key = self._sha256({"identity_key": identity_key, "occurrence": occurrence})[:32]
+        body = {"schema": "fb.forward-unresolved-exposure.v1", "exposure_id": stable_key,
+                "identity_key": identity_key,
+                "session_id": session_id, "exposure_type": exposure_type,
+                "exposure_key": exposure_key, "instrument_id": instrument_id,
+                "order_id": order_id, "quantity": quantity, "reason": reason,
+                "occurred_at_utc": occurred_at.astimezone(timezone.utc).isoformat(),
+                "valuation_inr": None, "loss_inr": None,
+                "pnl_status": "UNRECOGNIZED_PENDING_EVIDENCE", "state": "OPEN"}
+        try:
+            self.durable.append_audit(session_id=session_id, kind="unresolved_exposure",
+                                      record_id=stable_key, occurred_at=occurred_at, record=body)
+            self._con.commit()
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        return stable_key
+
+    def resolve_unresolved_exposure(self, *, session_id: str, exposure_id: str,
+                                    evidence_event_id: str, resolution: str,
+                                    reason: str, resolved_at: datetime) -> str:
+        """Append an exposure resolution linked to evidence already persisted in this session."""
+        if not all(value.strip() for value in (exposure_id, evidence_event_id, resolution, reason)):
+            raise ForwardSessionRunnerError("exposure resolution requires identity, evidence, type and reason")
+        if resolved_at.tzinfo is None or resolved_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("exposure resolution timestamp must be timezone aware")
+        records = self.records(session_id)
+        open_exposures = {row["exposure_id"]: row for row in records["unresolved_exposures"]}
+        if exposure_id not in open_exposures:
+            raise ForwardSessionRunnerError("cannot resolve an exposure that is not open")
+        allowed_resolutions = {
+            "STALE_MARK": {"FRESH_MARK", "POSITION_CLOSED"},
+            "MISSING_EXIT": {"EXIT_FILLED", "SETTLEMENT_CONFIRMED", "POSITION_CLOSED"},
+            "NO_CONFIRMABLE_QUOTE": {"FRESH_MARK", "EXIT_FILLED", "POSITION_CLOSED"},
+            "FILL_AMBIGUITY": {"CONFIRMED_FILL", "CONFIRMED_NO_FILL"},
+            "OPEN_RISK_UNKNOWN": {"RISK_POLICY_RESTORED", "POSITION_CLOSED"},
+            "LEDGER_MISMATCH": {"LEDGER_RECONCILED"},
+        }
+        exposure = open_exposures[exposure_id]
+        if resolution not in allowed_resolutions[exposure["exposure_type"]]:
+            raise ForwardSessionRunnerError("resolution type is incompatible with the exposure")
+        evidence_sha256: str | None = None
+        evidence_event: MarketEvent | None = None
+        for event in records["events"]:
+            if event.get("event_id") == evidence_event_id:
+                fields = {key: event[key] for key in (
+                    "event_id", "kind", "venue", "instrument_id", "event_time", "received_at",
+                    "available_at", "payload", "source", "sequence", "decision_time", "evidence_id",
+                    "source_at", "exchange_at", "published_at", "computed_at",
+                ) if key in event}
+                evidence_event = MarketEvent.from_dict(fields)
+                evidence_sha256 = evidence_event.sha256()
+                break
+        if evidence_sha256 is None:
+            for audit in records["audit_log"]:
+                record = audit.get("record", {})
+                if (audit.get("record_id") == evidence_event_id or
+                        record.get("event_id") == evidence_event_id or
+                        record.get("order_event_id") == evidence_event_id):
+                    evidence_sha256 = str(audit["record_sha256"])
+                    break
+        if evidence_sha256 is None:
+            for event in records["order_events"]:
+                if event.get("event_id") == evidence_event_id:
+                    evidence_sha256 = self._sha256(event)
+                    break
+        if evidence_sha256 is None:
+            raise ForwardSessionRunnerError("exposure resolution evidence is not persisted in this session")
+        if evidence_event_id in {event["event_id"] for event in records["events"]}:
+            persisted_evidence_event = next(event for event in records["events"]
+                                            if event["event_id"] == evidence_event_id)
+            if datetime.fromisoformat(persisted_evidence_event["available_at"]) > resolved_at.astimezone(
+                    timezone.utc):
+                raise ForwardSessionRunnerError("resolution cannot precede its evidence availability")
+        if resolution == "FRESH_MARK":
+            persisted_quote = next((row for row in records["events"]
+                                    if row.get("event_id") == evidence_event_id), None)
+            if evidence_event is None or executable_quote(evidence_event) is None or persisted_quote is None:
+                raise ForwardSessionRunnerError("fresh-mark resolution requires a persisted executable quote")
+            if datetime.fromisoformat(persisted_quote["available_at"]) <= datetime.fromisoformat(
+                    exposure["occurred_at_utc"]):
+                raise ForwardSessionRunnerError("fresh-mark evidence must postdate the unresolved exposure")
+        resolution_id = self._sha256({"exposure_id": exposure_id,
+                                      "evidence_event_id": evidence_event_id,
+                                      "resolution": resolution})[:32]
+        for audit in records["audit_log"]:
+            prior = audit.get("record", {})
+            if audit.get("kind") == "unresolved_exposure_resolution" and \
+                    prior.get("resolution_id") == resolution_id:
+                return resolution_id
+        body = {"schema": "fb.forward-unresolved-exposure-resolution.v1",
+                "resolution_id": resolution_id, "session_id": session_id,
+                "exposure_id": exposure_id, "evidence_event_id": evidence_event_id,
+                "evidence_sha256": evidence_sha256, "resolution": resolution,
+                "reason": reason, "resolved_at_utc": resolved_at.astimezone(timezone.utc).isoformat(),
+                "state": "RESOLVED"}
+        try:
+            self.durable.append_audit(session_id=session_id, kind="unresolved_exposure_resolution",
+                                      record_id=resolution_id, occurred_at=resolved_at, record=body)
+            self._con.commit()
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        return resolution_id
+
+    def set_operating_mode(self, *, session_id: str, mode: str | OperatingMode,
+                           event_id: str, reason: str, occurred_at: datetime | None = None) -> bool:
+        """Persist an explicit pause, degradation, recovery or halt decision."""
+        try:
+            self.state_store.state(session_id)
+            return self.operating_modes.transition(
+                session_id, mode, event_id=event_id,
+                occurred_at=occurred_at or capture_local_time(self.clock, label="operating mode transition"),
+                reason=reason)
+        except (ValueError, OperatingModeError) as exc:
+            raise ForwardSessionRunnerError(f"operating mode transition rejected: {exc}") from exc
 
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
               preflight: dict[str, bool]) -> SessionState:
         """Create or resume a session, recording every preflight check before opening it."""
+        if config.mode == "LIVE_PAPER":
+            _validate_live_paper_freeze(config)
+        try:
+            profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
         now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
+        if config.mode == "LIVE_PAPER":
+            try:
+                self._resolved_cost_schedule(session_id)
+            except ForwardSessionRunnerError as exc:
+                self.state_store.transition(session_id, SessionState.REJECTED, now=now,
+                                            reason=f"frozen cost schedule rejected: {exc}")
+                raise
+        try:
+            self.operating_modes.initialize(session_id, occurred_at=now)
+        except OperatingModeError as exc:
+            raise ForwardSessionRunnerError(f"operating mode initialization failed: {exc}") from exc
         state = self.state_store.state(session_id)
         if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED,
                      SessionState.NO_TRADE, SessionState.INCOMPLETE}:
@@ -297,6 +685,197 @@ class ForwardSessionRunner:
         self.state_store.transition(session_id, SessionState.OPEN, now=now)
         return SessionState.OPEN
 
+    def run_event_loop(self, *, session_id: str, config: ForwardRunConfig,
+                       events: Iterable[MarketEvent], session_open_at: datetime,
+                       preflight: dict[str, bool], consumer_id: str,
+                       on_market_event: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                       evaluate_protective_exits: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                       on_completed_bar: Callable[[MarketEvent, "ForwardSessionRunner"], None] | None = None,
+                       venue_calendar: VenueCalendar | None = None, venue: str | None = None,
+                       on_close: Callable[["ForwardSessionRunner"], None] | None = None,
+                       session_close_at: datetime | None = None,
+                       close_complete: bool = False) -> dict[str, Any]:
+        """Run one restartable, deterministic session event loop.
+
+        Events are made available one at a time in canonical time/sequence/ID order. The
+        market handler runs after durable ingestion; the optional completed-bar handler
+        runs only for BAR events explicitly tagged ``complete=True``; the protective-
+        exit evaluator then runs for every event (including quotes between strategy bars).
+        A durable consumer
+        cursor advances only after both handlers return. Handlers must therefore use
+        idempotent decision/order IDs: a crash after a handler side effect but before its
+        cursor acknowledgement intentionally replays that event.
+
+        Passing ``close_complete=True`` requests closeout after all pending events have
+        been handled. Otherwise the session stays open for a later call or supervised
+        closeout. A failed handler leaves the session open and the event unacknowledged,
+        so a restart can retry it without losing the event.
+        """
+        if not session_id.strip() or not consumer_id.strip():
+            raise ForwardSessionRunnerError("session and event consumer IDs are required")
+        if session_open_at.tzinfo is None or session_open_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("session open clock must be timezone aware")
+        if not callable(on_market_event) or not callable(evaluate_protective_exits):
+            raise ForwardSessionRunnerError("market and protective-exit handlers are required")
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
+        if profiles is None:
+            raise ForwardSessionRunnerError(
+                "deterministic event loop requires an explicit data profile for every frozen instrument")
+        if on_close is not None and not callable(on_close):
+            raise ForwardSessionRunnerError("session close handler must be callable")
+        if on_completed_bar is not None and not callable(on_completed_bar):
+            raise ForwardSessionRunnerError("completed-bar handler must be callable")
+        if on_completed_bar is not None and venue_calendar is None:
+            raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+        if venue_calendar is not None:
+            if venue is None or not venue.strip():
+                raise ForwardSessionRunnerError("venue is required with a sourced session calendar")
+        if type(close_complete) is not bool:
+            raise ForwardSessionRunnerError("close_complete must be boolean")
+        if close_complete and (session_close_at is None or session_close_at.tzinfo is None or
+                               session_close_at.utcoffset() is None):
+            raise ForwardSessionRunnerError("complete closeout requires an aware session close clock")
+
+        event_batch = list(events)
+        if any(not isinstance(event, MarketEvent) for event in event_batch):
+            raise ForwardSessionRunnerError("event loop accepts normalized MarketEvent values only")
+        if any(event.kind is EventKind.BAR and "complete" in event.payload and
+               type(event.payload["complete"]) is not bool for event in event_batch):
+            raise ForwardSessionRunnerError("bar complete marker must be boolean")
+        ordered = sorted(event_batch, key=lambda event: (
+            event.available_at, event.event_time,
+            -1 if event.sequence is None else event.sequence, event.event_id))
+        if venue_calendar is not None:
+            if venue is None:
+                raise ForwardSessionRunnerError("venue is required with a sourced session calendar")
+            state = self.plan_calendar_day(
+                session_id, config, venue=venue, calendar=venue_calendar,
+                now=session_open_at, preflight=preflight)
+        else:
+            self.state_store.create(session_id, config, now=session_open_at)
+            state = self.state_store.state(session_id)
+            if state is SessionState.PLANNED:
+                state = self.begin(session_id, config, now=session_open_at, preflight=preflight)
+        if state is not SessionState.OPEN:
+            return {"session_id": session_id, "status": state.value, "processed_event_ids": [],
+                    "persisted_event_ids": [], "close_report": None}
+
+        persisted_event_ids: list[str] = []
+        processed_event_ids: list[str] = []
+
+        def drain_consumer() -> None:
+            def dispatch(handler_name: str, callback: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                         event: MarketEvent, row: dict[str, Any]) -> None:
+                recovery = self.recovery.state(session_id, consumer_id, event.event_id, handler_name)
+                if recovery and recovery["status"] == "HALTED":
+                    current = self.operating_modes.mode(session_id)
+                    if current is not OperatingMode.HALTED:
+                        self.set_operating_mode(
+                            session_id=session_id, mode=OperatingMode.HALTED,
+                            event_id=f"handler-halted:{consumer_id}:{event.event_id}:{handler_name}",
+                            occurred_at=capture_local_time(self.clock, label="handler circuit breaker"),
+                            reason=f"handler retry limit reached: {handler_name}")
+                    raise ForwardSessionRunnerError(
+                        f"handler circuit breaker is HALTED for {event.event_id}:{handler_name}")
+                if recovery and recovery["retry_at"]:
+                    retry_at = datetime.fromisoformat(recovery["retry_at"])
+                    now = capture_local_time(self.clock, label="handler retry readiness")
+                    if now < retry_at:
+                        raise ForwardSessionRunnerError(
+                            f"handler retry deferred until {retry_at.isoformat()}: {event.event_id}:{handler_name}")
+                try:
+                    callback(event, self)
+                except Exception as exc:
+                    constraints = config.constraints
+                    attempts = constraints.get("handler_retry_max_attempts", 5)
+                    base_ms = constraints.get("handler_retry_base_delay_ms", 250)
+                    cap_ms = constraints.get("handler_retry_cap_delay_ms", 5_000)
+                    if any(type(value) is not int or value < 0
+                           for value in (attempts, base_ms, cap_ms)) or attempts < 1 or cap_ms < base_ms:
+                        raise ForwardSessionRunnerError("invalid bounded handler retry policy") from exc
+                    occurred = capture_local_time(self.clock, label="handler failure")
+                    try:
+                        failure = self.recovery.record_failure(
+                            session_id=session_id, consumer_id=consumer_id, event_id=event.event_id,
+                            handler=handler_name, occurred_at=occurred, error=exc,
+                            max_attempts=attempts, base_delay=timedelta(milliseconds=base_ms),
+                            max_delay=timedelta(milliseconds=cap_ms))
+                        current = self.operating_modes.mode(session_id)
+                        target = (OperatingMode.HALTED if failure["status"] == "HALTED"
+                                  else OperatingMode.DEGRADED)
+                        if current is not target and current is not OperatingMode.HALTED:
+                            self.set_operating_mode(
+                                session_id=session_id, mode=target,
+                                event_id=f"handler-{target.value.lower()}:{consumer_id}:{event.event_id}:{handler_name}",
+                                occurred_at=occurred,
+                                reason=f"event handler failed: {handler_name}:{type(exc).__name__}")
+                        if failure["alert_created"]:
+                            log.error("event handler failure session=%s consumer=%s event=%s handler=%s "
+                                      "attempt=%s status=%s error=%s: %s", session_id, consumer_id,
+                                      event.event_id, handler_name, failure["attempt"], failure["status"],
+                                      type(exc).__name__, str(exc)[:500])
+                    except RecoveryLedgerError as ledger_error:
+                        raise ForwardSessionRunnerError(f"handler recovery ledger failed: {ledger_error}") from exc
+                    raise
+                else:
+                    self.recovery.record_success(
+                        session_id=session_id, consumer_id=consumer_id, event_id=event.event_id,
+                        handler=handler_name, occurred_at=capture_local_time(self.clock, label="handler success"))
+
+            while pending := self.read_events_after(session_id, consumer_id, limit=1):
+                row = pending[0]
+                event = MarketEvent.from_dict(row["event"])
+                if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
+                        on_completed_bar is not None):
+                    if venue_calendar is None:
+                        raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+                    opens, closes = venue_calendar.session_bounds_utc(event.venue, config.exchange_date)
+                    _validate_completed_bar(event, opens, closes)
+                dispatch("market", on_market_event, event, row)
+                # Forecast cadence is bar-driven and separate from the position monitor.
+                # Missing or false completion evidence fails closed for forecasting.
+                if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
+                        on_completed_bar is not None):
+                    dispatch("completed_bar", on_completed_bar, event, row)
+                # This is deliberately independent of forecast cadence: every source
+                # event gives the position monitor a chance to evaluate protective exits.
+                dispatch("protective_exits", evaluate_protective_exits, event, row)
+                cursor = self.event_cursor(session_id, consumer_id)
+                self.acknowledge_event_offset(
+                    session_id, consumer_id, expected_offset=(cursor or {}).get("event_offset", 0),
+                    through_offset=row["offset"], event_ids=(row["event_id"],),
+                    now=datetime.fromisoformat(row["ingested_at"]))
+                processed_event_ids.append(row["event_id"])
+
+        # Retry the durable unacknowledged prefix before admitting newer events. This
+        # prevents callbacks from seeing later events in the session ledger.
+        drain_consumer()
+        for event in ordered:
+            if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
+                    on_completed_bar is not None):
+                if venue_calendar is None:
+                    raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+                opens, closes = venue_calendar.session_bounds_utc(event.venue, config.exchange_date)
+                _validate_completed_bar(event, opens, closes)
+            result = self.ingest(session_id, config, [event])
+            if result["persisted"]:
+                persisted_event_ids.append(event.event_id)
+            drain_consumer()
+
+        close_report = None
+        if close_complete:
+            if on_close is not None:
+                on_close(self)
+            close_report = self.close_session(session_id, complete=True, now=session_close_at)
+        return {"session_id": session_id,
+                "status": close_report["status"] if close_report else SessionState.OPEN.value,
+                "persisted_event_ids": persisted_event_ids,
+                "processed_event_ids": processed_event_ids,
+                "close_report": close_report}
+
     def plan_calendar_day(self, session_id: str, config: ForwardRunConfig, *, venue: str,
                           calendar: VenueCalendar, now: datetime, preflight: dict[str, bool],
                           supported_session_types: frozenset[str] = frozenset({"NORMAL"})) -> SessionState:
@@ -308,6 +887,10 @@ class ForwardSessionRunner:
         except ValueError as exc:
             raise ForwardSessionRunnerError(str(exc)) from exc
         self.state_store.create(session_id, config, now=now)
+        try:
+            self.operating_modes.initialize(session_id, occurred_at=now)
+        except OperatingModeError as exc:
+            raise ForwardSessionRunnerError(f"operating mode initialization failed: {exc}") from exc
         state = self.state_store.state(session_id)
         calendar_digest = calendar.sha256()
         if state is not SessionState.PLANNED:
@@ -445,6 +1028,11 @@ class ForwardSessionRunner:
             elif (history[-1]["state"] != body["status"]
                   or history[-1]["filled_quantity"] != body["filled_quantity"]):
                 raise ForwardSessionRunnerError("dispatched receipt conflicts with terminal order journal state")
+            # Repair a crash after order-receipt persistence but before the canonical
+            # position event was attached to the still-active account reservation.
+            self._record_canonical_paper_fill(
+                config=config, session_id=session_id, order_id=order_id,
+                receipt=body, receipt_sha256=str(receipt[0]))
         if dispatched:
             self._con.commit()
         records = self.records(session_id)
@@ -510,36 +1098,52 @@ class ForwardSessionRunner:
         """Durably accept normalized source events available during the frozen session."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("market events are accepted only in an OPEN session")
+        if config.sha256() != self.state_store.config_sha256(session_id):
+            raise ForwardSessionRunnerError("ingest config differs from the frozen session configuration")
         expected = set(config.instrument_universe)
         counts = {"received": 0, "persisted": 0, "duplicate": 0}
         batch = list(events)
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
+        persisted_events: list[tuple[MarketEvent, datetime]] = []
         self._con.execute("SAVEPOINT ingest_batch")
         try:
             for event in batch:
                 counts["received"] += 1
                 if event.instrument_id not in expected:
                     raise ForwardSessionRunnerError("event instrument is outside frozen universe")
+                if profiles is not None:
+                    try:
+                        validate_profile_event(profiles[event.instrument_id], event)
+                    except DataProfileError as exc:
+                        raise ForwardSessionRunnerError(f"instrument data profile rejected event: {exc}") from exc
                 permission_evidence: dict[str, Any] | None = None
                 if event.source in {"FIXTURE", "SYNTHETIC_FIXTURE"}:
                     if config.constraints.get("allow_synthetic_fixture_events") is not True:
                         raise ForwardSessionRunnerError(
                             "fixture market events require an explicit frozen synthetic-fixture session constraint")
                 else:
+                    permission_use = (DataUse.PROSPECTIVE_PAPER_CAPTURE
+                                      if config.mode == "LIVE_PAPER" else DataUse.PAPER_SIMULATION)
                     permission_rows = config.constraints.get("data_permissions", [])
                     matching = [row for row in permission_rows if isinstance(row, dict)
                                 and row.get("source_id") == event.source
-                                and row.get("use") == DataUse.PAPER_SIMULATION.value]
+                                and row.get("use") == permission_use.value]
                     if len(matching) != 1:
                         raise ForwardSessionRunnerError(
-                            f"market data rights are unknown for source {event.source!r} and paper simulation")
+                            f"market data rights are unknown for source {event.source!r} and "
+                            f"{permission_use.value.lower()}; forward executable paper testing is blocked")
                     try:
                         permission = DataPermission.from_dict(matching[0])
                     except (KeyError, TypeError, ValueError) as exc:
                         raise ForwardSessionRunnerError(f"invalid market data permission: {exc}") from exc
                     local_date = event.available_at.astimezone(IST).date()
-                    if not permission.allows(source_id=event.source, use=DataUse.PAPER_SIMULATION, on=local_date):
+                    if not permission.allows(source_id=event.source, use=permission_use, on=local_date):
                         raise ForwardSessionRunnerError(
-                            f"market data permission does not allow paper simulation for {event.source!r}")
+                            f"market data permission does not allow {permission_use.value.lower()} "
+                            f"for {event.source!r}; forward executable paper testing is blocked")
                     permission_evidence = dict(matching[0])
                 if event.event_time.astimezone(IST).date() != config.exchange_date:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")
@@ -592,7 +1196,8 @@ class ForwardSessionRunner:
                                     "data_permission": permission_evidence,
                                     "provenance": self.provenance})
                 counts["persisted"] += 1
-        except Exception as exc:
+                persisted_events.append((event, ingested_at))
+        except (OrderJournalError, ValueError) as exc:
             self._con.execute("ROLLBACK TO ingest_batch")
             self._con.execute("RELEASE ingest_batch")
             self._con.rollback()
@@ -600,6 +1205,37 @@ class ForwardSessionRunner:
             raise
         self._con.execute("RELEASE ingest_batch")
         self._con.commit()
+        batch_ingested_at = max((ingested_at for _, ingested_at in persisted_events), default=None)
+        usable = [(event, ingested_at) for event, ingested_at in persisted_events
+                  if event.kind in {EventKind.QUOTE, EventKind.TICK}]
+        if usable:
+            if batch_ingested_at is None:
+                raise ForwardSessionRunnerError("persisted quote lacks its ingest clock")
+            latest, _ = max(usable, key=lambda row: (row[0].available_at, row[0].event_id))
+            prior_heartbeat = self.heartbeats.last_heartbeat_at(session_id, "quote_feed")
+            quote_heartbeat_at = max(batch_ingested_at, prior_heartbeat) if prior_heartbeat else batch_ingested_at
+            heartbeat_suffix = quote_heartbeat_at.isoformat()
+            self.record_component_heartbeat(
+                session_id=session_id, component="quote_feed",
+                heartbeat_id=f"quote:{latest.event_id}:{heartbeat_suffix}", occurred_at=quote_heartbeat_at,
+                last_good_event_id=latest.event_id, last_good_event_at=latest.available_at)
+            self.record_component_heartbeat(
+                session_id=session_id, component="ledger_writer",
+                heartbeat_id=f"ledger:{latest.event_id}:{heartbeat_suffix}", occurred_at=quote_heartbeat_at,
+                last_good_event_id=latest.event_id, last_good_event_at=latest.available_at)
+        bars = [(event, ingested_at) for event, ingested_at in persisted_events
+                if event.kind is EventKind.BAR]
+        if bars:
+            if batch_ingested_at is None:
+                raise ForwardSessionRunnerError("persisted bar lacks its ingest clock")
+            latest_bar, _ = max(bars, key=lambda row: (row[0].available_at, row[0].event_id))
+            prior_heartbeat = self.heartbeats.last_heartbeat_at(session_id, "completed_bars")
+            bar_heartbeat_at = max(batch_ingested_at, prior_heartbeat) if prior_heartbeat else batch_ingested_at
+            self.record_component_heartbeat(
+                session_id=session_id, component="completed_bars",
+                heartbeat_id=f"bar:{latest_bar.event_id}:{bar_heartbeat_at.isoformat()}",
+                occurred_at=bar_heartbeat_at,
+                last_good_event_id=latest_bar.event_id, last_good_event_at=latest_bar.available_at)
         return counts
 
     def ingest_kite_archive(self, session_id: str, config: ForwardRunConfig,
@@ -685,20 +1321,37 @@ class ForwardSessionRunner:
     def decide(self, *, session_id: str, strategy_id: str, decision_id: str,
                outcome: str, input_event_ids: tuple[str, ...], decided_at: datetime | None = None,
                reason_codes: tuple[str, ...] = (), payload: dict[str, Any] | None = None,
-               feature_ready_at: datetime | None = None) -> bool:
+               feature_ready_at: datetime | None = None, feature_started_at: datetime | None = None,
+               model_inference_started_at: datetime | None = None,
+               model_inference_completed_at: datetime | None = None) -> bool:
         """Record a decision only when every referenced source event was already available."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("decisions are accepted only in an OPEN session")
         if not all(value.strip() for value in (strategy_id, decision_id)):
             raise ForwardSessionRunnerError("strategy and decision IDs are required")
-        if outcome not in {"TRADE", "NO_TRADE", "WITHHELD", "NO_SIGNAL"}:
+        if outcome not in {"TRADE", "NO_TRADE", "WITHHELD", "NO_SIGNAL", "DATA_UNUSABLE"}:
             raise ForwardSessionRunnerError("unsupported forward decision outcome")
         decided_at = decided_at or capture_local_time(self.clock, label="decision timestamp")
         if decided_at.tzinfo is None or decided_at.utcoffset() is None:
             raise ForwardSessionRunnerError("decision time must be timezone aware")
         if outcome != "TRADE" and not reason_codes:
             raise ForwardSessionRunnerError("non-trade decision requires a reason code")
-        if not input_event_ids:
+        config = self.state_store.config(session_id)
+        decision_payload = payload or {}
+        if not isinstance(decision_payload, dict):
+            raise ForwardSessionRunnerError("decision payload must be an object")
+        raw_forecast = decision_payload.get("expected_value_forecast")
+        is_candidate = outcome == "TRADE" or isinstance(decision_payload.get("candidate_intent"), dict)
+        forecast = None
+        if raw_forecast is not None:
+            forecast = _validate_expected_value_forecast(raw_forecast, decision_at=decided_at)
+        if config.mode == "LIVE_PAPER" and is_candidate and forecast is None:
+            raise ForwardSessionRunnerError("LIVE_PAPER candidates require a pre-entry expected-value forecast")
+        if forecast is not None and config.constraints.get("cost_schedule") is not None:
+            expected_cost_sha = self._resolved_cost_schedule(session_id).digest()
+            if forecast["cost_model_sha256"] != expected_cost_sha:
+                raise ForwardSessionRunnerError("expected-value forecast cost hash differs from frozen session costs")
+        if not input_event_ids and outcome != "DATA_UNUSABLE":
             raise ForwardSessionRunnerError("decision must reference at least one source event")
         unique_ids = tuple(sorted(set(input_event_ids)))
         if len(unique_ids) != len(input_event_ids):
@@ -706,37 +1359,87 @@ class ForwardSessionRunner:
         rows = self._con.execute(
             f"SELECT event_id, kind, available_at, event_json FROM runner_events WHERE session_id=? "
             f"AND kind NOT IN ('preflight','calendar_plan') AND event_id IN ({','.join('?' for _ in unique_ids)})",
-            [session_id, *unique_ids]).fetchall()
+            [session_id, *unique_ids]).fetchall() if unique_ids else []
         if len(rows) != len(unique_ids):
             raise ForwardSessionRunnerError("decision references an event absent from this session")
         clock = decided_at.astimezone(timezone.utc)
         if any(datetime.fromisoformat(available) > clock for _, _, available, _ in rows):
             raise ForwardSessionRunnerError("decision uses a source event unavailable at decision time")
         feature_clock = None
+        optional_clocks = {
+            "feature_started_at": feature_started_at,
+            "feature_ready_at": feature_ready_at,
+            "model_inference_started_at": model_inference_started_at,
+            "model_inference_completed_at": model_inference_completed_at,
+        }
+        normalized_clocks: dict[str, datetime | None] = {}
+        for name, value in optional_clocks.items():
+            if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+                raise ForwardSessionRunnerError(f"{name.replace('_', ' ')} must be timezone-aware")
+            normalized_clocks[name] = value.astimezone(timezone.utc) if value is not None else None
+        if not rows and any(value is not None for value in normalized_clocks.values()):
+            raise ForwardSessionRunnerError("feature and inference clocks cannot be attested without source inputs")
         if feature_ready_at is not None:
-            if feature_ready_at.tzinfo is None or feature_ready_at.utcoffset() is None:
-                raise ForwardSessionRunnerError("feature-ready time must be timezone-aware")
-            feature_clock = feature_ready_at.astimezone(timezone.utc)
+            if not rows:
+                raise ForwardSessionRunnerError("feature-ready time cannot be attested without source inputs")
+            feature_clock = normalized_clocks["feature_ready_at"]
             latest_input = max(datetime.fromisoformat(available).astimezone(timezone.utc)
                                for _, _, available, _ in rows)
+            assert feature_clock is not None
             if feature_clock < latest_input or feature_clock > clock:
                 raise ForwardSessionRunnerError(
                     "feature-ready time must follow all input availability and precede the signal decision")
+        feature_start_clock = normalized_clocks["feature_started_at"]
+        inference_start_clock = normalized_clocks["model_inference_started_at"]
+        inference_end_clock = normalized_clocks["model_inference_completed_at"]
+        if feature_start_clock is not None:
+            if not rows:
+                raise ForwardSessionRunnerError("feature computation cannot be attested without source inputs")
+            earliest_input = min(datetime.fromisoformat(available).astimezone(timezone.utc)
+                                 for _, _, available, _ in rows)
+            if feature_start_clock < earliest_input or feature_start_clock > clock:
+                raise ForwardSessionRunnerError("feature computation start must follow inputs and precede decision")
+        if feature_start_clock and feature_clock and feature_start_clock > feature_clock:
+            raise ForwardSessionRunnerError("feature computation start cannot follow feature-ready time")
+        if inference_start_clock and feature_clock and inference_start_clock < feature_clock:
+            raise ForwardSessionRunnerError("model inference cannot start before features are ready")
+        if inference_start_clock and inference_end_clock and inference_end_clock < inference_start_clock:
+            raise ForwardSessionRunnerError("model inference completion cannot precede its start")
+        if inference_end_clock and inference_end_clock > clock:
+            raise ForwardSessionRunnerError("model inference cannot complete after the signal decision")
         max_quote_age = self._max_quote_age(session_id)
         stale = []
+        quote_ages_ms = []
+        input_available = []
         for event_id, kind, _, event_json in rows:
+            input_event = MarketEvent.from_dict(json.loads(event_json))
+            input_available.append(input_event.available_at.astimezone(timezone.utc))
             if kind != "quote":
                 continue
-            source_time = MarketEvent.from_dict(json.loads(event_json)).event_time.astimezone(timezone.utc)
+            source_time = input_event.event_time.astimezone(timezone.utc)
+            quote_ages_ms.append((clock - source_time).total_seconds() * 1000)
             if source_time > clock or clock - source_time > timedelta(milliseconds=max_quote_age):
                 stale.append(event_id)
-        if stale:
+        if stale and outcome != "DATA_UNUSABLE":
+            current_mode = self.operating_modes.mode(session_id)
+            if current_mode not in {OperatingMode.DEGRADED, OperatingMode.HALTED}:
+                self.set_operating_mode(
+                    session_id=session_id, mode=OperatingMode.DEGRADED,
+                    event_id=f"stale-input:{decision_id}", occurred_at=clock,
+                    reason="stale decision quote: " + ",".join(sorted(stale)))
             raise ForwardSessionRunnerError(
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
+        if forecast is not None:
+            decision_payload = {**decision_payload, "expected_value_forecast": forecast}
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
+                "as_of": max(input_available).isoformat() if input_available else None,
+                "last_good_quote_age_ms": max(quote_ages_ms) if quote_ages_ms else None,
                 "feature_ready_at": feature_clock.isoformat() if feature_clock else None,
-                "reason_codes": sorted(set(reason_codes)), "payload": payload or {}}
+                "feature_started_at": feature_start_clock.isoformat() if feature_start_clock else None,
+                "model_inference_started_at": inference_start_clock.isoformat() if inference_start_clock else None,
+                "model_inference_completed_at": inference_end_clock.isoformat() if inference_end_clock else None,
+                "reason_codes": sorted(set(reason_codes)), "payload": decision_payload}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         existing = self._con.execute("SELECT record_sha256, record_json FROM runner_decisions WHERE session_id=? AND decision_id=?",
@@ -744,8 +1447,10 @@ class ForwardSessionRunner:
         if existing:
             if existing[0] != digest:
                 prior_body = json.loads(existing[1])
-                legacy_body = {key: value for key, value in body.items() if key != "feature_ready_at"}
-                if "feature_ready_at" not in prior_body and prior_body == legacy_body:
+                legacy_keys = {"feature_ready_at", "feature_started_at", "model_inference_started_at",
+                               "model_inference_completed_at"}
+                legacy_body = {key: value for key, value in body.items() if key not in legacy_keys}
+                if not any(key in prior_body for key in legacy_keys) and prior_body == legacy_body:
                     return False
                 raise ForwardSessionRunnerError("decision ID reused with conflicting content")
             return False
@@ -753,11 +1458,39 @@ class ForwardSessionRunner:
                                   [session_id]).fetchone()[0]
         if prior is not None and clock < datetime.fromisoformat(prior):
             raise ForwardSessionRunnerError("decision clock cannot move backwards within a session")
-        self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
-                          [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
-        self._append_audit("decision", session_id, decision_id, clock,
-                           {**body, "provenance": self.provenance})
-        self._con.commit()
+        if forecast is not None:
+            prior_forecasts = self._con.execute(
+                "SELECT record_json FROM runner_decisions WHERE session_id=? ORDER BY decided_at,decision_id",
+                [session_id]).fetchall()
+            previous_versions = []
+            for (encoded_prior,) in prior_forecasts:
+                prior_payload = json.loads(encoded_prior).get("payload", {})
+                prior_forecast = prior_payload.get("expected_value_forecast") if isinstance(prior_payload, dict) else None
+                if isinstance(prior_forecast, dict) and prior_forecast.get("candidate_id") == forecast["candidate_id"]:
+                    previous_versions.append(prior_forecast)
+            last_version = max((row["version"] for row in previous_versions), default=0)
+            if forecast["version"] != last_version + 1:
+                raise ForwardSessionRunnerError("expected-value forecast revisions must use the next immutable version")
+            if previous_versions and datetime.fromisoformat(forecast["forecasted_at_utc"]) <= datetime.fromisoformat(
+                    max(row["forecasted_at_utc"] for row in previous_versions)):
+                raise ForwardSessionRunnerError("forecast revisions must be newly published, not retroactive")
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            if forecast is not None:
+                self._append_audit("expected_value_forecast", session_id, decision_id, clock,
+                                   {**forecast, "decision_id": decision_id, "strategy_id": strategy_id})
+            self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                              [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
+            self._append_audit("decision", session_id, decision_id, clock,
+                               {**body, "provenance": self.provenance})
+            self._con.commit()
+        except Exception:
+            self._con.rollback()
+            raise
+        self.record_component_heartbeat(
+            session_id=session_id, component="strategy_process",
+            heartbeat_id=f"decision:{decision_id}", occurred_at=clock,
+            last_good_event_id=decision_id, last_good_event_at=clock)
         return True
 
     def record_risk_verdict(self, *, session_id: str, decision_id: str, verdict_id: str,
@@ -797,7 +1530,29 @@ class ForwardSessionRunner:
         self._append_audit("risk_verdict", session_id, verdict_id, occurred,
                            {**record, "provenance": self.provenance})
         self._con.commit()
+        critical_reasons = {
+            "DAILY_LOSS_LIMIT": "DAILY_LOSS",
+            "DRAWDOWN_LIMIT": "DRAWDOWN",
+            "STALE_FEED": "STALE_FEED",
+            "RECONCILIATION_MISMATCH": "RECONCILIATION_MISMATCH",
+            "LOST_HEARTBEAT": "LOST_HEARTBEAT",
+            "BROKER_STATE_UNKNOWN": "BROKER_STATE_UNKNOWN",
+            "RISK_LIMIT_BREACH": "RISK_LIMIT_BREACH",
+        }
+        if not allowed:
+            for reason_code in sorted(set(reason_codes)):
+                kill_reason = critical_reasons.get(reason_code)
+                if kill_reason is not None:
+                    self.paper_kill_switch.trip(
+                        event_id=f"risk:{session_id}:{decision_id}:{verdict_id}:{kill_reason}",
+                        reason=kill_reason, occurred_at=occurred,
+                        evidence_hash=digest, actor_id="risk-engine", actor_type="system")
         return True
+
+    def _require_paper_entries_enabled(self) -> None:
+        if self.paper_kill_switch.active:
+            reasons = ",".join(self.paper_kill_switch.active_reasons)
+            raise ForwardSessionRunnerError(f"paper kill switch is active: {reasons}")
 
     def record_decision_manifest(self, *, session_id: str, decision_id: str,
                                  manifest: dict[str, Any]) -> str:
@@ -820,6 +1575,37 @@ class ForwardSessionRunner:
         manifest_at = datetime.fromisoformat(manifest["decision_at_utc"].replace("Z", "+00:00"))
         if manifest["decision_id"] != decision_id or manifest["day"] != config.exchange_date.isoformat():
             raise ForwardSessionRunnerError("decision manifest identity or exchange date mismatches session")
+        if config.mode == "LIVE_PAPER":
+            expected_universe_sha = _canonical_sha256(sorted(config.instrument_universe))
+            expected_risk_sha = _canonical_sha256(config.constraints["risk_limits"])
+            expected_cost_sha = self._resolved_cost_schedule(session_id).digest()
+            if manifest["strategy_sha256"] != config.strategy_sha256:
+                raise ForwardSessionRunnerError("decision strategy hash differs from the frozen session strategy")
+            if manifest["benchmark_id"] != config.benchmark:
+                raise ForwardSessionRunnerError("decision benchmark differs from the frozen session benchmark")
+            if Decimal(manifest["capital_inr"]) != Decimal(config.capital):
+                raise ForwardSessionRunnerError("decision capital differs from frozen session capital")
+            if manifest["universe_sha256"] != expected_universe_sha:
+                raise ForwardSessionRunnerError("decision universe hash differs from the frozen session universe")
+            if manifest["risk_limits_sha256"] != expected_risk_sha:
+                raise ForwardSessionRunnerError("decision risk hash differs from frozen session risk limits")
+            if manifest["cost_model_sha256"] != expected_cost_sha:
+                raise ForwardSessionRunnerError("decision cost hash differs from the frozen session cost schedule")
+            decision_payload = decision.get("payload", {})
+            forecast = decision_payload.get("expected_value_forecast") if isinstance(decision_payload, dict) else None
+            if decision["outcome"] == "TRADE" or isinstance(decision_payload.get("candidate_intent"), dict):
+                if not isinstance(forecast, dict):
+                    raise ForwardSessionRunnerError("LIVE_PAPER decision manifest lacks its pre-entry forecast")
+                earliest_entry = datetime.fromisoformat(manifest["entry_earliest_at_utc"].replace("Z", "+00:00"))
+                if datetime.fromisoformat(forecast["forecasted_at_utc"]) >= earliest_entry.astimezone(timezone.utc):
+                    raise ForwardSessionRunnerError("expected-value forecast must precede the earliest execution clock")
+                if (forecast["predicted_return_fraction"] != manifest["predicted_return_fraction"] or
+                        forecast["predicted_cost_fraction"] != manifest["predicted_cost_fraction"] or
+                        forecast["forecast"] != manifest["forecast"] or
+                        forecast["model_sha256"] != manifest["model_sha256"] or
+                        forecast["cost_model_sha256"] != manifest["cost_model_sha256"]):
+                    raise ForwardSessionRunnerError(
+                        "decision manifest expected-value forecast differs from the frozen decision")
         if manifest_at.astimezone(timezone.utc) != decision_at.astimezone(timezone.utc):
             raise ForwardSessionRunnerError("decision manifest time differs from the durable decision")
         source_ids = {source["source_id"] for source in manifest["sources"]}
@@ -832,6 +1618,10 @@ class ForwardSessionRunner:
             if row is None or row[0] != source["sha256"]:
                 raise ForwardSessionRunnerError("decision manifest source hash differs from journaled market event")
             event = json.loads(row[1])
+            if config.mode == "LIVE_PAPER" and event["kind"] == EventKind.BAR.value:
+                if event["payload"].get("interval_seconds") != config.constraints["signal_interval_seconds"]:
+                    raise ForwardSessionRunnerError(
+                        "decision source bar interval differs from frozen signal_interval_seconds")
             for manifest_key, event_key in (("published_at_utc", "event_time"),
                                             ("received_at_utc", "received_at"),
                                             ("available_at_utc", "available_at")):
@@ -889,6 +1679,14 @@ class ForwardSessionRunner:
             "SELECT record_json FROM runner_data_rejections WHERE session_id=? ORDER BY rejection_id",
             [session_id]).fetchall()]
         audit_log = self.durable.audit_records(session_id)
+        expected_value_forecasts = [row["record"] for row in audit_log
+                                    if row["kind"] == "expected_value_forecast"]
+        exposure_rows = {row["record"]["exposure_id"]: row["record"] for row in audit_log
+                         if row["kind"] == "unresolved_exposure"}
+        resolved_exposure_ids = {row["record"]["exposure_id"] for row in audit_log
+                                 if row["kind"] == "unresolved_exposure_resolution"}
+        unresolved_exposures = [exposure_rows[key] for key in sorted(exposure_rows)
+                                if key not in resolved_exposure_ids]
         order_events: list[dict[str, Any]] = []
         prefix = f"{session_id}::"
         for journal_order_id in self.order_journal.order_ids():
@@ -897,14 +1695,116 @@ class ForwardSessionRunner:
                 order_events.extend(
                     event | {"session_id": session_id, "paper_order_id": paper_order_id}
                     for event in self.order_journal.replay(journal_order_id))
+            elif journal_order_id.startswith(f"oco:{prefix}"):
+                group_id = journal_order_id[len("oco:"):]
+                order_events.extend(
+                    event | {"session_id": session_id, "paper_order_id": f"oco:{group_id[len(prefix):]}"}
+                    for event in self.order_journal.replay(journal_order_id))
         result = {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                   "intents": intents, "execution_receipts": receipts, "session_reports": reports,
                   "order_events": order_events,
                   "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
+                  "expected_value_forecasts": expected_value_forecasts,
                   "data_rejections": data_rejections,
+                  "unresolved_exposures": unresolved_exposures,
                   "audit_log": audit_log, "accounting": accounting}
         result["timing_telemetry"] = _timing_telemetry(result)
+        result["component_heartbeats"] = self.heartbeats.latest(session_id)
+        result["operating_mode"] = self.operating_modes.mode(session_id).value
+        result["operating_mode_events"] = self.operating_modes.events(session_id)
+        result["handler_recovery_events"] = self.recovery.events(session_id)
         return result
+
+    def read_events_after(self, session_id: str, consumer_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
+        """Read persisted market events after a consumer's acknowledged insertion offset."""
+        if not consumer_id.strip():
+            raise ForwardSessionRunnerError("event cursor consumer ID is required")
+        if limit < 1 or limit > 10000:
+            raise ForwardSessionRunnerError("event cursor read limit must be between 1 and 10000")
+        row = self._con.execute(
+            "SELECT event_offset FROM runner_event_cursors WHERE session_id=? AND consumer_id=?",
+            [session_id, consumer_id]).fetchone()
+        offset = int(row[0]) if row else 0
+        rows = self._con.execute(
+            "SELECT rowid,event_id,kind,available_at,ingested_at,ingest_clock_source,event_sha256,event_json "
+            "FROM runner_events WHERE session_id=? AND rowid>? "
+            "AND kind NOT IN ('preflight','calendar_plan') ORDER BY rowid LIMIT ?",
+            [session_id, offset, limit]).fetchall()
+        return [{"offset": int(item[0]), "event_id": item[1], "kind": item[2],
+                 "available_at": item[3], "ingested_at": item[4], "ingest_clock_source": item[5],
+                 "event_sha256": item[6], "event": json.loads(item[7])} for item in rows]
+
+    def acknowledge_event_offset(self, session_id: str, consumer_id: str, *,
+                                 expected_offset: int, through_offset: int,
+                                 event_ids: tuple[str, ...], now: datetime | None = None) -> dict[str, Any]:
+        """Advance an event cursor over an exact durable prefix using compare-and-swap."""
+        consumer_id = consumer_id.strip()
+        if not consumer_id:
+            raise ForwardSessionRunnerError("event cursor consumer ID is required")
+        if expected_offset < 0 or through_offset < 1 or through_offset <= expected_offset:
+            raise ForwardSessionRunnerError("event cursor offsets must advance from a non-negative offset")
+        if not event_ids or len(event_ids) != len(set(event_ids)):
+            raise ForwardSessionRunnerError("event cursor acknowledgement requires unique event IDs")
+        now = now or capture_local_time(self.clock, label="event cursor acknowledgement")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ForwardSessionRunnerError("event cursor timestamp must be timezone aware")
+        updated_at = now.astimezone(timezone.utc).isoformat()
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            current = self._con.execute(
+                "SELECT event_offset,event_id,updated_at,cursor_sha256 FROM runner_event_cursors "
+                "WHERE session_id=? AND consumer_id=?", [session_id, consumer_id]).fetchone()
+            current_offset = int(current[0]) if current else 0
+            if current and current_offset == through_offset:
+                row = self._con.execute(
+                    "SELECT event_id FROM runner_events WHERE session_id=? AND rowid=?",
+                    [session_id, through_offset]).fetchone()
+                if row and row[0] == event_ids[-1]:
+                    self._con.commit()
+                    return {"session_id": session_id, "consumer_id": consumer_id,
+                            "event_offset": current_offset, "event_id": current[1],
+                            "updated_at": current[2], "cursor_sha256": current[3], "idempotent": True}
+            if current_offset != expected_offset:
+                raise ForwardSessionRunnerError("event cursor changed; reread before acknowledging")
+            rows = self._con.execute(
+                "SELECT rowid,event_id FROM runner_events WHERE session_id=? AND rowid>? AND rowid<=? "
+                "AND kind NOT IN ('preflight','calendar_plan') ORDER BY rowid",
+                [session_id, expected_offset, through_offset]).fetchall()
+            if (not rows or int(rows[-1][0]) != through_offset or
+                    tuple(str(row[1]) for row in rows) != event_ids):
+                raise ForwardSessionRunnerError("event cursor acknowledgement does not match the exact persisted prefix")
+            body = {"schema": "fb.forward-event-cursor.v1", "session_id": session_id,
+                    "consumer_id": consumer_id, "event_offset": through_offset,
+                    "event_id": event_ids[-1], "event_ids_sha256": self._sha256(list(event_ids)),
+                    "updated_at": updated_at}
+            canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            self._con.execute(
+                "INSERT INTO runner_event_cursors VALUES (?,?,?,?,?,?) "
+                "ON CONFLICT(session_id,consumer_id) DO UPDATE SET event_offset=excluded.event_offset, "
+                "event_id=excluded.event_id,updated_at=excluded.updated_at,cursor_sha256=excluded.cursor_sha256",
+                [session_id, consumer_id, through_offset, event_ids[-1], updated_at, digest])
+            self._con.commit()
+            return body | {"cursor_sha256": digest, "idempotent": False}
+        except Exception:
+            self._con.rollback()
+            raise
+
+    def event_cursor(self, session_id: str, consumer_id: str) -> dict[str, Any] | None:
+        """Return the latest durable consumer offset, or None before the first acknowledgement."""
+        row = self._con.execute(
+            "SELECT event_offset,event_id,updated_at,cursor_sha256 FROM runner_event_cursors "
+            "WHERE session_id=? AND consumer_id=?", [session_id, consumer_id]).fetchone()
+        if row is None:
+            return None
+        return {"session_id": session_id, "consumer_id": consumer_id, "event_offset": int(row[0]),
+                "event_id": row[1], "updated_at": row[2], "cursor_sha256": row[3]}
+
+    def heartbeat_health(self, session_id: str, *, now: datetime | None = None,
+                         stale_after: timedelta = timedelta(seconds=60)) -> dict[str, Any]:
+        """Return a wall-clock health view separately from deterministic session records."""
+        observed = now or capture_local_time(self.clock, label="heartbeat health cutoff")
+        return self.heartbeats.snapshot(session_id, now=observed, stale_after=stale_after)
 
     def _append_paper_order_event(self, *, session_id: str, order_id: str, state: str,
                                   occurred_at: datetime, quantity: int, filled_quantity: int,
@@ -977,6 +1877,158 @@ class ForwardSessionRunner:
             accounting={"source": "PAPER_EXECUTION_RECEIPT", "receipt_sha256": receipt_sha256,
                         "resolution_actor": reconciled_by, "physical_order_submitted": False})
         self._con.commit()
+        self._record_canonical_paper_fill(
+            config=self.state_store.config(session_id), session_id=session_id,
+            order_id=order_id, receipt=receipt, receipt_sha256=receipt_sha256)
+
+    def _record_canonical_paper_fill(self, *, config: ForwardRunConfig, session_id: str,
+                                     order_id: str, receipt: dict[str, Any],
+                                     receipt_sha256: str) -> None:
+        """Atomically bind observed paper fills to the canonical book and active reservation."""
+        filled_quantity = int(receipt.get("filled_quantity", 0))
+        if filled_quantity <= 0:
+            return
+        from financial_brain.portfolio.canonical_ledger import (
+            AssetClass,
+            EventKind as PortfolioEventKind,
+            PortfolioEvent,
+        )
+
+        intent_row = self._con.execute(
+            "SELECT request_json FROM paper_intents WHERE session_id=? AND order_id=?",
+            [session_id, order_id],
+        ).fetchone()
+        if intent_row is None:
+            raise ForwardSessionRunnerError("paper fill has no durable intent for canonical position booking")
+        intent = json.loads(intent_row[0])
+        market_event = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND event_id=?",
+            [session_id, intent["event_id"]],
+        ).fetchone()
+        if market_event is None:
+            raise ForwardSessionRunnerError("paper fill's source market event is missing")
+        instrument = str(json.loads(market_event[0])["instrument_id"])
+        position_rules = config.constraints.get("position_accounting", {})
+        if not isinstance(position_rules, dict) or not isinstance(position_rules.get(instrument, {}), dict):
+            raise ForwardSessionRunnerError("position_accounting must map instruments to canonical asset metadata")
+        explicit = position_rules.get(instrument, {})
+        unit = str(intent.get("quantity_unit", "UNSPECIFIED"))
+        asset_by_unit = {"SHARES": AssetClass.EQUITY, "ETF_UNITS": AssetClass.ETF,
+                         "OPTION_CONTRACTS": AssetClass.OPTION,
+                         "FUTURES_CONTRACTS": AssetClass.FUTURE}
+        if unit not in asset_by_unit:
+            raise ForwardSessionRunnerError(
+                f"canonical paper position ledger does not support quantity unit {unit!r}")
+        asset_class = AssetClass(str(explicit.get("asset_class", asset_by_unit[unit].value)))
+        if asset_class is not asset_by_unit[unit]:
+            raise ForwardSessionRunnerError("position asset class conflicts with instrument quantity unit")
+        currency = str(explicit.get("currency", "INR" if instrument.startswith(("NSE:", "NFO:")) else ""))
+        if not currency:
+            raise ForwardSessionRunnerError("position_accounting requires currency outside NSE/NFO instruments")
+        if unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"} and "multiplier" not in explicit:
+            raise ForwardSessionRunnerError(
+                "derivative position_accounting requires an explicit contract multiplier")
+        multiplier = Decimal(str(explicit.get("multiplier", "1")))
+        try:
+            fill = PortfolioEvent(
+                account_id=config.ledger_id, sleeve_id=config.cohort,
+                source_system="FORWARD_PAPER", source_event_id=f"{session_id}:{order_id}:fill",
+                source_sha256=receipt_sha256, event_kind=PortfolioEventKind.FILL,
+                occurred_at=str(receipt["simulated_at"]), currency=currency,
+                asset_class=asset_class, instrument_id=instrument,
+                side=str(intent["side"]), position_action=str(intent["side"]),
+                quantity=filled_quantity, price=str(receipt["average_price"]), multiplier=multiplier,
+                evidence_class="LOCAL_PAPER",
+                metadata={"session_id": session_id, "order_id": order_id,
+                          "decision_id": str(intent["decision_id"]),
+                          "reservation_id": f"{session_id}::{order_id}",
+                          "execution_receipt_sha256": receipt_sha256,
+                          "simulation_fidelity": receipt.get("simulation_fidelity")},
+            )
+            fee = None
+            if "charges_inr" in receipt:
+                charges = Decimal(str(receipt["charges_inr"]))
+                cost_items = receipt.get("cost_items")
+                if not charges.is_finite() or charges < 0 or not isinstance(cost_items, list) or not cost_items:
+                    raise ForwardSessionRunnerError(
+                        "paper charges require a finite non-negative total and itemized cost evidence")
+                if any(not isinstance(item, dict) or "total" not in item for item in cost_items):
+                    raise ForwardSessionRunnerError("each paper cost item must include an itemized total")
+                itemized_total = sum((Decimal(str(item["total"])) for item in cost_items), Decimal(0))
+                if itemized_total != charges:
+                    raise ForwardSessionRunnerError("paper charge total does not reconcile to cost items")
+                if charges:
+                    fee = PortfolioEvent(
+                        account_id=config.ledger_id, sleeve_id=config.cohort,
+                        source_system="FORWARD_PAPER", source_event_id=f"{session_id}:{order_id}:fees",
+                        source_sha256=receipt_sha256, event_kind=PortfolioEventKind.FEE,
+                        occurred_at=str(receipt["simulated_at"]), currency=currency,
+                        cash_delta=-charges, evidence_class="LOCAL_PAPER",
+                        metadata={"session_id": session_id, "order_id": order_id,
+                                  "fill_event_id": f"{session_id}:{order_id}:fill",
+                                  "execution_receipt_sha256": receipt_sha256,
+                                  "charges_inr": format(charges, "f"), "cost_items": cost_items,
+                                  "cost_fidelity": receipt.get("cost_fidelity")},
+                    )
+            reservation_ledger = DurableReservationLedger(self.journal_path)
+            reservation_ledger.record_paper_fill(
+                reservation_id=f"{session_id}::{order_id}", fill=fill, fee=fee)
+        except (KeyError, TypeError, ValueError, InvalidOperation, ReservationError) as exc:
+            raise ForwardSessionRunnerError(f"canonical paper fill transfer failed: {exc}") from exc
+
+    def arm_paper_oco(self, *, session_id: str, group_id: str, stop_order_id: str,
+                      target_order_id: str, occurred_at: datetime, evidence_id: str) -> Any:
+        """Arm a durable OCO pair for this session's existing stop and target orders."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("OCO can be armed only in an OPEN paper session")
+        from financial_brain.execution.oms.oco import arm_oco
+
+        scoped_group = f"{session_id}::{group_id}"
+        try:
+            result = arm_oco(
+                self.order_journal, group_id=scoped_group,
+                stop_order_id=f"{session_id}::{stop_order_id}",
+                target_order_id=f"{session_id}::{target_order_id}",
+                occurred_at=occurred_at, evidence_id=evidence_id,
+            )
+        except Exception as exc:
+            raise ForwardSessionRunnerError(f"paper OCO arm failed: {exc}") from exc
+        if result.event != "REPLAY":
+            self._append_audit("paper_oco", session_id, result.event_id, occurred_at,
+                               {"event": result.event, "group_id": scoped_group,
+                                "stop_order_id": stop_order_id, "target_order_id": target_order_id,
+                                "evidence_id": evidence_id})
+            self._con.commit()
+        return result
+
+    def resolve_paper_oco_fill(self, *, session_id: str, group_id: str,
+                               triggered_order_id: str, fill_event_id: str,
+                               occurred_at: datetime, reconciliation_evidence_id: str) -> Any:
+        """Request sibling cancellation or confirm the late-fill race from journal state."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("OCO fill resolution requires an OPEN paper session")
+        from financial_brain.execution.oms.oco import resolve_oco_fill
+
+        scoped_group = f"{session_id}::{group_id}"
+        try:
+            result = resolve_oco_fill(
+                self.order_journal, group_id=scoped_group,
+                triggered_order_id=f"{session_id}::{triggered_order_id}",
+                fill_event_id=fill_event_id, occurred_at=occurred_at,
+                reconciliation_evidence_id=reconciliation_evidence_id,
+            )
+        except Exception as exc:
+            raise ForwardSessionRunnerError(f"paper OCO fill resolution failed: {exc}") from exc
+        if result.event != "REPLAY":
+            self._append_audit("paper_oco", session_id, result.event_id, occurred_at,
+                               {"event": result.event, "group_id": scoped_group,
+                                "triggered_order_id": triggered_order_id,
+                                "fill_event_id": fill_event_id,
+                                "sibling_state": result.sibling_state,
+                                "warning": result.warning,
+                                "reconciliation_evidence_id": reconciliation_evidence_id})
+            self._con.commit()
+        return result
 
     def source_event(self, session_id: str, event_id: str) -> tuple[MarketEvent, str]:
         """Return one normalized journal event and its immutable row digest."""
@@ -1142,9 +2194,13 @@ class ForwardSessionRunner:
             hashes["accounting"] = self._sha256(records["accounting"])
             hashes["ledger"] = str(records["accounting"]["ledger_sha256"])
             hashes["outbox"] = self._sha256(outbox_rows)
+            hashes["event_cursors"] = self._event_cursors_hash(session_id)
             if existing:
                 prior = json.loads(existing[1])
-                if prior.get("session_state") != state.value or prior.get("record_hashes") != hashes:
+                prior_hashes = prior.get("record_hashes", {})
+                legacy_hashes = {key: value for key, value in hashes.items() if key != "event_cursors"}
+                if (prior.get("session_state") != state.value or
+                        prior_hashes not in (hashes, legacy_hashes)):
                     raise ForwardSessionRunnerError(
                         "END checkpoint ID already contains different immutable evidence")
                 self._con.commit()
@@ -1188,6 +2244,8 @@ class ForwardSessionRunner:
         current_ok: bool | None = None
         if phase == "END" and immutable_ok:
             current = self._checkpoint_hashes(session_id)
+            if "event_cursors" not in body.get("record_hashes", {}):
+                current.pop("event_cursors", None)
             current_ok = current == body["record_hashes"]
         return {"session_id": session_id, "checkpoint_id": checkpoint_id,
                 "immutable_evidence_valid": immutable_ok, "current_records_match": current_ok,
@@ -1207,12 +2265,36 @@ class ForwardSessionRunner:
                            "SELECT key, state, reconciled_by FROM outbox "
                            "WHERE key LIKE ? ORDER BY key", [f"paper:{session_id}:%"]).fetchall()]
         hashes["outbox"] = self._sha256(outbox_rows)
+        hashes["event_cursors"] = self._event_cursors_hash(session_id)
         return hashes
+
+    def _event_cursors_hash(self, session_id: str) -> str:
+        cursors = [{"consumer_id": row[0], "event_offset": int(row[1]), "event_id": row[2],
+                    "updated_at": row[3], "cursor_sha256": row[4]}
+                   for row in self._con.execute(
+                       "SELECT consumer_id,event_offset,event_id,updated_at,cursor_sha256 "
+                       "FROM runner_event_cursors WHERE session_id=? ORDER BY consumer_id",
+                       [session_id]).fetchall()]
+        return self._sha256(cursors)
 
     @staticmethod
     def _sha256(value: Any) -> str:
         canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    def _instrument_halted(self, session_id: str, instrument_id: str, at: datetime) -> bool:
+        """Fail closed when the latest available halt state is HALTED."""
+        cutoff = at.astimezone(timezone.utc).isoformat()
+        rows = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind=? AND available_at<=? "
+            "ORDER BY available_at, event_id", [session_id, EventKind.HALT.value, cutoff]).fetchall()
+        relevant = [MarketEvent.from_dict(json.loads(row[0])) for row in rows]
+        relevant = [event for event in relevant if event.instrument_id == instrument_id]
+        if not relevant:
+            return False
+        latest_at = max(event.available_at for event in relevant)
+        latest_states = {str(event.payload["status"]) for event in relevant if event.available_at == latest_at}
+        return "HALTED" in latest_states
 
     def execute_paper_intent(self, *, session_id: str, order_id: str, decision_id: str,
                              event_id: str, side: str, quantity: int | WholeUnits,
@@ -1261,6 +2343,18 @@ class ForwardSessionRunner:
         quantity = quantity_value
         if simulated_at.tzinfo is None or simulated_at.utcoffset() is None:
             raise ForwardSessionRunnerError("simulated execution clock must be timezone aware")
+        calendar_plan = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'", [session_id]
+        ).fetchone()
+        if calendar_plan:
+            planned = json.loads(calendar_plan[0])
+            if planned.get("outcome") == "OPEN":
+                execution_at = simulated_at.astimezone(timezone.utc)
+                session_open = datetime.fromisoformat(planned["opens_at"]).astimezone(timezone.utc)
+                session_close = datetime.fromisoformat(planned["closes_at"]).astimezone(timezone.utc)
+                if execution_at < session_open or execution_at >= session_close:
+                    raise ForwardSessionRunnerError(
+                        "paper execution time is outside the sourced exchange session cutoff")
         if latency_ms < 0:
             raise ForwardSessionRunnerError("simulated latency cannot be negative")
         if max_wait_ms is not None and (type(max_wait_ms) is not int or max_wait_ms < 0):
@@ -1285,7 +2379,16 @@ class ForwardSessionRunner:
         if decision_row is None or decision_row[0] != "TRADE":
             raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
         decision = json.loads(decision_row[1])
-        candidate_intent = decision.get("payload", {}).get("candidate_intent")
+        decision_payload = decision.get("payload", {})
+        candidate_intent = decision_payload.get("candidate_intent") if isinstance(decision_payload, dict) else None
+        config = self.state_store.config(session_id)
+        forecast = decision_payload.get("expected_value_forecast") if isinstance(decision_payload, dict) else None
+        if config.mode == "LIVE_PAPER":
+            if not isinstance(forecast, dict):
+                raise ForwardSessionRunnerError("LIVE_PAPER paper intent requires its frozen expected-value forecast")
+            forecasted_at = datetime.fromisoformat(forecast["forecasted_at_utc"])
+            if simulated_at.astimezone(timezone.utc) <= forecasted_at.astimezone(timezone.utc):
+                raise ForwardSessionRunnerError("expected-value forecast must precede the execution clock")
         if candidate_intent is not None:
             if not isinstance(candidate_intent, dict):
                 raise ForwardSessionRunnerError("canonical candidate intent must be an object")
@@ -1304,6 +2407,7 @@ class ForwardSessionRunner:
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
             raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
+        self._require_paper_entries_enabled()
         risk_record = json.loads(risk[1])
         if simulated_at.astimezone(timezone.utc) < datetime.fromisoformat(risk_record["assessed_at"]):
             raise ForwardSessionRunnerError("simulated fill cannot precede the persisted risk assessment")
@@ -1313,7 +2417,6 @@ class ForwardSessionRunner:
         if manifest_row is None:
             raise ForwardSessionRunnerError("paper intent requires a canonical persisted decision manifest")
         manifest = json.loads(manifest_row[1])
-        config = self.state_store.config(session_id)
         if config.constraints.get("cost_schedule") is not None:
             if config.constraints.get("liquidity_bucket") not in {"mega", "large", "mid", "small", "micro"}:
                 raise ForwardSessionRunnerError(
@@ -1327,8 +2430,16 @@ class ForwardSessionRunner:
         if event_row is None:
             raise ForwardSessionRunnerError("paper quote is absent from the session event journal")
         event = MarketEvent.from_dict(json.loads(event_row[0]))
+        try:
+            profiles = profiles_from_constraints(config.constraints, config.instrument_universe)
+            if profiles is not None:
+                validate_profile_event(profiles[event.instrument_id], event, for_execution=True)
+        except DataProfileError as exc:
+            raise ForwardSessionRunnerError(f"instrument execution data profile rejected intent: {exc}") from exc
         if candidate_intent is not None and candidate_intent.get("symbol") != event.instrument_id:
             raise ForwardSessionRunnerError("paper quote instrument differs from the canonical candidate intent")
+        if self._instrument_halted(session_id, event.instrument_id, simulated_at):
+            raise ForwardSessionRunnerError("market instrument is halted at simulated execution time")
         if event_id in decision["input_event_ids"]:
             signal_event = event
         else:
@@ -1346,6 +2457,13 @@ class ForwardSessionRunner:
         quote_age = execution_time - event.event_time.astimezone(timezone.utc)
         max_quote_age = self._max_quote_age(session_id)
         if quote_age < timedelta(0) or quote_age > timedelta(milliseconds=max_quote_age):
+            current_mode = self.operating_modes.mode(session_id)
+            if current_mode not in {OperatingMode.DEGRADED, OperatingMode.HALTED}:
+                self.set_operating_mode(
+                    session_id=session_id, mode=OperatingMode.DEGRADED,
+                    event_id=f"stale-execution:{order_id}", occurred_at=execution_time,
+                    reason=f"paper execution quote age {quote_age.total_seconds() * 1000:.3f}ms "
+                           f"exceeds configured maximum {max_quote_age}ms")
             raise ForwardSessionRunnerError(
                 f"paper fill quote exceeds configured maximum age of {max_quote_age}ms")
         selected = next((row for row in manifest["selections"]
@@ -1374,6 +2492,11 @@ class ForwardSessionRunner:
         if not event.evidence_id or re.fullmatch(r"[0-9a-f]{64}", event.evidence_id) is None:
             raise ForwardSessionRunnerError("paper fill requires an immutable SHA-256 source-payload evidence ID")
         accounting = self.records(session_id)["accounting"]
+        mode = self.operating_modes.mode(session_id)
+        reduces_position = (side == "SELL" and int(accounting["positions"].get(event.instrument_id, 0)) >= quantity)
+        if mode is not OperatingMode.ACTIVE and not reduces_position:
+            raise ForwardSessionRunnerError(
+                f"risk-increasing paper intent is blocked while operating mode is {mode.value}")
         safely_reconciled_retry = (
             accounting["status"] == "INCOMPLETE"
             and not accounting["errors"]
@@ -1424,8 +2547,14 @@ class ForwardSessionRunner:
                           rule.expiry.isoformat() if rule.expiry else None,
                           "status": rule.status, "session_phases": sorted(rule.session_phases)}
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
-                   "event_id": event_id, "side": side, "quantity": quantity,
+                   "event_id": event_id, "instrument_id": event.instrument_id,
+                   "side": side, "quantity": quantity,
                    "quantity_unit": quantity_unit,
+                   "as_of": signal_event.available_at.astimezone(timezone.utc).isoformat(),
+                   "first_executable_after": timed.earliest_fill_time.isoformat(),
+                   "expires_at": (timed.earliest_fill_time + timedelta(milliseconds=max_wait_ms)).isoformat()
+                   if max_wait_ms is not None else None,
+                   "last_good_quote_age_ms": quote_age.total_seconds() * 1000,
                    "decision_manifest_sha256": manifest_row[0],
                    "instrument_rulebook_sha256": rulebook.digest,
                    "effective_instrument_rule": effective_rule,
@@ -1434,6 +2563,7 @@ class ForwardSessionRunner:
                    "max_wait_ms": max_wait_ms,
                    "price_band": [str(value) for value in band] if band is not None else None,
                    "execution_style": "PASSIVE_LIMIT" if passive_trade_event_ids else "MARKETABLE_LIMIT",
+                   "execution_method": "PASSIVE_LIMIT" if passive_trade_event_ids else "MARKETABLE_LIMIT",
                    "passive_trade_event_ids": list(passive_trade_event_ids),
                    "latency_ms": latency_ms, "earliest_fill_time": timed.earliest_fill_time.isoformat(),
                    "simulated_at": simulated_at.astimezone(timezone.utc).isoformat()}
@@ -1444,6 +2574,15 @@ class ForwardSessionRunner:
         if existing and existing[0] != request_sha:
             raise ForwardSessionRunnerError("order ID reused with different paper intent")
         if not existing:
+            self._reserve_paper_intent(
+                config=config, session_id=session_id, order_id=order_id, desk_id=config.cohort,
+                instrument=event.instrument_id, side=side, quantity=quantity,
+                quantity_unit=quantity_unit, limit_price=limit,
+                cost_buffer=self._paper_cost_buffer(
+                    session_id=session_id, request=request, config=config, quantity=quantity,
+                    quantity_unit=quantity_unit, limit_price=limit, opposing_levels=opposing_levels),
+                created_at=simulated_at, source_sha256=request_sha,
+            )
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
                               [session_id, order_id, decision_id, event_id, request_sha, request_json])
             self._append_audit("paper_intent", session_id, order_id, simulated_at,
@@ -1490,6 +2629,10 @@ class ForwardSessionRunner:
                         "event_time_utc": event.event_time.isoformat(),
                         "received_at_utc": event.received_at.isoformat(),
                         "available_at_utc": event.available_at.isoformat(),
+                        "bid": str(quote["bid"]), "ask": str(quote["ask"]),
+                        "bid_quantity": quote["bid_quantity"], "ask_quantity": quote["ask_quantity"],
+                        "bid_levels": [[str(price), amount] for price, amount in quote["bid_levels"]],
+                        "ask_levels": [[str(price), amount] for price, amount in quote["ask_levels"]],
                     },
                     "trade_provenance": [{
                         "event_id": trade.event_id, "event_sha256": trade.sha256(),
@@ -1539,7 +2682,165 @@ class ForwardSessionRunner:
         self._append_paper_receipt_outcome(
             session_id=session_id, order_id=order_id, receipt=receipt, receipt_sha256=receipt_row[1],
             occurred_at=datetime.fromisoformat(receipt["simulated_at"]))
+        self._release_nonfilled_paper_reservation(
+            config=config, session_id=session_id, order_id=order_id,
+            receipt=receipt, receipt_sha256=str(receipt_row[1]),
+        )
         return receipt
+
+    def _reservation_setup(self, config: ForwardRunConfig) -> tuple[DurableReservationLedger,
+                                                                     ReservationPolicy]:
+        """Load the frozen account policy required before every paper intent."""
+        raw = config.constraints.get("reservation_policy")
+        if raw is None:
+            raise ForwardSessionRunnerError(
+                "paper intent requires a frozen account reservation_policy with explicit resource limits")
+        if not isinstance(raw, dict):
+            raise ForwardSessionRunnerError("reservation_policy must be a frozen configuration object")
+        try:
+            frozen_at = datetime.fromisoformat(str(raw["frozen_at"]))
+            policy = ReservationPolicy(
+                account_id=config.ledger_id,
+                version=str(raw["version"]),
+                frozen_at=frozen_at,
+                limits={str(key): Decimal(str(value)) for key, value in raw["limits"].items()},
+                source_sha256=str(raw["source_sha256"]),
+            )
+            # Reuse the runner journal's SQLite file so its existing durability and
+            # backup boundary also covers reservation receipts.
+            ledger = DurableReservationLedger(self.journal_path)
+        except (KeyError, TypeError, ValueError, InvalidOperation, ReservationError) as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen paper reservation policy: {exc}") from exc
+        return ledger, policy
+
+    def _reserve_paper_intent(self, *, config: ForwardRunConfig, session_id: str, order_id: str,
+                              desk_id: str, instrument: str, side: str, quantity: int,
+                              quantity_unit: str, limit_price: Decimal, cost_buffer: Decimal,
+                              created_at: datetime,
+                              source_sha256: str) -> None:
+        setup = self._reservation_setup(config)
+        ledger, policy = setup
+        resource_amounts: dict[str, Decimal] = {}
+        resource_amounts[f"INSTRUMENT_QUANTITY:{instrument}"] = Decimal(quantity)
+        multiplier = Decimal("1")
+        if quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+            metadata = config.constraints.get("position_accounting", {})
+            instrument_metadata = metadata.get(instrument) if isinstance(metadata, dict) else None
+            if not isinstance(instrument_metadata, dict) or "multiplier" not in instrument_metadata:
+                raise ForwardSessionRunnerError(
+                    "derivative paper intent requires explicit position_accounting contract multiplier")
+            try:
+                multiplier = Decimal(str(instrument_metadata["multiplier"]))
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ForwardSessionRunnerError("derivative contract multiplier must be a positive decimal") from exc
+            if not multiplier.is_finite() or multiplier <= 0:
+                raise ForwardSessionRunnerError("derivative contract multiplier must be a positive decimal")
+        if side == "BUY" and quantity_unit == "FUTURES_CONTRACTS":
+            # Futures entry reserves supplied margin and risk capital, never full notional.
+            pass
+        elif side == "BUY":
+            cash_required = limit_price * quantity * multiplier + cost_buffer
+            resource_amounts["CASH"] = cash_required
+            if quantity_unit == "OPTION_CONTRACTS":
+                resource_amounts["OPTION_BUYING_POWER"] = cash_required
+        elif side == "SELL":
+            resource_amounts[f"SELLABLE_INVENTORY:{instrument}"] = Decimal(quantity)
+            if cost_buffer:
+                resource_amounts["CASH"] = cost_buffer
+        if cost_buffer:
+            resource_amounts["PAPER_COST_BUFFER"] = cost_buffer
+        # Optional, frozen per-unit inputs allow callers to reserve margin, risk capital,
+        # options buying power, or settlement cash without inventing those values here.
+        configured = config.constraints.get("reservation_resource_amounts", {})
+        if configured:
+            if not isinstance(configured, dict) or not isinstance(configured.get(instrument, {}), dict):
+                raise ForwardSessionRunnerError("reservation_resource_amounts must map instruments to resources")
+            try:
+                for resource, per_unit in configured.get(instrument, {}).items():
+                    if str(resource) in resource_amounts:
+                        raise ValueError(f"configured resource cannot override computed {resource}")
+                    amount = Decimal(str(per_unit)) * quantity
+                    if not amount.is_finite() or amount <= 0:
+                        raise ValueError("resource amounts must be finite and positive")
+                    resource_amounts[str(resource)] = amount
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ForwardSessionRunnerError(f"invalid per-unit reservation amount: {exc}") from exc
+        if side == "BUY" and quantity_unit == "FUTURES_CONTRACTS" and any(
+                resource_amounts.get(resource, Decimal(0)) <= 0
+                for resource in ("MARGIN", "RISK_CAPITAL")):
+            raise ForwardSessionRunnerError(
+                "futures paper intent requires frozen per-unit MARGIN and RISK_CAPITAL amounts")
+        if not resource_amounts:
+            raise ForwardSessionRunnerError("paper intent has no reservable account resources")
+        request = ReservationRequest(
+            reservation_id=f"{session_id}::{order_id}", account_id=config.ledger_id,
+            desk_id=desk_id, created_at=created_at, amounts=resource_amounts,
+            source_sha256=source_sha256,
+        )
+        try:
+            ledger.reserve(policy, request)
+        except ReservationError as exc:
+            raise ForwardSessionRunnerError(f"paper intent reservation denied: {exc}") from exc
+
+    def _paper_cost_buffer(self, *, session_id: str, request: dict[str, Any],
+                           config: ForwardRunConfig, quantity: int, quantity_unit: str,
+                           limit_price: Decimal,
+                           opposing_levels: list[tuple[Decimal, int]]) -> Decimal:
+        """Reserve a paise-rounded upper bound for configured fees before paper execution."""
+        if config.constraints.get("cost_schedule") is None:
+            return Decimal(0)
+        from financial_brain.costs.india import Side
+
+        bucket = config.constraints.get("liquidity_bucket")
+        if bucket not in {"mega", "large", "mid", "small", "micro"}:
+            raise ForwardSessionRunnerError("costed paper reservation requires a valid liquidity bucket")
+        multiplier = Decimal("1")
+        if quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+            position_rules = config.constraints.get("position_accounting", {})
+            metadata = position_rules.get(str(request.get("instrument_id", ""))) \
+                if isinstance(position_rules, dict) else None
+            if not isinstance(metadata, dict) or "multiplier" not in metadata:
+                raise ForwardSessionRunnerError("costed derivative reservation requires explicit multiplier")
+            multiplier = Decimal(str(metadata["multiplier"]))
+            if not multiplier.is_finite() or multiplier <= 0:
+                raise ForwardSessionRunnerError("costed derivative multiplier must be finite and positive")
+        price_bound = limit_price
+        if request.get("side") == "SELL" and request.get("execution_style") != "PASSIVE_LIMIT":
+            executable = [price for price, depth in opposing_levels if depth > 0 and price >= limit_price]
+            if executable:
+                price_bound = max(executable)
+        schedule = self._resolved_cost_schedule(session_id)
+        lines = schedule.one_way(
+            day=config.exchange_date, turnover=float(price_bound * quantity * multiplier),
+            side=Side.BUY if request.get("side") == "BUY" else Side.SELL,
+            bucket=str(bucket), include_impact=False,
+        )
+        buffer = Decimal(str(lines["total"]))
+        if request.get("execution_style") == "PASSIVE_LIMIT":
+            buffer += Decimal(self._passive_adverse_cost(session_id, request, limit_price, quantity))
+        if not buffer.is_finite() or buffer < 0:
+            raise ForwardSessionRunnerError("computed paper cost reservation is invalid")
+        return buffer.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
+
+    def _release_nonfilled_paper_reservation(self, *, config: ForwardRunConfig, session_id: str,
+                                             order_id: str, receipt: dict[str, Any],
+                                             receipt_sha256: str) -> None:
+        """Free rejected/expired paper intents; retain filled exposure pending book transfer."""
+        if receipt.get("status") not in {"MISSED", "REJECTED"}:
+            return
+        setup = self._reservation_setup(config)
+        ledger, _policy = setup
+        terminal_kind = "REJECTED" if receipt["status"] == "REJECTED" else "EXPIRED"
+        try:
+            ledger.release(
+                account_id=config.ledger_id, reservation_id=f"{session_id}::{order_id}",
+                terminal_event_id=f"{session_id}:{order_id}:{receipt_sha256}",
+                terminal_kind=terminal_kind,
+                occurred_at=datetime.fromisoformat(str(receipt["simulated_at"])),
+                source_sha256=receipt_sha256,
+            )
+        except ReservationError as exc:
+            raise ForwardSessionRunnerError(f"paper reservation terminal reconciliation failed: {exc}") from exc
 
     def _attach_cost_evidence(self, session_id: str, request: dict[str, Any], receipt: dict[str, Any], *,
                               price: Decimal | None, filled_quantity: int) -> None:
@@ -1553,6 +2854,8 @@ class ForwardSessionRunner:
         config = self.state_store.config(session_id)
         bucket = config.constraints.get("liquidity_bucket")
         passive = request.get("execution_style") == "PASSIVE_LIMIT"
+        fidelity = self._cost_fidelity_evidence(session_id, request, receipt, config, bucket)
+        receipt["cost_fidelity"] = fidelity
         if config.constraints.get("cost_schedule") is None:
             receipt["simulated_adverse_selection_cost_inr"] = self._passive_adverse_cost(
                 session_id, request, price, filled_quantity) if passive else "0.00"
@@ -1565,7 +2868,18 @@ class ForwardSessionRunner:
         try:
             schedule = self._resolved_cost_schedule(session_id)
             side = Side.BUY if request["side"] == "BUY" else Side.SELL
-            turnover = float(price * filled_quantity)
+            multiplier = Decimal("1")
+            if request.get("quantity_unit") in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+                position_rules = config.constraints.get("position_accounting", {})
+                metadata = position_rules.get(str(request.get("instrument_id", ""))) \
+                    if isinstance(position_rules, dict) else None
+                if not isinstance(metadata, dict) or "multiplier" not in metadata:
+                    raise ForwardSessionRunnerError(
+                        "costed derivative fill requires explicit contract multiplier")
+                multiplier = Decimal(str(metadata["multiplier"]))
+                if not multiplier.is_finite() or multiplier <= 0:
+                    raise ForwardSessionRunnerError("costed derivative multiplier must be finite and positive")
+            turnover = float(price * filled_quantity * multiplier)
             # This runner has an observed opposing book and applies price impact through
             # depth walking and tick-rounded adverse execution prices. Do not add a second
             # generic bucket impact estimate to those same fills.
@@ -1590,6 +2904,79 @@ class ForwardSessionRunner:
         receipt["cost_items"] = cost_items
         receipt["simulated_adverse_selection_cost_inr"] = format(adverse_charge, "f")
         receipt["charges_inr"] = format(total_charges, "f")
+        fidelity["cost_model_version"] = schedule.version
+        fidelity["cost_model_id"] = schedule.schedule_id
+        fidelity["cost_schedule_sha256"] = schedule.source_sha256
+        fidelity["cost_schedule_source"] = schedule.source_ref
+        fidelity["stress_scenario"] = config.constraints.get("cost_stress_scenario", "UNAVAILABLE")
+        fidelity["unavailable_fields"] = [name for name, value in fidelity.items()
+                                           if value == "UNAVAILABLE"]
+
+    def _cost_fidelity_evidence(self, session_id: str, request: dict[str, Any], receipt: dict[str, Any],
+                                config: Any, bucket: Any) -> dict[str, Any]:
+        provenance = receipt.get("quote_provenance") or {}
+        event_ids = request.get("quote_event_ids") or request.get("input_quote_event_ids") or []
+        if not event_ids:
+            event_ids = request.get("market_event_ids", [])
+        quote_rows = []
+        for event_id in event_ids:
+            row = self._con.execute("SELECT event_json, event_sha256 FROM runner_events "
+                                    "WHERE session_id=? AND event_id=? AND kind='quote'",
+                                    [session_id, event_id]).fetchone()
+            if row is not None:
+                event = json.loads(row[0])
+                quote_rows.append({"event_id": event_id, "sha256": row[1],
+                                   "source": event.get("source", "UNAVAILABLE"),
+                                   "event_time": event.get("event_time", "UNAVAILABLE"),
+                                   "received_at": event.get("received_at", "UNAVAILABLE"),
+                                   "available_at": event.get("available_at", "UNAVAILABLE")})
+        if not quote_rows and isinstance(provenance, dict) and provenance.get("event_id"):
+            quote_rows.append({"event_id": provenance["event_id"],
+                               "sha256": provenance.get("event_sha256", "UNAVAILABLE"),
+                               "source": provenance.get("source", "UNAVAILABLE"),
+                               "event_time": provenance.get("event_time_utc", "UNAVAILABLE"),
+                               "received_at": provenance.get("received_at_utc", "UNAVAILABLE"),
+                               "available_at": provenance.get("available_at_utc", "UNAVAILABLE")})
+        if not quote_rows:
+            instrument_id = request.get("instrument_id") or request.get("symbol")
+            receipt_clock = receipt.get("simulated_at")
+            if instrument_id and receipt_clock:
+                candidates = self._con.execute("""SELECT event_id, event_json, event_sha256 FROM runner_events
+                    WHERE session_id=? AND kind='quote' AND available_at<=?
+                    ORDER BY available_at DESC, event_id DESC""", [session_id, receipt_clock]).fetchall()
+                for event_id, event_raw, digest in candidates:
+                    event = json.loads(event_raw)
+                    event_instrument = event.get("instrument_id")
+                    normalized_matches = (isinstance(event_instrument, str)
+                                          and isinstance(instrument_id, str)
+                                          and event_instrument.split(":", 1)[-1] ==
+                                          instrument_id.split(":", 1)[-1])
+                    if event_instrument != instrument_id and not normalized_matches:
+                        continue
+                    quote_rows.append({"event_id": event_id, "sha256": digest,
+                                       "source": event.get("source", "UNAVAILABLE"),
+                                       "event_time": event.get("event_time", "UNAVAILABLE"),
+                                       "received_at": event.get("received_at", "UNAVAILABLE"),
+                                       "available_at": event.get("available_at", "UNAVAILABLE")})
+                    break
+        receipt_clock = receipt.get("simulated_at", "UNAVAILABLE")
+        return {"schema": "fb.cost_fidelity.v1",
+                "provider_clock": quote_rows[-1]["event_time"] if quote_rows else "UNAVAILABLE",
+                "receipt_clock": receipt_clock,
+                "quote_source": quote_rows[-1]["source"] if quote_rows else "UNAVAILABLE",
+                "quote_event_ids": [row["event_id"] for row in quote_rows],
+                "quote_sha256": [row["sha256"] for row in quote_rows],
+                "quote_clocks": quote_rows,
+                "liquidity_bucket": bucket or "UNAVAILABLE",
+                "cost_model_version": "UNAVAILABLE", "cost_model_id": "UNAVAILABLE",
+                "cost_schedule_sha256": "UNAVAILABLE", "cost_schedule_source": "UNAVAILABLE",
+                "stress_scenario": config.constraints.get("cost_stress_scenario", "UNAVAILABLE"),
+                "impact_calibration": "UNAVAILABLE",
+                "data_rights_attestation": "UNAVAILABLE",
+                "unavailable_fields": ["provider_clock", "quote_source", "quote_event_ids", "quote_sha256",
+                                       "liquidity_bucket", "cost_model_version", "cost_model_id",
+                                       "cost_schedule_sha256", "cost_schedule_source", "stress_scenario",
+                                       "impact_calibration", "data_rights_attestation"]}
 
     def _passive_adverse_cost(self, session_id: str, request: dict[str, Any],
                               price: Decimal | None, filled_quantity: int) -> str:
@@ -1726,9 +3113,36 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("terminal session has no persisted close report")
         if state not in {SessionState.OPEN, SessionState.DRAINING}:
             raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
+        records = self.records(session_id)
+        config = self.state_store.config(session_id)
+        day_end = self._day_end_reconciliation(
+            records, session_id=session_id, config=config, reconciled_at=now)
+        position_dispositions = self._position_dispositions(
+            config, records["accounting"]["positions"])
+        mark_by_instrument = {row["instrument_id"]: row for row in day_end["position_marks"]}
+        for disposition in position_dispositions:
+            mark = mark_by_instrument.get(disposition["instrument_id"])
+            if mark is not None:
+                disposition["valuation_status"] = "OBSERVED_EXECUTABLE_QUOTE"
+                disposition["mark_price_inr"] = mark["mark_price_inr"]
+                disposition["mark_quote_event_id"] = mark["quote_event_id"]
+        self._record_close_exposures(session_id=session_id, day_end=day_end,
+                                     position_dispositions=position_dispositions, occurred_at=now)
+        records = self.records(session_id)
+        if records["unresolved_exposures"]:
+            day_end["exceptions"] = sorted(set(day_end["exceptions"] + ["UNRESOLVED_EXPOSURES_OPEN"]))
+            day_end["reconciled"] = False
+            day_end.pop("reconciliation_sha256", None)
+            day_end["reconciliation_sha256"] = hashlib.sha256(json.dumps(
+                day_end, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
         if complete:
             self._require_resolved_paper_intents(session_id)
-            accounting = self.records(session_id)["accounting"]
+            accounting = records["accounting"]
+            unresolved_positions = [row for row in position_dispositions
+                                    if row["disposition"] != "OVERNIGHT_CARRY_AUTHORIZED"]
+            if unresolved_positions:
+                raise ForwardSessionRunnerError(
+                    "cannot close complete with positions requiring flatten or expiry action")
             config = self.state_store.config(session_id)
             configured_costs_missing = (config.constraints.get("cost_schedule") is not None and
                                         accounting["filled_order_count"] > 0 and
@@ -1736,6 +3150,12 @@ class ForwardSessionRunner:
             if accounting["status"] not in {"RECONCILED_GROSS", "RECONCILED_NET"} or \
                     not accounting["cash_reconciled"] or configured_costs_missing:
                 raise ForwardSessionRunnerError("cannot close complete with OMS/accounting reconciliation errors")
+            fixture_only = (config.mode != "LIVE_PAPER" and
+                            config.constraints.get("allow_synthetic_fixture_events") is True)
+            if not day_end["reconciled"] and not fixture_only:
+                raise ForwardSessionRunnerError(
+                    "cannot seal session with unresolved day-end reconciliation exceptions: " +
+                    ", ".join(day_end["exceptions"]))
         if state is SessionState.OPEN:
             self.state_store.transition(session_id, SessionState.DRAINING, now=now)
         if complete:
@@ -1745,11 +3165,13 @@ class ForwardSessionRunner:
             self.state_store.transition(session_id, SessionState.INCOMPLETE, now=now,
                                         reason=reason or "session evidence incomplete")
             status = "INCOMPLETE"
-        records = self.records(session_id)
         body = {"session_id": session_id, "status": status, "closed_at": now.astimezone(timezone.utc).isoformat(),
                 "event_count": len(records["events"]), "decision_count": len(records["decisions"]),
                 "intent_count": len(records["intents"]),
                 "execution_receipt_count": len(records["execution_receipts"]),
+                "position_dispositions": position_dispositions,
+                "day_end_reconciliation": day_end,
+                "unresolved_exposures": records["unresolved_exposures"],
                 "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -1761,21 +3183,278 @@ class ForwardSessionRunner:
         self._con.commit()
         return report
 
+    def _record_close_exposures(self, *, session_id: str, day_end: dict[str, Any],
+                                position_dispositions: list[dict[str, Any]],
+                                occurred_at: datetime) -> None:
+        """Turn close exceptions into durable adverse exposure records before any seal attempt."""
+        exceptions = day_end["exceptions"]
+        if "OMS_UNRESOLVED" in exceptions or "OMS_NONTERMINAL" in exceptions:
+            order_ids = day_end["unresolved_order_ids"] or day_end["nonterminal_order_ids"] or ["unknown"]
+            for order_id in order_ids:
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="FILL_AMBIGUITY",
+                    exposure_key=f"order:{order_id}", order_id=order_id if order_id != "unknown" else None,
+                    reason="Paper order state or receipt is not terminal and reconciled.",
+                    occurred_at=occurred_at)
+        if "CASH_MISMATCH" in exceptions:
+            self.record_unresolved_exposure(
+                session_id=session_id, exposure_type="LEDGER_MISMATCH", exposure_key="cash-ledger",
+                reason="OMS cash and accounting ledger cash do not reconcile.", occurred_at=occurred_at)
+        for exception in exceptions:
+            if exception.startswith("POSITION_MARK_MISSING:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="NO_CONFIRMABLE_QUOTE",
+                    exposure_key=f"mark:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="No confirmable executable two-sided quote is available for the open inventory.",
+                    occurred_at=occurred_at)
+            elif exception.startswith("POSITION_MARK_STALE:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="STALE_MARK",
+                    exposure_key=f"stale-mark:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="Latest executable quote exceeds the frozen maximum age for a day-end mark.",
+                    occurred_at=occurred_at)
+            elif exception.startswith("OPEN_RISK_MISSING_OR_AMBIGUOUS:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="OPEN_RISK_UNKNOWN",
+                    exposure_key=f"open-risk:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="Open inventory lacks one unambiguous persisted stop-risk record.",
+                    occurred_at=occurred_at)
+        for disposition in position_dispositions:
+            if disposition["disposition"] != "OVERNIGHT_CARRY_AUTHORIZED":
+                instrument = disposition["instrument_id"]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="MISSING_EXIT",
+                    exposure_key=f"exit:{instrument}:{disposition['disposition']}",
+                    instrument_id=instrument, quantity=disposition["quantity"],
+                    reason=f"Position requires {disposition['disposition']} before a complete close.",
+                    occurred_at=occurred_at)
+
+    @staticmethod
+    def _day_end_reconciliation(records: dict[str, Any], *, session_id: str,
+                                config: ForwardRunConfig, reconciled_at: datetime) -> dict[str, Any]:
+        """Reconcile OMS, cash, costs, inventory marks and stop-risk before session sealing.
+
+        Carried positions require a same-session executable quote and a position-monitor
+        stop record. The report deliberately leaves valuation or risk unknown when either
+        evidence source is absent; it never substitutes a close or last-trade price.
+        """
+        accounting = records["accounting"]
+        exceptions: list[str] = []
+        unresolved_orders = sorted(set(accounting["unresolved_order_ids"]))
+        if unresolved_orders or accounting["errors"]:
+            exceptions.append("OMS_UNRESOLVED")
+        terminal = {"FILLED", "CANCELED", "REJECTED", "MISSED", "EXPIRED"}
+        open_order_states = sorted(order_id for order_id, state in accounting["oms_order_states"].items()
+                                   if state not in terminal)
+        if open_order_states and "OMS_UNRESOLVED" not in exceptions:
+            exceptions.append("OMS_NONTERMINAL")
+        if not accounting["cash_reconciled"]:
+            exceptions.append("CASH_MISMATCH")
+        fills = accounting["filled_order_count"]
+        fees_reconciled = fills == 0 or accounting["charges_assessed"]
+        if not fees_reconciled:
+            exceptions.append("FEES_UNASSESSED")
+
+        positions: dict[str, int] = accounting["positions"]
+        average_costs = accounting["average_cost_inr"]
+        latest_quotes: dict[str, tuple[datetime, MarketEvent, dict[str, Any]]] = {}
+        for raw_event in records["events"]:
+            try:
+                event_fields = {key: raw_event[key] for key in (
+                    "event_id", "kind", "venue", "instrument_id", "event_time", "received_at",
+                    "available_at", "payload", "source", "sequence", "decision_time", "evidence_id",
+                    "source_at", "exchange_at", "published_at", "computed_at",
+                ) if key in raw_event}
+                event = MarketEvent.from_dict(event_fields)
+            except (KeyError, TypeError, ValueError):
+                continue
+            if event.available_at > reconciled_at.astimezone(timezone.utc):
+                continue
+            quote = executable_quote(event)
+            if quote is None:
+                continue
+            prior = latest_quotes.get(event.instrument_id)
+            if prior is None or (event.available_at, event.event_id) > (prior[0], prior[1].event_id):
+                latest_quotes[event.instrument_id] = (event.available_at, event, quote)
+
+        stop_by_instrument: dict[str, set[Decimal]] = {}
+        for audit in records["audit_log"]:
+            if audit.get("kind") != "position_monitor":
+                continue
+            monitor = audit.get("record", {})
+            try:
+                instrument = str(monitor["instrument_id"])
+                stop = Decimal(str(monitor["stop_price"]))
+                available_at = datetime.fromisoformat(str(monitor["available_at"]))
+            except (KeyError, TypeError, ValueError, InvalidOperation):
+                continue
+            if available_at <= reconciled_at.astimezone(timezone.utc) and stop.is_finite() and stop > 0:
+                stop_by_instrument.setdefault(instrument, set()).add(stop)
+
+        position_marks: list[dict[str, Any]] = []
+        market_value = Decimal(0)
+        unrealized = Decimal(0)
+        open_risk = Decimal(0)
+        marks_complete = True
+        risk_complete = True
+        max_mark_age_ms = config.constraints.get("max_quote_age_ms", DEFAULT_MAX_QUOTE_AGE_MS)
+        if type(max_mark_age_ms) is not int or max_mark_age_ms < 0:
+            raise ForwardSessionRunnerError("max_quote_age_ms must be a non-negative integer for day-end marks")
+        for instrument, quantity in sorted(positions.items()):
+            quote_row = latest_quotes.get(instrument)
+            if quote_row is None:
+                marks_complete = False
+                risk_complete = False
+                exceptions.append(f"POSITION_MARK_MISSING:{instrument}")
+                continue
+            _available_at, event, quote = quote_row
+            age_ms = (reconciled_at.astimezone(timezone.utc) - event.available_at).total_seconds() * 1000
+            if age_ms < 0:
+                raise ForwardSessionRunnerError("day-end clock precedes latest quote availability")
+            if age_ms > max_mark_age_ms:
+                marks_complete = False
+                risk_complete = False
+                exceptions.append(f"POSITION_MARK_STALE:{instrument}")
+                continue
+            mark = quote["bid"] if quantity > 0 else quote["ask"]
+            qty = Decimal(abs(quantity))
+            signed_qty = Decimal(quantity)
+            basis = Decimal(str(average_costs[instrument]))
+            position_value = mark * signed_qty
+            position_unrealized = (mark - basis) * signed_qty
+            market_value += position_value
+            unrealized += position_unrealized
+            stops = stop_by_instrument.get(instrument, set())
+            if len(stops) != 1:
+                risk_complete = False
+                exceptions.append(f"OPEN_RISK_MISSING_OR_AMBIGUOUS:{instrument}")
+                stop_risk: Decimal | None = None
+            else:
+                stop = next(iter(stops))
+                stop_risk = abs(mark - stop) * qty
+                open_risk += stop_risk
+            position_marks.append({
+                "instrument_id": instrument, "quantity": quantity,
+                "mark_price_inr": str(mark), "mark_side": "BID" if quantity > 0 else "ASK",
+                "market_value_inr": str(position_value), "unrealized_gross_pnl_inr": str(position_unrealized),
+                "quote_event_id": event.event_id, "quote_event_sha256": event.sha256(),
+                "quote_source": event.source, "quote_available_at_utc": event.available_at.isoformat(),
+                "quote_age_ms": int(age_ms),
+                "stop_risk_inr": str(stop_risk) if stop_risk is not None else None,
+            })
+        if positions and marks_complete and risk_complete:
+            open_risk_value: str | None = str(open_risk)
+        elif positions:
+            open_risk_value = None
+        else:
+            open_risk_value = "0"
+        cash = Decimal(str(accounting["cash_inr"]))
+        marked_equity = cash + market_value if marks_complete else None
+        if not marks_complete:
+            # Missing marks may already have a per-instrument exception; keep this aggregate explicit.
+            if not any(value.startswith("POSITION_MARK_MISSING:") for value in exceptions):
+                exceptions.append("MARKED_EQUITY_UNAVAILABLE")
+        gross_only_fixture = (config.mode != "LIVE_PAPER" and
+                              config.constraints.get("allow_synthetic_fixture_events") is True)
+        body = {
+            "schema": "fb.forward-day-end-reconciliation.v1",
+            "session_id": session_id,
+            "exchange_date": config.exchange_date.isoformat(),
+            "reconciled_at_utc": reconciled_at.astimezone(timezone.utc).isoformat(),
+            "oms_reconciled": not unresolved_orders and not accounting["errors"] and not open_order_states,
+            "unresolved_order_ids": unresolved_orders,
+            "nonterminal_order_ids": open_order_states,
+            "cash_reconciled": bool(accounting["cash_reconciled"]),
+            "cash_inr": accounting["cash_inr"],
+            "inventory_reconciled": marks_complete,
+            "positions": accounting["positions"],
+            "position_marks": position_marks,
+            "market_value_inr": str(market_value) if marks_complete else None,
+            "realized_gross_pnl_inr": accounting["realized_gross_pnl_inr"],
+            "unrealized_gross_pnl_inr": str(unrealized) if marks_complete else None,
+            "marked_equity_inr": str(marked_equity) if marked_equity is not None else None,
+            "fees_reconciled": fees_reconciled,
+            "charges_inr": accounting["charges_inr"],
+            "charges_assessed": accounting["charges_assessed"],
+            "open_risk_inr": open_risk_value,
+            "open_risk_basis": "DISTANCE_TO_FROZEN_POSITION_MONITOR_STOP" if risk_complete and positions else
+                               "FLAT_BOOK" if not positions else None,
+            "profitability_eligible": (not exceptions and accounting["net_pnl_eligible"]),
+            "fixture_gross_only": gross_only_fixture,
+            "exceptions": sorted(set(exceptions)),
+            "reconciled": not exceptions,
+        }
+        digest = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        return body | {"reconciliation_sha256": digest}
+
+    @staticmethod
+    def _position_dispositions(config: ForwardRunConfig,
+                               positions: dict[str, int]) -> list[dict[str, Any]]:
+        """Classify open paper inventory without inventing a flatten or expiry fill."""
+        from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
+
+        authorized = config.constraints.get("carry_authorized_instruments", [])
+        if (not isinstance(authorized, list) or any(not isinstance(item, str) or not item.strip()
+                                                     for item in authorized)
+                or len(set(authorized)) != len(authorized)):
+            raise ForwardSessionRunnerError("carry_authorized_instruments must be a unique string list")
+        rule_data = config.constraints.get("instrument_rules")
+        try:
+            rule_book = InstrumentRuleBook(rule_data) if isinstance(rule_data, dict) else None
+        except InstrumentRuleError as exc:
+            raise ForwardSessionRunnerError(f"invalid instrument rules for session close: {exc}") from exc
+        result: list[dict[str, Any]] = []
+        for instrument, quantity in sorted(positions.items()):
+            if type(quantity) is not int or quantity == 0:
+                continue
+            rule = None
+            if rule_book is not None:
+                try:
+                    rule = rule_book.resolve(instrument, config.exchange_date)
+                except InstrumentRuleError:
+                    rule = None
+            quantity_unit = rule.quantity_unit if rule else "UNKNOWN"
+            expiry = rule.expiry if rule else None
+            derivative = quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}
+            if rule is None:
+                disposition = "INSTRUMENT_RULE_MISSING"
+            elif derivative and expiry is None:
+                disposition = "EXPIRY_RULE_MISSING"
+            elif derivative and expiry is not None and expiry <= config.exchange_date:
+                disposition = "EXPIRY_SETTLEMENT_REQUIRED"
+            elif instrument in authorized:
+                disposition = "OVERNIGHT_CARRY_AUTHORIZED"
+            else:
+                disposition = "INTRADAY_FLATTEN_REQUIRED"
+            result.append({"instrument_id": instrument, "quantity": quantity,
+                           "quantity_unit": quantity_unit,
+                           "expiry": expiry.isoformat() if expiry else None,
+                           "disposition": disposition,
+                           "valuation_status": "NOT_PROVIDED",
+                           "execution_or_settlement_fill_created": False})
+        return result
+
     def _require_resolved_paper_intents(self, session_id: str) -> None:
         intents = self._con.execute("SELECT order_id FROM paper_intents WHERE session_id=?",
                                     [session_id]).fetchall()
-        if not intents:
-            return
-        receipts = self._con.execute("SELECT order_id FROM paper_execution_receipts WHERE session_id=?",
-                                     [session_id]).fetchall()
-        if {row[0] for row in intents} != {row[0] for row in receipts}:
-            raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
-        rows = self._con.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
-                                 [f"paper:{session_id}:%"]).fetchall()
-        expected = {f"paper:{session_id}:{row[0]}" for row in intents}
-        actual = {key for key, state in rows if state == "DISPATCHED"}
-        if expected != actual:
-            raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
+        if intents:
+            receipts = self._con.execute("SELECT order_id FROM paper_execution_receipts WHERE session_id=?",
+                                         [session_id]).fetchall()
+            if {row[0] for row in intents} != {row[0] for row in receipts}:
+                raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
+            rows = self._con.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
+                                     [f"paper:{session_id}:%"]).fetchall()
+            expected = {f"paper:{session_id}:{row[0]}" for row in intents}
+            actual = {key for key, state in rows if state == "DISPATCHED"}
+            if expected != actual:
+                raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
         prefix = f"{session_id}::"
         unresolved = [history[-1]["state"] for order_ref in self.order_journal.order_ids()
                       if order_ref.startswith(prefix)
@@ -1786,6 +3465,14 @@ class ForwardSessionRunner:
         if unresolved:
             raise ForwardSessionRunnerError(
                 f"cannot close complete with unresolved paper order states: {sorted(set(unresolved))}")
+        oco_prefix = f"oco:{session_id}::"
+        unresolved_oco = [history[-1]["state"] for order_ref in self.order_journal.order_ids()
+                          if order_ref.startswith(oco_prefix)
+                          for history in (self.order_journal.replay(order_ref),)
+                          if history and history[-1]["state"] in {"CANCEL_PENDING", "UNKNOWN"}]
+        if unresolved_oco:
+            raise ForwardSessionRunnerError(
+                f"cannot close complete with unresolved paper OCO groups: {sorted(set(unresolved_oco))}")
 
     def _append_record(self, kind: str, session_id: str, record: dict[str, Any]) -> None:
         event_id = f"{session_id}:{kind}"

@@ -18,8 +18,9 @@ minimum order, reports the cash it could not deploy, and prices each leg with th
 from __future__ import annotations
 
 from datetime import date
+from math import floor, isfinite
 
-from ..costs.india import CostModel, Segment
+from ..costs.india import CostModel, Segment, Side
 
 MIN_ORDER_INR = 5_000.0
 TICK = 0.05
@@ -36,31 +37,62 @@ def _tick(x: float) -> float:
 
 def size_book(book: list[dict], *, capital_inr: float, prices: dict[str, float],
               min_order_inr: float = MIN_ORDER_INR, costs: CostModel | None = None) -> dict:
-    """Whole-share positions for an account of ``capital_inr`` from a list of ``{ticker, weight}``."""
-    if capital_inr <= 0:
-        raise TicketError("capital must be positive")
+    """Allocate whole shares under cash plus entry-fee budget for a small account.
+
+    Target weights remain targets, not promises: oversized aggregate targets are clipped
+    by remaining cash. Expected exit-side costs are reported separately and are not
+    double-counted against today's cash balance.
+    """
+    if not isfinite(capital_inr) or capital_inr <= 0:
+        raise TicketError("capital must be finite and positive")
+    if not isfinite(min_order_inr) or min_order_inr <= 0:
+        raise TicketError("minimum order must be finite and positive")
     costs = costs or CostModel()
-    lines, skipped, spent = [], [], 0.0
+    lines, skipped = [], []
+    spent, entry_fees = 0.0, 0.0
     for b in sorted(book, key=lambda x: -x["weight"]):
-        px = prices.get(b["ticker"])
-        if not px or px <= 0:
-            skipped.append({"ticker": b["ticker"], "why": "no price"})
+        ticker, weight = b.get("ticker"), b.get("weight")
+        if not isinstance(ticker, str) or not ticker.strip():
+            raise TicketError("every position requires a non-empty ticker")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) \
+                or not isfinite(weight) or not 0 <= weight <= 1:
+            raise TicketError(f"{ticker}: weight must be finite and within [0, 1]")
+        px = prices.get(ticker)
+        if px is None or isinstance(px, bool) or not isinstance(px, (int, float)) \
+                or not isfinite(px) or px <= 0:
+            skipped.append({"ticker": ticker, "why": "no finite positive price"})
             continue
-        target = b["weight"] * capital_inr
-        shares = int(target // px)
+        target = weight * capital_inr
+        available = max(0.0, capital_inr - spent - entry_fees)
+        shares = min(floor(target / px + 1e-12), floor(available / px + 1e-12))
+        low, high = 0, shares
+        while low < high:
+            candidate_shares = (low + high + 1) // 2
+            notional = candidate_shares * px
+            entry = costs.one_way(turnover=notional, side=Side.BUY,
+                segment=Segment.DELIVERY, bucket="large", include_impact=False)["total"]
+            if notional + entry <= available + 1e-9:
+                low = candidate_shares
+            else:
+                high = candidate_shares - 1
+        shares = low
         notional = shares * px
         if shares < 1 or notional < min_order_inr:
             skipped.append({"ticker": b["ticker"], "why": f"Rs {target:,.0f} target buys "
                             f"{shares} share(s) = Rs {notional:,.0f}, below the Rs {min_order_inr:,.0f} minimum"})
             continue
         rt = costs.round_trip(turnover=notional, segment=Segment.DELIVERY, include_impact=False)
+        entry = rt["buy"]["total"]
         lines.append({"ticker": b["ticker"], "shares": shares, "price": px, "notional": notional,
                       "weight": notional / capital_inr, "round_trip_fees": rt["total"],
-                      "fees_pct": rt["total"] / notional})
+                      "entry_fees": entry, "fees_pct": rt["total"] / notional})
         spent += notional
+        entry_fees += entry
+    fees_total = sum(l["round_trip_fees"] for l in lines)
     return {"capital": capital_inr, "positions": lines, "deployed": spent,
-            "cash": capital_inr - spent, "skipped": skipped,
-            "fees_total": sum(l["round_trip_fees"] for l in lines)}
+            "entry_fees_total": entry_fees, "cash_committed": spent + entry_fees,
+            "cash": max(0.0, capital_inr - spent - entry_fees), "skipped": skipped,
+            "fees_total": fees_total}
 
 
 def ticket(*, symbol: str, side: str, quantity: int, reference_price: float, limit_buffer: float = 0.002,

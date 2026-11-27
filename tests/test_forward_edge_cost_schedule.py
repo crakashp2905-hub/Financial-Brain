@@ -44,3 +44,35 @@ def test_missing_or_out_of_effective_date_schedule_fails_closed() -> None:
     resolved = book.resolve(schedule_id="india-equity", segment=Segment.DELIVERY, day=date(2026, 6, 30))
     with pytest.raises(CostScheduleError, match="not effective"):
         resolved.one_way(day=date(2026, 7, 1), turnover=100_000, side=Side.BUY, bucket="large")
+
+
+@pytest.mark.parametrize("model", [
+    lambda: CostModel(stt_delivery=-0.001),
+    lambda: CostModel(brokerage_rate=float("nan")),
+    lambda: CostModel(dp_charge_flat=float("inf")),
+    lambda: CostModel(impact={"mid": -0.01}),
+])
+def test_fee_schedule_rejects_negative_or_non_finite_cost_components(model) -> None:
+    with pytest.raises(ValueError):
+        model()
+
+
+def test_cost_model_is_immutable_and_product_schedules_resolve_independently() -> None:
+    model = CostModel()
+    with pytest.raises(TypeError):
+        model.impact["large"] = 0.0
+
+    schedules = tuple(
+        CostSchedule(f"india-{segment.value}", "v1", date(2026, 1, 1), None,
+                     segment, model, f"configured-{segment.value}", f"{index:064x}")
+        for index, segment in enumerate((Segment.DELIVERY, Segment.INTRADAY, Segment.FUT, Segment.OPT), 1)
+    )
+    book = CostScheduleBook(schedules)
+    for schedule in schedules:
+        resolved = book.resolve(schedule_id=schedule.schedule_id, segment=schedule.segment,
+                                day=date(2026, 11, 26))
+        charge = resolved.one_way(day=date(2026, 11, 26), turnover=50_000,
+                                  side=Side.SELL, bucket="large")
+        assert charge["segment"] == schedule.segment.value
+        assert charge["schedule_sha256"] == schedule.digest()
+        assert charge["source_sha256"] == schedule.source_sha256

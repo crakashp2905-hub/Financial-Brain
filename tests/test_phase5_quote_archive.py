@@ -42,5 +42,7 @@ def test_vwap_and_book_walk_are_recorded_on_the_trade_without_changing_the_fill(
     con = R.ledger(tmp_path / "l.duckdb")
     for x in e.end_of_day(datetime(2026, 10, 7, 15, 20), {"ABC": 102.0}):
         R.save(con, x, "live")
+    assert con.execute("SELECT entry_price_basis, exit_price_basis FROM trades").fetchone() == (
+        "OBSERVED_TWO_SIDED_QUOTE", "RESEARCH_ONLY_BUCKET_HALF_SPREAD_ESTIMATE")
     s = X.shortfall(con)[0]
     assert s["entry_vs_vwap_bp"] == pytest.approx((101.6 / 100.4 - 1) * 1e4) and s["with_depth"] == 1

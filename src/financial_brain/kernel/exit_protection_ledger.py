@@ -20,6 +20,7 @@ from .position_signals import (
 )
 from .trader_signal import ExitTrigger
 from .exit_policy import ExitPolicy
+from .exit_accounting import TrailingStopState
 
 
 class ExitLedgerError(ValueError):
@@ -61,7 +62,17 @@ class ExitProtectionLedger:
         return [r for r in self.journal.records() if r.get("position_id") == self.position_id]
 
     @staticmethod
+    def _decision_sha256(records: list[dict]) -> str:
+        decisions = {row["decision_sha256"] for row in records
+                     if row.get("type") == "ENTRY_SIGNAL" and row.get("decision_sha256")}
+        if len(decisions) != 1:
+            raise ExitLedgerError("position event requires exactly one immutable entry decision hash")
+        return next(iter(decisions))
+
+    @staticmethod
     def _append_idempotent(journal: DurableJournal, records: list[dict], record: dict, key: str) -> bool:
+        if record.get("type") != "ENTRY_SIGNAL":
+            record["decision_sha256"] = ExitProtectionLedger._decision_sha256(records)
         previous = next((r for r in records if r.get("idempotency_key") == key), None)
         if previous is not None:
             if previous != record:
@@ -71,11 +82,26 @@ class ExitProtectionLedger:
         return True
 
     @property
+    def trailing_stop_state(self) -> TrailingStopState | None:
+        """Recover the latest quote-derived trail from the hash-chained position journal."""
+        record = next((row for row in reversed(self._position_records())
+                       if row.get("type") == "TRAILING_STOP_UPDATE"), None)
+        if record is None:
+            return None
+        return TrailingStopState(
+            side=str(record["side"]), policy_version=str(record["policy_version"]),
+            distance=Decimal(str(record["distance"])), watermark=Decimal(str(record["watermark"])),
+            stop_price=Decimal(str(record["stop_price"])),
+        )
+
+    @property
     def state(self) -> ExitLedgerState:
         records = self._position_records()
         entries = {r["fill_id"]: _decimal(r["quantity"], "entry fill")
                    for r in records if r["type"] == "ENTRY_FILL"}
         protections = {r["protection_id"] for r in records if r["type"] == "PROTECTION_ARMED"}
+        protections.difference_update(r["protection_id"] for r in records
+                                      if r.get("type") == "PROTECTION_CANCELLED")
         intents = {r["idempotency_key"]: _decimal(r["quantity"], "exit intent")
                    for r in records if r["type"] == "EXIT_TRIGGERED"}
         cancelled: dict[str, Decimal] = {}
@@ -145,6 +171,20 @@ class ExitProtectionLedger:
                   "snapshot": json.loads(snapshot_json),
                   "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
                   "idempotency_key": idempotency_key}
+        decision_manifest = {
+            "signal_id": entry.signal_id,
+            "position_id": self.position_id,
+            "strategy_id": entry.strategy_id,
+            "strategy_version": entry.strategy_version,
+            "instrument_id": entry.instrument_id,
+            "side": entry.side.value,
+            "occurred_at": entry.occurred_at.isoformat(),
+            "quote_source_id": entry.quote_source_id,
+            "source_hash": entry.source_hash,
+            "snapshot_sha256": record["snapshot_sha256"],
+        }
+        manifest_json = json.dumps(decision_manifest, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        record["decision_sha256"] = hashlib.sha256(manifest_json.encode("utf-8")).hexdigest()
         records = self._position_records()
         if any(r.get("type") == "ENTRY_INTENT" and r.get("entry_signal_id") == entry.signal_id for r in records):
             raise ExitLedgerError("entry signal must be journaled before its intent")
@@ -170,6 +210,147 @@ class ExitProtectionLedger:
                   "snapshot": json.loads(snapshot_json),
                   "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
                   "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
+        existing_intent = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                                and r.get("intent_id") == intent_id), None)
+        if existing_intent is not None:
+            if existing_intent == record:
+                return False
+            raise ExitLedgerError("entry intent ID is already journaled with different content")
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def amend_entry_intent(self, *, intent_id: str, quantity: Decimal,
+                           snapshot: dict[str, object], occurred_at: datetime,
+                           source_hash: str, idempotency_key: str) -> bool:
+        """Append a versioned, decision-linked entry amendment without rewriting the original intent."""
+        qty = _decimal(quantity, "amended entry quantity")
+        if qty <= 0 or not intent_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("entry amendment requires intent ID, positive quantity and idempotency key")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("entry amendment time must be timezone-aware")
+        if len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash):
+            raise ExitLedgerError("entry amendment source_hash must be lowercase SHA-256")
+        try:
+            snapshot_json = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ExitLedgerError("entry-amendment snapshot must be canonical JSON data") from exc
+        records = self._position_records()
+        original = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                         and r.get("intent_id") == intent_id), None)
+        if original is None:
+            raise ExitLedgerError("entry amendment requires a journaled ENTRY_INTENT")
+        signal = next((r for r in records if r.get("type") == "ENTRY_SIGNAL"
+                       and r.get("signal_id") == original["entry_signal_id"]), None)
+        if signal is None or occurred_at < datetime.fromisoformat(signal["occurred_at"]):
+            raise ExitLedgerError("entry amendment cannot precede its frozen entry decision")
+        prior_key = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            candidate = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+            if candidate is not None and candidate.get("type") == "ENTRY_INTENT_AMENDED" \
+                    and candidate.get("intent_id") == intent_id and candidate.get("quantity") == str(qty) \
+                    and candidate.get("snapshot") == json.loads(snapshot_json) \
+                    and candidate.get("occurred_at") == occurred_at.isoformat() \
+                    and candidate.get("source_hash") == source_hash:
+                return False
+            raise ExitLedgerError("entry amendment idempotency key conflicts with prior evidence")
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("terminal entry intent cannot be amended")
+        fills = sum((_decimal(r["quantity"], "entry fill") for r in records
+                     if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
+        current_quantity = _decimal(
+            max((r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                 and r.get("intent_id") == intent_id), key=lambda r: int(r["revision"]))["quantity"]
+            if any(r.get("type") == "ENTRY_INTENT_AMENDED" and r.get("intent_id") == intent_id
+                   for r in records) else original["quantity"], "current entry quantity")
+        if fills >= current_quantity:
+            raise ExitLedgerError("fully filled entry intent cannot be amended")
+        if qty < fills:
+            raise ExitLedgerError("amended entry quantity cannot be below already filled quantity")
+        revisions = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                     and r.get("intent_id") == intent_id]
+        if revisions and occurred_at < datetime.fromisoformat(max(
+                revisions, key=lambda r: int(r["revision"]))["occurred_at"]):
+            raise ExitLedgerError("entry amendment time cannot move backwards")
+        revision = max((int(r["revision"]) for r in revisions), default=0) + 1
+        record = {"type": "ENTRY_INTENT_AMENDED", "position_id": self.position_id,
+                  "entry_signal_id": original["entry_signal_id"], "intent_id": intent_id,
+                  "revision": revision, "quantity": str(qty), "snapshot": json.loads(snapshot_json),
+                  "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
+                  "occurred_at": occurred_at.isoformat(), "source_hash": source_hash,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        self.journal.append(record)
+        return True
+
+    def cancel_entry_intent(self, *, intent_id: str, occurred_at: datetime,
+                            source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Persist a confirmed cancellation for the unfilled remainder of an entry intent."""
+        return self._terminate_entry_intent(
+            event_type="ENTRY_INTENT_CANCELLED", intent_id=intent_id, occurred_at=occurred_at,
+            source_hash=source_hash, reason=reason, idempotency_key=idempotency_key)
+
+    def expire_entry_intent(self, *, intent_id: str, occurred_at: datetime,
+                            source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Persist expiry only when the frozen intent snapshot's deadline has elapsed."""
+        return self._terminate_entry_intent(
+            event_type="ENTRY_INTENT_EXPIRED", intent_id=intent_id, occurred_at=occurred_at,
+            source_hash=source_hash, reason=reason, idempotency_key=idempotency_key)
+
+    def _terminate_entry_intent(self, *, event_type: str, intent_id: str, occurred_at: datetime,
+                                source_hash: str, reason: str, idempotency_key: str) -> bool:
+        if event_type not in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}:
+            raise ExitLedgerError("unsupported entry terminal event")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("entry terminal-event time must be timezone-aware")
+        if (not intent_id.strip() or not reason.strip() or not idempotency_key.strip()
+                or len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash)):
+            raise ExitLedgerError("entry terminal event requires intent, source hash, reason and idempotency key")
+        records = self._position_records()
+        original = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                         and r.get("intent_id") == intent_id), None)
+        if original is None:
+            raise ExitLedgerError("entry terminal event requires a journaled ENTRY_INTENT")
+        signal = next((r for r in records if r.get("type") == "ENTRY_SIGNAL"
+                       and r.get("signal_id") == original["entry_signal_id"]), None)
+        if signal is None or occurred_at < datetime.fromisoformat(signal["occurred_at"]):
+            raise ExitLedgerError("entry terminal event cannot precede its frozen entry decision")
+        prior_key = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if (prior_key.get("type") == event_type and prior_key.get("intent_id") == intent_id
+                    and prior_key.get("occurred_at") == occurred_at.isoformat()
+                    and prior_key.get("source_hash") == source_hash and prior_key.get("reason") == reason):
+                return False
+            raise ExitLedgerError("entry terminal-event idempotency key conflicts with prior evidence")
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("entry intent is already terminal")
+        amendments = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                      and r.get("intent_id") == intent_id]
+        effective_quantity = _decimal(
+            max(amendments, key=lambda r: int(r["revision"]))["quantity"] if amendments
+            else original["quantity"], "effective entry quantity")
+        filled = sum((_decimal(r["quantity"], "entry fill") for r in records
+                      if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
+        remaining = effective_quantity - filled
+        if remaining <= 0:
+            raise ExitLedgerError("fully filled entry intent cannot be cancelled or expired")
+        if event_type == "ENTRY_INTENT_EXPIRED":
+            latest_amendment = max(amendments, key=lambda r: int(r["revision"])) if amendments else None
+            snapshot = latest_amendment["snapshot"] if latest_amendment else original["snapshot"]
+            deadline_raw = snapshot.get("expires_at") if isinstance(snapshot, dict) else None
+            try:
+                deadline = datetime.fromisoformat(str(deadline_raw).replace("Z", "+00:00"))
+            except (TypeError, ValueError) as exc:
+                raise ExitLedgerError("entry expiry requires a frozen timezone-aware expires_at") from exc
+            if deadline.tzinfo is None or deadline.utcoffset() is None or occurred_at < deadline:
+                raise ExitLedgerError("entry intent cannot expire before its frozen deadline")
+        record = {"type": event_type, "position_id": self.position_id,
+                  "entry_signal_id": original["entry_signal_id"], "intent_id": intent_id,
+                  "remaining_quantity": str(remaining), "occurred_at": occurred_at.isoformat(),
+                  "source_hash": source_hash, "reason": reason,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
     def record_entry_fill(self, *, entry_signal_id: str, intent_id: str, fill_id: str, quantity: Decimal,
@@ -200,16 +381,25 @@ class ExitProtectionLedger:
                             and r.get("intent_id") == intent_id and r.get("entry_signal_id") == entry_signal_id]
         if not matching_intents:
             raise ExitLedgerError("entry fill requires a matching journaled ENTRY_INTENT")
-        intent_qty = sum((_decimal(r["quantity"], "entry intent") for r in matching_intents), Decimal(0))
+        prior_fill = next((r for r in records if r.get("type") == "ENTRY_FILL" and r.get("fill_id") == fill_id), None)
+        if prior_fill is not None:
+            if prior_fill != record:
+                raise ExitLedgerError("entry fill id conflicts with prior evidence")
+            return False
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("terminal entry intent cannot receive later fills")
+        if len(matching_intents) != 1:
+            raise ExitLedgerError("entry intent identity must have exactly one original record")
+        amendments = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                      and r.get("intent_id") == intent_id]
+        latest_amendment = max(amendments, key=lambda r: int(r["revision"])) if amendments else None
+        intent_qty = _decimal(latest_amendment["quantity"] if latest_amendment else
+                              matching_intents[0]["quantity"], "effective entry intent")
         prior_intent_fills = sum((_decimal(r["quantity"], "entry fill") for r in records
                                   if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
-        prior_fill_id = next((r for r in records if r.get("type") == "ENTRY_FILL"
-                              and r.get("fill_id") == fill_id), None)
-        if prior_fill_id is None and prior_intent_fills + qty > intent_qty:
+        if prior_intent_fills + qty > intent_qty:
             raise ExitLedgerError("entry fill quantity exceeds matching entry intent")
-        prior_fill = next((r for r in records if r.get("type") == "ENTRY_FILL" and r.get("fill_id") == fill_id), None)
-        if prior_fill is not None and prior_fill != record:
-            raise ExitLedgerError("entry fill id conflicts with prior evidence")
         if prior_fill is None:
             planned_entry_quantity = sum(
                 (_decimal(r["quantity"], "entry fill") for r in prior_entries), Decimal(0)
@@ -260,7 +450,177 @@ class ExitProtectionLedger:
                   "source_hash": protection.source_hash, "oco_group_id": protection.oco_group_id,
                   "exit_policy_version": exit_policy.policy_version,
                   "exit_policy_hash": exit_policy.policy_hash,
-                  "idempotency_key": idempotency_key}
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior = next((row for row in records if row.get("type") == "PROTECTION_ARMED"
+                      and row.get("protection_id") == protection.protection_id), None)
+        if prior is not None:
+            if prior == record:
+                return False
+            raise ExitLedgerError("protection ID is immutable and cannot be re-armed")
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def cancel_protection(self, *, protection_id: str, occurred_at: datetime,
+                          source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Cancel an exit policy only after its orders are settled and stop coverage remains."""
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("protection cancellation time must be timezone-aware")
+        if (not protection_id.strip() or not reason.strip() or not idempotency_key.strip()
+                or len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash)):
+            raise ExitLedgerError("protection cancellation needs ID, reason, source hash and idempotency key")
+        records = self._position_records()
+        protection = next((row for row in records if row.get("type") == "PROTECTION_ARMED"
+                           and row.get("protection_id") == protection_id), None)
+        if protection is None:
+            raise ExitLedgerError("cannot cancel an unknown protection policy")
+        record = {"type": "PROTECTION_CANCELLED", "position_id": self.position_id,
+                  "protection_id": protection_id, "occurred_at": occurred_at.isoformat(),
+                  "source_hash": source_hash, "reason": reason,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior_key = next((row for row in records if row.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if (prior_key.get("type") == "PROTECTION_CANCELLED"
+                    and prior_key.get("protection_id") == protection_id
+                    and prior_key.get("occurred_at") == occurred_at.isoformat()
+                    and prior_key.get("source_hash") == source_hash
+                    and prior_key.get("reason") == reason):
+                return False
+            raise ExitLedgerError("protection cancellation idempotency key conflicts with prior evidence")
+        if protection_id not in self.state.armed_protection_ids:
+            raise ExitLedgerError("protection policy is already cancelled")
+        created_at = datetime.fromisoformat(str(protection["created_at"]))
+        if occurred_at.astimezone(created_at.tzinfo) < created_at:
+            raise ExitLedgerError("protection cancellation cannot precede its arming time")
+
+        triggered = [row for row in records if row.get("type") == "EXIT_TRIGGERED"
+                     and row.get("protection_id") == protection_id]
+        for intent in triggered:
+            exit_key = str(intent["idempotency_key"])
+            intended = _decimal(intent["quantity"], "exit intent")
+            filled = sum((_decimal(row["quantity"], "exit fill") for row in records
+                          if row.get("type") == "EXIT_FILL" and row.get("exit_key") == exit_key), Decimal(0))
+            cancelled = sum((_decimal(row["quantity"], "exit cancellation") for row in records
+                             if row.get("type") == "EXIT_CANCELLED" and row.get("exit_key") == exit_key), Decimal(0))
+            for fill in records:
+                if fill.get("type") == "EXIT_FILL":
+                    cancelled += sum((_decimal(item["quantity"], "OCO sibling cancellation")
+                                      for item in fill.get("oco_cancelled_siblings", [])
+                                      if item.get("exit_key") == exit_key), Decimal(0))
+            if filled + cancelled < intended:
+                raise ExitLedgerError("protection has an unsettled exit order; cancel or resolve it first")
+        unresolved_ids = self.state.unresolved_exit_intent_ids
+        if any(row.get("type") == "EXIT_UNRESOLVED" and row.get("protection_id") == protection_id
+               and row.get("intent_id") in unresolved_ids for row in records):
+            raise ExitLedgerError("protection has an unresolved triggered exit")
+
+        state = self.state
+        if (protection.get("trigger") == ExitTrigger.HARD_STOP.value and state.open_quantity > 0
+                and self._active_hard_stop_quantity(records, excluding=protection_id) < state.open_quantity):
+            raise ExitLedgerError("cannot cancel hard stop without replacement coverage for the open position")
+        self.journal.append(record)
+        _ = self.state
+        return True
+
+    @staticmethod
+    def _active_hard_stop_quantity(records: list[dict], *, excluding: str | None = None) -> Decimal:
+        grouped: dict[str, Decimal] = {}
+        ungrouped = Decimal(0)
+        cancelled = {str(row.get("protection_id")) for row in records
+                     if row.get("type") == "PROTECTION_CANCELLED"}
+        for row in records:
+            protection_id = str(row.get("protection_id", ""))
+            if (row.get("type") != "PROTECTION_ARMED" or protection_id == excluding
+                    or protection_id in cancelled or row.get("trigger") != ExitTrigger.HARD_STOP.value):
+                continue
+            quantity = _decimal(row["quantity"], "hard-stop protected quantity")
+            group = row.get("oco_group_id")
+            if group is None:
+                ungrouped += quantity
+            else:
+                grouped[str(group)] = max(grouped.get(str(group), Decimal(0)), quantity)
+        return ungrouped + sum(grouped.values(), Decimal(0))
+
+    def record_trailing_stop_update(self, *, state: TrailingStopState,
+                                    observed_price: Decimal, observed_at: datetime,
+                                    quote_event_id: str, quote_evidence_sha256: str,
+                                    policy_sha256: str, idempotency_key: str,
+                                    policy_change_reason: str | None = None) -> bool:
+        """Persist a quote-derived monotone trail in the position's hash-chained journal."""
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise ExitLedgerError("trailing-stop observation time must be timezone-aware")
+        if not quote_event_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("trailing-stop quote and idempotency identities are required")
+        for label, digest in (("quote evidence", quote_evidence_sha256), ("policy", policy_sha256)):
+            if (len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest)):
+                raise ExitLedgerError(f"{label} hash must be lowercase SHA-256")
+        price = _decimal(observed_price, "trailing-stop observed price")
+        if price <= 0:
+            raise ExitLedgerError("trailing-stop observed price must be positive")
+        records = self._position_records()
+        entry = next((row for row in records if row.get("type") == "ENTRY_SIGNAL"), None)
+        if entry is None:
+            raise ExitLedgerError("trailing stop requires a journaled entry signal")
+        if state.side != entry["side"]:
+            raise ExitLedgerError("trailing-stop direction differs from the position entry")
+        record = {"type": "TRAILING_STOP_UPDATE", "position_id": self.position_id,
+                  "side": state.side, "policy_version": state.policy_version,
+                  "policy_sha256": policy_sha256, "distance": str(state.distance),
+                  "watermark": str(state.watermark), "stop_price": str(state.stop_price),
+                  "observed_price": str(price), "observed_at": observed_at.isoformat(),
+                  "quote_event_id": quote_event_id, "quote_evidence_sha256": quote_evidence_sha256,
+                  "policy_change_reason": policy_change_reason, "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior_key = next((row for row in records if row.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if prior_key == record:
+                return False
+            raise ExitLedgerError("idempotency key conflicts with previously journaled evidence")
+        duplicate_quote = next((row for row in records if row.get("type") == "TRAILING_STOP_UPDATE"
+                                and row.get("quote_event_id") == quote_event_id), None)
+        if duplicate_quote is not None:
+            if {key: value for key, value in duplicate_quote.items() if key != "decision_sha256"} == {
+                    key: value for key, value in record.items() if key != "decision_sha256"}:
+                return False
+            raise ExitLedgerError("quote event already has a conflicting trailing-stop update")
+        position_state = self.state
+        if position_state.open_quantity <= 0 or position_state.closed_event_id is not None:
+            raise ExitLedgerError("trailing-stop updates require an open filled position")
+        latest_entry_fill = max((datetime.fromisoformat(str(row["occurred_at"])) for row in records
+                                 if row.get("type") == "ENTRY_FILL" and row.get("occurred_at")),
+                                default=None)
+        if latest_entry_fill is not None and observed_at.astimezone(latest_entry_fill.tzinfo) < latest_entry_fill:
+            raise ExitLedgerError("trailing-stop observation cannot precede an entry fill")
+        prior = next((row for row in reversed(records) if row.get("type") == "TRAILING_STOP_UPDATE"), None)
+        if prior is not None:
+            prior_at = datetime.fromisoformat(str(prior["observed_at"]))
+            if observed_at.astimezone(prior_at.tzinfo) <= prior_at:
+                raise ExitLedgerError("trailing-stop observations must advance in time")
+            changed_policy = state.policy_version != prior["policy_version"]
+            if changed_policy:
+                if not isinstance(policy_change_reason, str) or not policy_change_reason.strip():
+                    raise ExitLedgerError("trailing-stop policy change requires an explicit reason")
+                if state.watermark != price:
+                    raise ExitLedgerError("new trailing-stop policy must start from the current observed quote")
+            else:
+                if policy_change_reason is not None:
+                    raise ExitLedgerError("policy-change reason is only valid when the version changes")
+                if policy_sha256 != prior["policy_sha256"] or state.distance != Decimal(prior["distance"]):
+                    raise ExitLedgerError("trailing-stop policy hash/distance changed without a version change")
+                old_watermark = Decimal(prior["watermark"])
+                expected_watermark = (max(old_watermark, price) if state.side == "BUY"
+                                      else min(old_watermark, price))
+                if state.watermark != expected_watermark:
+                    raise ExitLedgerError("trailing-stop watermark does not follow the observed quote")
+        else:
+            if policy_change_reason is not None:
+                raise ExitLedgerError("initial trailing-stop state cannot carry a policy-change reason")
+            if state.watermark != price:
+                raise ExitLedgerError("initial trailing-stop watermark must equal the observed quote")
+        expected_stop = (state.watermark - state.distance if state.side == "BUY"
+                         else state.watermark + state.distance)
+        if state.stop_price != expected_stop or expected_stop <= 0:
+            raise ExitLedgerError("trailing-stop price must match its observed watermark and distance")
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
     def emit(
@@ -284,6 +644,7 @@ class ExitProtectionLedger:
                   "source_hash": event.exit_signal.source_hash, "oco_group_id": event.oco_group_id,
                   "resolves_unresolved_intent_id": resolves_unresolved_intent_id,
                   "idempotency_key": key}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior = next((r for r in records if r.get("idempotency_key") == key), None)
         if prior is not None:
             if prior != record:
@@ -360,6 +721,8 @@ class ExitProtectionLedger:
                                   and r.get("protection_id") == protection_id), None)
         if protection_record is None:
             raise ExitLedgerError("unresolved exit protection must be durably armed")
+        if protection_id not in self.state.armed_protection_ids:
+            raise ExitLedgerError("unresolved exit protection must remain active")
         if protection_record.get("trigger") != trigger.value or qty > _decimal(
             protection_record["quantity"], "protected quantity"
         ):
@@ -370,6 +733,7 @@ class ExitProtectionLedger:
                   "intent_id": intent_id, "protection_id": protection_id, "trigger": trigger,
                   "quantity": str(qty), "observed_at": observed_at.isoformat(), "reason": reason,
                   "evidence_hash": evidence_hash, "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior = [r for r in records if r.get("intent_id") == intent_id]
         if prior:
             if prior[0] != record:
@@ -378,15 +742,76 @@ class ExitProtectionLedger:
         created = self._append_idempotent(self.journal, records, record, idempotency_key)
         return created
 
-    def record_exit_fill(self, *, exit_key: str, fill_id: str, quantity: Decimal,
-                         idempotency_key: str) -> bool:
-        qty = _decimal(quantity, "exit fill quantity")
-        if qty <= 0 or not fill_id.strip():
-            raise ExitLedgerError("exit fill id and positive quantity are required")
+    def record_exit_execution(self, *, exit_key: str, execution_id: str, simulated_at: datetime,
+                              quote_event_id: str, quote_observed_at: datetime,
+                              quote_available_at: datetime, quote_evidence_sha256: str,
+                              idempotency_key: str) -> bool:
+        """Persist a paper execution attempt separately from trigger and fill clocks."""
+        clocks = (simulated_at, quote_observed_at, quote_available_at)
+        if any(value.tzinfo is None or value.utcoffset() is None for value in clocks):
+            raise ExitLedgerError("paper execution and quote clocks must be timezone-aware")
+        if not execution_id.strip() or not quote_event_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("execution, quote and idempotency identities are required")
+        if (len(quote_evidence_sha256) != 64 or
+                any(char not in "0123456789abcdef" for char in quote_evidence_sha256)):
+            raise ExitLedgerError("quote evidence must be lowercase SHA-256")
         records = self._position_records()
+        trigger = next((row for row in records if row.get("type") == "EXIT_TRIGGERED"
+                        and row.get("idempotency_key") == exit_key), None)
+        if trigger is None:
+            raise ExitLedgerError("paper execution references an unknown emitted exit")
+        trigger_at = datetime.fromisoformat(str(trigger["observed_trigger_at"]))
+        emitted_at = datetime.fromisoformat(str(trigger["occurred_at"]))
+        if simulated_at < max(trigger_at, emitted_at):
+            raise ExitLedgerError("paper execution cannot precede the observed exit trigger")
+        if quote_available_at < quote_observed_at or quote_available_at > simulated_at:
+            raise ExitLedgerError("paper execution quote must be observed and available by execution time")
+        record = {"type": "EXIT_EXECUTION", "position_id": self.position_id,
+                  "exit_key": exit_key, "execution_id": execution_id,
+                  "simulated_at": simulated_at.isoformat(), "quote_event_id": quote_event_id,
+                  "quote_observed_at": quote_observed_at.isoformat(),
+                  "quote_available_at": quote_available_at.isoformat(),
+                  "quote_evidence_sha256": quote_evidence_sha256,
+                  "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
+        prior_id = next((row for row in records if row.get("type") == "EXIT_EXECUTION"
+                         and row.get("execution_id") == execution_id), None)
+        if prior_id is not None:
+            if prior_id != record:
+                raise ExitLedgerError("execution ID conflicts with prior evidence")
+            return False
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def record_exit_fill(self, *, exit_key: str, execution_id: str, fill_id: str, quantity: Decimal,
+                         occurred_at: datetime, price: Decimal, idempotency_key: str) -> bool:
+        qty = _decimal(quantity, "exit fill quantity")
+        fill_price = _decimal(price, "exit fill price")
+        if qty <= 0 or fill_price <= 0 or not fill_id.strip() or not execution_id.strip():
+            raise ExitLedgerError("exit fill, execution IDs, positive quantity and price are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("observed fill time must be timezone-aware")
+        records = self._position_records()
+        execution = next((row for row in records if row.get("type") == "EXIT_EXECUTION"
+                          and row.get("execution_id") == execution_id and row.get("exit_key") == exit_key), None)
+        if execution is None:
+            raise ExitLedgerError("exit fill requires a matching persisted paper execution")
+        simulated_at = datetime.fromisoformat(str(execution["simulated_at"]))
+        if occurred_at < simulated_at:
+            raise ExitLedgerError("observed fill cannot precede paper execution time")
+        record: dict[str, object] = {"type": "EXIT_FILL", "position_id": self.position_id,
+                                     "exit_key": exit_key, "execution_id": execution_id,
+                                     "fill_id": fill_id, "quantity": str(qty),
+                                     "price": str(fill_price), "occurred_at": occurred_at.isoformat(),
+                                     "idempotency_key": idempotency_key,
+                                     "oco_cancelled_siblings": []}
+        record["decision_sha256"] = self._decision_sha256(records)
         prior_fill = next((r for r in records if r.get("type") == "EXIT_FILL" and r.get("fill_id") == fill_id), None)
         if prior_fill is not None:
-            if prior_fill.get("exit_key") == exit_key and prior_fill.get("quantity") == str(qty):
+            # OCO sibling reductions are derived atomically from the winning fill and
+            # are persisted only on the original event. Compare the supplied fill facts
+            # exactly while preserving that immutable derived cancellation evidence.
+            if ({key: value for key, value in prior_fill.items() if key != "oco_cancelled_siblings"} ==
+                    {key: value for key, value in record.items() if key != "oco_cancelled_siblings"}):
                 return False
             raise ExitLedgerError("exit fill id conflicts with prior evidence")
         if self.state.closed_event_id is not None:
@@ -403,9 +828,6 @@ class ExitProtectionLedger:
                                   if r.get("type") == "EXIT_CANCELLED" and r.get("exit_key") == exit_key), Decimal(0))
         if filled_for_exit + cancelled_for_exit + qty > intents[exit_key]:
             raise ExitLedgerError("exit fill quantity exceeds emitted exit intent")
-        record: dict[str, object] = {"type": "EXIT_FILL", "position_id": self.position_id, "exit_key": exit_key,
-                                     "fill_id": fill_id, "quantity": str(qty),
-                                     "idempotency_key": idempotency_key}
         prior_records = [r for r in records if r.get("idempotency_key") == idempotency_key]
         if prior_records:
             if prior_records[0] != record:
@@ -432,6 +854,7 @@ class ExitProtectionLedger:
         # One hash-chained journal record makes the winner fill and OCO sibling
         # reductions inseparable during crash recovery.
         record["oco_cancelled_siblings"] = sibling_cancellations
+        record["decision_sha256"] = self._decision_sha256(records)
         self.journal.append(record)
         _ = self.state
         return True
@@ -447,6 +870,10 @@ class ExitProtectionLedger:
             raise ExitLedgerError("position close time must be timezone-aware")
         if not reason.strip() or not idempotency_key.strip():
             raise ExitLedgerError("position close requires reason and idempotency key")
+        latest_fill = max((datetime.fromisoformat(str(row["occurred_at"])) for row in self._position_records()
+                           if row.get("type") == "EXIT_FILL" and row.get("occurred_at")), default=None)
+        if latest_fill is not None and occurred_at < latest_fill:
+            raise ExitLedgerError("position accounting close cannot precede its latest observed exit fill")
         state = self.state
         if state.entry_filled_quantity <= 0 or state.open_quantity != 0:
             raise ExitLedgerError("position cannot close before recorded fills close its quantity")
@@ -459,7 +886,8 @@ class ExitProtectionLedger:
                          "event_id": event_id, "occurred_at": occurred_at.isoformat(), "reason": reason,
                          "entry_filled_quantity": str(state.entry_filled_quantity),
                          "exit_filled_quantity": str(state.exit_filled_quantity),
-                         "idempotency_key": idempotency_key}
+                         "idempotency_key": idempotency_key,
+                         "decision_sha256": self._decision_sha256(records)}
             if existing == candidate:
                 return False
             raise ExitLedgerError("position already has a different close event")

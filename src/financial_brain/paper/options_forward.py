@@ -101,3 +101,35 @@ def audit(con) -> dict:
     return {"intents": len(intents), "outcomes": len(outcomes), **metadata("local_paper"),
             "pending": len(intents) - len(closed), "invalid_intents": bad_intents,
             "invalid_outcomes": bad_outcomes, "external_timestamp_attested": False}
+
+
+def cohort_report(con, *, cohort: str, rule_version: str) -> dict:
+    """Reconcile a frozen cohort, retaining unresolved and no-fill intents in its denominator."""
+    rows = con.execute("""SELECT i.signal_id, i.payload_sha256, i.payload,
+                                o.intent_sha256, o.result, o.result_sha256
+                         FROM intents AS i LEFT JOIN outcomes AS o
+                           USING (cohort, rule_version, signal_id)
+                         WHERE i.cohort=? AND i.rule_version=?
+                         ORDER BY i.signal_id""", [cohort, rule_version]).fetchall()
+    summary = {"cohort": cohort, "rule_version": rule_version, "intents": len(rows),
+               "pending": 0, "closed": 0, "no_entry": 0, "net_pnl_inr": 0.0,
+               "costs_inr": 0.0, "invalid": [], "evidence_class": "LOCAL_PAPER",
+               "independently_attested": False}
+    for signal_id, intent_hash, intent_payload, outcome_hash, result_payload, result_hash in rows:
+        if _digest(str(intent_payload)) != intent_hash:
+            summary["invalid"].append({"signal_id": signal_id, "record": "intent"})
+        if result_payload is None:
+            summary["pending"] += 1
+            continue
+        summary["closed"] += 1
+        result_text = str(result_payload)
+        if outcome_hash != intent_hash or _digest(result_text) != result_hash:
+            summary["invalid"].append({"signal_id": signal_id, "record": "outcome"})
+        result = json.loads(result_text)
+        if result.get("status") == "NO_ENTRY_QUOTE":
+            summary["no_entry"] += 1
+        if result.get("net_pnl_inr") is not None:
+            summary["net_pnl_inr"] += float(result["net_pnl_inr"])
+        if result.get("costs_inr") is not None:
+            summary["costs_inr"] += float(result["costs_inr"])
+    return summary

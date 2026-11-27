@@ -21,15 +21,16 @@ def _norm_pdf(x: float) -> float:
     return math.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
 
 
-def _check(spot: float, strike: float, t: float, vol: float) -> None:
+def _check(spot: float, strike: float, t: float, vol: float, rate: float, div: float) -> None:
     if spot <= 0 or strike <= 0:
         raise OptionError("spot and strike must be positive")
-    if t < 0 or vol < 0 or not all(math.isfinite(v) for v in (spot, strike, t, vol)):
-        raise OptionError("time and volatility must be finite and non-negative")
+    if (t < 0 or vol < 0
+            or not all(math.isfinite(v) for v in (spot, strike, t, vol, rate, div))):
+        raise OptionError("pricing inputs must be finite; time and volatility non-negative")
 
 
 def bsm_price(spot: float, strike: float, t: float, rate: float, vol: float, call: bool, div: float = 0.0) -> float:
-    _check(spot, strike, t, vol)
+    _check(spot, strike, t, vol, rate, div)
     if t == 0 or vol == 0:
         fwd = spot * math.exp(-div * t) - strike * math.exp(-rate * t)
         return max(fwd, 0.0) if call else max(-fwd, 0.0)
@@ -41,7 +42,7 @@ def bsm_price(spot: float, strike: float, t: float, rate: float, vol: float, cal
 
 
 def greeks(spot: float, strike: float, t: float, rate: float, vol: float, call: bool, div: float = 0.0) -> dict:
-    _check(spot, strike, t, vol)
+    _check(spot, strike, t, vol, rate, div)
     if t <= 0 or vol <= 0:
         raise OptionError("Greeks need positive time and volatility")
     sq = math.sqrt(t)
@@ -64,6 +65,10 @@ def implied_vol(price: float, spot: float, strike: float, t: float, rate: float,
     """Bisection on volatility, bounded. Prices outside the no-arbitrage band raise instead of guessing."""
     if t <= 0:
         raise OptionError("implied vol needs positive time")
+    _check(spot, strike, t, 0.0, rate, div)
+    if not math.isfinite(price) or not math.isfinite(lo) or not math.isfinite(hi) \
+            or not math.isfinite(tol) or lo <= 0 or hi <= lo or tol <= 0:
+        raise OptionError("price and solver bounds must be finite and valid")
     intrinsic = max(spot * math.exp(-div * t) - strike * math.exp(-rate * t), 0.0) if call else \
         max(strike * math.exp(-rate * t) - spot * math.exp(-div * t), 0.0)
     upper = spot * math.exp(-div * t) if call else strike * math.exp(-rate * t)

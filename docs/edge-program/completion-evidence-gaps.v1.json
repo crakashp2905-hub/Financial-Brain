@@ -1,0 +1,594 @@
+{
+  "schema_version": "1.0",
+  "policy": {
+    "complete_requires": [
+      "an existing documentation reference",
+      "recorded test evidence and an existing test file",
+      "an existing acceptance artifact whose SHA-256 matches the ledger"
+    ],
+    "rule": "A module existing in the repository is not acceptance evidence by itself."
+  },
+  "complete_items": 85,
+  "items_with_evidence_gaps": 83,
+  "gap_count": 163,
+  "gaps": [
+    {
+      "id": "FB-0001",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0005",
+      "gaps": [
+        "missing_recorded_test_evidence",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0006",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0007",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0009",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0010",
+      "gaps": [
+        "missing_recorded_test_evidence",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0011",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0012",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0101",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0102",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0104",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0105",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0107",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0110",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0306",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0317",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0401",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0468",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0479",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0490",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0701",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0702",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0703",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0705",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0706",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0707",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0708",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0709",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0710",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0711",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0712",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0713",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0714",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0715",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-0717",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-1308",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-1314",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-1318",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-1405",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-1406",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2201",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2501",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2509",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2510",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2511",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2512",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2514",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2518",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2519",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2520",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2522",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2523",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2526",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2533",
+      "gaps": [
+        "missing_recorded_test_evidence",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2534",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2535",
+      "gaps": [
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "FB-2543",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-05",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-10",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-11",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-12",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-13",
+      "gaps": [
+        "missing_recorded_test_evidence",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-14",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-15",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-16",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-17",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-00-18",
+      "gaps": [
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-14-18",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-15-06",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-16-06",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-17-05",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-17-15",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-18-07",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-18-20",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_existing_executable_test_artifact",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-22-01",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-23-16",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-24-03",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-24-08",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-24-16",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-25-01",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-25-02",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-25-10",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    },
+    {
+      "id": "SL-25-16",
+      "gaps": [
+        "missing_existing_documentation_reference",
+        "missing_hashed_acceptance_artifact"
+      ]
+    }
+  ]
+}

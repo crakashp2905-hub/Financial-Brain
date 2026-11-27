@@ -20,10 +20,12 @@ def panel(n_dates=160, n=300, seed=1):
     d0 = date(2018, 1, 1)
     for k in range(n_dates):
         d = d0 + timedelta(days=7 * k)
+        label_end_20 = d + timedelta(days=140)
         good = rng.normal(0, 1, n)
         noise = rng.normal(0, 1, n)
         y5 = 0.01 * good + rng.normal(0, 0.05, n)
-        rows.append(pd.DataFrame({"d": d, "lineage": [f"L{i}" for i in range(n)], "adv20": rng.uniform(1e7, 1e10, n),
+        rows.append(pd.DataFrame({"d": d, "label_end_20": label_end_20,
+                                  "lineage": [f"L{i}" for i in range(n)], "adv20": rng.uniform(1e7, 1e10, n),
                                   "good": good, "noise": noise, "fwd5": y5, "fwd20": y5 + rng.normal(0, 0.05, n),
                                   "rt": 0.003}))
     return DL.universe(pd.concat(rows, ignore_index=True))
@@ -50,7 +52,21 @@ def test_walk_forward_never_trains_on_its_test_year():
     out = DL.walk_forward(p, ["good", "noise"], years=range(2020, 2023), model_factory=Spy)
     assert out["d"].min() >= date(2020, 1, 1) and len(seen) == 3 and seen == sorted(seen)
     first_test = p[(p["d"] >= date(2020, 1, 1))]  # noqa: F841
-    assert seen[0] <= (p["d"] < date(2020, 1, 1) - timedelta(days=30)).sum()
+    assert seen[0] <= (p["label_end_20"] < date(2020, 1, 1) - timedelta(days=30)).sum()
+
+
+def test_walk_forward_requires_label_end_purge_and_keeps_shared_dates_together():
+    start = date(2018, 1, 15)
+    p = pd.DataFrame({"d": [date(2018, 1, 1)] * 2 + [date(2018, 1, 8)] * 2,
+                      "label_end_20": [date(2018, 1, 14)] * 2 + [date(2018, 1, 20)] * 2,
+                      "fwd20": [0.01, -0.01, 0.02, -0.02]})
+    mask = DL.purged_training_mask(p, test_start=start, embargo_days=0)
+    assert mask[p["d"] == date(2018, 1, 1)].all()
+    assert not mask[p["d"] == date(2018, 1, 8)].any()
+    p.loc[0, "label_end_20"] = date(2018, 1, 16)
+    import pytest
+    with pytest.raises(ValueError, match="shared decision cross-section"):
+        DL.purged_training_mask(p, test_start=start, embargo_days=0)
 
 
 def test_books_charge_costs_only_on_entries():
