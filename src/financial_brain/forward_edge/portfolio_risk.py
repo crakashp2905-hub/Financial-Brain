@@ -52,18 +52,29 @@ class Limits:
     max_sector: Decimal
 
 
-def check_batch(limits: Limits, intents: list[dict], positions: dict[str, Decimal], sectors: dict[str, str]) -> list[dict]:
+def check_batch(limits: Limits, intents: list[dict[str, object]], positions: dict[str, Decimal],
+                sectors: dict[str, str]) -> list[dict[str, object]]:
     """Evaluate intents cumulatively, in order. Two intents that are each fine alone cannot jointly breach a limit."""
-    book = dict(positions)
-    verdicts = []
+    book: dict[str, Decimal] = dict(positions)
+    verdicts: list[dict[str, object]] = []
     for it in intents:
-        sym, signed = it["symbol"], Decimal(it["notional"]) * (1 if it["side"] == "BUY" else -1)
+        symbol = it.get("symbol")
+        side = it.get("side")
+        try:
+            notional = Decimal(str(it["notional"]))
+        except (KeyError, ArithmeticError, ValueError) as exc:
+            raise RiskError("intent notional must be a finite non-negative amount") from exc
+        if (not isinstance(symbol, str) or not symbol.strip() or side not in {"BUY", "SELL"}
+                or not notional.is_finite() or notional < 0):
+            raise RiskError("intent needs an instrument, BUY/SELL side and finite non-negative notional")
+        sym = symbol
+        signed = notional if side == "BUY" else -notional
         trial = dict(book)
         trial[sym] = trial.get(sym, Decimal(0)) + signed
-        gross = sum(abs(v) for v in trial.values())
-        net = sum(trial.values())
+        gross = sum((abs(v) for v in trial.values()), Decimal(0))
+        net = sum(trial.values(), Decimal(0))
         sector = sectors.get(sym, "?")
-        sector_exp = sum(abs(v) for s, v in trial.items() if sectors.get(s, "?") == sector)
+        sector_exp = sum((abs(v) for s, v in trial.items() if sectors.get(s, "?") == sector), Decimal(0))
         reasons = []
         if gross > limits.max_gross:
             reasons.append("GROSS")
@@ -191,12 +202,13 @@ def capacity_notional(adv_notional: Decimal, depth_notional: Decimal, participat
 
 # ---- FE-0112 shocks ----
 
-def apply_shock(cash: Decimal, positions: dict[str, tuple[int, Decimal]], shock: dict[str, Decimal]) -> dict[str, Decimal]:
+def apply_shock(cash: Decimal, positions: dict[str, tuple[int, Decimal]],
+                shock: dict[str, Decimal]) -> dict[str, Decimal | bool]:
     """positions: sym -> (qty, price). shock: sym -> fractional move. Cash is untouched; only marks move."""
     before = cash + sum(q * p for q, p in positions.values())
     after_positions = {s: (q, p * (Decimal(1) + shock.get(s, Decimal(0)))) for s, (q, p) in positions.items()}
     after = cash + sum(q * p for q, p in after_positions.values())
-    explained = sum(q * p * shock.get(s, Decimal(0)) for s, (q, p) in positions.items())
+    explained = sum((q * p * shock.get(s, Decimal(0)) for s, (q, p) in positions.items()), Decimal(0))
     return {"equity_before": before, "equity_after": after, "explained_change": explained,
             "invariant_holds": (after - before) == explained and cash >= Decimal(0)}
 
