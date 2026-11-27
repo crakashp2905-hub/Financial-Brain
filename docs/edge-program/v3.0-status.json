@@ -10317,12 +10317,16 @@
     {
       "id": "PA-11-06",
       "text": "Implement Fibonacci levels only with causally confirmed anchors; formally test whether arbitrary extensions have value beyond generic support/resistance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/confirmed_fibonacci.py: ratio projections require alternating chronological pivots and refuse anchors unavailable at as_of_bar",
+        "tests/test_confirmed_fibonacci.py: verifies point-in-time observability and rejection of reversed/nonalternating anchors",
+        "No preregistered empirical comparison of extensions versus generic support/resistance has been completed"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "76fe58a2"
     },
     {
       "id": "PA-11-07",
@@ -21412,6 +21416,7 @@
       "PA-11-03",
       "PA-11-04",
       "PA-11-05",
+      "PA-11-06",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21835,13 +21840,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1010,
+    "audited_count": 1011,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 879,
-      "UNASSESSED": 368
+      "PARTIAL": 880,
+      "UNASSESSED": 367
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21990,7 +21995,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 879,
-    "UNASSESSED": 368
+    "PARTIAL": 880,
+    "UNASSESSED": 367
   }
 }
