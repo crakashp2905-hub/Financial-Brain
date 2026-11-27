@@ -10517,12 +10517,16 @@
     {
       "id": "PA-12-04",
       "text": "Validate text-extracted facts against source bytes and official disclosures; no LLM-generated accounting number enters a trading feature without provenance and deterministic checking.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/lake/store.py verifies SHA-256 when reading archived source bytes; src/financial_brain/ingest/filings.py extracts deterministic typed claims with source lake key, event type and sentence context",
+        "src/financial_brain/docintel/extract.py uses rule-based extraction, rejects unnamed amounts and refuses scan-only text rather than treating absence as zero",
+        "No complete cross-check against official XBRL values or end-to-end policy preventing every LLM-generated accounting number from entering a feature was found"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "1f7eddd8"
     },
     {
       "id": "PA-12-05",
@@ -21497,6 +21501,7 @@
       "PA-12-01",
       "PA-12-02",
       "PA-12-03",
+      "PA-12-04",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21920,13 +21925,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1025,
+    "audited_count": 1026,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 888,
-      "UNASSESSED": 353
+      "PARTIAL": 889,
+      "UNASSESSED": 352
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22075,7 +22080,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 888,
-    "UNASSESSED": 353
+    "PARTIAL": 889,
+    "UNASSESSED": 352
   }
 }
