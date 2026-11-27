@@ -12005,7 +12005,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "ca740fc847ebeb927cb2d159d435822713b8c4dfdb32a64aa227d77c3156650f",
+      "source_sha256": "bc4e304d0a02163b874d55662de6bea94be20735936990c2707f9513eb9af488",
       "test_paths": []
     },
     {
@@ -12066,7 +12066,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/capital_efficiency.py",
-      "source_sha256": "5b1c1d709366b77110de4dae8f55b06e216d25c985c815fbcfbb112faab23e20",
+      "source_sha256": "aadf7f011058ce18b9631f4ff0beacd488bfcaf68ecf0668d0205264d6593982",
       "test_paths": []
     },
     {

@@ -141,3 +141,25 @@ def test_capital_efficiency_refuses_pre_split_mark_as_interval_mark(tmp_path):
     with pytest.raises(CapitalEfficiencyError, match="lacks an interval-end mark"):
         report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
                                   risk_budget_inr=100)
+
+
+def test_capital_efficiency_includes_net_source_bound_cash_distribution(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "distribution.sqlite3")
+    ledger.import_events([
+        event("total", EventKind.CASH_FLOW, START, cash_delta="100000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "TOTAL"}),
+        event("deployed", EventKind.CASH_FLOW, START, cash_delta="50000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "DEPLOYED"}),
+        event("buy", EventKind.FILL, START.replace(day=10), asset_class=AssetClass.ETF,
+              instrument_id="NSE:ABC", side="BUY", quantity="10", price="100"),
+        event("dividend", EventKind.CASH_DISTRIBUTION, START.replace(day=20),
+              asset_class=AssetClass.ETF, instrument_id="NSE:ABC", quantity="10", price="2",
+              cash_delta="18", metadata={"action_type": "CASH_DISTRIBUTION", "action_id": "div-1",
+                                          "source_reference": "NSE:CA:2026-01-20:ABC",
+                                          "gross_amount": "20", "withholding_amount": "2"}),
+        event("mark", EventKind.MARK, START.replace(day=21), asset_class=AssetClass.ETF,
+              instrument_id="NSE:ABC", price="100"),
+    ])
+    report = report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
+                                       risk_budget_inr=Decimal("1000"))
+    assert report.net_pnl_inr == Decimal("18")

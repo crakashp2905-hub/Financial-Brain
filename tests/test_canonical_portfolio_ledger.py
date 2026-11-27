@@ -162,6 +162,32 @@ def test_one_account_split_adjusts_matching_positions_across_sleeves_once(tmp_pa
     assert positions["intraday"]["quantity"] == Decimal("4")
 
 
+def test_source_bound_cash_distribution_reconciles_entitlement_withholding_and_cash(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "distribution.sqlite")
+    ledger.import_events([
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="1000"),
+        event("holding", EventKind.FILL, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", side="BUY", quantity="10", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("dividend-payment", EventKind.CASH_DISTRIBUTION, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="10", price="2", cash_delta="18",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "CASH_DISTRIBUTION", "action_id": "exchange-dividend-1",
+                        "source_reference": "NSE:CA:2026-11-21:NIFTYBEES", "gross_amount": "20",
+                        "withholding_amount": "2"}),
+    ])
+    snapshot = ledger.snapshot("paper-main")
+    assert snapshot["cash"]["INR"] == Decimal("18") + Decimal("1000") - Decimal("1000")
+    assert snapshot["positions"][0]["quantity"] == Decimal("10")
+
+    with pytest.raises(CanonicalLedgerError, match="must reconcile"):
+        event("forged-dividend", EventKind.CASH_DISTRIBUTION, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="10", price="2", cash_delta="19",
+              metadata={"action_type": "CASH_DISTRIBUTION", "action_id": "exchange-dividend-2",
+                        "source_reference": "NSE:CA:2026-11-21:NIFTYBEES", "gross_amount": "20",
+                        "withholding_amount": "2"}).normalized()
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,

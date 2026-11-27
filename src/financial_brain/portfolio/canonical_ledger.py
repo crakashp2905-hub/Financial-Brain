@@ -33,6 +33,7 @@ class AssetClass(StrEnum):
 
 class EventKind(StrEnum):
     CASH_FLOW = "CASH_FLOW"
+    CASH_DISTRIBUTION = "CASH_DISTRIBUTION"
     FILL = "FILL"
     EXPIRY_SETTLEMENT = "EXPIRY_SETTLEMENT"
     POSITION_ADJUSTMENT = "POSITION_ADJUSTMENT"
@@ -161,6 +162,28 @@ class PortfolioEvent:
             if row["side"] is not None or row["position_action"] is not None \
                     or self.price is not None or self.cash_delta is not None:
                 raise CanonicalLedgerError("a split adjustment cannot carry execution price, side or cash")
+        elif kind is EventKind.CASH_DISTRIBUTION:
+            metadata = row["metadata"]
+            gross = _required_decimal(metadata.get("gross_amount") if isinstance(metadata, dict) else None,
+                                      "gross_amount")
+            withholding = _decimal(metadata.get("withholding_amount", "0")
+                                   if isinstance(metadata, dict) else "0", "withholding_amount")
+            quantity = _required_decimal(self.quantity, "quantity")
+            rate = _required_decimal(self.price, "price")
+            net = _required_decimal(self.cash_delta, "cash_delta")
+            if (not row["asset_class"] or AssetClass(str(row["asset_class"])) not in
+                    {AssetClass.EQUITY, AssetClass.ETF} or not row["instrument_id"]):
+                raise CanonicalLedgerError("a cash distribution needs an equity or ETF instrument")
+            if (not isinstance(metadata, dict) or metadata.get("action_type") != "CASH_DISTRIBUTION"
+                    or gross < 0 or withholding < 0 or withholding > gross
+                    or quantity <= 0 or rate <= 0 or gross != quantity * rate
+                    or net != gross - withholding):
+                raise CanonicalLedgerError("cash distribution gross, withholding, entitlement and net must reconcile")
+            if not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                       for key in ("action_id", "source_reference")):
+                raise CanonicalLedgerError("a cash distribution needs source action identity and reference")
+            if row["side"] is not None or row["position_action"] is not None:
+                raise CanonicalLedgerError("a cash distribution is not an execution fill")
         elif kind in {EventKind.CASH_FLOW, EventKind.FEE}:
             amount = _required_decimal(self.cash_delta, "cash_delta")
             if self.quantity is not None or self.price is not None or self.instrument_id is not None:
@@ -483,7 +506,7 @@ class CanonicalPortfolioLedger:
         for event in events:
             currency = str(event["currency"])
             kind = EventKind(str(event["event_kind"]))
-            if kind is EventKind.CASH_FLOW or kind is EventKind.FEE:
+            if kind in {EventKind.CASH_FLOW, EventKind.CASH_DISTRIBUTION, EventKind.FEE}:
                 cash[currency] = cash.get(currency, Decimal(0)) + Decimal(str(event["cash_delta"]))
                 continue
             if kind is EventKind.UNRESOLVED_POSITION:
