@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "461b4bb5c71f1d83b7e665ce86aaffbffb7830e7038b425ede8c24b14a79b2b1",
-  "audit_export_sha256": "965853abd73e7591de185e4941e7f2624170de429bd65e29d37ca7c789228501",
+  "status_ledger_sha256": "66f72d82650973222db9b233f8cf6c9e3e2e7ca63339d39962daed2ba5fab5f0",
+  "audit_export_sha256": "fa96c7309069248a2d093171ad548f8273ed2210690a4260ba9d7993281fc636",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1388,19 +1388,21 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Pair **all** open positions with an exit policy and a crash-resumable monitor; require auditable exceptions for product types like NAV-based mutual funds."
           },
-          "commit": "66d90e8d",
-          "blocker": "Partial: exit policies, durable per-position monitoring, NAV review behavior and a coverage audit exist, but there is no canonical cross-book inventory wired to the audit, no universal pre-entry coverage gate, and no operational restart drill proving every open position resumes monitoring.",
+          "commit": "pending",
+          "blocker": "Partial: the canonical snapshot can now be audited, but account/book aggregation, a universal pre-entry gate, durable monitor scheduling across every book, and operational restart drills remain unproven.",
           "evidence": [
             "kernel.exit_policy defines immutable, versioned exit rules and requires hard-stop protection for its exchange-traded position contract.",
             "kernel.exit_protection_ledger persists entry intents/fills, armed protections, exit intents/fills and closure in a hash-chained DurableJournal; replay reconstructs pending and open quantities and rejects unsafe transitions.",
             "forward_edge.paper_book_adapter.due_exits evaluates sourced executable quotes and trading-session age for runner-owned paper-book positions; coverage is limited to that adapter path.",
             "kernel.portfolio_exit_guard routes mutual-fund risk reduction to NAV_REDEMPTION_REVIEW and prohibits representing it as an intraday fill.",
-            "portfolio.exit_coverage adds a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and still needs a replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
-            "The coverage contract is pure and is not yet supplied by a canonical all-book position inventory or enforced by every entry/runner adapter; real crash/restart drills and monitor scheduling remain unverified."
+            "portfolio.exit_coverage provides a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
+            "New `audit_canonical_snapshot_exit_coverage` derives nonzero open positions directly from a `CanonicalPortfolioLedger.snapshot`, uses asset/instrument/sleeve identity so separate sleeves cannot share a receipt, maps mutual funds to NAV exceptions, and detects missing coverage for any open sleeve. A real SQLite canonical-ledger snapshot is exercised in regression tests.",
+            "This adapter covers one supplied canonical account snapshot only; it is not yet a canonical cross-book inventory, a universal pre-entry coverage gate, or proof of operational restart scheduling/drills."
           ],
           "tests": [
-            "python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q: 18 passed.",
-            "Ruff and targeted mypy passed for the new exit-coverage module and tests."
+            "`python -m pytest tests/test_exit_coverage.py -q`: 10 passed, including canonical snapshot mapping, multiple sleeves, NAV exception and real SQLite ledger snapshot.",
+            "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",
+            "Ruff and targeted mypy passed for the exit-coverage module and tests."
           ]
         },
         {
@@ -3234,5 +3236,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c62b2a77c74b156cfabc281aa636935bcbac8c7bd79528f7e7e76b86eb8b2235"
+  "report_sha256": "f6f26448888e00d5f0fea5fb58a3d1e1fc289353c442ce6383bee6f7f3e84fb3"
 }

@@ -125,6 +125,42 @@ def audit_exit_coverage(*, positions: Iterable[OpenPositionForExitCoverage],
     return ExitCoverageReport(len(position_rows), len(position_rows) - len(uncovered_ids), tuple(gaps))
 
 
+def audit_canonical_snapshot_exit_coverage(*, snapshot: dict[str, object],
+                                           evidence: Iterable[ExitCoverageEvidence]
+                                           ) -> ExitCoverageReport:
+    """Audit the open positions projected by ``CanonicalPortfolioLedger.snapshot``.
+
+    Position identities include asset class, instrument and sleeve so parallel sleeves
+    cannot accidentally share one monitor receipt. This only covers the supplied account
+    snapshot; callers must still aggregate every account/book in scope.
+    """
+    rows = snapshot.get("positions")
+    if not isinstance(rows, list):
+        raise ExitCoverageError("canonical portfolio snapshot must contain a positions list")
+    positions: list[OpenPositionForExitCoverage] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ExitCoverageError("canonical snapshot position rows must be objects")
+        try:
+            asset_class = str(row["asset_class"])
+            instrument = str(row["instrument_id"])
+            sleeve = str(row["sleeve_id"])
+            quantity = Decimal(str(row["quantity"]))
+        except (KeyError, InvalidOperation, TypeError, ValueError) as exc:
+            raise ExitCoverageError("canonical snapshot position identity or quantity is invalid") from exc
+        if not quantity.is_finite():
+            raise ExitCoverageError("canonical snapshot position quantity must be finite")
+        if quantity == 0:
+            continue
+        if asset_class not in {"EQUITY", "ETF", "OPTION", "MUTUAL_FUND"}:
+            raise ExitCoverageError(f"unsupported canonical asset class: {asset_class}")
+        product = (ExitProduct.NAV_MUTUAL_FUND if asset_class == "MUTUAL_FUND"
+                   else ExitProduct.EXCHANGE_TRADED)
+        position_id = f"{asset_class}:{instrument}:{sleeve}"
+        positions.append(OpenPositionForExitCoverage(position_id, instrument, product, quantity))
+    return audit_exit_coverage(positions=positions, evidence=evidence)
+
+
 __all__ = [
     "ExitCoverageEvidence",
     "ExitCoverageError",
@@ -132,5 +168,6 @@ __all__ = [
     "ExitCoverageReport",
     "ExitProduct",
     "OpenPositionForExitCoverage",
+    "audit_canonical_snapshot_exit_coverage",
     "audit_exit_coverage",
 ]
