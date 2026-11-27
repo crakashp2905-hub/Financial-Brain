@@ -81,6 +81,37 @@ def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_
     assert registry.status(report_sha256=result.report_sha256)["status"] == "CURRENT"
 
 
+def test_unsettled_cash_receivable_remains_part_of_reconciled_equity(tmp_path):
+    ledger = _ledger(tmp_path / "receivable-equity.sqlite")
+    ledger.append(_event(
+        "redemption-receivable", EventKind.CASH_RECEIVABLE, START + timedelta(hours=3),
+        cash_delta="-200", metadata={"action": "RECOGNIZE", "amount": "200",
+                                      "receivable_id": "mf-redemption-1"},
+    ))
+
+    report = reconcile_account_equity(
+        ledger=ledger, account_id=ACCOUNT, opening_as_of=START, closing_as_of=END,
+        reported_net_pnl_inr=Decimal("90"),
+    )
+
+    assert report.closing_equity_inr == Decimal("100590.00")
+    assert report.net_investment_pnl_inr == Decimal("90.00")
+    assert report.difference_inr == Decimal("0.00")
+    assert report.reconciled
+
+    # Payout converts the recognized claim into cash without changing account equity.
+    ledger.append(_event(
+        "redemption-payout", EventKind.CASH_RECEIVABLE, END + timedelta(minutes=1),
+        cash_delta="200", evidence_class="OBSERVED_PAYOUT_EVIDENCE",
+        metadata={"action": "SETTLE", "amount": "200", "receivable_id": "mf-redemption-1",
+                  "source_id": "rta-statement", "source_reference": "payout-1"},
+    ))
+    settled = ledger.snapshot(ACCOUNT, as_of=(END + timedelta(minutes=1)).isoformat())
+    assert settled["cash"]["INR"] == Decimal("99490")
+    assert settled["cash"]["INR"] + Decimal("10") * Decimal("110") == Decimal("100590")
+    assert settled["cash_receivables"] == []
+
+
 def test_missing_opening_mark_fails_closed(tmp_path):
     result = reconcile_account_equity(
         ledger=_ledger(tmp_path / "equity.sqlite", mark_at_open=False), account_id=ACCOUNT,

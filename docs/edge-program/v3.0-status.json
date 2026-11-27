@@ -8299,7 +8299,8 @@
         "The auditor verifies every stored account event payload hash, binds opening/closing snapshots and the event set by SHA-256, requires complete INR-only marked positions, opening balance, complete projection and no unresolved positions, and fails closed for stale/future marks or ledger uncertainty.",
         "Trade cashflows, fees, distributions and mark changes are reflected through the canonical ledger dated fills/cash events/marks and ending valuation; distributions remain investment P&L unless explicitly classified as external contributions.",
         "This reconciles the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions. The reconciler now reserves a SQLite write lock while it verifies the event hash set and derives opening/closing snapshots, preventing concurrent appends from splitting one report cutoff; later-arriving backdated source events still require report invalidation/reconciliation.",
-        "`EquityReconciliationRegistry` now durably stores each reconciliation receipt in the canonical SQLite ledger. Its cutoff hash covers canonical events through the closing timestamp; status checks invalidate a persisted report when a late/backdated event changes that event set, while post-cutoff events leave the historical report current. `require_reconciled` rechecks the persisted registry before allowing a report through the reconciliation gate."
+        "`EquityReconciliationRegistry` now durably stores each reconciliation receipt in the canonical SQLite ledger. Its cutoff hash covers canonical events through the closing timestamp; status checks invalidate a persisted report when a late/backdated event changes that event set, while post-cutoff events leave the historical report current. `require_reconciled` rechecks the persisted registry before allowing a report through the reconciliation gate.",
+        "Canonical equity now adds verified INR cash receivables to cash and marked positions. A redemption recognition reduces spendable cash while preserving total equity; observed payout settlement transfers the claim to cash without creating P&L. Regression: tests/test_portfolio_equity_reconciliation.py::test_unsettled_cash_receivable_remains_part_of_reconciled_equity."
       ],
       "blocker": "Canonical-ledger completeness is not equivalent to complete source capture: upstream OMS/broker statements and distributions still need independent matching, and production consumers must use the persisted report gate rather than rely on an earlier in-memory reconciliation result.",
       "last_audited_at_utc": "2026-11-27T04:05:48Z",
@@ -8310,7 +8311,7 @@
         "`python -m ruff check src/financial_brain/portfolio/equity_reconciliation.py tests/test_portfolio_equity_reconciliation.py`: passed.",
         "`python -m mypy src/financial_brain/portfolio/equity_reconciliation.py --follow-imports=silent`: passed."
       ],
-      "test_result": "Durable equity reconciliation reports now detect and persist invalidation when canonical events change through the close cutoff; later events do not invalidate historical reports. Twenty-four focused reconciliation/canonical-ledger tests pass, including concurrency, with Ruff and targeted mypy clean. PA-04-15 remains PARTIAL pending independent upstream source completeness and production gate adoption."
+      "test_result": "Nine focused equity reconciliation tests pass, including unsettled receivable recognition/payout neutrality; Ruff and targeted mypy pass. PA-04-15 remains PARTIAL pending independent upstream source completeness and production gate adoption."
     },
     {
       "id": "PA-04-16",

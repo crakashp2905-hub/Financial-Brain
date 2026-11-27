@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "b52e68840bee160c36e59ae996613008b865e9bfa8bbb1c251a1ff8f466b3ece",
-  "audit_export_sha256": "14b3caf6efe954bd8ada22fa57361fb9d8bd59e7887d742bd9396ee7913c4a3b",
+  "status_ledger_sha256": "f45a4fd7816e0ab5f60565c21f881b0dbf2881cfcb1f6b73093e741867181116",
+  "audit_export_sha256": "783d88f65eeb41d8e6605289180769bffdbc1f1b95ffa03c1b672ef12a483c82",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 135,
@@ -1628,7 +1628,8 @@
             "The auditor verifies every stored account event payload hash, binds opening/closing snapshots and the event set by SHA-256, requires complete INR-only marked positions, opening balance, complete projection and no unresolved positions, and fails closed for stale/future marks or ledger uncertainty.",
             "Trade cashflows, fees, distributions and mark changes are reflected through the canonical ledger dated fills/cash events/marks and ending valuation; distributions remain investment P&L unless explicitly classified as external contributions.",
             "This reconciles the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions. The reconciler now reserves a SQLite write lock while it verifies the event hash set and derives opening/closing snapshots, preventing concurrent appends from splitting one report cutoff; later-arriving backdated source events still require report invalidation/reconciliation.",
-            "`EquityReconciliationRegistry` now durably stores each reconciliation receipt in the canonical SQLite ledger. Its cutoff hash covers canonical events through the closing timestamp; status checks invalidate a persisted report when a late/backdated event changes that event set, while post-cutoff events leave the historical report current. `require_reconciled` rechecks the persisted registry before allowing a report through the reconciliation gate."
+            "`EquityReconciliationRegistry` now durably stores each reconciliation receipt in the canonical SQLite ledger. Its cutoff hash covers canonical events through the closing timestamp; status checks invalidate a persisted report when a late/backdated event changes that event set, while post-cutoff events leave the historical report current. `require_reconciled` rechecks the persisted registry before allowing a report through the reconciliation gate.",
+            "Canonical equity now adds verified INR cash receivables to cash and marked positions. A redemption recognition reduces spendable cash while preserving total equity; observed payout settlement transfers the claim to cash without creating P&L. Regression: tests/test_portfolio_equity_reconciliation.py::test_unsettled_cash_receivable_remains_part_of_reconciled_equity."
           ],
           "tests": [
             "`python -m pytest --basetemp=.pytest-pa0415-registry-rerun tests/test_portfolio_equity_reconciliation.py tests/test_canonical_portfolio_ledger.py -q`: 24 passed.",
@@ -3584,5 +3585,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "40b85b6ff9a4547bbec4ab7ad173d8f483e3a9d11c5a221f0a1e5de70ad4de54"
+  "report_sha256": "e5f097ddeef2a72862fc7a3df3734cba1ad72ec8916647c48cfab932d7a846c7"
 }

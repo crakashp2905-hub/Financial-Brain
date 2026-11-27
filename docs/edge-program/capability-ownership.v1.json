@@ -3370,6 +3370,12 @@
       "module_owner": "src/financial_brain/portfolio/marginal.py"
     },
     {
+      "capability_id": "module:src/financial_brain/portfolio/mutual_fund_adapter.py",
+      "path": "src/financial_brain/portfolio/mutual_fund_adapter.py",
+      "module_role": "portfolio_allocation_or_accounting",
+      "module_owner": "src/financial_brain/portfolio/mutual_fund_adapter.py"
+    },
+    {
       "capability_id": "module:src/financial_brain/portfolio/my_book.py",
       "path": "src/financial_brain/portfolio/my_book.py",
       "module_role": "portfolio_allocation_or_accounting",

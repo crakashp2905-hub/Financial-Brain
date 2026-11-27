@@ -194,6 +194,18 @@ def _snapshot_equity(snapshot: dict[str, object], label: str) -> Decimal:
     if not isinstance(positions, list):
         raise EquityReconciliationError(f"{label} position projection is missing")
     equity = _money(cash["INR"], f"{label} INR cash")
+    receivables = snapshot.get("cash_receivables")
+    if not isinstance(receivables, list):
+        raise EquityReconciliationError(f"{label} cash receivables projection is missing")
+    for row in receivables:
+        if not isinstance(row, dict):
+            raise EquityReconciliationError(f"{label} contains a malformed cash receivable")
+        if row.get("currency") != "INR":
+            raise EquityReconciliationError(f"{label} contains a non-INR cash receivable")
+        amount = _money(row.get("amount"), f"{label} cash receivable amount")
+        if amount <= 0:
+            raise EquityReconciliationError(f"{label} contains a non-positive cash receivable")
+        equity += amount
     for row in positions:
         if not isinstance(row, dict):
             raise EquityReconciliationError(f"{label} contains a malformed position")
