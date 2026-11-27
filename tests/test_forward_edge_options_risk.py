@@ -25,6 +25,29 @@ def test_executable_multileg_quotes_report_legging_and_unverified_margin() -> No
     assert report["expiry_settlement_status"] == "NOT_MODELLED"
 
 
+def test_put_debit_vertical_uses_long_higher_strike_and_short_lower_strike() -> None:
+    legs = (OptionLegQuote("long", "BUY", 11, "NIFTY26NOV25100PE", "NIFTY", "PE", 25100,
+                           date(2026, 11, 26), 75, NOW, 104, 105, 1000, 1000),
+            OptionLegQuote("short", "SELL", 12, "NIFTY26NOV25000PE", "NIFTY", "PE", 25000,
+                           date(2026, 11, 26), 75, NOW, 59, 60, 1000, 1000))
+    report = evaluate_defined_risk_legs(legs=legs, quantity=75, as_of=NOW,
+                                        leg_order=("long", "short"), max_quote_age_seconds=30)
+    assert report["entry_debit_inr"] == pytest.approx(3450)
+    assert report["economic_max_loss_inr"] == pytest.approx(3450)
+
+
+@pytest.mark.parametrize("option_type,long_strike,short_strike", [("CE", 25100, 25000),
+                                                                     ("PE", 25000, 25100)])
+def test_inverted_debit_verticals_fail_closed(option_type, long_strike, short_strike) -> None:
+    legs = (OptionLegQuote("long", "BUY", 21, "long", "NIFTY", option_type, long_strike,
+                           date(2026, 11, 26), 75, NOW, 100, 101, 1000, 1000),
+            OptionLegQuote("short", "SELL", 22, "short", "NIFTY", option_type, short_strike,
+                           date(2026, 11, 26), 75, NOW, 60, 61, 1000, 1000))
+    with pytest.raises(OptionsRiskError, match="inverted"):
+        evaluate_defined_risk_legs(legs=legs, quantity=75, as_of=NOW,
+                                   leg_order=("long", "short"), max_quote_age_seconds=30)
+
+
 def test_expiry_intrinsic_is_only_a_scenario_and_verified_margin_is_explicit() -> None:
     report = evaluate_defined_risk_legs(legs=_legs(), quantity=75, as_of=NOW,
                                         leg_order=("long", "short"), max_quote_age_seconds=30,
