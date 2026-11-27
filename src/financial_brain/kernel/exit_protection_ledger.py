@@ -100,6 +100,8 @@ class ExitProtectionLedger:
         entries = {r["fill_id"]: _decimal(r["quantity"], "entry fill")
                    for r in records if r["type"] == "ENTRY_FILL"}
         protections = {r["protection_id"] for r in records if r["type"] == "PROTECTION_ARMED"}
+        protections.difference_update(r["protection_id"] for r in records
+                                      if r.get("type") == "PROTECTION_CANCELLED")
         intents = {r["idempotency_key"]: _decimal(r["quantity"], "exit intent")
                    for r in records if r["type"] == "EXIT_TRIGGERED"}
         cancelled: dict[str, Decimal] = {}
@@ -448,8 +450,96 @@ class ExitProtectionLedger:
                   "source_hash": protection.source_hash, "oco_group_id": protection.oco_group_id,
                   "exit_policy_version": exit_policy.policy_version,
                   "exit_policy_hash": exit_policy.policy_hash,
-                  "idempotency_key": idempotency_key}
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior = next((row for row in records if row.get("type") == "PROTECTION_ARMED"
+                      and row.get("protection_id") == protection.protection_id), None)
+        if prior is not None:
+            if prior == record:
+                return False
+            raise ExitLedgerError("protection ID is immutable and cannot be re-armed")
         return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def cancel_protection(self, *, protection_id: str, occurred_at: datetime,
+                          source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Cancel an exit policy only after its orders are settled and stop coverage remains."""
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("protection cancellation time must be timezone-aware")
+        if (not protection_id.strip() or not reason.strip() or not idempotency_key.strip()
+                or len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash)):
+            raise ExitLedgerError("protection cancellation needs ID, reason, source hash and idempotency key")
+        records = self._position_records()
+        protection = next((row for row in records if row.get("type") == "PROTECTION_ARMED"
+                           and row.get("protection_id") == protection_id), None)
+        if protection is None:
+            raise ExitLedgerError("cannot cancel an unknown protection policy")
+        record = {"type": "PROTECTION_CANCELLED", "position_id": self.position_id,
+                  "protection_id": protection_id, "occurred_at": occurred_at.isoformat(),
+                  "source_hash": source_hash, "reason": reason,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior_key = next((row for row in records if row.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if (prior_key.get("type") == "PROTECTION_CANCELLED"
+                    and prior_key.get("protection_id") == protection_id
+                    and prior_key.get("occurred_at") == occurred_at.isoformat()
+                    and prior_key.get("source_hash") == source_hash
+                    and prior_key.get("reason") == reason):
+                return False
+            raise ExitLedgerError("protection cancellation idempotency key conflicts with prior evidence")
+        if protection_id not in self.state.armed_protection_ids:
+            raise ExitLedgerError("protection policy is already cancelled")
+        created_at = datetime.fromisoformat(str(protection["created_at"]))
+        if occurred_at.astimezone(created_at.tzinfo) < created_at:
+            raise ExitLedgerError("protection cancellation cannot precede its arming time")
+
+        triggered = [row for row in records if row.get("type") == "EXIT_TRIGGERED"
+                     and row.get("protection_id") == protection_id]
+        for intent in triggered:
+            exit_key = str(intent["idempotency_key"])
+            intended = _decimal(intent["quantity"], "exit intent")
+            filled = sum((_decimal(row["quantity"], "exit fill") for row in records
+                          if row.get("type") == "EXIT_FILL" and row.get("exit_key") == exit_key), Decimal(0))
+            cancelled = sum((_decimal(row["quantity"], "exit cancellation") for row in records
+                             if row.get("type") == "EXIT_CANCELLED" and row.get("exit_key") == exit_key), Decimal(0))
+            for fill in records:
+                if fill.get("type") == "EXIT_FILL":
+                    cancelled += sum((_decimal(item["quantity"], "OCO sibling cancellation")
+                                      for item in fill.get("oco_cancelled_siblings", [])
+                                      if item.get("exit_key") == exit_key), Decimal(0))
+            if filled + cancelled < intended:
+                raise ExitLedgerError("protection has an unsettled exit order; cancel or resolve it first")
+        unresolved_ids = self.state.unresolved_exit_intent_ids
+        if any(row.get("type") == "EXIT_UNRESOLVED" and row.get("protection_id") == protection_id
+               and row.get("intent_id") in unresolved_ids for row in records):
+            raise ExitLedgerError("protection has an unresolved triggered exit")
+
+        state = self.state
+        if (protection.get("trigger") == ExitTrigger.HARD_STOP.value and state.open_quantity > 0
+                and self._active_hard_stop_quantity(records, excluding=protection_id) < state.open_quantity):
+            raise ExitLedgerError("cannot cancel hard stop without replacement coverage for the open position")
+        self.journal.append(record)
+        _ = self.state
+        return True
+
+    @staticmethod
+    def _active_hard_stop_quantity(records: list[dict], *, excluding: str | None = None) -> Decimal:
+        grouped: dict[str, Decimal] = {}
+        ungrouped = Decimal(0)
+        cancelled = {str(row.get("protection_id")) for row in records
+                     if row.get("type") == "PROTECTION_CANCELLED"}
+        for row in records:
+            protection_id = str(row.get("protection_id", ""))
+            if (row.get("type") != "PROTECTION_ARMED" or protection_id == excluding
+                    or protection_id in cancelled or row.get("trigger") != ExitTrigger.HARD_STOP.value):
+                continue
+            quantity = _decimal(row["quantity"], "hard-stop protected quantity")
+            group = row.get("oco_group_id")
+            if group is None:
+                ungrouped += quantity
+            else:
+                grouped[str(group)] = max(grouped.get(str(group), Decimal(0)), quantity)
+        return ungrouped + sum(grouped.values(), Decimal(0))
 
     def record_trailing_stop_update(self, *, state: TrailingStopState,
                                     observed_price: Decimal, observed_at: datetime,
@@ -631,6 +721,8 @@ class ExitProtectionLedger:
                                   and r.get("protection_id") == protection_id), None)
         if protection_record is None:
             raise ExitLedgerError("unresolved exit protection must be durably armed")
+        if protection_id not in self.state.armed_protection_ids:
+            raise ExitLedgerError("unresolved exit protection must remain active")
         if protection_record.get("trigger") != trigger.value or qty > _decimal(
             protection_record["quantity"], "protected quantity"
         ):

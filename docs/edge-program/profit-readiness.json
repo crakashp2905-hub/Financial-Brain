@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "c7cbfaef9cbb34a1d9652fd27358ffac9dcfa676dfe74e551dabed4d63cc2cb9",
-  "audit_export_sha256": "41cad31110a8ebc49d44331f4d5cfdbd8207fe3efd82ef91097f75d08e48db99",
+  "status_ledger_sha256": "849bc6669a43826d4d2a73ee233e2fa525de19c273918988fbb325470b8a72c9",
+  "audit_export_sha256": "03d9357686da891a275072a05325d738030821d98f2daf56f20192becc81c62d",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1320,7 +1320,9 @@
             "tests/test_exit_protection_ledger.py verifies every recorded position lifecycle event retains one decision hash, changing the frozen setup changes that hash, and restart/idempotency behavior remains valid.",
             "src/financial_brain/kernel/exit_protection_ledger.py now appends decision-hash-linked ENTRY_INTENT_AMENDED events with monotone revisions, frozen snapshot hashes, source hashes, and a revised quantity cap; it refuses revisions below already filled quantity or after full fill/terminal state.",
             "The same durable position journal now records ENTRY_INTENT_CANCELLED and ENTRY_INTENT_EXPIRED with remaining quantity, source hash, reason, event time and frozen entry decision hash. Expiry requires the frozen timezone-aware expires_at to have elapsed; terminal intents cannot receive later fills. Replays are idempotent.",
-            "Stop/target policy, trigger, exit fill, partial fill, cancellation and position-close events remain linked to the frozen strategy decision hash by the existing hash-chained journal. Cross-OMS order amendment/cancel/expiry propagation remains separate."
+            "Stop/target policy, trigger, exit fill, partial fill, cancellation and position-close events remain linked to the frozen strategy decision hash by the existing hash-chained journal. Cross-OMS order amendment/cancel/expiry propagation remains separate.",
+            "`ExitProtectionLedger.cancel_protection` now appends a source-hashed, reasoned, decision-linked `PROTECTION_CANCELLED` event. It refuses cancellation while the policy has unsettled triggered-exit quantity, while its exit is unresolved, or when removing a hard stop would leave less than full open-quantity hard-stop coverage. State replay excludes cancelled protections; replays are idempotent and a protection ID cannot be re-armed with conflicting policy.",
+            "`tests/test_exit_protection_ledger.py::test_hard_stop_policy_can_be_replaced_only_with_coverage_and_replays_safely` and `::test_protection_cannot_be_cancelled_while_triggered_exit_is_pending` verify replacement coverage, pending-order block, restart state and replay semantics."
           ],
           "tests": [
             "python -m pytest tests/test_exit_protection_ledger.py -q: 15 passed.",
@@ -1329,7 +1331,8 @@
             "python -m pytest tests/test_exit_protection_ledger.py -q --basetemp=.pytest-pa0403-entry-life-final2: 19 passed.",
             "Focused tests prove amendment revision/replay/hash linkage, effective fill cap, refusal below filled quantity, cancel idempotency/terminal behavior, and expiry deadline enforcement.",
             "ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py: passed.",
-            "mypy src/financial_brain/kernel/exit_protection_ledger.py: passed."
+            "mypy src/financial_brain/kernel/exit_protection_ledger.py: passed.",
+            "`python -m pytest tests/test_exit_protection_ledger.py -q --basetemp=.pytest-pa0403-cancel-protection-final`: 24 passed; Ruff and targeted mypy passed."
           ]
         },
         {
@@ -3250,5 +3253,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "343cf6ea0ac950f8a9051d1fb0ac9520387aab49d24158030ce34eab86257ff3"
+  "report_sha256": "46cf1235e0cd8b0e8cf0b3228f28ba182dd866ac6592413f9e4618cad8234439"
 }

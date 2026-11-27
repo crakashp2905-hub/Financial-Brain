@@ -439,6 +439,45 @@ def test_armed_protection_must_match_strategy_version_and_policy_rule(tmp_path):
         ledger.arm(_protection(), exit_policy=wrong_level, idempotency_key="bad:level")
 
 
+def test_hard_stop_policy_can_be_replaced_only_with_coverage_and_replays_safely(tmp_path):
+    ledger = _armed(tmp_path / "protection-replacement.journal")
+    cancel_args = {
+        "protection_id": PROTECTION_ID, "occurred_at": NOW + timedelta(minutes=2),
+        "source_hash": "d" * 64, "reason": "replace with revised stop policy",
+        "idempotency_key": "protection:cancel:old",
+    }
+    with pytest.raises(ExitLedgerError, match="without replacement coverage"):
+        ledger.cancel_protection(**cancel_args)
+
+    replacement_id = "550e8400-e29b-41d4-a716-446655440013"
+    replacement = _protection(protection_id=replacement_id, trigger_price=Decimal("96"),
+                               source_hash="f" * 64, created_at=NOW + timedelta(minutes=1))
+    replacement_policy = ExitPolicy(
+        strategy_id="breakout", strategy_version="1", policy_version="protective-exits-v2",
+        rules=(ExitRule("hard-stop", ExitTrigger.HARD_STOP, ExitRuleAction.FULL_EXIT,
+                        quantity_fraction=Decimal("1"), trigger_price=Decimal("96")),
+               ExitRule("take-profit", ExitTrigger.TAKE_PROFIT, ExitRuleAction.FULL_EXIT,
+                        quantity_fraction=Decimal("1"), trigger_price=Decimal("110"))),
+    )
+    ledger.arm(replacement, exit_policy=replacement_policy, idempotency_key="protection:arm:new")
+    assert ledger.cancel_protection(**cancel_args)
+    assert not ledger.cancel_protection(**cancel_args)
+    assert ledger.state.armed_protection_ids == {replacement_id}
+    with pytest.raises(ExitLedgerError, match="durably armed"):
+        ledger.emit(_entry(), _protection(), _event("10", "exit:cancelled-stop"))
+
+
+def test_protection_cannot_be_cancelled_while_triggered_exit_is_pending(tmp_path):
+    ledger = _armed(tmp_path / "protection-pending-exit.journal")
+    ledger.emit(_entry(), _protection(), _event("10", "exit:pending-stop"))
+    with pytest.raises(ExitLedgerError, match="unsettled exit order"):
+        ledger.cancel_protection(
+            protection_id=PROTECTION_ID, occurred_at=NOW + timedelta(hours=2),
+            source_hash="d" * 64, reason="attempt while triggered order is pending",
+            idempotency_key="protection:cancel:pending",
+        )
+
+
 def test_position_close_requires_all_recorded_exit_fills_and_survives_restart(tmp_path):
     path = tmp_path / "closed.journal"
     ledger = _armed(path)

@@ -7994,10 +7994,12 @@
         "tests/test_exit_protection_ledger.py verifies every recorded position lifecycle event retains one decision hash, changing the frozen setup changes that hash, and restart/idempotency behavior remains valid.",
         "src/financial_brain/kernel/exit_protection_ledger.py now appends decision-hash-linked ENTRY_INTENT_AMENDED events with monotone revisions, frozen snapshot hashes, source hashes, and a revised quantity cap; it refuses revisions below already filled quantity or after full fill/terminal state.",
         "The same durable position journal now records ENTRY_INTENT_CANCELLED and ENTRY_INTENT_EXPIRED with remaining quantity, source hash, reason, event time and frozen entry decision hash. Expiry requires the frozen timezone-aware expires_at to have elapsed; terminal intents cannot receive later fills. Replays are idempotent.",
-        "Stop/target policy, trigger, exit fill, partial fill, cancellation and position-close events remain linked to the frozen strategy decision hash by the existing hash-chained journal. Cross-OMS order amendment/cancel/expiry propagation remains separate."
+        "Stop/target policy, trigger, exit fill, partial fill, cancellation and position-close events remain linked to the frozen strategy decision hash by the existing hash-chained journal. Cross-OMS order amendment/cancel/expiry propagation remains separate.",
+        "`ExitProtectionLedger.cancel_protection` now appends a source-hashed, reasoned, decision-linked `PROTECTION_CANCELLED` event. It refuses cancellation while the policy has unsettled triggered-exit quantity, while its exit is unresolved, or when removing a hard stop would leave less than full open-quantity hard-stop coverage. State replay excludes cancelled protections; replays are idempotent and a protection ID cannot be re-armed with conflicting policy.",
+        "`tests/test_exit_protection_ledger.py::test_hard_stop_policy_can_be_replaced_only_with_coverage_and_replays_safely` and `::test_protection_cannot_be_cancelled_while_triggered_exit_is_pending` verify replacement coverage, pending-order block, restart state and replay semantics."
       ],
       "blocker": "Partial: kernel entry amendment, cancel and expiry are now immutable and decision-linked, but exit-order amendments and cross-system state propagation are absent. ForwardSessionRunner, OMS, legacy books and options paths do not share this lifecycle journal or one transaction boundary.",
-      "last_audited_at_utc": "2026-11-27T01:48:29+00:00",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "9e293df7",
       "test_evidence": [
         "python -m pytest tests/test_exit_protection_ledger.py -q: 15 passed.",
@@ -8006,9 +8008,10 @@
         "python -m pytest tests/test_exit_protection_ledger.py -q --basetemp=.pytest-pa0403-entry-life-final2: 19 passed.",
         "Focused tests prove amendment revision/replay/hash linkage, effective fill cap, refusal below filled quantity, cancel idempotency/terminal behavior, and expiry deadline enforcement.",
         "ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py: passed.",
-        "mypy src/financial_brain/kernel/exit_protection_ledger.py: passed."
+        "mypy src/financial_brain/kernel/exit_protection_ledger.py: passed.",
+        "`python -m pytest tests/test_exit_protection_ledger.py -q --basetemp=.pytest-pa0403-cancel-protection-final`: 24 passed; Ruff and targeted mypy passed."
       ],
-      "test_result": "The kernel position lifecycle now journals immutable entry amendments, confirmed cancellation and elapsed expiry with the original decision hash and source evidence. The focused exit-protection suite passes 19 tests with Ruff and mypy clean. Cross-system lifecycle integration remains partial."
+      "test_result": "The position journal supports decision-linked policy cancellation only after outstanding exit orders are settled and full hard-stop coverage remains. Cancellation replays idempotently and canceled protection is inactive after recovery. Twenty-four focused exit-ledger tests, Ruff and targeted mypy pass. Cross-system OMS propagation remains partial."
     },
     {
       "id": "PA-04-04",
