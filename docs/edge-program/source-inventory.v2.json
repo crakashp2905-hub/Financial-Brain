@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 740,
+  "source_count": 741,
   "sources": [
     {
       "capability_ids": [],
@@ -11151,6 +11151,30 @@
         "dataclasses",
         "datetime",
         "decimal",
+        "enum",
+        "hashlib",
+        "json",
+        "pathlib",
+        "re",
+        "sqlite3",
+        "types",
+        "typing"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/durable_reservations.py",
+      "source_sha256": "5f39dbc71ebf7aa2daed2f65eae9dd254355828abeaa42c26c68ba7e4105aed4",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "dataclasses",
+        "datetime",
+        "decimal",
         "financial_brain.portfolio.canonical_ledger",
         "hashlib",
         "json"
@@ -13288,6 +13312,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 710,
-  "unassigned_role_count": 443
+  "unassessed_count": 711,
+  "unassigned_role_count": 444
 }
