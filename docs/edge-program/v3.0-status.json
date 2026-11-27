@@ -9924,12 +9924,18 @@
     {
       "id": "PA-09-15",
       "text": "Keep a clean no-action baseline of simply holding cash/options avoidance; do not treat 55% directional accuracy as economic evidence without payoff analysis.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_no_action.py defines a clean hold-cash/avoid-options comparison with zero-position sessions, explicit cash return, option gross returns, all-in costs and after-cost compounded returns on the same book-equity basis.",
+        "The output reports net excess, drawdown and positive sessions, and does not accept directional accuracy as economic evidence.",
+        "tests/test_forecasting_index_no_action.py verifies cash accrual on no-trade days, after-cost compounding, underperformance versus cash and invalid-data rejection; focused tests, Ruff and mypy pass.",
+        "No option-paper cohort or session cash-rate series is connected, so no actual payoff comparison is available and the baseline is not yet enforced as a promotion gate."
+      ],
+      "blocker": "Connect complete paper option outcomes and contemporaneous cash returns, then require after-cost payoff and risk comparisons versus this no-action baseline before strategy promotion.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "8a7d9980",
+      "test_result": "2 focused no-action baseline tests passed; Ruff and mypy passed."
     },
     {
       "id": "PA-09-16",
@@ -21264,6 +21270,7 @@
       "PA-09-12",
       "PA-09-13",
       "PA-09-14",
+      "PA-09-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21687,13 +21694,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 985,
+    "audited_count": 986,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 855,
-      "UNASSESSED": 393
+      "PARTIAL": 856,
+      "UNASSESSED": 392
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21842,7 +21849,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 855,
-    "UNASSESSED": 393
+    "PARTIAL": 856,
+    "UNASSESSED": 392
   }
 }
