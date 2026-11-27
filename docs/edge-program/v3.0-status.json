@@ -9032,72 +9032,128 @@
     {
       "id": "PA-07-01",
       "text": "Freeze H005 industry momentum, H003 risk-adjusted momentum and P3 frog-in-the-pan as three **separate** shadow candidates with exact original formulas, data coverage and lineage.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The frozen `docs/forward-edge/reference-candidates.v1.json` keeps H005, H003 and P3 as separate historical-only candidates, with exact formulas, implementation paths, immutable source commit/blob fingerprints and `prospective_status=NOT_CONFIRMED`; `scripts/validate_reference_candidates.py` enforces the set and labels.",
+        "The monthly paper target functions emit distinct H005/H003/P3 books. The manifest does not establish full data coverage, a separate deployable artifact or a completed prospective candidate freeze."
+      ],
+      "blocker": "Historical formula/source pins are reproducible, but data coverage and exact prospective book/lineage freeze are not complete.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "The frozen `docs/forward-edge/reference-candidates.v1.json` keeps H005, H003 and P3 as separate historical-only candidates, with exact formulas, implementation paths, immutable source commit/blob fingerprints and `prospective_status=NOT_CONFIRMED`; `scripts/validate_reference_candidates.py` enforces the set and labels. Historical formula/source pins are reproducible, but data coverage and exact prospective book/lineage freeze are not complete. PA-07-01 remains PARTIAL."
     },
     {
       "id": "PA-07-02",
       "text": "Prevent overlap between their research histories and later forward evidence; set a hard prospective start date from the deployed SHA, not the date a past notebook ran.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "The candidate manifest requires a separately authorized prospective cohort and prohibits promoting historical evidence; `v3.0-status.json` keeps candidate labels historical-only.",
+        "The paper zoo labels H003/H005 forward-shadow intent from 2026-11-18, but the evidence does not attest the first prospective session from deployed SHA or prevent all overlapping historical/forward inputs at every runner boundary."
+      ],
+      "blocker": "Prospective boundary and overlap isolation are policy-described but not enforced and independently evidenced end to end.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "The candidate manifest requires a separately authorized prospective cohort and prohibits promoting historical evidence; `v3.0-status.json` keeps candidate labels historical-only. Prospective boundary and overlap isolation are policy-described but not enforced and independently evidenced end to end. PA-07-02 remains PARTIAL."
     },
     {
       "id": "PA-07-03",
       "text": "Fix the H003 registered universe's unintended ETF/MF inclusion only by a newly versioned and separately tested rule, never silently altering H003's prior verdict.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.load` now selects only tradable NSE ordinary equity (`series=EQ`, `instrument_type=STK`); `test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units` rejects ETF/MF inclusion.",
+        "The historical H003 source pin remains immutable, but no separately versioned H003 candidate/ruling records the repaired universe and an independent rerun of the registered verdict."
+      ],
+      "blocker": "The loader filter is tested, but strategy-version and verdict lineage for the corrected H003 universe are incomplete.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "`evaluation.edges.load` now selects only tradable NSE ordinary equity (`series=EQ`, `instrument_type=STK`); `test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units` rejects ETF/MF inclusion. The loader filter is tested, but strategy-version and verdict lineage for the corrected H003 universe are incomplete. PA-07-03 remains PARTIAL."
     },
     {
       "id": "PA-07-04",
       "text": "Require effective-dated historical index membership and delisting handling for all three; a survivorship-biased universe fails the gate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.load` joins daily universe snapshots, and H005 industry resolution uses effective-dated NIFTY 500 membership with availability-time filtering.",
+        "`index_tri.py` documents that retained constituent history begins only from nightly captures on 2026-10-18; earlier membership and delisted-name coverage are not complete. This does not establish unbiased historical membership for all three books."
+      ],
+      "blocker": "Point-in-time mechanisms exist, but historical constituent/delisting coverage is incomplete and not quantified for all candidate windows.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "`evaluation.edges.load` joins daily universe snapshots, and H005 industry resolution uses effective-dated NIFTY 500 membership with availability-time filtering. Point-in-time mechanisms exist, but historical constituent/delisting coverage is incomplete and not quantified for all candidate windows. PA-07-04 remains PARTIAL."
     },
     {
       "id": "PA-07-05",
       "text": "Reproduce H005's top-three industry ranking and subsequent stock selections from strictly data available at each monthly rebalance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper.zoo_edges.h_targets` ranks eligible industries on 6-month equal-name returns, requires at least eight names, chooses the top three, then selects stocks by 12-1 momentum. Membership must be effective and observed by the signal-date close.",
+        "Commit bd29ddd3 adds the observation cutoff; `test_h005_uses_only_industry_membership_known_at_rebalance` and `test_h005_excludes_membership_first_observed_after_rebalance_close` cover future-effective and late-observed memberships."
+      ],
+      "blocker": "The ranking implementation and time filter are tested, but source coverage and full historical selection reproduction remain unverified.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "`paper.zoo_edges.h_targets` ranks eligible industries on 6-month equal-name returns, requires at least eight names, chooses the top three, then selects stocks by 12-1 momentum. Membership must be effective and observed by the signal-date close. The ranking implementation and time filter are tested, but source coverage and full historical selection reproduction remain unverified. PA-07-05 remains PARTIAL."
     },
     {
       "id": "PA-07-06",
       "text": "Reproduce H003's 12–1 momentum divided by trailing 250-day volatility, with safe denominators and missing-history abstention.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`paper.zoo_edges.h_targets` computes 12-1 daily momentum divided by trailing 250-session daily-return standard deviation with 200 minimum observations; non-finite scores are removed before selection.",
+        "`evaluation.edges.load` supplies point-in-time tradable ordinary shares and candidate tests cover H003 equal-weight picks and ETF/MF exclusion."
+      ],
+      "blocker": "Formula implementation exists, but explicit zero/near-zero volatility, insufficient-history rejection and complete historical data coverage tests/replay are missing.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "`paper.zoo_edges.h_targets` computes 12-1 daily momentum divided by trailing 250-session daily-return standard deviation with 200 minimum observations; non-finite scores are removed before selection. Formula implementation exists, but explicit zero/near-zero volatility, insufficient-history rejection and complete historical data coverage tests/replay are missing. PA-07-06 remains PARTIAL."
     },
     {
       "id": "PA-07-07",
       "text": "Reproduce P3's frog-in-the-pan construction without selecting a hindsight-favorable revision; document the index/universe benchmark and turnover.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`evaluation.edges.info_discreteness` fixes the P3 formula and `paper.zoo_edges.monthly_targets` maintains it as a distinct monthly book; the immutable candidate manifest preserves its historical failed verdict and exact source fingerprints.",
+        "The pinned record prevents a hindsight-favorable formula change from replacing the reference, but no end-to-end report verifies the benchmark, turnover, costs and selected revision across the complete investable universe."
+      ],
+      "blocker": "The reference formula/verdict are pinned; full benchmark, turnover and point-in-time universe reproduction remain incomplete.",
+      "last_audited_at_utc": "2026-11-27T05:03:11Z",
+      "commit": "bd29ddd3",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+      ],
+      "test_result": "`evaluation.edges.info_discreteness` fixes the P3 formula and `paper.zoo_edges.monthly_targets` maintains it as a distinct monthly book; the immutable candidate manifest preserves its historical failed verdict and exact source fingerprints. The reference formula/verdict are pinned; full benchmark, turnover and point-in-time universe reproduction remain incomplete. PA-07-07 remains PARTIAL."
     },
     {
       "id": "PA-07-08",
@@ -20951,6 +21007,13 @@
       "PA-06-15",
       "PA-06-16",
       "PA-06-17",
+      "PA-07-01",
+      "PA-07-02",
+      "PA-07-03",
+      "PA-07-04",
+      "PA-07-05",
+      "PA-07-06",
+      "PA-07-07",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21389,13 +21452,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 953,
+    "audited_count": 960,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 823,
-      "UNASSESSED": 425
+      "PARTIAL": 830,
+      "UNASSESSED": 418
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21544,7 +21607,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 823,
-    "UNASSESSED": 425
+    "PARTIAL": 830,
+    "UNASSESSED": 418
   }
 }

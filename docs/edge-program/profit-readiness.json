@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "5b96d24d337fa2952cbdd8c7495fb50c809deca5bf06f184751e4ffbd4961bfd",
-  "audit_export_sha256": "7cd77ff6f0550ebace3b9ebe015e37020329a85f3632dd38e0ad07f47fc1a831",
+  "status_ledger_sha256": "554702f642813510f5b867df071fde4265a0ed5d01fde89ee75dcb51b7cfcb02",
+  "audit_export_sha256": "8851628720a82a865c91b89f7429f1dbf2bc269e9a76258115eeea36ee9b9e12",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 823,
-    "UNASSESSED": 425
+    "PARTIAL": 830,
+    "UNASSESSED": 418
   },
-  "assessed_count": 953,
-  "unassessed_count": 425,
+  "assessed_count": 960,
+  "unassessed_count": 418,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 43,
-        "UNASSESSED": 18
+        "PARTIAL": 50,
+        "UNASSESSED": 11
       },
       "evidence": [
         {
@@ -2791,94 +2791,136 @@
         },
         {
           "item_id": "PA-07-01",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1061,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Freeze H005 industry momentum, H003 risk-adjusted momentum and P3 frog-in-the-pan as three **separate** shadow candidates with exact original formulas, data coverage and lineage."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "Historical formula/source pins are reproducible, but data coverage and exact prospective book/lineage freeze are not complete.",
+          "evidence": [
+            "The frozen `docs/forward-edge/reference-candidates.v1.json` keeps H005, H003 and P3 as separate historical-only candidates, with exact formulas, implementation paths, immutable source commit/blob fingerprints and `prospective_status=NOT_CONFIRMED`; `scripts/validate_reference_candidates.py` enforces the set and labels.",
+            "The monthly paper target functions emit distinct H005/H003/P3 books. The manifest does not establish full data coverage, a separate deployable artifact or a completed prospective candidate freeze."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-02",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1062,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Prevent overlap between their research histories and later forward evidence; set a hard prospective start date from the deployed SHA, not the date a past notebook ran."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "Prospective boundary and overlap isolation are policy-described but not enforced and independently evidenced end to end.",
+          "evidence": [
+            "The candidate manifest requires a separately authorized prospective cohort and prohibits promoting historical evidence; `v3.0-status.json` keeps candidate labels historical-only.",
+            "The paper zoo labels H003/H005 forward-shadow intent from 2026-11-18, but the evidence does not attest the first prospective session from deployed SHA or prevent all overlapping historical/forward inputs at every runner boundary."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-03",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1063,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Fix the H003 registered universe's unintended ETF/MF inclusion only by a newly versioned and separately tested rule, never silently altering H003's prior verdict."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "The loader filter is tested, but strategy-version and verdict lineage for the corrected H003 universe are incomplete.",
+          "evidence": [
+            "`evaluation.edges.load` now selects only tradable NSE ordinary equity (`series=EQ`, `instrument_type=STK`); `test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units` rejects ETF/MF inclusion.",
+            "The historical H003 source pin remains immutable, but no separately versioned H003 candidate/ruling records the repaired universe and an independent rerun of the registered verdict."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-04",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1064,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Require effective-dated historical index membership and delisting handling for all three; a survivorship-biased universe fails the gate."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "Point-in-time mechanisms exist, but historical constituent/delisting coverage is incomplete and not quantified for all candidate windows.",
+          "evidence": [
+            "`evaluation.edges.load` joins daily universe snapshots, and H005 industry resolution uses effective-dated NIFTY 500 membership with availability-time filtering.",
+            "`index_tri.py` documents that retained constituent history begins only from nightly captures on 2026-10-18; earlier membership and delisted-name coverage are not complete. This does not establish unbiased historical membership for all three books."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-05",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1065,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Reproduce H005's top-three industry ranking and subsequent stock selections from strictly data available at each monthly rebalance."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "The ranking implementation and time filter are tested, but source coverage and full historical selection reproduction remain unverified.",
+          "evidence": [
+            "`paper.zoo_edges.h_targets` ranks eligible industries on 6-month equal-name returns, requires at least eight names, chooses the top three, then selects stocks by 12-1 momentum. Membership must be effective and observed by the signal-date close.",
+            "Commit bd29ddd3 adds the observation cutoff; `test_h005_uses_only_industry_membership_known_at_rebalance` and `test_h005_excludes_membership_first_observed_after_rebalance_close` cover future-effective and late-observed memberships."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-06",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1066,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Reproduce H003's 12–1 momentum divided by trailing 250-day volatility, with safe denominators and missing-history abstention."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "Formula implementation exists, but explicit zero/near-zero volatility, insufficient-history rejection and complete historical data coverage tests/replay are missing.",
+          "evidence": [
+            "`paper.zoo_edges.h_targets` computes 12-1 daily momentum divided by trailing 250-session daily-return standard deviation with 200 minimum observations; non-finite scores are removed before selection.",
+            "`evaluation.edges.load` supplies point-in-time tradable ordinary shares and candidate tests cover H003 equal-weight picks and ETF/MF exclusion."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-07",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1067,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Reproduce P3's frog-in-the-pan construction without selecting a hindsight-favorable revision; document the index/universe benchmark and turnover."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bd29ddd3",
+          "blocker": "The reference formula/verdict are pinned; full benchmark, turnover and point-in-time universe reproduction remain incomplete.",
+          "evidence": [
+            "`evaluation.edges.info_discreteness` fixes the P3 formula and `paper.zoo_edges.monthly_targets` maintains it as a distinct monthly book; the immutable candidate manifest preserves its historical failed verdict and exact source fingerprints.",
+            "The pinned record prevents a hindsight-favorable formula change from replacing the reference, but no end-to-end report verifies the benchmark, turnover, costs and selected revision across the complete investable universe."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
+            "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-08",
@@ -3394,5 +3436,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "3a981898da31bac4d62bedd2dc3bafc2f9ab4a8f03db65b608487963edcf5762"
+  "report_sha256": "5f436263b3855f769ab343c3eeb8b4fb849723277d28c9b530a2fc5f0c024aed"
 }
