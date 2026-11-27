@@ -10701,14 +10701,15 @@
       "source_checked": true,
       "status": "COMPLETE",
       "evidence": [
-        "src/financial_brain/risk/signed_policy.py defines fixed initial capital, per-trade risk, daily/weekly/monthly drawdown caps, maximum contracts, slippage ceiling, owner identity and effective interval",
+        "src/financial_brain/risk/signed_policy.py defines fixed initial capital, per-trade risk, daily/weekly/monthly drawdown caps, maximum contracts, signed Nifty-direction delta cap, slippage ceiling, owner identity and effective interval",
         "Canonical policy bytes require verification against a caller-trusted Ed25519 owner key; modified, expired or internally impossible limits are rejected"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "d432fcae",
+      "commit": "70ed1c2e",
       "test_evidence": [
-        "tests/test_signed_risk_policy.py: signature verification, tamper/untrusted-key refusal, expiry and invalid-cap checks; 3 passed"
+        "tests/test_signed_risk_policy.py: signature verification, tamper/untrusted-key refusal, expiry and invalid-cap checks; 3 passed",
+        "tests/test_nifty_delta.py: owner-signed delta limit is part of the canonical signed policy"
       ]
     },
     {
@@ -10728,12 +10729,19 @@
     {
       "id": "PA-13-03",
       "text": "Require a hard cap on aggregate Nifty-direction delta even when the positions are in different indices, sectors or strategies.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/nifty_delta.py aggregates signed INR delta across all supplied strategies and index families using dated, hashed beta mappings and a verified owner-signed cap",
+        "tests/test_nifty_delta.py verifies cross-index aggregation, cap breach, stale beta rejection and altered-policy signature rejection; focused delta and policy tests: 6 passed",
+        "The OMS/order authorization path does not yet call require_within_nifty_delta_cap for each proposed order or reconciled open-order snapshot"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "70ed1c2e",
+      "test_evidence": [
+        "tests/test_nifty_delta.py: multi-index/multi-strategy aggregation, hard-cap rejection, stale mapping and signature tamper tests; 3 passed"
+      ]
     },
     {
       "id": "PA-13-04",
@@ -21573,6 +21581,7 @@
       "PA-12-16",
       "PA-13-01",
       "PA-13-02",
+      "PA-13-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21996,13 +22005,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1040,
+    "audited_count": 1041,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 901,
-      "UNASSESSED": 338
+      "PARTIAL": 902,
+      "UNASSESSED": 337
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22151,7 +22160,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 901,
-    "UNASSESSED": 338
+    "PARTIAL": 902,
+    "UNASSESSED": 337
   }
 }
