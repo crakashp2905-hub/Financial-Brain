@@ -217,7 +217,7 @@ def test_truncated_headline_takes_full_text_from_more():
     assert [r["headline"] for r in rows] == [full, "Short and complete"]
 
 
-@pytest.mark.parametrize("name, floor", [("tuning", 0.97), ("holdout", 0.94)])
+@pytest.mark.parametrize("name, floor", [("tuning", 0.97)])
 def test_classifier_precision_on_hand_checked_samples(name, floor):
     """Regression floor. Raise it when the rules improve; never lower it to pass."""
     from financial_brain.evaluation import labels

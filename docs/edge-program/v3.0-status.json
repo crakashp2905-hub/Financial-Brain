@@ -7987,10 +7987,11 @@
         "tests/test_canonical_portfolio_ledger.py verifies short opening, partial buy-to-cover, realized and unrealized P&L, cash projection, explicit source event action retention, and rejection of short crossing/over-cover. ForwardSessionRunner remains long-only and does not yet consume these canonical position actions.",
         "EventKind.POSITION_ADJUSTMENT now supports source-identified equity/ETF SPLIT events at account level, across all matching sleeves, with a non-unit positive ratio, explicit action id/reference, no execution price or cash posting, and an existing-position requirement. Projection scales units and inversely adjusts average cost while preserving total basis, clears pre-split marks pending a post-action mark, and applies the split in chronological transition validation. The capital-efficiency report mirrors quantity/basis handling and removes stale pre-split marks.",
         "tests/test_canonical_portfolio_ledger.py and tests/test_capital_efficiency.py cover split accounting, unchanged cash/realized P&L, replay idempotency, missing-position/invalid-ratio rejection, stale-mark invalidation, and capital-efficiency basis/turnover.",
-        "EventKind.CASH_DISTRIBUTION now records source-identified equity/ETF entitlement units, per-unit gross distribution, withholding and reconciled net cash without changing instrument quantity. Canonical snapshots book the net cash event; portfolio.capital_efficiency includes it in after-cost net P&L. The event is not an authenticated exchange/broker entitlement and depends on the caller supplied source reference and source hash."
+        "EventKind.CASH_DISTRIBUTION now records source-identified equity/ETF entitlement units, per-unit gross distribution, withholding and reconciled net cash without changing instrument quantity. Canonical snapshots book the net cash event; portfolio.capital_efficiency includes it in after-cost net P&L. The event is not an authenticated exchange/broker entitlement and depends on the caller supplied source reference and source hash.",
+        "portfolio.mutual_fund_adapter imports durable MF paper SUBSCRIBE/REDEEM rows as source-hash-bound canonical unit fills and separate fee events at the assigned NAV date. Redeemed proceeds are reclassified from available cash to a receivable; a later payout converts that claim to spendable cash only with a separately hashed payout source, reference and availability timestamp. NAV, units, gross/net, charges and payout amount/time must reconcile. The adapter explicitly labels the paper book and does not authenticate an RTA or broker."
       ],
-      "blocker": "Partial: source-bound equity/ETF split and cash-distribution accounting are implemented, but there is no official corporate-action/distribution feed importer or authenticated entitlement verification; mutual-fund NAV lifecycle imports, margin/settlement handling and universal desk/OMS transaction wiring remain open.",
-      "last_audited_at_utc": "2026-11-27T15:08:00+00:00",
+      "blocker": "Partial: canonical event adapters now cover source-identified equity/ETF splits and distributions, option event imports, and MF subscriptions/redemptions with payout-aware receivables. Official corporate-action/entitlement ingestion, automated MF DB/payout orchestration, full margin/settlement handling and one transactional boundary across every desk OMS remain open.",
+      "last_audited_at_utc": "2026-11-27T15:32:00+00:00",
       "commit": "727958fe",
       "test_evidence": [
         "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-options-accounting-final: 27 passed.",
@@ -8000,9 +8001,10 @@
         "ruff check src/financial_brain/portfolio/canonical_ledger.py tests/test_canonical_portfolio_ledger.py: passed.",
         "mypy src/financial_brain/portfolio/canonical_ledger.py: passed.",
         "python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-cash-distribution: 28 passed.",
-        "Ruff passed for canonical_ledger.py, capital_efficiency.py and their two focused test modules; targeted mypy passed for both source modules."
+        "Ruff passed for canonical_ledger.py, capital_efficiency.py and their two focused test modules; targeted mypy passed for both source modules.",
+        "python -m pytest tests/test_mutual_fund_portfolio_adapter.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-mf-final4: 34 passed; Ruff passed for the three source modules and focused test modules; targeted mypy passed for all three source modules."
       ],
-      "test_result": "Canonical position accounting now handles account-level source-identified equity/ETF split adjustments across all sleeves and cash distributions with reconciled gross/withholding/net cash. Split adjustments preserve historical basis, invalidate pre-split marks, and distribution net cash flows into capital-efficiency P&L. The 28-test focused ledger/capital-efficiency suite, Ruff and targeted mypy pass. Official action/entitlement ingestion and the broader all-desk multi-asset transaction boundary remain open."
+      "test_result": "Canonical portfolio imports source-hash-bound MF subscriptions and redemptions with NAV/units/charges reconciliation. Redemption proceeds stay in a receivable until a distinct observed payout event; replay, delayed availability, source and cash accounting are covered alongside equity/ETF split/distribution accounting. The 34-test focused MF/canonical-ledger/capital-efficiency suite, Ruff and targeted mypy pass. Official feed/entitlement ingestion and universal transactional integration remain open."
     },
     {
       "id": "PA-04-03",
@@ -12193,8 +12195,8 @@
         "Historical run 44901944665 passed both OS test suites before the current checklist tranche; it does not replace a green run on the current head.",
         "GitHub Actions run 46019366453 on commit 158f83e9: Ubuntu locked reproducibility succeeded, Ubuntu full tests stopped at the stale capability-ownership inventory; the Windows full and locked jobs were still running at last observation. docs/edge-program/capability-ownership.v1.json is regenerated locally."
       ],
-      "blocker": "Partial: current-host full-test CI failed at generated source inventory freshness. Both lock-install jobs passed. The generated source inventory and dependency graph have been refreshed locally and the source-inventory regression tests pass; those snapshots must be pushed and a fresh hosted run must pass.",
-      "last_audited_at_utc": "2026-11-27T15:12:00+00:00",
+      "blocker": "Partial: run 46022012465 passed both locked-install jobs but failed both full test jobs. Local changes preserve owner-authorized holdout access and fail-closed execution data requirements while repairing the stale generated catalogue and test compatibility. A fresh hosted full-suite run must pass.",
+      "last_audited_at_utc": "2026-11-27T15:32:00+00:00",
       "commit": null,
       "test_evidence": [
         "python -m pytest tests/test_source_inventory.py tests/test_market_data_use_matrix.py tests/test_checklist_completion_gate.py -q --basetemp .pytest-pa17-14-snapshots2: 13 passed.",
@@ -12203,9 +12205,10 @@
         "python scripts/forward_engine_graph.py --check: passed.",
         "git diff --check: passed.",
         "python scripts/capability_ownership.py --check: current (25 contracts, 577 modules); python -m pytest tests/test_capability_ownership.py -q: 3 passed.",
-        "GitHub Actions run 46021265389 for commit 034f4b518625eb3b2470bbff2557d84ab4a33177: Ubuntu/Windows reproducibility jobs passed; both full-test jobs failed at Verify source inventory snapshot. Source/dependency snapshots regenerated locally; scripts/source_inventory.py --check and scripts/forward_engine_graph.py --check pass; tests/test_source_inventory.py: 5 passed."
+        "GitHub Actions run 46021265389 for commit 034f4b518625eb3b2470bbff2557d84ab4a33177: Ubuntu/Windows reproducibility jobs passed; both full-test jobs failed at Verify source inventory snapshot. Source/dependency snapshots regenerated locally; scripts/source_inventory.py --check and scripts/forward_engine_graph.py --check pass; tests/test_source_inventory.py: 5 passed.",
+        "GitHub Actions run 46022012465 on commit aad2547a9d9b613c55f685973421490b25a06948: Ubuntu/Windows locked-reproducibility jobs passed; both full test jobs failed on five regressions (stale generated strategy-eligibility snapshot, missing authorized sealed session in legacy holdout-score test, monkeypatched ordinary _rows call receiving a None session keyword, and workstation preview test expecting a pass without the newly required quote/account evidence). Local fixes preserve sealed-holdout and pre-trade fail-closed gates; all six focused regressions now pass, hosted rerun pending."
       ],
-      "test_result": "The 2026-11-27 hosted run 46021265389 for commit 034f4b51 failed both full-test jobs at Verify source inventory snapshot; both locked Ubuntu and Windows reproducibility jobs passed. After the additional canonical ledger edits, source-inventory.v2.json and forward-engine-dependency-graph.v1.json were regenerated and current-tree checks pass; a new hosted run is pending."
+      "test_result": "The latest hosted run passed locked reproducibility on Ubuntu and Windows, but the full suite failed on legacy tests that did not reflect the current sealed-holdout and market-data/account-context gates, plus a stale generated eligibility file. The affected implementation/tests and generated catalogue are corrected locally; six targeted regressions pass. Current-head hosted acceptance remains pending."
     },
     {
       "id": "PA-17-15",
@@ -12311,8 +12314,8 @@
         "GitHub Actions run 46018219552: both Ubuntu/Windows locked reproducibility jobs passed including lock and hard-coded-path audit; both full test jobs reached and failed only at stale source-inventory snapshot verification. Current source inventory and dependency graph are regenerated in this worktree.",
         "GitHub Actions run 46019366453: Ubuntu locked reproducibility succeeded and full tests progressed beyond source inventory but failed at capability-ownership freshness. Current ownership inventory regenerated; Windows jobs had not completed at last observation."
       ],
-      "blocker": "Partial: locked Ubuntu/Windows reproducibility remains green, but the latest full-suite jobs failed at stale source inventory. Updated snapshots now pass local current-tree validation; a fresh hosted run after they are pushed remains required.",
-      "last_audited_at_utc": "2026-11-27T15:12:00+00:00",
+      "blocker": "Partial: run 46022012465 passed both locked-install jobs but failed both full test jobs. Local changes preserve owner-authorized holdout access and fail-closed execution data requirements while repairing the stale generated catalogue and test compatibility. A fresh hosted full-suite run must pass.",
+      "last_audited_at_utc": "2026-11-27T15:32:00+00:00",
       "commit": null,
       "test_evidence": [
         "python -m pytest tests/test_audit_reproducible_install.py tests/test_reproduce.py -q --basetemp .pytest-pa1801-audit2: 8 passed.",
@@ -12324,9 +12327,10 @@
         "GitHub Actions run 46016868320: ubuntu-24.04 locked reproducibility job 140566112660 and windows-2022 locked reproducibility job 140566113128 both passed, including the new lock/path audit; Ubuntu and Windows full test jobs failed at the provider-product matrix freshness step before the LF-normalized fix.",
         "GitHub Actions run 46018219552: locked reproducibility ubuntu-24.04 and windows-2022 succeeded; full tests on ubuntu-24.04 and windows-latest failed at the source-inventory snapshot check before suite execution.",
         "GitHub Actions run 46019366453: Ubuntu reproducibility job passed; Ubuntu test job failed at Verify trader capability owners; Windows test/reproducibility jobs were in progress at last observation.",
-        "GitHub Actions run 46021265389 for commit 034f4b518625eb3b2470bbff2557d84ab4a33177: Ubuntu/Windows reproducibility jobs passed; both full-test jobs failed at Verify source inventory snapshot. Source/dependency snapshots regenerated locally; scripts/source_inventory.py --check and scripts/forward_engine_graph.py --check pass; tests/test_source_inventory.py: 5 passed."
+        "GitHub Actions run 46021265389 for commit 034f4b518625eb3b2470bbff2557d84ab4a33177: Ubuntu/Windows reproducibility jobs passed; both full-test jobs failed at Verify source inventory snapshot. Source/dependency snapshots regenerated locally; scripts/source_inventory.py --check and scripts/forward_engine_graph.py --check pass; tests/test_source_inventory.py: 5 passed.",
+        "GitHub Actions run 46022012465 on commit aad2547a9d9b613c55f685973421490b25a06948: Ubuntu/Windows locked-reproducibility jobs passed; both full test jobs failed on five regressions (stale generated strategy-eligibility snapshot, missing authorized sealed session in legacy holdout-score test, monkeypatched ordinary _rows call receiving a None session keyword, and workstation preview test expecting a pass without the newly required quote/account evidence). Local fixes preserve sealed-holdout and pre-trade fail-closed gates; all six focused regressions now pass, hosted rerun pending."
       ],
-      "test_result": "Run 46021265389 on commit 034f4b51 passed Ubuntu and Windows locked reproducibility jobs, including the pinned install/path audit; both full-test jobs failed at stale source-inventory snapshot before tests. The source and dependency snapshots are now regenerated locally; revised hosted full-suite acceptance remains pending."
+      "test_result": "The latest hosted run passed locked reproducibility on Ubuntu and Windows, but the full suite failed on legacy tests that did not reflect the current sealed-holdout and market-data/account-context gates, plus a stale generated eligibility file. The affected implementation/tests and generated catalogue are corrected locally; six targeted regressions pass. Current-head hosted acceptance remains pending."
     },
     {
       "id": "PA-18-02",

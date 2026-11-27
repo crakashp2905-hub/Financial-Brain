@@ -61,6 +61,7 @@ def test_legacy_label_holdout_requires_receipt_before_read(tmp_path, monkeypatch
     session, ledger = _session(tmp_path, "announcement_labels_holdout.json", "labels-holdout")
     result = labels.score("holdout", holdout_session=session)
     assert result["n"] == 102
+    assert result["precision"] >= 0.94, result["misses"]
     assert ledger.audit()["consumed_datasets"] == 1
     ledger.close()
 

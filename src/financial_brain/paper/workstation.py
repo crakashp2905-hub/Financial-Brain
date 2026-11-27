@@ -32,7 +32,8 @@ def last_tuesday(y: int, m: int) -> date:
 
 
 def expiries(today: date, n: int = 2) -> list[date]:
-    out, y, m = [], today.year, today.month
+    out: list[date] = []
+    y, m = today.year, today.month
     while len(out) < n:
         d = last_tuesday(y, m)
         if d >= today:
@@ -72,7 +73,9 @@ def next_session_10am(today: date) -> datetime:
     return datetime.combine(d, time(10, 0), tzinfo=IST)
 
 
-def ticket(*, symbol: str, price: float, shares: int, cost_one_side: float, when: datetime) -> dict:
+def ticket(*, symbol: str, price: float, shares: int, cost_one_side: float, when: datetime,
+           quote_exchange_at: datetime | None = None, quote_received_at: datetime | None = None,
+           quote_source: str | None = None, account_daily_pnl_inr: float | None = None) -> dict:
     from ..execution.oms import model as M
     from ..execution.oms import risk_gate as RG
     from ..execution.oms import rollout as RO
@@ -81,6 +84,10 @@ def ticket(*, symbol: str, price: float, shares: int, cost_one_side: float, when
     limit = RG.round_to_tick(price * 1.0005, M.BUY)
     o = M.Order(client_id="preview", strategy="preview", day=str(when.date()), symbol=symbol, exchange="NSE",
                 side=M.BUY, qty=int(shares), limit_price=limit, arrival_price=price)
-    why = RG.check(o, RO.SMALL, RG.Context(now=when, ltp=price))
+    why = RG.check(o, RO.SMALL, RG.Context(
+        now=when, ltp=price, quote_exchange_at=quote_exchange_at,
+        quote_received_at=quote_received_at, quote_source=quote_source,
+        account_daily_pnl_inr=account_daily_pnl_inr,
+    ))
     return {"symbol": symbol, "shares": int(shares), "limit": limit, "notional": shares * limit,
             "cost_inr": shares * limit * cost_one_side, "verdict": "would pass" if not why else "; ".join(why)}

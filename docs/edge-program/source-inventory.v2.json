@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 819,
+  "source_count": 820,
   "sources": [
     {
       "capability_ids": [],
@@ -1914,7 +1914,7 @@
       "owner_role_hint": "Research",
       "parse_status": "ok",
       "source": "src/financial_brain/evaluation/models.py",
-      "source_sha256": "f2a79bb960ae961c2dda980f7feed2f66e599623d67e95ec0a91838ab5068b2c",
+      "source_sha256": "e64f6457a8d8c2a4bdb921a856a366f06f96edea2f83389e8d6c97547160c074",
       "test_paths": []
     },
     {
@@ -11275,7 +11275,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/workstation.py",
-      "source_sha256": "d3f0915f9ebc6d1209a0c5f1c7d9d7dbf1aff6f496047ec75303d684da570528",
+      "source_sha256": "22cc69f8a48728e987bd946e63322a4d468b81b3994fc2e8f3cb57b15524116d",
       "test_paths": []
     },
     {
@@ -12005,7 +12005,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/canonical_ledger.py",
-      "source_sha256": "bc4e304d0a02163b874d55662de6bea94be20735936990c2707f9513eb9af488",
+      "source_sha256": "a5cb8d585fe42a5975b314be342687b3d993cb30768ddc16bf75977d8b713131",
       "test_paths": []
     },
     {
@@ -12066,7 +12066,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/capital_efficiency.py",
-      "source_sha256": "aadf7f011058ce18b9631f4ff0beacd488bfcaf68ecf0668d0205264d6593982",
+      "source_sha256": "d4d3af2300576257fdb05c98ca9de1228b1d04c6e975a2a290718e93808143a6",
       "test_paths": []
     },
     {
@@ -12349,6 +12349,26 @@
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/marginal.py",
       "source_sha256": "4c270eeefd6a360208251fedae5afc60be8f0669d2d9f135fe1b26bd368e5186",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
+        "canonical_ledger",
+        "datetime",
+        "decimal",
+        "financial_brain.paper.mf_account_ledger",
+        "re",
+        "typing",
+        "zoneinfo"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/mutual_fund_adapter.py",
+      "source_sha256": "55600c34ef90aacd74ec085ce5f85f02c99ca35cd59c567cee2651b88482a330",
       "test_paths": []
     },
     {
@@ -14843,6 +14863,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 789,
-  "unassigned_role_count": 481
+  "unassessed_count": 790,
+  "unassigned_role_count": 482
 }

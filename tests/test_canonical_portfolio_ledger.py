@@ -188,6 +188,27 @@ def test_source_bound_cash_distribution_reconciles_entitlement_withholding_and_c
                         "withholding_amount": "2"}).normalized()
 
 
+def test_receivable_cannot_become_spendable_cash_without_observed_payout_evidence():
+    with pytest.raises(CanonicalLedgerError, match="observed payout evidence"):
+        event("unverified-payout", EventKind.CASH_RECEIVABLE, cash_delta="10",
+              metadata={"action": "SETTLE", "receivable_id": "redemption-1", "amount": "10"}
+              ).normalized()
+
+
+def test_receivable_payout_cannot_exceed_claim_and_batch_rolls_back(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "overpaid-receivable.sqlite")
+    recognize = event("recognize-10", EventKind.CASH_RECEIVABLE, cash_delta="-10",
+                      metadata={"action": "RECOGNIZE", "receivable_id": "redemption-1",
+                                "amount": "10"})
+    settle = event("settle-11", EventKind.CASH_RECEIVABLE, cash_delta="11",
+                   occurred_at="2026-11-21T10:00:00+05:30", evidence_class="OBSERVED_PAYOUT_EVIDENCE",
+                   metadata={"action": "SETTLE", "receivable_id": "redemption-1", "amount": "11",
+                             "source_id": "RTA", "source_reference": "rta:payout:1"})
+    with pytest.raises(CanonicalLedgerError, match="exceeds an outstanding claim"):
+        ledger.import_events([recognize, settle])
+    assert ledger.event_count() == 0
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,

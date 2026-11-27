@@ -61,6 +61,12 @@ def _rows(task: str, *, holdout_session: SealedDatasetSession | None = None) -> 
     raise ValueError(f"unknown task {task}")
 
 
+def _evaluation_rows(task: str, holdout_session: SealedDatasetSession | None) -> list[dict[str, Any]]:
+    """Keep ordinary fixture reads compatible while forwarding an explicit sealed session."""
+    return (_rows(task, holdout_session=holdout_session) if holdout_session is not None
+            else _rows(task))
+
+
 def base(task: str) -> str:
     """A held-out set is scored as its base task (same choices, prompt, thresholds)."""
     for suffix in ("_holdout", "_news"):
@@ -158,8 +164,7 @@ def score(golds: list[str], decisions: list, target: float) -> dict:
 
 def bench(con, task: str, model: str, *, target: float = 0.9, limit: int | None = None,
           record: bool = True, holdout_session: SealedDatasetSession | None = None) -> dict:
-    rows = _rows(task, holdout_session=holdout_session)[:limit] if limit else _rows(
-        task, holdout_session=holdout_session)
+    rows = _evaluation_rows(task, holdout_session)[:limit] if limit else _evaluation_rows(task, holdout_session)
     decide = decider(task, model)
     decisions = [decide(r) for r in rows]
     out = score([r["gold"] for r in rows], decisions, target)
@@ -184,7 +189,7 @@ def simulate_route(con, task: str, steps: list[dict], *, items_task: str | None 
     how often an *accepted* answer was wrong. ``items_task`` replays the same steps (and
     their thresholds) on another set - that is how a route is verified out-of-sample."""
     task = items_task or task
-    golds = [r["gold"] for r in _rows(task, holdout_session=holdout_session)]
+    golds = [r["gold"] for r in _evaluation_rows(task, holdout_session)]
     items: dict[str, list[Any]] = {}
     for s in steps:
         row = con.execute("""SELECT detail FROM model_bench WHERE task = ? AND model = ?
@@ -235,7 +240,7 @@ def rescore(con, task: str, *, target: float = 0.9,
             holdout_session: SealedDatasetSession | None = None) -> list[dict]:
     """Recompute thresholds for each model's latest run from its stored items - no model
     calls. Appends new rows marked ``rescored``."""
-    golds = [r["gold"] for r in _rows(task, holdout_session=holdout_session)]
+    golds = [r["gold"] for r in _evaluation_rows(task, holdout_session)]
     out = []
     for model, detail, lat in con.execute("""
             SELECT model, detail, latency_ms FROM (SELECT *, ROW_NUMBER() OVER (
@@ -317,7 +322,7 @@ def validate_route(con, route_task: str, holdout: str, *,
     tuning set - live on a held-out set, and score it. Nothing is tuned here."""
     from ..llm import router
     steps = router.plan(con, route_task)
-    rows = _rows(holdout, holdout_session=holdout_session)
+    rows = _evaluation_rows(holdout, holdout_session)
     golds, labels, accepted, lat = [], [], 0, 0
     per: Counter[tuple[str, str]] = Counter()
     for r in rows:

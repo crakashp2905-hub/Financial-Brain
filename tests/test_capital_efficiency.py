@@ -163,3 +163,29 @@ def test_capital_efficiency_includes_net_source_bound_cash_distribution(tmp_path
     report = report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
                                        risk_budget_inr=Decimal("1000"))
     assert report.net_pnl_inr == Decimal("18")
+
+
+def test_capital_efficiency_keeps_unpaid_redemption_receivable_out_of_spendable_cash(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "receivable.sqlite3")
+    ledger.import_events([
+        event("total", EventKind.CASH_FLOW, START, cash_delta="100000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "TOTAL"}),
+        event("deployed", EventKind.CASH_FLOW, START, cash_delta="50000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "DEPLOYED"}),
+        event("buy", EventKind.FILL, START.replace(day=10), asset_class=AssetClass.MUTUAL_FUND,
+              instrument_id="mf:ABC", side="BUY", position_action="BUY", quantity="10", price="100"),
+        event("buy-fee", EventKind.FEE, START.replace(day=10), cash_delta="-1"),
+        event("redeem", EventKind.FILL, START.replace(day=20), asset_class=AssetClass.MUTUAL_FUND,
+              instrument_id="mf:ABC", side="SELL", position_action="SELL", quantity="1", price="110"),
+        event("redeem-fee", EventKind.FEE, START.replace(day=20), cash_delta="-1"),
+        event("pending-payout", EventKind.CASH_RECEIVABLE, START.replace(day=20), cash_delta="-109",
+              metadata={"action": "RECOGNIZE", "receivable_id": "redemption-1", "amount": "109"}),
+        event("mark", EventKind.MARK, START.replace(day=21), asset_class=AssetClass.MUTUAL_FUND,
+              instrument_id="mf:ABC", price="100"),
+    ])
+    snapshot = ledger.snapshot("paper")
+    assert snapshot["cash"]["INR"] == Decimal("148999")
+    assert snapshot["cash_receivables"][0]["amount"] == Decimal("109")
+    report = report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
+                                       risk_budget_inr=Decimal("1000"))
+    assert report.net_pnl_inr == Decimal("8")

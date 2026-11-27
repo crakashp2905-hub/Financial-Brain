@@ -34,6 +34,7 @@ class AssetClass(StrEnum):
 class EventKind(StrEnum):
     CASH_FLOW = "CASH_FLOW"
     CASH_DISTRIBUTION = "CASH_DISTRIBUTION"
+    CASH_RECEIVABLE = "CASH_RECEIVABLE"
     FILL = "FILL"
     EXPIRY_SETTLEMENT = "EXPIRY_SETTLEMENT"
     POSITION_ADJUSTMENT = "POSITION_ADJUSTMENT"
@@ -184,6 +185,28 @@ class PortfolioEvent:
                 raise CanonicalLedgerError("a cash distribution needs source action identity and reference")
             if row["side"] is not None or row["position_action"] is not None:
                 raise CanonicalLedgerError("a cash distribution is not an execution fill")
+        elif kind is EventKind.CASH_RECEIVABLE:
+            metadata = row["metadata"]
+            amount = _required_decimal(metadata.get("amount") if isinstance(metadata, dict) else None,
+                                       "receivable amount")
+            action = metadata.get("action") if isinstance(metadata, dict) else None
+            receivable_id = metadata.get("receivable_id") if isinstance(metadata, dict) else None
+            cash_delta = _required_decimal(self.cash_delta, "cash_delta")
+            if (action not in {"RECOGNIZE", "SETTLE"} or not isinstance(receivable_id, str)
+                    or not receivable_id.strip() or amount <= 0):
+                raise CanonicalLedgerError("cash receivable needs an action, identity and positive amount")
+            expected_delta = -amount if action == "RECOGNIZE" else amount
+            if cash_delta != expected_delta:
+                raise CanonicalLedgerError("cash receivable transfer does not reconcile to its amount")
+            if action == "SETTLE" and (
+                row["evidence_class"] != "OBSERVED_PAYOUT_EVIDENCE"
+                or not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                           for key in ("source_id", "source_reference"))
+            ):
+                raise CanonicalLedgerError("receivable settlement needs observed payout evidence")
+            if self.quantity is not None or self.price is not None or self.instrument_id is not None \
+                    or row["side"] is not None or row["position_action"] is not None:
+                raise CanonicalLedgerError("cash receivable cannot contain instrument or execution fields")
         elif kind in {EventKind.CASH_FLOW, EventKind.FEE}:
             amount = _required_decimal(self.cash_delta, "cash_delta")
             if self.quantity is not None or self.price is not None or self.instrument_id is not None:
@@ -365,10 +388,25 @@ class CanonicalPortfolioLedger:
             "ORDER BY json_extract(event_json, '$.occurred_at'), sequence", (account_id,)
         ).fetchall()
         positions: dict[tuple[str, str, str], tuple[Decimal, str, Decimal]] = {}
+        receivables: dict[tuple[str, str], Decimal] = {}
         broker_trade_ids: set[str] = set()
         for stored in rows:
             row = json.loads(stored[0])
             kind = row.get("event_kind")
+            if kind == EventKind.CASH_RECEIVABLE.value:
+                metadata = row["metadata"]
+                receivable_key = (str(row["currency"]), str(metadata["receivable_id"]))
+                amount = Decimal(str(metadata["amount"]))
+                if metadata["action"] == "RECOGNIZE":
+                    if receivable_key in receivables:
+                        raise CanonicalLedgerError("cash receivable was recognized more than once")
+                    receivables[receivable_key] = amount
+                else:
+                    outstanding = receivables.get(receivable_key, Decimal(0))
+                    if outstanding <= 0 or amount > outstanding:
+                        raise CanonicalLedgerError("cash receivable settlement exceeds an outstanding claim")
+                    receivables[receivable_key] = outstanding - amount
+                continue
             if kind == EventKind.POSITION_ADJUSTMENT.value:
                 identity = (str(row["asset_class"]), str(row["instrument_id"]))
                 matched = [key for key, value in positions.items()
@@ -500,6 +538,7 @@ class CanonicalPortfolioLedger:
         events = self.events(account_id, as_of=as_of)
         resolved_unresolved_ids = _resolved_legacy_event_ids(events)
         cash: dict[str, Decimal] = {}
+        receivables: dict[tuple[str, str], Decimal] = {}
         positions: dict[tuple[str, str, str], _Position] = {}
         marks: dict[tuple[str, str], tuple[Decimal, str, str]] = {}
         unresolved: list[dict[str, object]] = []
@@ -508,6 +547,24 @@ class CanonicalPortfolioLedger:
             kind = EventKind(str(event["event_kind"]))
             if kind in {EventKind.CASH_FLOW, EventKind.CASH_DISTRIBUTION, EventKind.FEE}:
                 cash[currency] = cash.get(currency, Decimal(0)) + Decimal(str(event["cash_delta"]))
+                continue
+            if kind is EventKind.CASH_RECEIVABLE:
+                metadata = event["metadata"]
+                if not isinstance(metadata, dict):
+                    raise CanonicalLedgerError("cash receivable metadata must be an object")
+                receivable_key = (currency, str(metadata["receivable_id"]))
+                amount = Decimal(str(metadata["amount"]))
+                if metadata["action"] == "RECOGNIZE":
+                    if receivable_key in receivables:
+                        raise CanonicalLedgerError("cash receivable was recognized more than once")
+                    receivables[receivable_key] = amount
+                    cash[currency] = cash.get(currency, Decimal(0)) - amount
+                else:
+                    outstanding = receivables.get(receivable_key, Decimal(0))
+                    if outstanding <= 0 or amount > outstanding:
+                        raise CanonicalLedgerError("cash receivable settlement exceeds an outstanding claim")
+                    receivables[receivable_key] = outstanding - amount
+                    cash[currency] = cash.get(currency, Decimal(0)) + amount
                 continue
             if kind is EventKind.UNRESOLVED_POSITION:
                 if str(event["source_event_id"]) not in resolved_unresolved_ids:
@@ -635,6 +692,10 @@ class CanonicalPortfolioLedger:
         if not has_opening_balance:
             pnl_promotion_blockers.append("OPENING_BALANCE_MISSING")
         return {"account_id": account_id, "as_of": as_of, "cash": cash,
+                "cash_receivables": [
+                    {"currency": currency, "receivable_id": receivable_id, "amount": amount}
+                    for (currency, receivable_id), amount in sorted(receivables.items()) if amount
+                ],
                 "opening_balance_supplied": has_opening_balance,
                 "cash_scope": "COMPLETE_WITH_OPENING_BALANCE" if has_opening_balance
                 else "NET_EVENT_FLOWS_ONLY_NO_OPENING_BALANCE",

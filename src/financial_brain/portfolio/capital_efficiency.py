@@ -137,6 +137,9 @@ def report_capital_efficiency(*, ledger: CanonicalPortfolioLedger, account_id: s
             other_cash += distribution
             cash_balance += distribution
             peak_cash_use = max(peak_cash_use, deployed_capital - cash_balance)
+        elif kind == EventKind.CASH_RECEIVABLE.value:
+            cash_balance += _money(row["cash_delta"], "receivable cash transfer")
+            peak_cash_use = max(peak_cash_use, deployed_capital - cash_balance)
         elif kind == EventKind.CASH_FLOW.value:
             metadata = row.get("metadata") or {}
             if isinstance(metadata, dict) and metadata.get("cash_flow_type") == "OPENING_BALANCE":
