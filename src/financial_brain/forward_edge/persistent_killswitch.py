@@ -53,13 +53,15 @@ def _approval_hash(approval: Approval) -> str:
 class PersistentKillSwitch:
     """SQLite WAL append-only event chain; only scoped human approval can clear the latch."""
 
-    def __init__(self, path: Path, *, switch_id: str = "paper-entry") -> None:
+    def __init__(self, path: Path, *, switch_id: str = "paper-entry",
+                 connection: sqlite3.Connection | None = None) -> None:
         if not switch_id.strip():
             raise KillSwitchError("switch_id is required")
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.switch_id = switch_id
-        self._con = sqlite3.connect(str(self.path,))
+        self._owns_connection = connection is None
+        self._con = connection or sqlite3.connect(str(self.path))
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
         self._con.execute("CREATE TABLE IF NOT EXISTS kill_events (seq INTEGER PRIMARY KEY, event_id TEXT NOT NULL UNIQUE, prev_hash TEXT NOT NULL, event_json TEXT NOT NULL, event_hash TEXT NOT NULL)")
@@ -69,7 +71,8 @@ class PersistentKillSwitch:
         self._state()
 
     def close(self) -> None:
-        self._con.close()
+        if self._owns_connection:
+            self._con.close()
 
     def _replay(self) -> tuple[list[str], str, int]:
         rows = self._con.execute("SELECT seq,prev_hash,event_json,event_hash FROM kill_events ORDER BY seq").fetchall()

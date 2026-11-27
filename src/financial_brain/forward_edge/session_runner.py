@@ -244,6 +244,10 @@ class ForwardSessionRunner:
         self._con = sqlite3.connect(str(self.journal_path))
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=FULL")
+        from .persistent_killswitch import PersistentKillSwitch
+
+        self.paper_kill_switch = PersistentKillSwitch(
+            self.journal_path, switch_id="forward-paper-entry", connection=self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_events (
             session_id TEXT NOT NULL, event_id TEXT NOT NULL, kind TEXT NOT NULL,
             available_at TEXT NOT NULL, ingested_at TEXT, ingest_clock_source TEXT,
@@ -351,6 +355,7 @@ class ForwardSessionRunner:
         return value
 
     def close(self) -> None:
+        self.paper_kill_switch.close()
         self._con.close()
 
     def record_component_heartbeat(self, *, session_id: str, component: str, heartbeat_id: str,
@@ -1249,7 +1254,29 @@ class ForwardSessionRunner:
         self._append_audit("risk_verdict", session_id, verdict_id, occurred,
                            {**record, "provenance": self.provenance})
         self._con.commit()
+        critical_reasons = {
+            "DAILY_LOSS_LIMIT": "DAILY_LOSS",
+            "DRAWDOWN_LIMIT": "DRAWDOWN",
+            "STALE_FEED": "STALE_FEED",
+            "RECONCILIATION_MISMATCH": "RECONCILIATION_MISMATCH",
+            "LOST_HEARTBEAT": "LOST_HEARTBEAT",
+            "BROKER_STATE_UNKNOWN": "BROKER_STATE_UNKNOWN",
+            "RISK_LIMIT_BREACH": "RISK_LIMIT_BREACH",
+        }
+        if not allowed:
+            for reason_code in sorted(set(reason_codes)):
+                kill_reason = critical_reasons.get(reason_code)
+                if kill_reason is not None:
+                    self.paper_kill_switch.trip(
+                        event_id=f"risk:{session_id}:{decision_id}:{verdict_id}:{kill_reason}",
+                        reason=kill_reason, occurred_at=occurred,
+                        evidence_hash=digest, actor_id="risk-engine", actor_type="system")
         return True
+
+    def _require_paper_entries_enabled(self) -> None:
+        if self.paper_kill_switch.active:
+            reasons = ",".join(self.paper_kill_switch.active_reasons)
+            raise ForwardSessionRunnerError(f"paper kill switch is active: {reasons}")
 
     def record_decision_manifest(self, *, session_id: str, decision_id: str,
                                  manifest: dict[str, Any]) -> str:
@@ -2050,6 +2077,7 @@ class ForwardSessionRunner:
                                   "WHERE session_id=? AND decision_id=?", [session_id, decision_id]).fetchone()
         if risk is None or risk[0] != 1:
             raise ForwardSessionRunnerError("paper intent requires an explicit persisted allow risk verdict")
+        self._require_paper_entries_enabled()
         risk_record = json.loads(risk[1])
         if simulated_at.astimezone(timezone.utc) < datetime.fromisoformat(risk_record["assessed_at"]):
             raise ForwardSessionRunnerError("simulated fill cannot precede the persisted risk assessment")

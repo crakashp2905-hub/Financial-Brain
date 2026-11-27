@@ -1694,7 +1694,21 @@ def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
     with pytest.raises(ForwardSessionRunnerError, match="explicit persisted allow risk verdict"):
         execute(runner, event, decided)
     assert runner.records("s")["intents"] == []
+    assert runner.paper_kill_switch.active
+    assert runner.paper_kill_switch.active_reasons == ("DAILY_LOSS",)
     runner.close()
+
+
+def test_risk_breach_latch_persists_across_runner_restart_and_blocks_entries(tmp_path):
+    runner, _event, _decided = trade_setup(tmp_path, risk_allowed=False)
+    assert runner.paper_kill_switch.active
+    runner.close()
+
+    resumed = make_runner(tmp_path)
+    assert resumed.paper_kill_switch.active
+    with pytest.raises(ForwardSessionRunnerError, match="paper kill switch is active: DAILY_LOSS"):
+        resumed._require_paper_entries_enabled()
+    resumed.close()
 
 
 def test_paper_fill_cannot_precede_risk_assessment_clock(tmp_path):

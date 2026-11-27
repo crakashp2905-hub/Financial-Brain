@@ -10861,12 +10861,13 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/execution/oms/killswitch.py atomically replaces the persisted broker latch before attempting broker cancellations; oms/engine.py checks it at submit, approval and send. tests/test_oms.py verifies cancellation, entry blocking and agent-reset refusal.",
-        "src/financial_brain/forward_edge/persistent_killswitch.py uses SQLite WAL, synchronous=FULL, an immutable hash-chained event ledger and scoped approval validation; tests/test_forward_edge_persistent_killswitch.py covers restart persistence, integrity, idempotency and human approval.",
-        "Integration is incomplete: ForwardSessionRunner.execute_paper_intent does not consult PersistentKillSwitch, and the broker file reset accepts any non-agent actor rather than an externally verified owner identity. Therefore a paper path can bypass the persistent latch and owner-level reset authorization is not established."
+        "src/financial_brain/execution/oms/killswitch.py atomically persists the broker latch before cancellation; oms/engine.py blocks submit/approval/send while tripped. tests/test_oms.py verifies cancellation, blocking and agent-reset refusal.",
+        "src/financial_brain/forward_edge/persistent_killswitch.py provides an SQLite WAL, synchronous=FULL, immutable hash-chained latch with scoped human reset approval. ForwardSessionRunner now shares its durable journal connection with this latch, trips it on critical persisted risk denials, and blocks paper execution while active.",
+        "tests/test_forward_edge_session_runner.py: full runner suite 94 passed; focused critical-risk-latch/restart tests 2 passed. tests/test_forward_edge_persistent_killswitch.py: 4 passed. Ruff passed on changed modules.",
+        "Still partial: the broker-side file reset accepts a non-agent actor string rather than the same externally scoped owner approval used by the paper latch; broker and paper reset identity controls are not unified."
       ],
       "blocker": null,
-      "last_audited_at_utc": "2026-11-27T09:45:00Z",
+      "last_audited_at_utc": "2026-11-27T12:15:00Z",
       "commit": null
     },
     {
