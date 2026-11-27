@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 import sqlite3
 import uuid
@@ -30,6 +31,10 @@ from financial_brain.forward_edge.operating_mode import (
     OperatingModeError,
     OperatingModeLedger,
 )
+from financial_brain.forward_edge.session_recovery import (
+    RecoveryLedgerError,
+    SessionRecoveryLedger,
+)
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.forward_edge.data_distribution import DistributionThresholds, compare_windows
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
@@ -51,6 +56,7 @@ from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
 IST = ZoneInfo("Asia/Kolkata")
 DEFAULT_MAX_QUOTE_AGE_MS = 5_000
+log = logging.getLogger("forward_session_runner")
 
 
 def _timing_telemetry(records: dict[str, Any]) -> dict[str, Any]:
@@ -259,6 +265,7 @@ class ForwardSessionRunner:
         self.durable = DurableSessionJournal(self._con)
         self.heartbeats = SessionHeartbeatLedger(self._con)
         self.operating_modes = OperatingModeLedger(self._con)
+        self.recovery = SessionRecoveryLedger(self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -502,6 +509,64 @@ class ForwardSessionRunner:
         processed_event_ids: list[str] = []
 
         def drain_consumer() -> None:
+            def dispatch(handler_name: str, callback: Callable[[MarketEvent, "ForwardSessionRunner"], None],
+                         event: MarketEvent, row: dict[str, Any]) -> None:
+                recovery = self.recovery.state(session_id, consumer_id, event.event_id, handler_name)
+                if recovery and recovery["status"] == "HALTED":
+                    current = self.operating_modes.mode(session_id)
+                    if current is not OperatingMode.HALTED:
+                        self.set_operating_mode(
+                            session_id=session_id, mode=OperatingMode.HALTED,
+                            event_id=f"handler-halted:{consumer_id}:{event.event_id}:{handler_name}",
+                            occurred_at=capture_local_time(self.clock, label="handler circuit breaker"),
+                            reason=f"handler retry limit reached: {handler_name}")
+                    raise ForwardSessionRunnerError(
+                        f"handler circuit breaker is HALTED for {event.event_id}:{handler_name}")
+                if recovery and recovery["retry_at"]:
+                    retry_at = datetime.fromisoformat(recovery["retry_at"])
+                    now = capture_local_time(self.clock, label="handler retry readiness")
+                    if now < retry_at:
+                        raise ForwardSessionRunnerError(
+                            f"handler retry deferred until {retry_at.isoformat()}: {event.event_id}:{handler_name}")
+                try:
+                    callback(event, self)
+                except Exception as exc:
+                    constraints = config.constraints
+                    attempts = constraints.get("handler_retry_max_attempts", 5)
+                    base_ms = constraints.get("handler_retry_base_delay_ms", 250)
+                    cap_ms = constraints.get("handler_retry_cap_delay_ms", 5_000)
+                    if any(type(value) is not int or value < 0
+                           for value in (attempts, base_ms, cap_ms)) or attempts < 1 or cap_ms < base_ms:
+                        raise ForwardSessionRunnerError("invalid bounded handler retry policy") from exc
+                    occurred = capture_local_time(self.clock, label="handler failure")
+                    try:
+                        failure = self.recovery.record_failure(
+                            session_id=session_id, consumer_id=consumer_id, event_id=event.event_id,
+                            handler=handler_name, occurred_at=occurred, error=exc,
+                            max_attempts=attempts, base_delay=timedelta(milliseconds=base_ms),
+                            max_delay=timedelta(milliseconds=cap_ms))
+                        current = self.operating_modes.mode(session_id)
+                        target = (OperatingMode.HALTED if failure["status"] == "HALTED"
+                                  else OperatingMode.DEGRADED)
+                        if current is not target and current is not OperatingMode.HALTED:
+                            self.set_operating_mode(
+                                session_id=session_id, mode=target,
+                                event_id=f"handler-{target.value.lower()}:{consumer_id}:{event.event_id}:{handler_name}",
+                                occurred_at=occurred,
+                                reason=f"event handler failed: {handler_name}:{type(exc).__name__}")
+                        if failure["alert_created"]:
+                            log.error("event handler failure session=%s consumer=%s event=%s handler=%s "
+                                      "attempt=%s status=%s error=%s: %s", session_id, consumer_id,
+                                      event.event_id, handler_name, failure["attempt"], failure["status"],
+                                      type(exc).__name__, str(exc)[:500])
+                    except RecoveryLedgerError as ledger_error:
+                        raise ForwardSessionRunnerError(f"handler recovery ledger failed: {ledger_error}") from exc
+                    raise
+                else:
+                    self.recovery.record_success(
+                        session_id=session_id, consumer_id=consumer_id, event_id=event.event_id,
+                        handler=handler_name, occurred_at=capture_local_time(self.clock, label="handler success"))
+
             while pending := self.read_events_after(session_id, consumer_id, limit=1):
                 row = pending[0]
                 event = MarketEvent.from_dict(row["event"])
@@ -511,15 +576,15 @@ class ForwardSessionRunner:
                         raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
                     opens, closes = venue_calendar.session_bounds_utc(event.venue, config.exchange_date)
                     _validate_completed_bar(event, opens, closes)
-                on_market_event(event, self)
+                dispatch("market", on_market_event, event, row)
                 # Forecast cadence is bar-driven and separate from the position monitor.
                 # Missing or false completion evidence fails closed for forecasting.
                 if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
                         on_completed_bar is not None):
-                    on_completed_bar(event, self)
+                    dispatch("completed_bar", on_completed_bar, event, row)
                 # This is deliberately independent of forecast cadence: every source
                 # event gives the position monitor a chance to evaluate protective exits.
-                evaluate_protective_exits(event, self)
+                dispatch("protective_exits", evaluate_protective_exits, event, row)
                 cursor = self.event_cursor(session_id, consumer_id)
                 self.acknowledge_event_offset(
                     session_id, consumer_id, expected_offset=(cursor or {}).get("event_offset", 0),
@@ -1265,6 +1330,7 @@ class ForwardSessionRunner:
         result["component_heartbeats"] = self.heartbeats.latest(session_id)
         result["operating_mode"] = self.operating_modes.mode(session_id).value
         result["operating_mode_events"] = self.operating_modes.events(session_id)
+        result["handler_recovery_events"] = self.recovery.events(session_id)
         return result
 
     def read_events_after(self, session_id: str, consumer_id: str, *, limit: int = 500) -> list[dict[str, Any]]:

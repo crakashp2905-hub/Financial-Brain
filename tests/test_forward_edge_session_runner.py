@@ -126,6 +126,9 @@ def test_deterministic_event_loop_orders_events_and_checks_exits_after_each(tmp_
 
 def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
     config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_base_delay_ms": 0,
+                                           "handler_retry_cap_delay_ms": 0})
     events = [make_event(event_id=f"restart-{index}",
                          available_at=NOW + timedelta(seconds=index),
                          event_time=NOW + timedelta(seconds=index)) for index in range(2)]
@@ -158,8 +161,63 @@ def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
         session_close_at=NOW + timedelta(seconds=3), close_complete=True)
     assert attempted == ["restart-0", "restart-1"]
     assert replayed == [("market", "restart-1"), ("exit", "restart-1")]
+    recovery = resumed.records("restartable")["handler_recovery_events"]
+    assert [(row["handler"], row["status"]) for row in recovery] == [
+        ("market", "RETRY_WAIT"), ("market", "RECOVERED")]
+    assert resumed.records("restartable")["operating_mode"] == "DEGRADED"
     assert result["status"] == "CLOSED"
     resumed.close()
+
+
+def test_event_loop_defers_retry_without_acknowledging_event(tmp_path):
+    config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_base_delay_ms": 60_000,
+                                           "handler_retry_cap_delay_ms": 60_000})
+    runner = make_runner(tmp_path)
+    event = make_event(event_id="deferred-retry")
+    with pytest.raises(RuntimeError, match="temporary monitor failure"):
+        runner.run_event_loop(
+            session_id="defer", config=config, events=[event], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: (_ for _ in ()).throw(RuntimeError("temporary monitor failure")))
+    with pytest.raises(ForwardSessionRunnerError, match="handler retry deferred until"):
+        runner.run_event_loop(
+            session_id="defer", config=config, events=[], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None, evaluate_protective_exits=lambda *_: None)
+
+    assert runner.event_cursor("defer", "position-monitor") is None
+    assert runner.records("defer")["handler_recovery_events"][0]["status"] == "RETRY_WAIT"
+    assert runner.records("defer")["operating_mode"] == "DEGRADED"
+    runner.close()
+
+
+def test_event_loop_halts_after_handler_retry_budget_is_exhausted(tmp_path):
+    config = make_profiled_config()
+    config = replace(config, constraints={**config.constraints,
+                                           "handler_retry_max_attempts": 1,
+                                           "handler_retry_base_delay_ms": 0,
+                                           "handler_retry_cap_delay_ms": 0})
+    runner = make_runner(tmp_path)
+    event = make_event(event_id="halted-handler")
+    with pytest.raises(RuntimeError, match="persistent monitor failure"):
+        runner.run_event_loop(
+            session_id="halt", config=config, events=[event], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: (_ for _ in ()).throw(RuntimeError("persistent monitor failure")))
+
+    assert runner.state_store.state("halt") is SessionState.OPEN
+    assert runner.records("halt")["operating_mode"] == "HALTED"
+    assert runner.event_cursor("halt", "position-monitor") is None
+    with pytest.raises(ForwardSessionRunnerError, match="circuit breaker is HALTED"):
+        runner.run_event_loop(
+            session_id="halt", config=config, events=[], session_open_at=NOW - timedelta(seconds=1),
+            preflight=READY_PREFLIGHT, consumer_id="position-monitor",
+            on_market_event=lambda *_: None, evaluate_protective_exits=lambda *_: None)
+    runner.close()
 
 
 def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks(tmp_path):
