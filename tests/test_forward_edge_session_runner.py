@@ -12,7 +12,7 @@ import sys
 import duckdb
 import pytest
 
-from financial_brain.forward_edge.market_data import normalize_kite_quote
+from financial_brain.forward_edge.market_data import KiteQuoteNormalizationError, normalize_kite_quote
 from financial_brain.forward_edge.market_events import EventKind, MarketEvent
 from financial_brain.forward_edge.durable import DurableJournalError
 from financial_brain.forward_edge.instrument_rules import fixture_rule_book
@@ -818,6 +818,111 @@ def test_supervisor_marks_stale_feed_incomplete_and_keeps_fresh_feed_open(tmp_pa
     assert expired == [{"session_id": "fresh", "state": "INCOMPLETE",
                         "reason": "market feed silent for 91.000s; limit is 90.000s",
                         "stale_seconds": 91.0}]
+    runner.close()
+
+
+def test_paper_session_integrated_shock_drill_preserves_exposure_and_order_truth(tmp_path):
+    config = make_config()
+    rules = fixture_rule_book("NSE:INFY", quantity_unit="OPTION_CONTRACTS",
+                              expiry=config.exchange_date)
+    config = replace(config, constraints={**config.constraints, "instrument_rules": rules,
+                                          "carry_authorized_instruments": ["NSE:INFY"],
+                                          "position_accounting": {"NSE:INFY": {
+                                              "asset_class": "OPTION", "currency": "INR",
+                                              "multiplier": "1"}}})
+    runner = make_runner(tmp_path)
+    assert runner.plan_calendar_day(
+        "shock", config, venue="NSE", calendar=_calendar(config.exchange_date), now=NOW,
+        preflight={**READY_PREFLIGHT, "risk_policy_loaded": True}) is SessionState.OPEN
+
+    quote_payload = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+                     "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                               "sell": [{"price": 100.05, "quantity": 20}]}}
+    signal_quote = normalize_kite_quote("NSE:INFY", quote_payload, received_at=NOW)
+    runner.ingest("shock", config, [signal_quote])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="shock", strategy_id="shock-drill", decision_id="shock-entry",
+                  outcome="TRADE", input_event_ids=(signal_quote.event_id,), decided_at=decided)
+    record_manifest(runner, session_id="shock", decision_id="shock-entry", event=signal_quote,
+                    decided_at=decided, quantity=2, holding_sessions=1)
+    runner.record_risk_verdict(session_id="shock", decision_id="shock-entry", verdict_id="shock-risk",
+                               allowed=True, policy_id="shock-test-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    event_count_before_skew = len(runner.records("shock")["events"])
+    fill_time = decided + timedelta(milliseconds=100)
+    fill_quote = normalize_kite_quote(
+        "NSE:INFY", quote_payload | {"timestamp": "2026-11-13 10:15:01"}, received_at=fill_time)
+    runner.ingest("shock", config, [fill_quote], ingest_metadata={
+        fill_quote.event_id: (fill_time + timedelta(milliseconds=1), "SHOCK_DRILL_CLOCK")})
+    receipt = runner.execute_paper_intent(
+        session_id="shock", order_id="shock-entry-order", decision_id="shock-entry",
+        event_id=fill_quote.event_id, side="BUY", quantity=2, quantity_unit="OPTION_CONTRACTS",
+        limit_price=Decimal("100.10"), tick_size=Decimal("0.05"), freeze_limit=1000,
+        slice_size=100, adverse_slippage_bps=Decimal("0"), latency_ms=100,
+        simulated_at=decided + timedelta(milliseconds=200))
+    assert receipt["status"] == "FILLED" and receipt["filled_quantity"] == 2
+
+    future_quote = quote_payload | {"timestamp": "2026-11-13 10:15:10"}
+    with pytest.raises(KiteQuoteNormalizationError, match="future-skew tolerance"):
+        normalize_kite_quote("NSE:INFY", future_quote, received_at=NOW + timedelta(seconds=2))
+    assert runner.state_store.state("shock") is SessionState.OPEN
+    assert len(runner.records("shock")["events"]) == event_count_before_skew + 1
+    with pytest.raises(ForwardSessionRunnerError, match="outside frozen universe"):
+        runner.ingest("shock", config, [MarketEvent(
+            "unmapped-token", EventKind.QUOTE, "NSE", "NSE:UNKNOWN", NOW + timedelta(seconds=3),
+            NOW + timedelta(seconds=3), NOW + timedelta(seconds=3),
+            {"bid": 1.0, "ask": 1.1}, "SHOCK_DRILL")])
+    assert runner.records("shock")["data_rejections"][-1]["source_event_ids"] == ["unmapped-token"]
+
+    # Restart the same durable paper session before processing cancellation evidence.
+    runner.close()
+    runner = make_runner(tmp_path)
+    resumed = runner.resume("shock", now=NOW + timedelta(seconds=4))
+    assert resumed["state"] == "OPEN"
+    assert len(resumed["records"]["execution_receipts"]) == 1
+    assert resumed["records"]["accounting"]["positions"] == {"NSE:INFY": 2}
+
+    for order_id in ("shock-stop", "shock-target"):
+        runner._append_paper_order_event(session_id="shock", order_id=order_id, state="CREATED",
+                                         occurred_at=NOW, quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(session_id="shock", order_id=order_id, state="SUBMITTED",
+                                         occurred_at=NOW + timedelta(seconds=1),
+                                         quantity=2, filled_quantity=0)
+    runner.arm_paper_oco(session_id="shock", group_id="shock-position", stop_order_id="shock-stop",
+                         target_order_id="shock-target", occurred_at=NOW + timedelta(seconds=2),
+                         evidence_id="b" * 64)
+    runner._append_paper_order_event(
+        session_id="shock", order_id="shock-stop", state="FILLED", occurred_at=NOW + timedelta(seconds=5),
+        quantity=2, filled_quantity=2, price="99.00", fill_evidence_id="c" * 64)
+    stop_fill_id = runner.order_journal.replay("shock::shock-stop")[-1]["event_id"]
+    cancel_requested = runner.resolve_paper_oco_fill(
+        session_id="shock", group_id="shock-position", triggered_order_id="shock-stop",
+        fill_event_id=stop_fill_id, occurred_at=NOW + timedelta(seconds=6),
+        reconciliation_evidence_id="d" * 64)
+    assert cancel_requested.event == "CANCEL_REQUESTED"
+    runner._append_paper_order_event(
+        session_id="shock", order_id="shock-target", state="CANCELED",
+        occurred_at=NOW + timedelta(seconds=7), quantity=2, filled_quantity=0)
+    cancel_confirmed = runner.resolve_paper_oco_fill(
+        session_id="shock", group_id="shock-position", triggered_order_id="shock-stop",
+        fill_event_id=stop_fill_id, occurred_at=NOW + timedelta(seconds=8),
+        reconciliation_evidence_id="d" * 64)
+    assert cancel_confirmed.event == "CANCEL_CONFIRMED"
+
+    outage = runner.supervise_open_sessions(now=NOW + timedelta(seconds=200),
+                                            max_feed_silence=timedelta(seconds=90))
+    assert outage[0]["session_id"] == "shock" and outage[0]["state"] == "INCOMPLETE"
+    records = runner.records("shock")
+    assert records["session_reports"][0]["status"] == "INCOMPLETE"
+    assert records["accounting"]["positions"] == {"NSE:INFY": 2}
+    assert any(row["disposition"] == "EXPIRY_SETTLEMENT_REQUIRED"
+               for row in records["session_reports"][0]["position_dispositions"])
+    assert any(row["exposure_type"] == "STALE_MARK" for row in records["unresolved_exposures"])
+    assert any(row["exposure_type"] == "MISSING_EXIT" for row in records["unresolved_exposures"])
+    assert records["execution_receipts"][0]["status"] == "FILLED"
+    shock_order_states = {row["paper_order_id"]: row["state"] for row in records["order_events"]
+                          if row["paper_order_id"] in {"shock-stop", "shock-target"}}
+    assert shock_order_states == {"shock-stop": "FILLED", "shock-target": "CANCELED"}
     runner.close()
 
 
