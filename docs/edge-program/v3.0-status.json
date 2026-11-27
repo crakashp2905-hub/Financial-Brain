@@ -9292,7 +9292,7 @@
       ],
       "blocker": "Partial: the diagnostic exists and is tested on stored targets/net P&L, but recurring reporting, enforced point-in-time industry-map provenance, and prospective portfolio-combination proof remain absent.",
       "last_audited_at_utc": "2026-11-27T05:40:48Z",
-      "commit": null,
+      "commit": "895f79ba",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0714-final tests/test_zoo_h_targets.py -q: 20 passed, including missing-return alignment, weighted overlap, industry HHI and short-history availability.",
         "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",

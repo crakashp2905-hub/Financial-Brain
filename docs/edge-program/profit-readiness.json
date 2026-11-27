@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "22a0c0e090a76f3ca14f145abbdb62a91b7ce2bcb70b039c0f895761878aaa81",
-  "audit_export_sha256": "2576498412f538919f1ed9d3fdf60d4d213646afc855eae90ae1a4ff1d50abba",
+  "status_ledger_sha256": "1d87aaae5afaffce1060f68dfc4cade0d6a02a8077a3f256dba50aaae66fc8a4",
+  "audit_export_sha256": "5bbca6bb13cd0a4586ccd4f44650d7da83be49c9ac90b5bf28f41b0137db8755",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3060,7 +3060,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Measure strategy overlap, top-stock concentration, industry concentration, common drawdown and incremental alpha of combining them; do not count correlated momentum books as three independent edges."
           },
-          "commit": null,
+          "commit": "895f79ba",
           "blocker": "Partial: the diagnostic exists and is tested on stored targets/net P&L, but recurring reporting, enforced point-in-time industry-map provenance, and prospective portfolio-combination proof remain absent.",
           "evidence": [
             "Before this change the repo had individual position/desk overlap utilities, but no paper-zoo report joining monthly candidate books, their actual target weights and net P&L.",
@@ -3498,5 +3498,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "b45a035d3c26ee6afa60ed0524f0251b822b69e963f0c9a161a298b69f9808b7"
+  "report_sha256": "4911b5fd80098450882951fdc12f8d135adc48e3a3313ae221f6962efb34c150"
 }
