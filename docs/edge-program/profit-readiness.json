@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:43:17Z",
+  "as_of_utc": "2026-11-27T00:55:20Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "dc5cf2edcd42e58ba584c9ca13e8179accde83a52419c4fc7b12328b1f653880",
-  "audit_export_sha256": "bca6af1f1962015436ec9ec4449be25f5ea8741fe92574c21a85943478f53765",
+  "status_ledger_sha256": "88b356534cae8bb9e4ea52830b4f425fffc59d2015a5b5b6724227ec6ef5a97a",
+  "audit_export_sha256": "15fba6832b08e172e6cf6aecdcc29fc7662b22bbb2564a32d6135ea5282a3059",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 804,
-    "UNASSESSED": 444
+    "PARTIAL": 805,
+    "UNASSESSED": 443
   },
-  "assessed_count": 934,
-  "unassessed_count": 444,
+  "assessed_count": 935,
+  "unassessed_count": 443,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 24,
-        "UNASSESSED": 4
+        "PARTIAL": 25,
+        "UNASSESSED": 3
       },
       "evidence": [
         {
@@ -1134,16 +1134,26 @@
         },
         {
           "item_id": "PA-03-12",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 969,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement explicit `PAUSED`, `DEGRADED`, `RECOVERING`, `HALTED` states; failed data freshness cannot silently continue opening trades."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "2738a8c5",
+          "blocker": "Heartbeat staleness is not yet automatically reconciled into operating modes for every component, and a supervisor/recovery drill across restart and open-position monitoring remains unverified.",
+          "evidence": [
+            "src/financial_brain/forward_edge/operating_mode.py implements append-only, hash-chained ACTIVE/PAUSED/DEGRADED/RECOVERING/HALTED modes and validates transitions; HALTED is terminal and DEGRADED requires an explicit RECOVERING transition before ACTIVE.",
+            "src/financial_brain/forward_edge/session_runner.py initializes and exposes the durable mode; stale decision and execution quotes latch DEGRADED; risk-increasing paper intents are rejected in every non-ACTIVE mode, while a SELL reducing reconciled long inventory remains available for risk reduction.",
+            "tests/test_forward_edge_operating_mode.py validates durable transitions, mandatory recovery path and append-only history; session-runner tests validate stale-data latching and blocked buys while degraded.",
+            "python -m pytest tests/test_forward_edge_operating_mode.py tests/test_forward_edge_heartbeats.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0312-full: 83 passed.",
+            "Focused regression after full run: mode ledger and degraded-order gate, 2 passed; Ruff and mypy passed on changed modules."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_operating_mode.py tests/test_forward_edge_heartbeats.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0312-full: 83 passed.",
+            "python -m pytest tests/test_forward_edge_session_runner.py::test_degraded_operating_mode_blocks_risk_increasing_paper_intents tests/test_forward_edge_operating_mode.py -q --basetemp=.pytest-pa0312-gate: 2 passed.",
+            "ruff check on changed source/tests passed; mypy on operating_mode.py and session_runner.py passed."
+          ]
         },
         {
           "item_id": "PA-03-13",
@@ -3182,5 +3192,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "5ffaf0057718b0ffd044d390c25724b6225cd4780a8377fc1cd2fd85faaefeba"
+  "report_sha256": "ddc1054c3c2bcf799998d78d242df863a60595bd388029e97d1ff854a440a847"
 }

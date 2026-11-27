@@ -7836,12 +7836,24 @@
     {
       "id": "PA-03-12",
       "text": "Implement explicit `PAUSED`, `DEGRADED`, `RECOVERING`, `HALTED` states; failed data freshness cannot silently continue opening trades.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/operating_mode.py implements append-only, hash-chained ACTIVE/PAUSED/DEGRADED/RECOVERING/HALTED modes and validates transitions; HALTED is terminal and DEGRADED requires an explicit RECOVERING transition before ACTIVE.",
+        "src/financial_brain/forward_edge/session_runner.py initializes and exposes the durable mode; stale decision and execution quotes latch DEGRADED; risk-increasing paper intents are rejected in every non-ACTIVE mode, while a SELL reducing reconciled long inventory remains available for risk reduction.",
+        "tests/test_forward_edge_operating_mode.py validates durable transitions, mandatory recovery path and append-only history; session-runner tests validate stale-data latching and blocked buys while degraded.",
+        "python -m pytest tests/test_forward_edge_operating_mode.py tests/test_forward_edge_heartbeats.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0312-full: 83 passed.",
+        "Focused regression after full run: mode ledger and degraded-order gate, 2 passed; Ruff and mypy passed on changed modules."
+      ],
+      "blocker": "Heartbeat staleness is not yet automatically reconciled into operating modes for every component, and a supervisor/recovery drill across restart and open-position monitoring remains unverified.",
+      "last_audited_at_utc": "2026-11-27T00:55:20+00:00",
+      "commit": "2738a8c5",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_operating_mode.py tests/test_forward_edge_heartbeats.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0312-full: 83 passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py::test_degraded_operating_mode_blocks_risk_increasing_paper_intents tests/test_forward_edge_operating_mode.py -q --basetemp=.pytest-pa0312-gate: 2 passed.",
+        "ruff check on changed source/tests passed; mypy on operating_mode.py and session_runner.py passed."
+      ],
+      "test_result": "Explicit durable operating modes now fail closed for new risk after stale data, with human-controlled recovery and risk-reducing sell support. Automatic multi-component heartbeat supervision and outage recovery remain incomplete, so status is PARTIAL."
     },
     {
       "id": "PA-03-13",
@@ -20180,7 +20192,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:43:17Z",
+    "as_of_utc": "2026-11-27T00:55:20Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20642,6 +20654,7 @@
       "PA-03-09",
       "PA-03-10",
       "PA-03-11",
+      "PA-03-12",
       "PA-03-15",
       "PA-04-01",
       "PA-04-02",
@@ -21117,13 +21130,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 934,
+    "audited_count": 935,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 804,
-      "UNASSESSED": 444
+      "PARTIAL": 805,
+      "UNASSESSED": 443
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21272,7 +21285,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 804,
-    "UNASSESSED": 444
+    "PARTIAL": 805,
+    "UNASSESSED": 443
   }
 }
