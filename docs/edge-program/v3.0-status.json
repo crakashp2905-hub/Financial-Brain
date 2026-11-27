@@ -9844,12 +9844,18 @@
     {
       "id": "PA-09-10",
       "text": "Use nested chronological folds, purged overlapping forward labels and immutable train/validation/test manifests; freeze all hyperparameters before opening test.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_validation.py builds expanding train/validation/test partitions, inner purged chronological folds, session-grouped decision clocks, and removes labels overlapping validation/test boundaries by the configured embargo.",
+        "The immutable FrozenIndexManifest binds source-data SHA, ordered features, fixed hyperparameters and exact row membership into canonical JSON plus a SHA-256; verification detects content tampering.",
+        "tests/test_forecasting_index_validation.py verifies chronology, overlap purging, deterministic parameter-sensitive hashes, tamper detection and invalid clocks; 34 focused forecasting-index tests passed across the forecasting tranche, and the validation module Ruff/mypy checks pass.",
+        "The manifest builder is not integrated into a real data extraction/training pipeline; source hashes and hyperparameters remain caller supplied, and no untouched market test set has been run."
+      ],
+      "blocker": "Integrate immutable manifest creation with the real, versioned data and training pipeline; verify the source-data digest, freeze parameters before test access, and run nested chronological evaluation on real feed data.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "27f4db7d",
+      "test_result": "34 focused forecasting-index tests passed; Ruff and mypy passed for new module."
     },
     {
       "id": "PA-09-11",
@@ -21229,6 +21235,7 @@
       "PA-09-07",
       "PA-09-08",
       "PA-09-09",
+      "PA-09-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21652,13 +21659,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 980,
+    "audited_count": 981,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 850,
-      "UNASSESSED": 398
+      "PARTIAL": 851,
+      "UNASSESSED": 397
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21807,7 +21814,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 850,
-    "UNASSESSED": 398
+    "PARTIAL": 851,
+    "UNASSESSED": 397
   }
 }
