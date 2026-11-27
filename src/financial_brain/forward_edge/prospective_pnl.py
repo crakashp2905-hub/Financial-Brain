@@ -140,6 +140,8 @@ def build_session_pnl(*, strategy_id: str, account_id: str, session: date,
         qty * marks[symbol] for symbol, qty in actual_positions.items())
     previous_equity = float(previous_accounting["cash_inr"]) + sum(
         qty * prior_marks[symbol] for symbol, qty in prior_positions.items())
+    if not math.isfinite(previous_equity) or previous_equity <= 0:
+        raise ProspectivePnlError("previous paper equity must be finite and positive")
     if not math.isclose(current_equity - previous_equity, net_pnl, rel_tol=0.0, abs_tol=0.02):
         raise ProspectivePnlError("calculated paper P&L does not reconcile to cash plus marked positions")
 
@@ -178,7 +180,9 @@ def build_session_pnl(*, strategy_id: str, account_id: str, session: date,
              "unrealized_pnl_change_inr": unrealized_change, "gross_pnl_inr": gross_pnl,
              "transaction_costs_inr": cost_delta, "net_pnl_inr": net_pnl,
              "cash_inr": float(current_accounting["cash_inr"]),
+             "previous_equity_inr": previous_equity,
              "holdings_value_inr": current_equity - float(current_accounting["cash_inr"]),
+             "net_return": net_pnl / previous_equity,
              "equity_inr": current_equity, "positions": actual_positions}
     body = {"schema": "fb.prospective_session_pnl.v1", "strategy_id": strategy_id,
             "account_id": account_id, "session": session.isoformat(),
@@ -201,7 +205,43 @@ class ProspectivePnlLedger:
         self._connection.execute("""CREATE TABLE IF NOT EXISTS prospective_session_pnl (
             strategy_id TEXT NOT NULL, session TEXT NOT NULL, digest TEXT NOT NULL, payload TEXT NOT NULL,
             PRIMARY KEY(strategy_id, session))""")
+        self._connection.execute("""CREATE TABLE IF NOT EXISTS prospective_session_schedules (
+            strategy_id TEXT PRIMARY KEY, schedule_sha256 TEXT NOT NULL, source_sha256 TEXT NOT NULL,
+            frozen_at TEXT NOT NULL, sessions_json TEXT NOT NULL)""")
         self._connection.commit()
+
+    def freeze_schedule(self, *, strategy_id: str, sessions: list[date], frozen_at: date,
+                        source_sha256: str) -> str:
+        """Pin every eligible exchange session before the cohort begins; omissions stay visible later."""
+        if not isinstance(strategy_id, str) or not strategy_id.strip():
+            raise ProspectivePnlError("strategy_id is required to freeze the session schedule")
+        if type(frozen_at) is not date:
+            raise ProspectivePnlError("frozen_at must be a date")
+        if not isinstance(sessions, list) or not sessions or any(type(day) is not date for day in sessions):
+            raise ProspectivePnlError("scheduled sessions must be a non-empty list of dates")
+        if sessions != sorted(set(sessions)):
+            raise ProspectivePnlError("scheduled sessions must be unique and chronological")
+        if sessions[0] <= frozen_at:
+            raise ProspectivePnlError("schedule must be frozen before its first eligible session")
+        for label, digest in (("source_sha256", source_sha256),):
+            if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+                raise ProspectivePnlError(f"{label} must be lowercase SHA-256")
+        encoded = json.dumps([day.isoformat() for day in sessions], separators=(",", ":"))
+        body = {"strategy_id": strategy_id, "sessions": json.loads(encoded),
+                "frozen_at": frozen_at.isoformat(), "source_sha256": source_sha256}
+        digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        prior = self._connection.execute(
+            "SELECT schedule_sha256 FROM prospective_session_schedules WHERE strategy_id=?", (strategy_id,)
+        ).fetchone()
+        if prior:
+            if prior[0] != digest:
+                raise ProspectivePnlError("prospective session schedule is immutable once frozen")
+            return digest
+        self._connection.execute(
+            "INSERT INTO prospective_session_schedules VALUES (?,?,?,?,?)",
+            (strategy_id, digest, source_sha256, frozen_at.isoformat(), encoded))
+        self._connection.commit()
+        return digest
 
     def append(self, report: dict[str, Any]) -> bool:
         if report.get("schema") != "fb.prospective_session_pnl.v1":
@@ -209,6 +249,13 @@ class ProspectivePnlLedger:
         strategy, session, digest = report.get("strategy_id"), report.get("session"), report.get("sha256")
         if not all(isinstance(x, str) and x.strip() for x in (strategy, session, digest)):
             raise ProspectivePnlError("strategy, session and digest are required")
+        schedule = self._connection.execute(
+            "SELECT sessions_json FROM prospective_session_schedules WHERE strategy_id=?", (strategy,)
+        ).fetchone()
+        if schedule is None:
+            raise ProspectivePnlError("freeze the full eligible session schedule before appending P&L")
+        if session not in json.loads(schedule[0]):
+            raise ProspectivePnlError("P&L session is outside the frozen eligible session schedule")
         unsigned = {key: value for key, value in report.items() if key != "sha256"}
         computed = hashlib.sha256(json.dumps(unsigned, sort_keys=True, separators=(",", ":"),
                                          allow_nan=False).encode()).hexdigest()
@@ -235,31 +282,61 @@ class ProspectivePnlLedger:
         if not 1 <= month <= 12:
             raise ProspectivePnlError("month must be between 1 and 12")
         prefix = f"{year:04d}-{month:02d}-"
+        schedule = self._connection.execute(
+            "SELECT sessions_json, schedule_sha256, source_sha256 FROM prospective_session_schedules "
+            "WHERE strategy_id=?", (strategy_id,)).fetchone()
+        if schedule is None:
+            raise ProspectivePnlError("monthly return series requires a frozen eligible session schedule")
+        scheduled = [day for day in json.loads(schedule[0]) if day.startswith(prefix)]
+        if not scheduled:
+            raise ProspectivePnlError("no eligible sessions are scheduled for the requested month")
         rows = self._connection.execute(
-            "SELECT payload FROM prospective_session_pnl WHERE strategy_id=? AND session LIKE ? ORDER BY session",
+            "SELECT session,payload FROM prospective_session_pnl WHERE strategy_id=? AND session LIKE ? ORDER BY session",
             (strategy_id, prefix + "%")).fetchall()
-        payloads = [json.loads(row[0]) for row in rows]
-        for payload in payloads:
+        payloads = {row[0]: json.loads(row[1]) for row in rows}
+        session_series = []
+        for day in scheduled:
+            payload = payloads.get(day)
+            if payload is None:
+                session_series.append({"session": day, "status": "UNRECORDED",
+                                       "net_pnl_inr": None, "net_return": None,
+                                       "evidence_class": None})
+            else:
+                paper_row = payload["paper"]
+                net_return = paper_row.get("net_return")
+                status = ("CASH_ZERO_RETURN" if paper_row["evidence_class"] ==
+                          "CASH_NO_FILLED_POSITIONS" and paper_row["net_pnl_inr"] == 0 else
+                          "RECORDED" if net_return is not None else "RETURN_UNAVAILABLE_LEGACY")
+                session_series.append({"session": day, "status": status,
+                                       "net_pnl_inr": paper_row["net_pnl_inr"],
+                                       "net_return": net_return,
+                                       "evidence_class": paper_row["evidence_class"]})
+        for payload in payloads.values():
             unsigned = {key: value for key, value in payload.items() if key != "sha256"}
             computed = hashlib.sha256(json.dumps(unsigned, sort_keys=True, separators=(",", ":"),
                                        allow_nan=False).encode()).hexdigest()
             if computed != payload.get("sha256"):
                 raise ProspectivePnlError("stored prospective session P&L digest failed verification")
-        paper = [row["paper"] for row in payloads]
-        shadow = [row["shadow"] for row in payloads]
+        missing = [row["session"] for row in session_series
+                   if row["status"] in {"UNRECORDED", "RETURN_UNAVAILABLE_LEGACY"}]
+        paper = [row["paper"] for row in payloads.values()]
+        shadow = [row["shadow"] for row in payloads.values()]
         complete_shadow = all(row["net_pnl_inr"] is not None for row in shadow)
         return {"strategy_id": strategy_id, "year": year, "month": month,
-                "sessions": len(payloads), "evidence_class": "LOCAL_PROSPECTIVE",
+                "schedule_sha256": schedule[1], "schedule_source_sha256": schedule[2],
+                "sessions": len(scheduled), "reported_sessions": len(payloads),
+                "missing_sessions": missing, "coverage_status": "COMPLETE" if not missing else "INCOMPLETE",
+                "session_return_series": session_series, "evidence_class": "LOCAL_PROSPECTIVE",
                 "paper_filled_sessions": sum(row["session_filled_receipt_count"] > 0 for row in paper),
-                "paper_gross_pnl_inr": sum(row["gross_pnl_inr"] for row in paper),
-                "paper_costs_inr": sum(row["transaction_costs_inr"] for row in paper),
-                "paper_net_pnl_inr": sum(row["net_pnl_inr"] for row in paper),
-                "shadow_gross_pnl_inr": sum(row["gross_pnl_inr"] for row in shadow),
+                "paper_gross_pnl_inr": sum(row["gross_pnl_inr"] for row in paper) if not missing else None,
+                "paper_costs_inr": sum(row["transaction_costs_inr"] for row in paper) if not missing else None,
+                "paper_net_pnl_inr": sum(row["net_pnl_inr"] for row in paper) if not missing else None,
+                "shadow_gross_pnl_inr": sum(row["gross_pnl_inr"] for row in shadow) if not missing else None,
                 "shadow_costs_inr": sum(row["estimated_costs_inr"] or 0.0 for row in shadow)
-                    if complete_shadow else None,
+                    if complete_shadow and not missing else None,
                 "shadow_net_pnl_inr": sum(row["net_pnl_inr"] for row in shadow)
-                    if complete_shadow else None,
-                "source_session_hashes": [row["sha256"] for row in payloads]}
+                    if complete_shadow and not missing else None,
+                "source_session_hashes": [payloads[day]["sha256"] for day in scheduled if day in payloads]}
 
     def close(self) -> None:
         self._connection.close()

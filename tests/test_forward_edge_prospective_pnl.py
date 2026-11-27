@@ -55,10 +55,21 @@ def test_session_report_reconciles_actual_filled_paper_and_separate_shadow():
 def test_pnl_ledger_is_idempotent_immutable_and_monthly():
     ledger = ProspectivePnlLedger(":memory:")
     report = _report()
+    schedule_sha = ledger.freeze_schedule(strategy_id="mom-v1", sessions=[date(2026, 11, 27)],
+                                          frozen_at=date(2026, 11, 15), source_sha256="e" * 64)
+    assert ledger.freeze_schedule(strategy_id="mom-v1", sessions=[date(2026, 11, 27)],
+                                  frozen_at=date(2026, 11, 15), source_sha256="e" * 64) == schedule_sha
+    with pytest.raises(ProspectivePnlError, match="immutable once frozen"):
+        ledger.freeze_schedule(strategy_id="mom-v1", sessions=[date(2026, 11, 27), date(2026, 11, 30)],
+                               frozen_at=date(2026, 11, 15), source_sha256="e" * 64)
+    with pytest.raises(ProspectivePnlError, match="outside the frozen"):
+        ledger.append({**report, "session": "2026-11-30"})
     assert ledger.append(report) is True
     assert ledger.append(report) is False
     monthly = ledger.monthly_report(strategy_id="mom-v1", year=2026, month=11)
     assert monthly["sessions"] == 1
+    assert monthly["reported_sessions"] == 1
+    assert monthly["coverage_status"] == "COMPLETE"
     assert monthly["paper_filled_sessions"] == 1
     assert monthly["paper_net_pnl_inr"] == pytest.approx(95.0)
     assert monthly["shadow_net_pnl_inr"] == pytest.approx(98.0)
@@ -107,6 +118,7 @@ def test_consecutive_session_reports_use_held_fill_inventory_for_actual_pnl():
         shadow_starting_equity_inr=10_100.0, shadow_costs_inr=0.0,
         shadow_cost_evidence_sha256="c" * 64, marks_source_sha256="e" * 64)
     assert report["paper"]["net_pnl_inr"] == pytest.approx(-50.0)
+    assert report["paper"]["net_return"] == pytest.approx(-50.0 / 10_095.0)
     assert report["paper"]["session_filled_receipt_count"] == 0
 
 
@@ -123,3 +135,29 @@ def test_unfilled_cash_session_is_recorded_as_cash_not_paper_position_return():
     assert report["paper"]["evidence_class"] == "CASH_NO_FILLED_POSITIONS"
     assert report["paper"]["position_pnl_eligible"] is False
     assert report["paper"]["net_pnl_inr"] == 0.0
+    assert report["paper"]["net_return"] == 0.0
+    ledger = ProspectivePnlLedger(":memory:")
+    ledger.freeze_schedule(strategy_id="mom-v1", sessions=[date(2026, 11, 27)],
+                           frozen_at=date(2026, 11, 15), source_sha256="e" * 64)
+    ledger.append(report)
+    monthly = ledger.monthly_report(strategy_id="mom-v1", year=2026, month=11)
+    assert monthly["session_return_series"] == [{
+        "session": "2026-11-27", "status": "CASH_ZERO_RETURN", "net_pnl_inr": 0.0,
+        "net_return": 0.0, "evidence_class": "CASH_NO_FILLED_POSITIONS"}]
+    ledger.close()
+
+
+def test_monthly_report_keeps_unrecorded_scheduled_sessions_in_the_return_series():
+    ledger = ProspectivePnlLedger(":memory:")
+    ledger.freeze_schedule(strategy_id="mom-v1", sessions=[date(2026, 11, 27), date(2026, 11, 30)],
+                           frozen_at=date(2026, 11, 15), source_sha256="e" * 64)
+    ledger.append(_report())
+    monthly = ledger.monthly_report(strategy_id="mom-v1", year=2026, month=11)
+    assert monthly["sessions"] == 2
+    assert monthly["reported_sessions"] == 1
+    assert monthly["missing_sessions"] == ["2026-11-30"]
+    assert monthly["coverage_status"] == "INCOMPLETE"
+    assert [row["status"] for row in monthly["session_return_series"]] == ["RECORDED", "UNRECORDED"]
+    assert monthly["session_return_series"][1]["net_return"] is None
+    assert monthly["paper_net_pnl_inr"] is None
+    ledger.close()
