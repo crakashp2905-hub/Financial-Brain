@@ -9796,12 +9796,18 @@
     {
       "id": "PA-09-07",
       "text": "Include time-of-day and liquidity regime checks: first 15 minutes, midday low activity, pre-close, known macro events, expiry days and unusual option spreads.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_15m.py session_regimes tags first 15 minutes, midday, pre-close and regular-session periods plus macro event, expiry day and unusual option-spread states.",
+        "Unknown event/expiry/spread inputs remain explicit unknown tags. Spread anomaly checks require a paired threshold that callers must calibrate from prior/training data.",
+        "tests/test_forecasting_index_15m.py covers time windows, positive and unknown event/expiry/spread cases, and out-of-session rejection; 26 focused forecasting-index tests passed, Ruff and mypy passed.",
+        "No point-in-time macro calendar, expiry-session classification, options spread feed or real-session regime analysis is wired into the forecasting pipeline."
+      ],
+      "blocker": "Connect authorized point-in-time event/contract/quote inputs, calibrate spread thresholds from prior observations, and evaluate forecast quality and coverage by regime on real sessions.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "d0a47623",
+      "test_result": "26 focused forecasting-index tests passed; Ruff and mypy passed for forecast, index-market and scorecard modules."
     },
     {
       "id": "PA-09-08",
@@ -21208,6 +21214,7 @@
       "PA-09-04",
       "PA-09-05",
       "PA-09-06",
+      "PA-09-07",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21631,13 +21638,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 977,
+    "audited_count": 978,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 847,
-      "UNASSESSED": 401
+      "PARTIAL": 848,
+      "UNASSESSED": 400
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21786,7 +21793,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 847,
-    "UNASSESSED": 401
+    "PARTIAL": 848,
+    "UNASSESSED": 400
   }
 }
