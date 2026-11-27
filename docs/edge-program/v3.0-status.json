@@ -9337,7 +9337,7 @@
       ],
       "blocker": "Partial: explicit owner sleeve and cost-versus-edge gates are implemented for monthly plan receipts, but approval and expectancy evidence are not independently authenticated and the gate is not wired into every paper strategy path.",
       "last_audited_at_utc": "2026-11-27T05:46:41Z",
-      "commit": null,
+      "commit": "ba9582b1",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0716-capital-gate tests/test_zoo_h_targets.py -q: 24 passed, covering missing owner approval, sleeve/available capital caps, missing alpha evidence, costs >= expected gross edge, and permitted paper-review-only intents.",
         "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
