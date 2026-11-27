@@ -1144,6 +1144,7 @@ def test_stale_quote_is_refused_at_decision_time_by_the_frozen_age_limit(tmp_pat
         runner.decide(session_id="s", strategy_id="momentum", decision_id="stale-trade", outcome="TRADE",
                       input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
     assert runner.records("s")["decisions"] == []
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
     runner.close()
 
 
@@ -1165,8 +1166,22 @@ def test_quote_that_ages_out_during_simulated_latency_cannot_create_an_intent(tm
     runner, event, decided = trade_setup(tmp_path, max_quote_age_ms=150, decision_offset_ms=100)
     with pytest.raises(ForwardSessionRunnerError, match="paper fill quote exceeds configured maximum age of 150ms"):
         execute(runner, event, decided, execution_offset_ms=500)
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
     assert runner.records("s")["intents"] == []
     assert runner.records("s")["execution_receipts"] == []
+    runner.close()
+
+
+def test_degraded_operating_mode_blocks_risk_increasing_paper_intents(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    runner.set_operating_mode(session_id="s", mode="DEGRADED", event_id="feed-degraded",
+                              reason="quote feed freshness breached", occurred_at=decided)
+
+    with pytest.raises(ForwardSessionRunnerError, match="blocked while operating mode is DEGRADED"):
+        execute(runner, event, decided)
+
+    assert runner.records("s")["operating_mode"] == "DEGRADED"
+    assert runner.records("s")["intents"] == []
     runner.close()
 
 

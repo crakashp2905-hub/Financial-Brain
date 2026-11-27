@@ -25,6 +25,11 @@ from financial_brain.forward_edge.data_profiles import (
 )
 from financial_brain.forward_edge.durable import DurableJournalError, DurableSessionJournal
 from financial_brain.forward_edge.heartbeats import SessionHeartbeatLedger
+from financial_brain.forward_edge.operating_mode import (
+    OperatingMode,
+    OperatingModeError,
+    OperatingModeLedger,
+)
 from financial_brain.forward_edge.data_permissions import DataPermission, DataUse
 from financial_brain.forward_edge.data_distribution import DistributionThresholds, compare_windows
 from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
@@ -253,6 +258,7 @@ class ForwardSessionRunner:
             record_json TEXT NOT NULL, PRIMARY KEY(session_id, rejection_id))""")
         self.durable = DurableSessionJournal(self._con)
         self.heartbeats = SessionHeartbeatLedger(self._con)
+        self.operating_modes = OperatingModeLedger(self._con)
         self._con.execute("""CREATE TABLE IF NOT EXISTS runner_session_reports (
             session_id TEXT PRIMARY KEY, status TEXT NOT NULL, report_sha256 TEXT NOT NULL,
             report_json TEXT NOT NULL)""")
@@ -353,6 +359,18 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError(f"component heartbeat rejected: {exc}") from exc
         self.state_store.close()
 
+    def set_operating_mode(self, *, session_id: str, mode: str | OperatingMode,
+                           event_id: str, reason: str, occurred_at: datetime | None = None) -> bool:
+        """Persist an explicit pause, degradation, recovery or halt decision."""
+        try:
+            self.state_store.state(session_id)
+            return self.operating_modes.transition(
+                session_id, mode, event_id=event_id,
+                occurred_at=occurred_at or capture_local_time(self.clock, label="operating mode transition"),
+                reason=reason)
+        except (ValueError, OperatingModeError) as exc:
+            raise ForwardSessionRunnerError(f"operating mode transition rejected: {exc}") from exc
+
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
               preflight: dict[str, bool]) -> SessionState:
         """Create or resume a session, recording every preflight check before opening it."""
@@ -362,6 +380,10 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
         now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
+        try:
+            self.operating_modes.initialize(session_id, occurred_at=now)
+        except OperatingModeError as exc:
+            raise ForwardSessionRunnerError(f"operating mode initialization failed: {exc}") from exc
         state = self.state_store.state(session_id)
         if state in {SessionState.OPEN, SessionState.REJECTED, SessionState.CLOSED,
                      SessionState.NO_TRADE, SessionState.INCOMPLETE}:
@@ -542,6 +564,10 @@ class ForwardSessionRunner:
         except ValueError as exc:
             raise ForwardSessionRunnerError(str(exc)) from exc
         self.state_store.create(session_id, config, now=now)
+        try:
+            self.operating_modes.initialize(session_id, occurred_at=now)
+        except OperatingModeError as exc:
+            raise ForwardSessionRunnerError(f"operating mode initialization failed: {exc}") from exc
         state = self.state_store.state(session_id)
         calendar_digest = calendar.sha256()
         if state is not SessionState.PLANNED:
@@ -1046,6 +1072,12 @@ class ForwardSessionRunner:
             if source_time > clock or clock - source_time > timedelta(milliseconds=max_quote_age):
                 stale.append(event_id)
         if stale and outcome != "DATA_UNUSABLE":
+            current_mode = self.operating_modes.mode(session_id)
+            if current_mode not in {OperatingMode.DEGRADED, OperatingMode.HALTED}:
+                self.set_operating_mode(
+                    session_id=session_id, mode=OperatingMode.DEGRADED,
+                    event_id=f"stale-input:{decision_id}", occurred_at=clock,
+                    reason="stale decision quote: " + ",".join(sorted(stale)))
             raise ForwardSessionRunnerError(
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
@@ -1231,6 +1263,8 @@ class ForwardSessionRunner:
                   "audit_log": audit_log, "accounting": accounting}
         result["timing_telemetry"] = _timing_telemetry(result)
         result["component_heartbeats"] = self.heartbeats.latest(session_id)
+        result["operating_mode"] = self.operating_modes.mode(session_id).value
+        result["operating_mode_events"] = self.operating_modes.events(session_id)
         return result
 
     def read_events_after(self, session_id: str, consumer_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
@@ -1802,6 +1836,13 @@ class ForwardSessionRunner:
         quote_age = execution_time - event.event_time.astimezone(timezone.utc)
         max_quote_age = self._max_quote_age(session_id)
         if quote_age < timedelta(0) or quote_age > timedelta(milliseconds=max_quote_age):
+            current_mode = self.operating_modes.mode(session_id)
+            if current_mode not in {OperatingMode.DEGRADED, OperatingMode.HALTED}:
+                self.set_operating_mode(
+                    session_id=session_id, mode=OperatingMode.DEGRADED,
+                    event_id=f"stale-execution:{order_id}", occurred_at=execution_time,
+                    reason=f"paper execution quote age {quote_age.total_seconds() * 1000:.3f}ms "
+                           f"exceeds configured maximum {max_quote_age}ms")
             raise ForwardSessionRunnerError(
                 f"paper fill quote exceeds configured maximum age of {max_quote_age}ms")
         selected = next((row for row in manifest["selections"]
@@ -1830,6 +1871,11 @@ class ForwardSessionRunner:
         if not event.evidence_id or re.fullmatch(r"[0-9a-f]{64}", event.evidence_id) is None:
             raise ForwardSessionRunnerError("paper fill requires an immutable SHA-256 source-payload evidence ID")
         accounting = self.records(session_id)["accounting"]
+        mode = self.operating_modes.mode(session_id)
+        reduces_position = (side == "SELL" and int(accounting["positions"].get(event.instrument_id, 0)) >= quantity)
+        if mode is not OperatingMode.ACTIVE and not reduces_position:
+            raise ForwardSessionRunnerError(
+                f"risk-increasing paper intent is blocked while operating mode is {mode.value}")
         safely_reconciled_retry = (
             accounting["status"] == "INCOMPLETE"
             and not accounting["errors"]
