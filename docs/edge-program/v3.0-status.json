@@ -9282,12 +9282,24 @@
     {
       "id": "PA-07-14",
       "text": "Measure strategy overlap, top-stock concentration, industry concentration, common drawdown and incremental alpha of combining them; do not count correlated momentum books as three independent edges.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Before this change the repo had individual position/desk overlap utilities, but no paper-zoo report joining monthly candidate books, their actual target weights and net P&L.",
+        "Commit pending adds paper.zoo_edges.monthly_book_diversification_report, measuring pairwise weighted target Jaccard overlap, stock HHI/top-stock weight, daily net-return correlations, aligned common maximum drawdown and equal-capital combined net results versus the best single candidate.",
+        "Missing/null net-return sessions are excluded from all cross-strategy statistics and coverage gaps are reported; the report refuses a sufficient-history status below the configured common-session minimum.",
+        "Industry HHI is only computed when a caller supplies an industry mapping; mapping provenance/as-of validity is not represented in the API. The diagnostic is not wired into a scheduled paper report or selection gate, and equal-capital combination results are descriptive only."
+      ],
+      "blocker": "Partial: the diagnostic exists and is tested on stored targets/net P&L, but recurring reporting, enforced point-in-time industry-map provenance, and prospective portfolio-combination proof remain absent.",
+      "last_audited_at_utc": "2026-11-27T05:40:48Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0714-final tests/test_zoo_h_targets.py -q: 20 passed, including missing-return alignment, weighted overlap, industry HHI and short-history availability.",
+        "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+        "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Paper zoo candidates now have an auditable diversification diagnostic for targets and aligned after-cost returns, with explicit incomplete coverage and absent industry-map reporting. Scheduled integration and verified as-of industry data remain; PA-07-14 remains PARTIAL."
     },
     {
       "id": "PA-07-15",
@@ -21084,6 +21096,7 @@
       "PA-07-11",
       "PA-07-12",
       "PA-07-13",
+      "PA-07-14",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21522,11 +21535,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 966,
+    "audited_count": 967,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 836,
-      "UNASSESSED": 412,
+      "PARTIAL": 837,
+      "UNASSESSED": 411,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21675,8 +21688,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 836,
-    "UNASSESSED": 412,
+    "PARTIAL": 837,
+    "UNASSESSED": 411,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }

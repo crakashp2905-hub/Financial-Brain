@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "3fe6d6a0dd94361c97223c6cf14e34aab94385cde140feddfaf347546dd67a75",
-  "audit_export_sha256": "126ae48f38079956d457f76e869424b18b80ca598fafb6646e025364d36f2928",
+  "status_ledger_sha256": "22a0c0e090a76f3ca14f145abbdb62a91b7ce2bcb70b039c0f895761878aaa81",
+  "audit_export_sha256": "2576498412f538919f1ed9d3fdf60d4d213646afc855eae90ae1a4ff1d50abba",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 836,
-    "UNASSESSED": 412
+    "PARTIAL": 837,
+    "UNASSESSED": 411
   },
-  "assessed_count": 966,
-  "unassessed_count": 412,
+  "assessed_count": 967,
+  "unassessed_count": 411,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 56,
-        "UNASSESSED": 5
+        "PARTIAL": 57,
+        "UNASSESSED": 4
       },
       "evidence": [
         {
@@ -3054,16 +3054,26 @@
         },
         {
           "item_id": "PA-07-14",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1074,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Measure strategy overlap, top-stock concentration, industry concentration, common drawdown and incremental alpha of combining them; do not count correlated momentum books as three independent edges."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: the diagnostic exists and is tested on stored targets/net P&L, but recurring reporting, enforced point-in-time industry-map provenance, and prospective portfolio-combination proof remain absent.",
+          "evidence": [
+            "Before this change the repo had individual position/desk overlap utilities, but no paper-zoo report joining monthly candidate books, their actual target weights and net P&L.",
+            "Commit pending adds paper.zoo_edges.monthly_book_diversification_report, measuring pairwise weighted target Jaccard overlap, stock HHI/top-stock weight, daily net-return correlations, aligned common maximum drawdown and equal-capital combined net results versus the best single candidate.",
+            "Missing/null net-return sessions are excluded from all cross-strategy statistics and coverage gaps are reported; the report refuses a sufficient-history status below the configured common-session minimum.",
+            "Industry HHI is only computed when a caller supplies an industry mapping; mapping provenance/as-of validity is not represented in the API. The diagnostic is not wired into a scheduled paper report or selection gate, and equal-capital combination results are descriptive only."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0714-final tests/test_zoo_h_targets.py -q: 20 passed, including missing-return alignment, weighted overlap, industry HHI and short-history availability.",
+            "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+            "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-15",
@@ -3488,5 +3498,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "3bf499d937a0bf035fa763dafe8695856c985b802c4092d951b88e553c181389"
+  "report_sha256": "b45a035d3c26ee6afa60ed0524f0251b822b69e963f0c9a161a298b69f9808b7"
 }

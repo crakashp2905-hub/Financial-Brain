@@ -336,3 +336,44 @@ def test_monthly_paper_snapshot_rejects_oversell_and_unreasoned_no_fill():
             target_weights={}, fills=[{"lineage": "L1", "side": "BUY", "requested_shares": 2,
                                        "filled_shares": 0, "cost_inr": 0}],
             marks={}, opening_cash_inr=1000.0)
+
+
+def test_monthly_book_diversification_report_uses_aligned_net_returns_and_exposes_overlap():
+    z = duckdb.connect(":memory:")
+    from financial_brain.paper import zoo
+    z.execute(zoo.SCHEMA)
+    days = [pd.Timestamp(f"2026-11-{d:02d}").date() for d in (27, 28, 29)]
+    left, right = "edge_p1_residual_mom", "edge_h003_riskadj_mom"
+    for day in days:
+        z.execute("INSERT INTO zoo_targets VALUES (?,?,?,?)", [left, day, "L1", 0.6])
+        z.execute("INSERT INTO zoo_targets VALUES (?,?,?,?)", [left, day, "L2", 0.4])
+        z.execute("INSERT INTO zoo_targets VALUES (?,?,?,?)", [right, day, "L1", 0.3])
+        z.execute("INSERT INTO zoo_targets VALUES (?,?,?,?)", [right, day, "L3", 0.7])
+    for strategy, values in ((left, [0.05, -0.1, 0.02]), (right, [0.02, None, 0.03])):
+        for day, value in zip(days, values):
+            z.execute("INSERT INTO zoo_pnl VALUES (?,?,?,?,?,?,?)",
+                      [strategy, day, value, 0.0, value, 0.0, 2])
+    report = ZE.monthly_book_diversification_report(
+        z, strategies=(left, right), industry_by_lineage={"L1": "IND_A", "L2": "IND_A", "L3": "IND_B"},
+        min_common_sessions=2)
+    assert report["status"] == "SUFFICIENT_COMMON_HISTORY"
+    assert report["common_net_return_sessions"] == 2
+    assert report["return_coverage"][right]["missing_or_incomplete_sessions"] == 1
+    pair = report["target_weighted_overlap"][0]
+    assert pair["mean_weighted_jaccard"] == pytest.approx(0.3 / 1.7)
+    assert report["net_return_correlation"][f"{left}|{right}"]["common_sessions"] == 2
+    assert report["industry_concentration"][left]["mean_industry_hhi"] == pytest.approx(1.0)
+    assert report["combination_diagnostic"]["not_a_promotion_or_allocation_decision"] is True
+
+
+def test_monthly_book_diversification_report_marks_absent_industry_map_and_short_history():
+    z = duckdb.connect(":memory:")
+    from financial_brain.paper import zoo
+    z.execute(zoo.SCHEMA)
+    z.execute("INSERT INTO zoo_targets VALUES ('edge_p1_residual_mom', DATE '2026-11-27', 'L1', 1.0)")
+    z.execute("INSERT INTO zoo_pnl VALUES ('edge_p1_residual_mom', DATE '2026-11-27', 0.01, 0, 0.01, 0, 1)")
+    result = ZE.monthly_book_diversification_report(
+        z, strategies=("edge_p1_residual_mom",), min_common_sessions=3)
+    assert result["status"] == "INSUFFICIENT_COMMON_HISTORY"
+    assert result["industry_concentration"]["edge_p1_residual_mom"]["status"] == \
+        "UNAVAILABLE_NO_AS_OF_INDUSTRY_MAP"

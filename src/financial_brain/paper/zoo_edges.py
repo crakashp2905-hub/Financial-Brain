@@ -484,6 +484,158 @@ def record_monthly_paper_snapshot(z, *, strategy: str, session: date,
     return {**payload, "payload_hash": payload_hash, "idempotent_replay": False}
 
 
+def monthly_book_diversification_report(z, *, strategies: tuple[str, ...] = MONTHLY_BOOKS,
+                                       start: date | None = None, end: date | None = None,
+                                       industry_by_lineage: dict[str, str] | None = None,
+                                       min_common_sessions: int = 60) -> dict:
+    """Describe overlap, concentration, drawdowns and equal-risk-free combination value.
+
+    Uses recorded ``zoo_targets`` and net ``zoo_pnl``. Missing/incomplete return rows are
+    excluded from the aligned comparison and reported as coverage gaps, never zero-filled.
+    Industry concentration is computed only from a caller-supplied as-of-valid map; without
+    one it is explicitly unavailable. Combined-book statistics are descriptive, not a
+    capital allocation or strategy promotion decision.
+    """
+    import math
+    from collections import defaultdict
+
+    if not strategies or len(set(strategies)) != len(strategies):
+        raise ValueError("strategies must be non-empty and unique")
+    invalid = sorted(set(strategies) - set(MONTHLY_BOOKS))
+    if invalid:
+        raise ValueError(f"unsupported monthly strategies: {invalid}")
+    if min_common_sessions < 2:
+        raise ValueError("min_common_sessions must be at least two")
+    if start and end and start > end:
+        raise ValueError("start must not follow end")
+    target_filter = " AND day >= ?" if start else ""
+    target_filter += " AND day <= ?" if end else ""
+    target_params = ([start] if start else []) + ([end] if end else [])
+    target_rows = z.execute(
+        "SELECT strategy, day, key, weight FROM zoo_targets WHERE strategy IN (SELECT UNNEST(?))"
+        + target_filter + " ORDER BY day, strategy, key",
+        [list(strategies), *target_params]).fetchall()
+    targets: dict[str, dict[date, dict[str, float]]] = {s: defaultdict(dict) for s in strategies}
+    for strategy, day, lineage, weight in target_rows:
+        targets[strategy][day][lineage] = float(weight)
+
+    pnl_filter = " AND day >= ?" if start else ""
+    pnl_filter += " AND day <= ?" if end else ""
+    pnl_params = ([start] if start else []) + ([end] if end else [])
+    pnl_rows = z.execute(
+        "SELECT strategy, day, net FROM zoo_pnl WHERE strategy IN (SELECT UNNEST(?))"
+        + pnl_filter + " ORDER BY day, strategy", [list(strategies), *pnl_params]).fetchall()
+    returns: dict[str, dict[date, float]] = {s: {} for s in strategies}
+    return_days: dict[str, set[date]] = {s: set() for s in strategies}
+    for strategy, day, net in pnl_rows:
+        if net is not None and np.isfinite(float(net)):
+            returns[strategy][day] = float(net)
+            return_days[strategy].add(day)
+
+    overlap_rows = []
+    for i, left in enumerate(strategies):
+        for right in strategies[i + 1:]:
+            dates = sorted(set(targets[left]) & set(targets[right]))
+            values = []
+            for day in dates:
+                a, b = targets[left][day], targets[right][day]
+                denom = sum(max(abs(a.get(k, 0.0)), abs(b.get(k, 0.0)))
+                            for k in set(a) | set(b))
+                if denom:
+                    values.append(sum(min(abs(a.get(k, 0.0)), abs(b.get(k, 0.0)))
+                                      for k in set(a) | set(b)) / denom)
+            overlap_rows.append({"left": left, "right": right,
+                                 "common_target_dates": len(dates),
+                                 "mean_weighted_jaccard": float(np.mean(values)) if values else None})
+
+    concentration: dict[str, dict] = {}
+    industry_concentration: dict[str, dict] = {}
+    for strategy in strategies:
+        hhis, top_weights, industry_hhis = [], [], []
+        for _day, weights in targets[strategy].items():
+            long_weights = [abs(w) for w in weights.values()]
+            total = sum(long_weights)
+            if total <= 0:
+                continue
+            normalized = [w / total for w in long_weights]
+            hhis.append(sum(w * w for w in normalized))
+            top_weights.append(max(normalized))
+            if industry_by_lineage is not None:
+                grouped: dict[str, float] = defaultdict(float)
+                for lineage, weight in weights.items():
+                    industry = industry_by_lineage.get(lineage)
+                    if industry:
+                        grouped[industry] += abs(weight)
+                covered = sum(grouped.values())
+                if covered:
+                    industry_weights = [v / covered for v in grouped.values()]
+                    industry_hhis.append(sum(v * v for v in industry_weights))
+        concentration[strategy] = {
+            "target_dates": len(hhis), "mean_stock_hhi": float(np.mean(hhis)) if hhis else None,
+            "mean_top_stock_weight": float(np.mean(top_weights)) if top_weights else None,
+        }
+        industry_concentration[strategy] = {
+            "status": "AS_OF_MAP_SUPPLIED" if industry_by_lineage is not None else "UNAVAILABLE_NO_AS_OF_INDUSTRY_MAP",
+            "mapped_dates": len(industry_hhis),
+            "mean_industry_hhi": float(np.mean(industry_hhis)) if industry_hhis else None,
+        }
+
+    aligned_days = sorted(set.intersection(*(return_days[s] for s in strategies))) if strategies else []
+    coverage = {s: {"valid_net_sessions": len(returns[s]), "missing_or_incomplete_sessions":
+                    len(set.union(*(return_days[k] for k in strategies)) - return_days[s])}
+                for s in strategies}
+    correlation = {}
+    for i, left in enumerate(strategies):
+        for right in strategies[i + 1:]:
+            common = sorted(return_days[left] & return_days[right])
+            corr = (float(np.corrcoef([returns[left][d] for d in common],
+                                      [returns[right][d] for d in common])[0, 1])
+                    if len(common) >= 2 and np.std([returns[left][d] for d in common]) > 0
+                    and np.std([returns[right][d] for d in common]) > 0 else None)
+            correlation[f"{left}|{right}"] = {"common_sessions": len(common), "net_return_correlation": corr}
+
+    def drawdown(values: list[float]) -> float | None:
+        if not values:
+            return None
+        nav, peak, worst = 1.0, 1.0, 0.0
+        for value in values:
+            nav *= 1.0 + value
+            peak = max(peak, nav)
+            worst = min(worst, nav / peak - 1.0)
+        return worst
+
+    aligned_matrix = {s: [returns[s][d] for d in aligned_days] for s in strategies}
+    combined = [float(np.mean([aligned_matrix[s][j] for s in strategies]))
+                for j in range(len(aligned_days))]
+    combined_cumulative = float(np.prod([1 + value for value in combined]) - 1) if combined else None
+    individual_cumulative = {s: float(np.prod([1 + aligned_matrix[s][j]
+                                                for j in range(len(aligned_days))]) - 1)
+                             for s in strategies}
+    best_single = max(individual_cumulative.values()) if individual_cumulative else None
+    combined_vol = float(np.std(combined, ddof=1) * math.sqrt(250)) if len(combined) > 1 else None
+    combined_sharpe = (float(np.mean(combined)) / float(np.std(combined, ddof=1)) * math.sqrt(250)
+                       if len(combined) > 1 and np.std(combined, ddof=1) > 0 else None)
+    return {
+        "status": "SUFFICIENT_COMMON_HISTORY" if len(aligned_days) >= min_common_sessions
+                  else "INSUFFICIENT_COMMON_HISTORY",
+        "strategies": list(strategies), "common_net_return_sessions": len(aligned_days),
+        "minimum_common_sessions": min_common_sessions, "return_coverage": coverage,
+        "target_weighted_overlap": overlap_rows, "net_return_correlation": correlation,
+        "stock_concentration": concentration, "industry_concentration": industry_concentration,
+        "common_drawdown": {"combined_equal_weight_max_drawdown": drawdown(combined),
+                            "individual_max_drawdown": {s: drawdown(aligned_matrix[s]) for s in strategies}},
+        "combination_diagnostic": {
+            "method": "equal capital per strategy; aligned complete net sessions only",
+            "combined_cumulative_net_return": combined_cumulative,
+            "best_single_cumulative_net_return": best_single,
+            "incremental_cumulative_return_vs_best_single": (
+                combined_cumulative - best_single if combined_cumulative is not None and best_single is not None else None),
+            "combined_annualized_volatility": combined_vol, "combined_annualized_sharpe": combined_sharpe,
+            "not_a_promotion_or_allocation_decision": True,
+        },
+    }
+
+
 def monthly_target_hashes(targets: dict[str, dict]) -> dict[str, str]:
     """Stable per-book hashes for intended-versus-persisted monthly target audits."""
     hashes = {}
