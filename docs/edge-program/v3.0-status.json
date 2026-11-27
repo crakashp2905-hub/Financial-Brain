@@ -10275,12 +10275,16 @@
     {
       "id": "PA-11-03",
       "text": "Implement FVG/IFVG from precisely defined three-candle non-overlap rules with availability-at time and invalidation; avoid visual hindsight zones.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/price_action_gaps.py: causal three-candle non-overlap detector with third-close availability, later mitigation and IFVG transition",
+        "tests/test_price_action_gaps.py: verifies bullish/bearish gaps, boundary equality, ordering, timestamp rules and immutable event state",
+        "Implementation is detector-only; strategy adapter integration, visual golden fixtures and empirical edge validation remain outstanding"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "22f9278a"
     },
     {
       "id": "PA-11-04",
@@ -21397,6 +21401,7 @@
       "PA-10-17",
       "PA-10-18",
       "PA-10-19",
+      "PA-11-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21820,13 +21825,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1007,
+    "audited_count": 1008,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 876,
-      "UNASSESSED": 371
+      "PARTIAL": 877,
+      "UNASSESSED": 370
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21975,7 +21980,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 876,
-    "UNASSESSED": 371
+    "PARTIAL": 877,
+    "UNASSESSED": 370
   }
 }
