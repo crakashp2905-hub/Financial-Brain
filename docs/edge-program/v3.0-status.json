@@ -9397,20 +9397,23 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`kernel.portfolio_exit_guard` carries option delta, gamma and vega exposure and can propose aggregate risk-reduction exits under configured caps; theta is not represented in its Greek contract.",
+        "Commit `be4014f0` adds signed option theta normalized to INR per calendar day, including contract multiplier, to `kernel.portfolio_exit_guard`; the guard aggregates gross absolute theta and proposes lot/depth-aware paper reductions under `max_gross_option_theta_inr_per_day`.",
+        "The guard rejects non-option theta inputs. Its theta exposure cap is a position-reduction control and does not model theta repricing across time or volatility scenarios.",
         "`forward_edge.options_risk.evaluate_defined_risk_legs` uses executable leg bid/ask/depth to estimate debit, maximum loss for supported debit verticals, legging exposure and an explicit intrinsic-at-expiry scenario.",
         "`forward_edge.disaster_stress` models price gaps, spread blowouts, expiry extra losses, partial/unfilled exits and network partitions with deterministic report hashes.",
         "No single scenario report combines delta/gamma/vega/theta repricing, payoff convexity, expiry clustering and sourced gap-to-stop outcomes across the canonical portfolio."
       ],
-      "blocker": "Partial: delta/gamma/vega controls, defined-risk payoff/expiry scenarios and generic gap stresses exist separately; theta, expiry clustering and joined gap-to-stop stress are missing from a canonical portfolio scenario report.",
-      "last_audited_at_utc": "2026-11-27T04:54:02Z",
-      "commit": "a464ea4e",
+      "blocker": "Partial: standalone delta/gamma/vega/theta exposure caps, defined-risk payoff/expiry scenarios and generic gap stresses exist; a canonical portfolio scenario report still does not combine Greek repricing, payoff convexity, expiry clustering and sourced gap-to-stop outcomes.",
+      "last_audited_at_utc": "2026-11-27T04:58:24Z",
+      "commit": "be4014f0",
       "test_evidence": [
+        "`python -m pytest --basetemp .pytest-pa0810-theta tests/test_portfolio_exit_guard.py -q`: 13 passed, including signed gross theta aggregation, cap-triggered quantity reduction and non-option rejection.",
+        "Ruff, mypy for `portfolio_exit_guard.py`, and `git diff --check` passed.",
         "`python -m pytest --basetemp .pytest-pa0808-15 tests/test_cross_desk_risk.py tests/test_cross_desk_overlap.py tests/test_forward_edge_options_risk.py tests/test_portfolio_exit_guard.py tests/test_derivatives_subledger.py tests/test_forward_edge_disaster_stress.py tests/test_portfolio_allocator_benchmarks.py tests/test_capital_efficiency.py tests/test_portfolio_durable_reservations.py tests/test_portfolio_capacity_optimizer.py -q`: 66 passed.",
         "The 66-test package includes option risk, portfolio exit guard and deterministic disaster-stress suites; coverage verifies supported spread limits, Greek caps and scenario behavior but not a unified portfolio Greek stress report.",
         "Ruff passed for all ten reviewed source modules and focused tests; targeted mypy passed for the ten source modules; git diff --check passed."
       ],
-      "test_result": "Separate options and stress controls are tested; the full multi-Greek, expiry-cluster and gap-to-stop portfolio scenario model remains absent. PA-08-10 remains PARTIAL."
+      "test_result": "Separate delta/gamma/vega/theta exposure controls and stress components are tested; the full repricing, expiry-cluster and gap-to-stop portfolio scenario model remains absent. PA-08-10 remains PARTIAL."
     },
     {
       "id": "PA-08-11",

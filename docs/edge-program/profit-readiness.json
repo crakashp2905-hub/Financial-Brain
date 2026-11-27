@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "15ff79b61d92504f420cf2b6280f97a085e74bab7317abef2b91e90bb05a619c",
-  "audit_export_sha256": "431360c7575782918dffbf55bd8704343ccc0c5b54d704d7fe82fbb4e906e179",
+  "status_ledger_sha256": "5b96d24d337fa2952cbdd8c7495fb50c809deca5bf06f184751e4ffbd4961bfd",
+  "audit_export_sha256": "7cd77ff6f0550ebace3b9ebe015e37020329a85f3632dd38e0ad07f47fc1a831",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3222,15 +3222,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Include option greeks (delta/gamma/vega/theta), payoff convexity, expiry clustering and gap-to-stop stress in portfolio scenario analysis."
           },
-          "commit": "a464ea4e",
-          "blocker": "Partial: delta/gamma/vega controls, defined-risk payoff/expiry scenarios and generic gap stresses exist separately; theta, expiry clustering and joined gap-to-stop stress are missing from a canonical portfolio scenario report.",
+          "commit": "be4014f0",
+          "blocker": "Partial: standalone delta/gamma/vega/theta exposure caps, defined-risk payoff/expiry scenarios and generic gap stresses exist; a canonical portfolio scenario report still does not combine Greek repricing, payoff convexity, expiry clustering and sourced gap-to-stop outcomes.",
           "evidence": [
-            "`kernel.portfolio_exit_guard` carries option delta, gamma and vega exposure and can propose aggregate risk-reduction exits under configured caps; theta is not represented in its Greek contract.",
+            "Commit `be4014f0` adds signed option theta normalized to INR per calendar day, including contract multiplier, to `kernel.portfolio_exit_guard`; the guard aggregates gross absolute theta and proposes lot/depth-aware paper reductions under `max_gross_option_theta_inr_per_day`.",
+            "The guard rejects non-option theta inputs. Its theta exposure cap is a position-reduction control and does not model theta repricing across time or volatility scenarios.",
             "`forward_edge.options_risk.evaluate_defined_risk_legs` uses executable leg bid/ask/depth to estimate debit, maximum loss for supported debit verticals, legging exposure and an explicit intrinsic-at-expiry scenario.",
             "`forward_edge.disaster_stress` models price gaps, spread blowouts, expiry extra losses, partial/unfilled exits and network partitions with deterministic report hashes.",
             "No single scenario report combines delta/gamma/vega/theta repricing, payoff convexity, expiry clustering and sourced gap-to-stop outcomes across the canonical portfolio."
           ],
           "tests": [
+            "`python -m pytest --basetemp .pytest-pa0810-theta tests/test_portfolio_exit_guard.py -q`: 13 passed, including signed gross theta aggregation, cap-triggered quantity reduction and non-option rejection.",
+            "Ruff, mypy for `portfolio_exit_guard.py`, and `git diff --check` passed.",
             "`python -m pytest --basetemp .pytest-pa0808-15 tests/test_cross_desk_risk.py tests/test_cross_desk_overlap.py tests/test_forward_edge_options_risk.py tests/test_portfolio_exit_guard.py tests/test_derivatives_subledger.py tests/test_forward_edge_disaster_stress.py tests/test_portfolio_allocator_benchmarks.py tests/test_capital_efficiency.py tests/test_portfolio_durable_reservations.py tests/test_portfolio_capacity_optimizer.py -q`: 66 passed.",
             "The 66-test package includes option risk, portfolio exit guard and deterministic disaster-stress suites; coverage verifies supported spread limits, Greek caps and scenario behavior but not a unified portfolio Greek stress report.",
             "Ruff passed for all ten reviewed source modules and focused tests; targeted mypy passed for the ten source modules; git diff --check passed."
@@ -3391,5 +3394,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "d58566e4a9bd75151539c999e76a0c344ec3d0b562a4d1dbd2f8f57f022bd3aa"
+  "report_sha256": "3a981898da31bac4d62bedd2dc3bafc2f9ab4a8f03db65b608487963edcf5762"
 }
