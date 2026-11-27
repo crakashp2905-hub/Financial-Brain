@@ -101,6 +101,22 @@ def test_h005_uses_only_industry_membership_known_at_rebalance():
     assert "FUTURE_INDUSTRY" not in set(industries)
 
 
+def test_h005_excludes_membership_first_observed_after_rebalance_close():
+    P, cols = _panel()
+    con = _rcon(cols)
+    as_of = P["C"].index[-1].date()
+    late_observation = pd.Timestamp(as_of, tz="Asia/Kolkata") + pd.Timedelta(days=1)
+    con.execute(
+        "INSERT INTO index_membership VALUES (?, ?, ?, ?, ?)",
+        ["IN0", "LATE_INDUSTRY", "NIFTY 500", as_of, late_observation],
+    )
+
+    industries = ZE._industries(con, cols, as_of)
+
+    assert industries["L0"] == "IND_A"
+    assert "LATE_INDUSTRY" not in set(industries)
+
+
 def test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units():
     con = duckdb.connect()
     day = pd.Timestamp("2026-11-24")

@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import json
 import hashlib
-from datetime import date
+from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -154,7 +155,14 @@ VERDICT.update({
 
 
 def _industries(rcon, lineages, as_of: date) -> pd.Series:
-    """Resolve each lineage's latest NIFTY 500 industry known on the decision date."""
+    """Resolve NIFTY 500 industry rows effective and observed by the decision-date close.
+
+    The daily rebalance job runs after the NSE close. A membership row ingested later
+    than 23:59:59 IST on the signal date cannot affect that date's candidate ranking.
+    """
+    available_by = datetime.combine(as_of, time.max, tzinfo=ZoneInfo("Asia/Kolkata")).astimezone(
+        timezone.utc
+    )
     df = rcon.execute("""WITH security_asof AS (
                             SELECT lineage, isin,
                                    ROW_NUMBER() OVER (PARTITION BY lineage ORDER BY business_date DESC) AS rn
@@ -166,9 +174,10 @@ def _industries(rcon, lineages, as_of: date) -> pd.Series:
                                                       ORDER BY m.as_of DESC, m.observed_at DESC) AS rn
                             FROM security_asof s JOIN index_membership m USING (isin)
                             WHERE s.rn = 1 AND m.index_name = 'NIFTY 500' AND m.as_of <= ?
+                              AND m.observed_at <= ?
                         )
                         SELECT lineage, industry FROM membership_asof WHERE rn = 1""",
-                       [as_of, list(lineages), as_of]).df()
+                       [as_of, list(lineages), as_of, available_by]).df()
     return df.drop_duplicates("lineage").set_index("lineage")["industry"].reindex(list(lineages))
 
 
