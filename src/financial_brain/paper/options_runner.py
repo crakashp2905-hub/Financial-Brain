@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import Counter
+import math
 
 from .options import OptionPaperError, Quote, cost_hurdle, long_round_trip, option_lot_count
 from ..kernel.units import OptionLots
@@ -32,6 +33,8 @@ class Intent:
     max_entry_delay: timedelta = timedelta(minutes=1)
     max_exit_delay: timedelta = timedelta(minutes=1)
     max_quote_age: timedelta = timedelta(seconds=30)
+    option_setup_id: str = "UNSPECIFIED"
+    delta_at_decision: float | None = None
 
     def __post_init__(self) -> None:
         # Keep the durable payload scalar-compatible after validating the domain unit.
@@ -46,6 +49,12 @@ class Intent:
             digest = getattr(self, name)
             if (len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest)):
                 raise OptionPaperError(f"{name} must be a lowercase SHA-256 evidence reference")
+        if not self.option_setup_id.strip():
+            raise OptionPaperError("option setup ID is required")
+        if (self.delta_at_decision is not None
+                and (not math.isfinite(self.delta_at_decision)
+                     or not -1 <= self.delta_at_decision <= 1)):
+            raise OptionPaperError("decision delta must be finite and between -1 and 1")
         if self.decided_at.tzinfo is None or self.planned_exit_at.tzinfo is None:
             raise OptionPaperError("option intent timestamps must be timezone-aware")
         if self.planned_exit_at <= self.decided_at:
@@ -65,7 +74,8 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
             "directional_signal_id": intent.directional_signal_id,
             "directional_evidence_sha256": intent.directional_evidence_sha256,
             "option_evidence_sha256": intent.option_evidence_sha256,
-            "cohort": intent.cohort,
+            "cohort": intent.cohort, "option_setup_id": intent.option_setup_id,
+            "delta_at_decision": intent.delta_at_decision,
             "rule_version": intent.rule_version, "mode": "replay", **metadata("replay")}
     ordered = sorted((q for q in quotes if q.token == intent.token), key=lambda q: q.observed_at)
     entry_candidates = [q for q in ordered if intent.decided_at < q.observed_at <=
@@ -111,7 +121,22 @@ def run_intent(intent: Intent, quotes: list[Quote]) -> dict:
             return {**base, "status": "NO_FILL", "reason": "ZERO_VISIBLE_DEPTH", "entry_at": entry.observed_at}
         return {**base, "status": "NO_EXIT_QUOTE", "entry_at": entry.observed_at,
                 "entry_premium_inr": entry.ask * entry.lot_size * lots}
-    return {**base, "status": "CLOSED", **long_round_trip(entry, exit_quote, lots=lots)}
+    spread_bps = (entry.ask - entry.bid) / ((entry.ask + entry.bid) / 2) * 10_000
+    expiry_days = (entry.expiry - entry.observed_at.date()).days
+    delta = intent.delta_at_decision
+    delta_bucket = ("UNREPORTED" if delta is None else
+                    "0.00-0.25" if abs(delta) < 0.25 else
+                    "0.25-0.50" if abs(delta) < 0.50 else
+                    "0.50-0.75" if abs(delta) < 0.75 else "0.75-1.00")
+    spread_bucket = ("0-25_BPS" if spread_bps < 25 else "25-100_BPS" if spread_bps < 100
+                     else "100-300_BPS" if spread_bps < 300 else "300_PLUS_BPS")
+    expiry_bucket = "0-1D" if expiry_days <= 1 else "2-7D" if expiry_days <= 7 else "8_PLUS_D"
+    return {**base, "status": "CLOSED", "option_type": "CE" if entry.symbol.endswith("CE") else
+            "PE" if entry.symbol.endswith("PE") else "UNKNOWN",
+            "entry_spread_bps": spread_bps, "spread_bucket": spread_bucket,
+            "expiry_days_at_entry": expiry_days, "expiry_bucket": expiry_bucket,
+            "delta_bucket": delta_bucket,
+            **long_round_trip(entry, exit_quote, lots=lots)}
 
 
 def _valid(q: Quote) -> bool:
@@ -148,10 +173,27 @@ def replay_cohort(con, intents: list[Intent]) -> dict:
     results = [run_intent(i, archive_quotes(con, i)) for i in intents]
     closed = [r for r in results if r["status"] == "CLOSED"]
     counts = Counter(r["status"] for r in results)
+    groups: dict[tuple[str, str, str, str], list[dict]] = {}
+    for result in results:
+        key = (str(result.get("option_type", "UNRESOLVED")),
+               str(result.get("expiry_bucket", "UNRESOLVED")),
+               str(result.get("delta_bucket", "UNREPORTED")),
+               str(result.get("spread_bucket", "UNRESOLVED")))
+        groups.setdefault(key, []).append(result)
+    attribution = [{"option_type": key[0], "expiry_bucket": key[1],
+                    "delta_bucket": key[2], "spread_bucket": key[3],
+                    "intents": len(rows),
+                    "closed": sum(row["status"] == "CLOSED" for row in rows),
+                    "no_fill_or_unresolved": sum(row["status"] != "CLOSED" for row in rows),
+                    "net_pnl_inr": sum(float(row.get("net_pnl_inr", 0))
+                                        for row in rows if row["status"] == "CLOSED")}
+                   for key, rows in sorted(groups.items())]
     return {"mode": "replay", **metadata("replay"), "intents": len(intents), "closed": len(closed),
             "coverage": len(closed) / len(intents) if intents else 0.0,
             "status_counts": dict(counts),
             "gross_pnl_inr": sum(r["gross_pnl_inr"] for r in closed),
             "charges_inr": sum(r["charges_inr"] for r in closed),
             "net_pnl_inr": sum(r["net_pnl_inr"] for r in closed),
+            "option_attribution": attribution,
+            "direction_correctness": "NOT_COMPUTED_UNDERLYING_OUTCOME_JOIN_REQUIRED",
             "results": results}

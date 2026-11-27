@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from dataclasses import replace
 
 import duckdb
 
@@ -110,3 +111,28 @@ def test_archive_requires_fresh_broker_timestamp():
     assert report["evidence_class"] == "HISTORICAL_REPLAY" and report["independently_attested"] is False
     assert report["coverage"] == 0 and report["status_counts"] == {"NO_EXIT_QUOTE": 1}
     assert report["net_pnl_inr"] == 0
+    assert report["option_attribution"][0]["no_fill_or_unresolved"] == 1
+    assert report["direction_correctness"] == "NOT_COMPUTED_UNDERLYING_OUTCOME_JOIN_REQUIRED"
+
+
+def test_closed_replay_attributes_net_pnl_by_setup_expiry_delta_and_spread():
+    con = duckdb.connect()
+    con.execute(SCHEMA)
+    i = replace(intent(), option_setup_id="momentum-breakout", delta_at_decision=0.42)
+    entry_at = D + timedelta(seconds=10)
+    exit_at = i.planned_exit_at
+    for received, source, bid, ask in (
+            (entry_at, entry_at - timedelta(milliseconds=100), 100.0, 101.0),
+            (exit_at, exit_at - timedelta(milliseconds=100), 115.0, 116.0)):
+        con.execute("""INSERT INTO option_quotes
+            (received_at, source_at, instrument_token, tradingsymbol, underlying, expiry,
+             strike, option_type, lot_size, bid, ask, bid_qty, ask_qty, book_quality)
+            VALUES (?, ?, 123, 'NIFTY26NOV25000CE', 'NIFTY', ?, 25000, 'CE', 65,
+                    ?, ?, 1000, 1000, 'TWO_SIDED')""",
+                    [received, source, EXPIRY, bid, ask])
+    report = replay_cohort(con, [i])
+    group = report["option_attribution"][0]
+    assert (group["option_type"], group["expiry_bucket"], group["delta_bucket"],
+            group["spread_bucket"]) == ("CE", "2-7D", "0.25-0.50", "25-100_BPS")
+    assert group["closed"] == 1 and group["intents"] == 1
+    assert group["net_pnl_inr"] == report["net_pnl_inr"]
