@@ -9726,7 +9726,7 @@
       ],
       "blocker": "Wire an authorized complete index-minute feed into this builder, persist source and availability clocks, and validate on real sessions. Current repo provides the strict pure builder but no end-to-end data path.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": null,
+      "commit": "8af691d6",
       "test_result": "18 focused forecasting-index tests passed; Ruff and mypy passed for both forecast modules."
     },
     {
