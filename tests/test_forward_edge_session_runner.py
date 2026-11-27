@@ -64,6 +64,7 @@ def make_config(*, max_quote_age_ms=None):
                        "limits": {"CASH": "1000000000",
                                   "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
                                   "OPTION_BUYING_POWER": "1000000000",
+                                  "PAPER_COST_BUFFER": "1000000000",
                                   "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
                                   "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
                    }}
@@ -90,6 +91,7 @@ def make_config_with_constraints(constraints):
                        "limits": {"CASH": "1000000000",
                                   "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
                                   "OPTION_BUYING_POWER": "1000000000",
+                                  "PAPER_COST_BUFFER": "1000000000",
                                   "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
                                   "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
                    }, **constraints}
@@ -1582,6 +1584,10 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
     assert buy["simulated_adverse_selection_cost_inr"] == "0.00"
     assert buy["cost_items"][0]["impact"] == 0
     assert all(item.get("type") != "SIMULATED_ADVERSE_SELECTION" for item in buy["cost_items"])
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+    active_reservations = DurableReservationLedger(tmp_path / "journal.sqlite").active_amounts("ledger-1")
+    assert active_reservations["PAPER_COST_BUFFER"] >= Decimal(buy["charges_inr"])
+    assert active_reservations["CASH"] >= Decimal("200.60") + Decimal(buy["charges_inr"])
     sell = runner.execute_paper_intent(
         session_id="s", order_id="sell", decision_id="trade-1", event_id=fill_event.event_id,
         side="SELL", quantity=2, limit_price=Decimal("99.00"), tick_size=Decimal("0.05"),

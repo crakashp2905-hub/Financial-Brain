@@ -358,6 +358,12 @@ class DurableReservationLedger:
             quantity_resource = f"INSTRUMENT_QUANTITY:{row['instrument_id']}"
             fill_quantity = Decimal(str(row["quantity"]))
             position_action = row["position_action"] or row["side"]
+            fee_amount = (-Decimal(str(fee_row["cash_delta"]))
+                          if fee_row is not None else Decimal(0))
+            if fee_amount > Decimal(reserved.get("PAPER_COST_BUFFER", "0")):
+                raise ReservationError("paper fees exceed their frozen cost-buffer reservation")
+            if fee_amount > Decimal(reserved.get("CASH", "0")):
+                raise ReservationError("paper fees exceed their frozen cash reservation")
             if Decimal(reserved.get(quantity_resource, "0")) < fill_quantity:
                 raise ReservationError("paper fill quantity exceeds its frozen instrument reservation")
             if position_action == "SELL":
@@ -366,11 +372,13 @@ class DurableReservationLedger:
                     raise ReservationError("paper sell fill exceeds its frozen sellable-inventory reservation")
             elif position_action == "BUY" and row["asset_class"] != "FUTURE":
                 required_cash = (fill_quantity * Decimal(str(row["price"]))
-                                 * Decimal(str(row["multiplier"])))
+                                 * Decimal(str(row["multiplier"])) + fee_amount)
                 if Decimal(reserved.get("CASH", "0")) < required_cash:
                     raise ReservationError("paper buy fill exceeds its frozen cash reservation")
                 if (row["asset_class"] == "OPTION"
-                        and Decimal(reserved.get("OPTION_BUYING_POWER", "0")) < required_cash):
+                        and Decimal(reserved.get("OPTION_BUYING_POWER", "0"))
+                        < fill_quantity * Decimal(str(row["price"])) * Decimal(str(row["multiplier"]))
+                        + fee_amount):
                     raise ReservationError("option fill exceeds its frozen options-buying-power reservation")
             elif row["asset_class"] == "FUTURE" and position_action == "BUY":
                 if any(Decimal(reserved.get(resource, "0")) <= 0

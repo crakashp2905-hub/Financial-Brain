@@ -33,6 +33,7 @@ def _policy(**limits):
         "MARGIN": Decimal("50000"),
         "RISK_CAPITAL": Decimal("10000"),
         "OPTION_BUYING_POWER": Decimal("20000"),
+        "PAPER_COST_BUFFER": Decimal("10000"),
         "SETTLEMENT_CASH": Decimal("50000"),
         "INSTRUMENT_QUANTITY:NSE:ABC": Decimal("100"),
         "SELLABLE_INVENTORY:NSE:ABC": Decimal("50"),
@@ -162,7 +163,8 @@ def test_paper_fill_and_source_bound_fee_commit_atomically_and_replay_once(tmp_p
     path = tmp_path / "shared-fee-book.sqlite"
     reservations = DurableReservationLedger(path)
     reservations.reserve(
-        _policy(), _request("s::o", CASH="600", **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
+        _policy(), _request("s::o", CASH="600", PAPER_COST_BUFFER="2.50",
+                            **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
     fill = PortfolioEvent(
         account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
         source_event_id="s:o:fill", source_sha256="c" * 64, event_kind=EventKind.FILL,
@@ -184,6 +186,31 @@ def test_paper_fill_and_source_bound_fee_commit_atomically_and_replay_once(tmp_p
     assert canonical.event_count() == 2
     assert canonical.snapshot("paper-account")["cash"]["INR"] == Decimal("-502.50")
     assert reservations.verify("paper-account")["mismatched"] == 0
+
+
+def test_paper_fill_rejects_fee_above_frozen_cost_buffer(tmp_path):
+    path = tmp_path / "fee-buffer-overrun.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(), _request("s::o", CASH="600", PAPER_COST_BUFFER="2.49",
+                            **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fill", source_sha256="c" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="5", price="100",
+    )
+    fee = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fees", source_sha256="c" * 64, event_kind=EventKind.FEE,
+        occurred_at="2026-11-25T09:02:00+05:30", cash_delta="-2.50",
+        metadata={"fill_event_id": "s:o:fill"},
+    )
+
+    with pytest.raises(ReservationError, match="cost-buffer reservation"):
+        reservations.record_paper_fill(reservation_id="s::o", fill=fill, fee=fee)
+
+    assert CanonicalPortfolioLedger(path).event_count() == 0
 
 
 def test_paper_fee_must_match_fill_source_and_rolls_back_on_conflict(tmp_path):

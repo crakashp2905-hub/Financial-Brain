@@ -8,7 +8,7 @@ import re
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
-from decimal import InvalidOperation, ROUND_HALF_EVEN, Decimal
+from decimal import InvalidOperation, ROUND_CEILING, ROUND_HALF_EVEN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Iterable
 from zoneinfo import ZoneInfo
@@ -2172,7 +2172,8 @@ class ForwardSessionRunner:
                           rule.expiry.isoformat() if rule.expiry else None,
                           "status": rule.status, "session_phases": sorted(rule.session_phases)}
         request = {"session_id": session_id, "order_id": order_id, "decision_id": decision_id,
-                   "event_id": event_id, "side": side, "quantity": quantity,
+                   "event_id": event_id, "instrument_id": event.instrument_id,
+                   "side": side, "quantity": quantity,
                    "quantity_unit": quantity_unit,
                    "as_of": signal_event.available_at.astimezone(timezone.utc).isoformat(),
                    "first_executable_after": timed.earliest_fill_time.isoformat(),
@@ -2202,6 +2203,9 @@ class ForwardSessionRunner:
                 config=config, session_id=session_id, order_id=order_id, desk_id=config.cohort,
                 instrument=event.instrument_id, side=side, quantity=quantity,
                 quantity_unit=quantity_unit, limit_price=limit,
+                cost_buffer=self._paper_cost_buffer(
+                    session_id=session_id, request=request, config=config, quantity=quantity,
+                    quantity_unit=quantity_unit, limit_price=limit, opposing_levels=opposing_levels),
                 created_at=simulated_at, source_sha256=request_sha,
             )
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
@@ -2332,7 +2336,8 @@ class ForwardSessionRunner:
 
     def _reserve_paper_intent(self, *, config: ForwardRunConfig, session_id: str, order_id: str,
                               desk_id: str, instrument: str, side: str, quantity: int,
-                              quantity_unit: str, limit_price: Decimal, created_at: datetime,
+                              quantity_unit: str, limit_price: Decimal, cost_buffer: Decimal,
+                              created_at: datetime,
                               source_sha256: str) -> None:
         setup = self._reservation_setup(config)
         ledger, policy = setup
@@ -2355,12 +2360,16 @@ class ForwardSessionRunner:
             # Futures entry reserves supplied margin and risk capital, never full notional.
             pass
         elif side == "BUY":
-            cash_required = limit_price * quantity * multiplier
+            cash_required = limit_price * quantity * multiplier + cost_buffer
             resource_amounts["CASH"] = cash_required
             if quantity_unit == "OPTION_CONTRACTS":
                 resource_amounts["OPTION_BUYING_POWER"] = cash_required
         elif side == "SELL":
             resource_amounts[f"SELLABLE_INVENTORY:{instrument}"] = Decimal(quantity)
+            if cost_buffer:
+                resource_amounts["CASH"] = cost_buffer
+        if cost_buffer:
+            resource_amounts["PAPER_COST_BUFFER"] = cost_buffer
         # Optional, frozen per-unit inputs allow callers to reserve margin, risk capital,
         # options buying power, or settlement cash without inventing those values here.
         configured = config.constraints.get("reservation_resource_amounts", {})
@@ -2393,6 +2402,46 @@ class ForwardSessionRunner:
             ledger.reserve(policy, request)
         except ReservationError as exc:
             raise ForwardSessionRunnerError(f"paper intent reservation denied: {exc}") from exc
+
+    def _paper_cost_buffer(self, *, session_id: str, request: dict[str, Any],
+                           config: ForwardRunConfig, quantity: int, quantity_unit: str,
+                           limit_price: Decimal,
+                           opposing_levels: list[tuple[Decimal, int]]) -> Decimal:
+        """Reserve a paise-rounded upper bound for configured fees before paper execution."""
+        if config.constraints.get("cost_schedule") is None:
+            return Decimal(0)
+        from financial_brain.costs.india import Side
+
+        bucket = config.constraints.get("liquidity_bucket")
+        if bucket not in {"mega", "large", "mid", "small", "micro"}:
+            raise ForwardSessionRunnerError("costed paper reservation requires a valid liquidity bucket")
+        multiplier = Decimal("1")
+        if quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+            position_rules = config.constraints.get("position_accounting", {})
+            metadata = position_rules.get(str(request.get("instrument_id", ""))) \
+                if isinstance(position_rules, dict) else None
+            if not isinstance(metadata, dict) or "multiplier" not in metadata:
+                raise ForwardSessionRunnerError("costed derivative reservation requires explicit multiplier")
+            multiplier = Decimal(str(metadata["multiplier"]))
+            if not multiplier.is_finite() or multiplier <= 0:
+                raise ForwardSessionRunnerError("costed derivative multiplier must be finite and positive")
+        price_bound = limit_price
+        if request.get("side") == "SELL" and request.get("execution_style") != "PASSIVE_LIMIT":
+            executable = [price for price, depth in opposing_levels if depth > 0 and price >= limit_price]
+            if executable:
+                price_bound = max(executable)
+        schedule = self._resolved_cost_schedule(session_id)
+        lines = schedule.one_way(
+            day=config.exchange_date, turnover=float(price_bound * quantity * multiplier),
+            side=Side.BUY if request.get("side") == "BUY" else Side.SELL,
+            bucket=str(bucket), include_impact=False,
+        )
+        buffer = Decimal(str(lines["total"]))
+        if request.get("execution_style") == "PASSIVE_LIMIT":
+            buffer += Decimal(self._passive_adverse_cost(session_id, request, limit_price, quantity))
+        if not buffer.is_finite() or buffer < 0:
+            raise ForwardSessionRunnerError("computed paper cost reservation is invalid")
+        return buffer.quantize(Decimal("0.01"), rounding=ROUND_CEILING)
 
     def _release_nonfilled_paper_reservation(self, *, config: ForwardRunConfig, session_id: str,
                                              order_id: str, receipt: dict[str, Any],
@@ -2440,7 +2489,18 @@ class ForwardSessionRunner:
         try:
             schedule = self._resolved_cost_schedule(session_id)
             side = Side.BUY if request["side"] == "BUY" else Side.SELL
-            turnover = float(price * filled_quantity)
+            multiplier = Decimal("1")
+            if request.get("quantity_unit") in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+                position_rules = config.constraints.get("position_accounting", {})
+                metadata = position_rules.get(str(request.get("instrument_id", ""))) \
+                    if isinstance(position_rules, dict) else None
+                if not isinstance(metadata, dict) or "multiplier" not in metadata:
+                    raise ForwardSessionRunnerError(
+                        "costed derivative fill requires explicit contract multiplier")
+                multiplier = Decimal(str(metadata["multiplier"]))
+                if not multiplier.is_finite() or multiplier <= 0:
+                    raise ForwardSessionRunnerError("costed derivative multiplier must be finite and positive")
+            turnover = float(price * filled_quantity * multiplier)
             # This runner has an observed opposing book and applies price impact through
             # depth walking and tick-rounded adverse execution prices. Do not add a second
             # generic bucket impact estimate to those same fills.
