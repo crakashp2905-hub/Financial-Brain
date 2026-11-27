@@ -10,6 +10,7 @@ from financial_brain.forecasting.index_15m import (
     brier,
     check_probabilities,
     completed_before,
+    cost_aware_flat_band,
     features_at,
     frequency_baseline,
     label,
@@ -112,3 +113,11 @@ def test_training_noise_threshold_and_probabilities_fail_closed():
         noise_threshold([0.0, 0.0])
     with pytest.raises(SeriesError, match="sum to one"):
         check_probabilities({"UP": 0.5, "DOWN": 0.6, "FLAT": 0.0})
+
+
+def test_cost_aware_flat_band_uses_training_noise_or_all_in_cost_floor():
+    returns = [0.01, -0.02, 0.03]
+    assert cost_aware_flat_band(returns, 0.005) == 0.01
+    assert cost_aware_flat_band(returns, 0.02) == 0.02
+    with pytest.raises(SeriesError, match="finite and nonnegative"):
+        cost_aware_flat_band(returns, -0.001)

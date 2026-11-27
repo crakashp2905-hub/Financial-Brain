@@ -105,6 +105,19 @@ def noise_threshold(train_returns: list[float], quantile: float = 0.33) -> float
     return threshold
 
 
+def cost_aware_flat_band(train_returns: list[float], round_trip_cost_fraction: float,
+                         quantile: float = 0.33) -> float:
+    """Freeze a flat threshold at the larger of training noise and round-trip cost.
+
+    Costs must be expressed as a fraction of underlying notional for the same intended
+    round trip. Call once inside each training fold and reuse unchanged on validation/test.
+    This is a label threshold, not proof that a strategy is profitable after costs.
+    """
+    if (not isfinite(round_trip_cost_fraction) or round_trip_cost_fraction < 0):
+        raise SeriesError("round-trip cost fraction must be finite and nonnegative")
+    return max(noise_threshold(train_returns, quantile), round_trip_cost_fraction)
+
+
 def label(realized_return: float | None, threshold: float) -> str | None:
     """Compatibility label helper with a frozen positive threshold."""
     if realized_return is None:
@@ -213,5 +226,5 @@ __all__ = [
     "Bar", "IndexForwardTarget", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
     "features_at", "forward_return", "forward_targets", "frequency_baseline", "label", "leak_check",
     "summarize_forward_distributions",
-    "noise_threshold", "purged_splits", "purged_time_splits",
+    "cost_aware_flat_band", "noise_threshold", "purged_splits", "purged_time_splits",
 ]
