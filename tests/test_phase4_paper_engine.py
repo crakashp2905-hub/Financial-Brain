@@ -15,7 +15,7 @@ import duckdb
 import pytest
 
 from financial_brain.costs import book as costbook
-from financial_brain.costs.india import CostModel, Segment
+from financial_brain.costs.india import CostModel, Segment, Side
 from financial_brain.paper import engine
 
 START = date(2024, 1, 1)
@@ -130,6 +130,23 @@ def test_an_order_that_cannot_fill_leaves_a_smaller_position_not_the_intended_on
     partial = [t for t in r.trades if t.unfilled > 0]
     assert partial, "a constrained market should leave unfilled orders"
     assert all(t.shares < t.intended_shares for t in partial)
+
+
+def test_each_fill_charges_side_specific_itemized_delivery_costs():
+    con = _db(names=4, drift=0.002)
+    r = engine.run(con, feature="dist_52w_high", start=START,
+                   end=START + timedelta(days=119), rebalance=20, max_positions=3,
+                   simulate_fills=False)
+    model = CostModel()
+    assert r.trades
+    for trade in r.trades:
+        expected = model.one_way(
+            turnover=trade.notional, side=Side(trade.side.lower()),
+            segment=Segment.DELIVERY, bucket="mega")["total"]
+        assert trade.cost_inr == pytest.approx(expected)
+    sells = [t for t in r.trades if t.side == "sell"]
+    if sells:
+        assert all(t.cost_inr > 0 for t in sells)
 
 
 def test_equity_is_cash_plus_holdings_every_session():

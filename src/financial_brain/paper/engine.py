@@ -45,7 +45,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from ..costs import book as costbook
-from ..costs.india import CostModel, Segment
+from ..costs.india import CostModel, Segment, Side
 from ..execution import simulator as sim
 
 #: Sessions between rebalances.
@@ -810,7 +810,20 @@ def _fill(con, *, session: date, lineage: str, side: str, shares: int, rt: dict,
     decision = decision_price if decision_price is not None else close
     symbol = _symbol(con, lineage) if simulate_fills else None
     bucket = buckets.get(lineage, "micro")
-    half = rt.get(bucket, rt["micro"]) / 2      # one leg
+    # Apply the configured Indian cost schedule to the actual executed leg.  The
+    # preceding implementation allocated a blended half of a round-trip rate,
+    # which omitted side asymmetry and mishandled flat delivery/DP charges.
+    cost_enabled = any(rate > 0 for rate in rt.values())
+    model = CostModel() if cost_enabled else None
+
+    def execution_cost(notional: float) -> float:
+        if not notional:
+            return 0.0
+        if model is None:
+            return 0.0
+        return model.one_way(
+            turnover=notional, side=Side(side.lower()), segment=Segment.DELIVERY,
+            bucket=bucket)["total"]
 
     if symbol:
         f = sim.execute(con, symbol=symbol, session=session, side=side,
@@ -821,7 +834,7 @@ def _fill(con, *, session: date, lineage: str, side: str, shares: int, rt: dict,
             notional = f.filled_shares * f.achieved
             return Trade(session=session, lineage=lineage, side=side,
                          shares=f.filled_shares, price=f.achieved, notional=notional,
-                         cost_inr=notional * half, fill_kind=SIMULATED_FILL,
+                         cost_inr=execution_cost(notional), fill_kind=SIMULATED_FILL,
                          shortfall_bps=f.shortfall_bps, minutes=f.minutes,
                          intended_shares=shares)
         if not close:
@@ -830,5 +843,5 @@ def _fill(con, *, session: date, lineage: str, side: str, shares: int, rt: dict,
         return None
     notional = shares * close
     return Trade(session=session, lineage=lineage, side=side, shares=shares, price=close,
-                 notional=notional, cost_inr=notional * half,
+                 notional=notional, cost_inr=execution_cost(notional),
                  fill_kind=CLOSE_FILL, intended_shares=shares)

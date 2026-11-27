@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "26e240f5c1309b8f88e6a2ac82569b681372586997040ee4828a6b69af1bb550",
-  "audit_export_sha256": "2ff85a7e3cba3c284fde34d24ec6e359b49a52ff74082fabf592147b744c9ea4",
+  "status_ledger_sha256": "f35e86adf52a7b62602418febeecd2afb5406b3d435eafdd701fdb2e20785690",
+  "audit_export_sha256": "3229050565be696a81220db7fcbe42c2afd4f356ea659800786e63f00cfb5402",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 834,
-    "UNASSESSED": 414
+    "PARTIAL": 835,
+    "UNASSESSED": 413
   },
-  "assessed_count": 964,
-  "unassessed_count": 414,
+  "assessed_count": 965,
+  "unassessed_count": 413,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 54,
-        "UNASSESSED": 7
+        "PARTIAL": 55,
+        "UNASSESSED": 6
       },
       "evidence": [
         {
@@ -2986,16 +2986,25 @@
         },
         {
           "item_id": "PA-07-11",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1071,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Replay one complete monthly cycle from snapshot to equity close, including dividends, transaction taxes, DP charges and partial fills."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: the monthly replay engine covers snapshot-to-equity, costs and partial fills, and per-trade statutory cost calculation is corrected; dividend cash entitlements and a full monthly cycle acceptance fixture remain.",
+          "evidence": [
+            "Inspected paper.engine.run: it uses point-in-time feature snapshots, next-session order execution, cash/position accounting, partial fills from minute volume, and session-level equity marking.",
+            "This package changes _fill to compute actual per-leg delivery charges from CostModel.one_way using the filled notional, side and liquidity bucket; sell charges now include DP fee and the configured schedule itemization. Regression asserts each trade charge against the one-way model.",
+            "The engine still lacks dividend cash booking and an end-to-end monthly snapshot-to-close fixture. Corporate-action adjusted prices do not themselves prove entitlement cash reconciliation. Therefore the requested complete monthly cycle is not complete."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0711-costs4 tests/test_phase4_paper_engine.py -q: 31 passed, including one-way side-specific cost schedule regression.",
+            "python -m ruff check src/financial_brain/paper/engine.py tests/test_phase4_paper_engine.py: passed.",
+            "python -m mypy src/financial_brain/paper/engine.py: reported existing unrelated missing annotation at engine.py:487 for buckets local; no runtime test failure.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-12",
@@ -3466,5 +3475,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "f7dda8d8a42cb4e281a62e71680c3bae03c94a7c5a05f30a4a8cdba5686602d8"
+  "report_sha256": "a595f006e64c0832a7cdd89fba12c221e0c661277fa643391e8a0a9190ba17db"
 }

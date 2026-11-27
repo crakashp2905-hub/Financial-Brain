@@ -9217,12 +9217,23 @@
     {
       "id": "PA-07-11",
       "text": "Replay one complete monthly cycle from snapshot to equity close, including dividends, transaction taxes, DP charges and partial fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Inspected paper.engine.run: it uses point-in-time feature snapshots, next-session order execution, cash/position accounting, partial fills from minute volume, and session-level equity marking.",
+        "This package changes _fill to compute actual per-leg delivery charges from CostModel.one_way using the filled notional, side and liquidity bucket; sell charges now include DP fee and the configured schedule itemization. Regression asserts each trade charge against the one-way model.",
+        "The engine still lacks dividend cash booking and an end-to-end monthly snapshot-to-close fixture. Corporate-action adjusted prices do not themselves prove entitlement cash reconciliation. Therefore the requested complete monthly cycle is not complete."
+      ],
+      "blocker": "Partial: the monthly replay engine covers snapshot-to-equity, costs and partial fills, and per-trade statutory cost calculation is corrected; dividend cash entitlements and a full monthly cycle acceptance fixture remain.",
+      "last_audited_at_utc": "2026-11-27T05:28:00Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0711-costs4 tests/test_phase4_paper_engine.py -q: 31 passed, including one-way side-specific cost schedule regression.",
+        "python -m ruff check src/financial_brain/paper/engine.py tests/test_phase4_paper_engine.py: passed.",
+        "python -m mypy src/financial_brain/paper/engine.py: reported existing unrelated missing annotation at engine.py:487 for buckets local; no runtime test failure.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Existing full paper-engine tests pass with per-executed-leg delivery statutory charges and DP fees itemized via CostModel; partial fills remain supported. Dividend entitlements and end-to-end monthly replay are not implemented, so PA-07-11 remains PARTIAL."
     },
     {
       "id": "PA-07-12",
@@ -21055,6 +21066,7 @@
       "PA-07-08",
       "PA-07-09",
       "PA-07-10",
+      "PA-07-11",
       "PA-07-12",
       "PA-08-01",
       "PA-08-02",
@@ -21494,13 +21506,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 964,
+    "audited_count": 965,
     "status_counts": {
       "COMPLETE": 107,
-      "EXTERNAL_BLOCKED": 6,
+      "PARTIAL": 835,
+      "UNASSESSED": 413,
       "NOT_STARTED": 17,
-      "PARTIAL": 834,
-      "UNASSESSED": 414
+      "EXTERNAL_BLOCKED": 6
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21647,9 +21659,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "EXTERNAL_BLOCKED": 6,
+    "PARTIAL": 835,
+    "UNASSESSED": 413,
     "NOT_STARTED": 17,
-    "PARTIAL": 834,
-    "UNASSESSED": 414
+    "EXTERNAL_BLOCKED": 6
   }
 }
