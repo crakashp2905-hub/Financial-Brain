@@ -10765,12 +10765,21 @@
     {
       "id": "PA-13-05",
       "text": "Use volatility-aware position sizing with severe shrinkage toward zero when probabilities are uncalibrated or recent evidence weakens.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/evidence_aware_sizing.py combines a volatility target with out-of-sample calibration quality/sample shrinkage and a recent net-alpha lower-confidence-bound/trade-count multiplier, then enforces a hard position-fraction cap.",
+        "Missing, non-point-in-time, stale, invalid-hash and future evidence is rejected. Uncalibrated probabilities receive at most a 0.05 multiplier; nonpositive recent net-alpha lower bound reduces size to zero.",
+        "This callable is not yet wired into the paper OMS/allocation authorization path. Artifact digests are caller-supplied identifiers and are not independently signature-authenticated."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T08:34:56Z",
+      "commit": "6d4e5ef5",
+      "test_evidence": [
+        "tests/test_evidence_aware_sizing.py: volatility scaling, calibration shrinkage, negative/weak recent net evidence, hard cap, stale/future/invalid evidence, and frozen-session checks passed.",
+        "Combined tests/test_evidence_aware_sizing.py, tests/test_forward_edge_risk_throttle.py, tests/test_forward_edge_risk_allocator.py and tests/test_options_portfolio_stress.py: 25 passed.",
+        "Ruff on the new sizer and tests passed; mypy on the sizing module passed; git diff --check passed."
+      ]
     },
     {
       "id": "PA-13-06",
@@ -20970,7 +20979,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T08:30:44Z",
+    "as_of_utc": "2026-11-27T08:34:56Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21592,6 +21601,7 @@
       "PA-13-02",
       "PA-13-03",
       "PA-13-04",
+      "PA-13-05",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22015,13 +22025,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1042,
+    "audited_count": 1043,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 903,
-      "UNASSESSED": 336
+      "PARTIAL": 904,
+      "UNASSESSED": 335
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22170,7 +22180,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 903,
-    "UNASSESSED": 336
+    "PARTIAL": 904,
+    "UNASSESSED": 335
   }
 }
