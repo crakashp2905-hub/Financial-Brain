@@ -9764,12 +9764,18 @@
     {
       "id": "PA-09-05",
       "text": "Create hard baselines: random walk, class frequencies, volatility-aware no-direction, same-time-of-day climatology and a simple previous-bar rule.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_15m.py now exposes random-walk zero-return, training class-frequency, volatility-aware no-direction, same-time-of-day class climatology with global fallback, and previous-bar baselines.",
+        "Time-bucket frequencies consume only caller-provided training labels; predictions require a known bucket and deterministic fallback is explicit.",
+        "tests/test_forecasting_index_15m.py checks each baseline output and training-only behavior; 22 focused forecasting-index tests passed, Ruff and mypy passed.",
+        "Baselines are not integrated into a chronological experiment runner and have not been scored on actual index-minute outcomes or compared using a frozen test manifest."
+      ],
+      "blocker": "Wire the baselines into chronological folds and score all of them on the same complete real index sessions with frozen training labels and target definitions.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "5be8ada4",
+      "test_result": "22 focused forecasting-index tests passed; Ruff and mypy passed."
     },
     {
       "id": "PA-09-06",
@@ -21194,6 +21200,7 @@
       "PA-09-02",
       "PA-09-03",
       "PA-09-04",
+      "PA-09-05",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21617,13 +21624,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 975,
+    "audited_count": 976,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 845,
-      "UNASSESSED": 403
+      "PARTIAL": 846,
+      "UNASSESSED": 402
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21772,7 +21779,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 845,
-    "UNASSESSED": 403
+    "PARTIAL": 846,
+    "UNASSESSED": 402
   }
 }
