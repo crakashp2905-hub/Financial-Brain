@@ -8,7 +8,7 @@
     ],
     "rule": "A module existing in the repository is not acceptance evidence by itself."
   },
-  "complete_items": 135,
+  "complete_items": 136,
   "items_with_evidence_gaps": 134,
   "gap_count": 260,
   "gaps": [

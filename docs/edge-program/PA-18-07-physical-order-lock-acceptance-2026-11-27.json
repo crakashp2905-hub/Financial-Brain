@@ -1,0 +1,36 @@
+{
+  "schema": "fb.acceptance.physical_order_lock.v1",
+  "requirement_id": "PA-18-07",
+  "status": "VERIFIED_UNAVAILABLE",
+  "tested_at_utc": "2026-11-27T17:45:33Z",
+  "source_commit": "bcab02d5271c10a1372193b0648d0641e2a530cb",
+  "verification_command": "python -m pytest tests/test_oms.py::test_shared_physical_order_lock_blocks_legacy_writes_even_when_every_legacy_lock_is_open tests/test_oms.py::test_the_order_path_lives_in_one_file_only tests/test_forward_edge_session_runner.py::test_forward_paper_intent_cannot_reach_broker_with_forged_live_flags tests/test_phase5_intraday_runner.py::test_live_paper_and_replay_never_call_physical_broker_even_with_forged_flags -q",
+  "result": {
+    "passed": 4,
+    "failed": 0,
+    "errors": 0
+  },
+  "controls": [
+    {
+      "path": "src/financial_brain/execution/order_policy.py",
+      "control": "PHYSICAL_ORDERS_ENABLED is a build constant set to false; every physical write raises PhysicalOrderDenied without a runtime override."
+    },
+    {
+      "path": "src/financial_brain/execution/oms/kite_broker.py",
+      "control": "All non-GET transport requests call the shared denial policy before credentials or network transport are accessed."
+    },
+    {
+      "path": "tests/test_oms.py",
+      "control": "Hostile test opens legacy environment/stage/verdict locks, supplies credentials, forges the policy flag, and confirms place/cancel/write verbs never reach the injected transport. A static test constrains Kite order transport to the single guarded module."
+    },
+    {
+      "path": "tests/test_forward_edge_session_runner.py",
+      "control": "Forged live flags and credentials do not let the forward paper runner invoke broker placement."
+    },
+    {
+      "path": "tests/test_phase5_intraday_runner.py",
+      "control": "Live-paper and replay entry points do not invoke physical broker placement when live flags are forged."
+    }
+  ],
+  "scope_limit": "This verifies broker-write unavailability in the repository's shipping execution paths and checked artifacts. It does not attest to external broker-account state or provider licensing."
+}
