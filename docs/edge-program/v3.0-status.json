@@ -10928,11 +10928,15 @@
     {
       "id": "PA-13-15",
       "text": "Run property-based simulation of thousands of trades ensuring total reserved and at-risk capital never exceeds signed hard limits.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_portfolio_durable_reservations.py::test_thousand_intent_stress_never_exceeds_cash_margin_or_risk_caps runs 1,000 seeded intents and asserts cash, margin and risk-capital reservations never exceed frozen limits; focused test passed.",
+        "src/financial_brain/portfolio/durable_reservations.py uses SQLite BEGIN IMMEDIATE and atomically denies any over-budget multi-resource reservation. Existing test_portfolio_durable_reservations.py includes concurrency and atomicity cases.",
+        "Requirement remains partial: frozen limits are hash-bound but not independently signature-verified; full reservation test module had 7 unrelated Windows sandbox temp-path sqlite open failures in this run, so full-suite green evidence is absent."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T10:25:00Z",
       "commit": null
     },
     {
@@ -21665,6 +21669,7 @@
       "PA-13-12",
       "PA-13-13",
       "PA-13-14",
+      "PA-13-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22088,13 +22093,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1052,
+    "audited_count": 1053,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 913,
-      "UNASSESSED": 326
+      "PARTIAL": 914,
+      "UNASSESSED": 325
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22243,7 +22248,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 913,
-    "UNASSESSED": 326
+    "PARTIAL": 914,
+    "UNASSESSED": 325
   }
 }

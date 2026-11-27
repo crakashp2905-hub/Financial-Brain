@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+import random
 
 import pytest
 
@@ -91,6 +92,27 @@ def test_concurrent_desks_cannot_overreserve_account_cash(tmp_path):
     assert results.count("DENIED") == 1
     active = DurableReservationLedger(path).active_amounts("paper-account")
     assert active["CASH"] == Decimal("60")
+
+
+def test_thousand_intent_stress_never_exceeds_cash_margin_or_risk_caps(tmp_path):
+    ledger = DurableReservationLedger(tmp_path / "thousand-intents.sqlite")
+    limits = {"CASH": Decimal("5000"), "MARGIN": Decimal("2000"),
+              "RISK_CAPITAL": Decimal("1000")}
+    policy = _policy(**limits)
+    rng = random.Random(13015)
+    accepted = rejected = 0
+    for index in range(1_000):
+        amounts = {resource: Decimal(rng.randint(1, 75)) for resource in limits}
+        try:
+            ledger.reserve(policy, _request(f"stress-{index:04d}", **amounts))
+            accepted += 1
+        except ReservationError as exc:
+            assert "budget exceeded" in str(exc)
+            rejected += 1
+        active = ledger.active_amounts("paper-account")
+        assert all(active.get(resource, Decimal(0)) <= cap for resource, cap in limits.items())
+    assert accepted > 0 and rejected > 0
+    assert ledger.verify("paper-account")["mismatched"] == 0
 
 
 def test_release_requires_source_bound_terminal_event_and_is_replay_safe(tmp_path):
