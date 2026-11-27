@@ -35,6 +35,28 @@ def test_monthly_rebalance_audit_reports_exact_missed_signal_date_and_hash_misma
     assert state["targets"]["edge_p1_residual_mom"] == {"OLD": 1.0}
 
 
+def test_missing_held_return_is_incomplete_and_does_not_block_other_strategy(tmp_path):
+    z = Z.connect(tmp_path / "missing-return.duckdb")
+    first, second = date(2026, 11, 2), date(2026, 11, 3)
+    Z.settle(z, "missing", first, None, {}, 0.0, {"A": 1.0})
+    Z.settle(z, "observed", first, None, {}, 0.0, {"B": 1.0})
+
+    missing = Z.settle(z, "missing", second, first, {}, 0.0, {"A": 1.0})
+    observed = Z.settle(z, "observed", second, first, {"B": 0.02}, 0.01, {"B": 1.0})
+
+    assert missing["gross"] is None and missing["net"] is None and missing["bench"] is None
+    assert observed["gross"] == pytest.approx(0.02)
+    assert observed["net"] == pytest.approx(observed["gross"] - observed["cost"])
+    quality = z.execute(
+        "SELECT status, missing_return_keys FROM zoo_pnl_quality WHERE strategy='missing' AND day=?",
+        [second],
+    ).fetchone()
+    assert quality == ("INCOMPLETE_MISSING_RETURN", '["A"]')
+    summary = Z.summary(z)
+    assert pd.isna(summary.loc["missing", "last_net"])
+    assert summary.loc["observed", "last_net"] == pytest.approx(observed["net"])
+
+
 
 
 def test_pairs_open_on_divergence_and_close_on_crossing():
