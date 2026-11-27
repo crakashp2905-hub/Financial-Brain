@@ -12,6 +12,7 @@ import sqlite3
 import sys
 from collections import Counter
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -303,6 +304,63 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
             lineage_valid = False
 
     open_exposures = sorted(set(exposure_records) - resolved_exposures)
+    risk_verdicts = {row["record"].get("decision_id"): row["record"] for row in records
+                     if row["kind"] == "risk_verdict" and isinstance(row["record"].get("decision_id"), str)}
+    session_close = next((row["record"] for row in reversed(records)
+                          if row["kind"] == "session_report"), None)
+    day_end = session_close.get("day_end_reconciliation") if isinstance(session_close, dict) else None
+    missing_fill_order_ids: list[str] = []
+    for order_id in intents:
+        receipt = receipts.get(order_id)
+        try:
+            quantity = int(receipt.get("filled_quantity", 0) or 0) if receipt else 0
+        except (TypeError, ValueError, OverflowError):
+            quantity = 0
+        try:
+            requested = int(intents[order_id].get("quantity", 0) or 0)
+        except (TypeError, ValueError, OverflowError):
+            requested = 0
+        if (receipt is None or receipt.get("status") not in {"FILLED", "PARTIAL"}
+                or quantity <= 0 or requested <= 0 or quantity < requested):
+            missing_fill_order_ids.append(order_id)
+    missing_fill_order_ids.sort()
+    realized_gross = _decimal_or_none(day_end.get("realized_gross_pnl_inr")) if isinstance(day_end, dict) else None
+    unrealized_gross = _decimal_or_none(day_end.get("unrealized_gross_pnl_inr")) if isinstance(day_end, dict) else None
+    charges = _decimal_or_none(day_end.get("charges_inr")) if isinstance(day_end, dict) else None
+    gross_pnl = realized_gross + unrealized_gross if realized_gross is not None and unrealized_gross is not None else None
+    net_pnl = (gross_pnl - charges if gross_pnl is not None and charges is not None
+               and day_end.get("fees_reconciled") is True else None)
+    blocked_signals = sum(
+        1 for decision_id, decision in decisions.items()
+        if decision.get("outcome") in {"WITHHELD", "DATA_UNUSABLE"}
+        or (decision.get("outcome") == "TRADE" and
+            (risk_verdicts.get(decision_id) or {}).get("allowed") is False)
+    )
+    eligible_strategy_ids = config.get("eligible_strategy_ids")
+    eligible_count = (len(set(eligible_strategy_ids)) if isinstance(eligible_strategy_ids, list)
+                      and eligible_strategy_ids
+                      and all(isinstance(value, str) and value.strip() for value in eligible_strategy_ids)
+                      else None)
+    eligible_status = ("FROZEN_SESSION_CONFIG" if eligible_count is not None else
+                       "UNKNOWN: raw session does not carry a frozen eligible-strategy denominator")
+    proof = {
+        "eligible_count": eligible_count,
+        "eligible_count_status": eligible_status,
+        "generated_signal_count": decision_outcomes.get("TRADE", 0),
+        "blocked_signal_count": blocked_signals,
+        "matched_fill_count": filled_receipts,
+        "missing_fill_count": len(missing_fill_order_ids),
+        "missing_fill_order_ids": missing_fill_order_ids,
+        "gross_pnl_inr": _decimal_text(gross_pnl),
+        "net_pnl_inr": _decimal_text(net_pnl),
+        "worst_loss_inr": None,
+        "worst_loss_status": "UNKNOWN: raw audit lacks a validated per-trade realized-loss attribution",
+        "benchmark_id": config.get("benchmark"),
+        "benchmark_comparison": None,
+        "benchmark_status": "UNKNOWN: no same-session benchmark return/mark is persisted in raw runner logs",
+        "session_close_status": session_close.get("status") if isinstance(session_close, dict) else None,
+        "financial_reconciliation_status": day_end.get("reconciled") if isinstance(day_end, dict) else None,
+    }
     return {
         "session_id": session_id,
         "exchange_date": config.get("exchange_date"),
@@ -320,8 +378,56 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
         "open_unresolved_exposure_ids": open_exposures,
         "raw_hash_chain_valid": chain_valid,
         "decision_quote_lineage_valid": lineage_valid,
+        "one_page_proof": proof,
         "issues": issues,
     }
+
+
+def _decimal_or_none(value: Any) -> Decimal | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return parsed if parsed.is_finite() else None
+
+
+def _decimal_text(value: Decimal | None) -> str | None:
+    return format(value, "f") if value is not None else None
+
+
+def render_one_page_proof(report: dict[str, Any], session: dict[str, Any]) -> str:
+    proof = session["one_page_proof"]
+    def value(name: str) -> str:
+        item = proof.get(name)
+        return "Unknown" if item is None else str(item)
+    lines = [
+        f"# Forward paper session proof — {session['session_id']}", "",
+        f"**Exchange date:** {session['exchange_date']}  ",
+        f"**Audit status:** {report['status']}  ",
+        f"**Raw audit head:** `{session['audit_sequence_head'] or 'none'}`  ",
+        f"**Report SHA-256:** `{report['report_sha256']}`", "",
+        "| Measure | Result |", "|---|---:|",
+        f"| Eligible strategy count | {value('eligible_count')} |",
+        f"| Generated trade signals | {proof['generated_signal_count']} |",
+        f"| Blocked signals | {proof['blocked_signal_count']} |",
+        f"| Matched fills | {proof['matched_fill_count']} |",
+        f"| Missing fills | {proof['missing_fill_count']} |",
+        f"| Gross P&L (INR) | {value('gross_pnl_inr')} |",
+        f"| Net P&L (INR) | {value('net_pnl_inr')} |",
+        f"| Worst realized loss (INR) | {value('worst_loss_inr')} |",
+        f"| Frozen benchmark | {value('benchmark_id')} |",
+        f"| Benchmark comparison | {value('benchmark_comparison')} |", "",
+        "## Evidence gaps", "",
+        f"- Eligible count: {proof['eligible_count_status']}",
+        f"- Worst loss: {proof['worst_loss_status']}",
+        f"- Benchmark: {proof['benchmark_status']}",
+        f"- Financial reconciliation: {value('financial_reconciliation_status')}",
+        f"- Decision lineage valid: {session['decision_quote_lineage_valid']}",
+        f"- Raw hash chain valid: {session['raw_hash_chain_valid']}",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def run_daily_audit(*, state_db: Path, journal_db: Path, exchange_date: date) -> dict[str, Any]:
@@ -364,6 +470,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--date", required=True, type=date.fromisoformat,
                         help="exchange date in YYYY-MM-DD")
     parser.add_argument("--output", type=Path, help="write JSON report here; stdout if omitted")
+    parser.add_argument("--proof-dir", type=Path,
+                        help="write one Markdown proof page per session into this directory")
     args = parser.parse_args(argv)
     report = run_daily_audit(state_db=args.state_db, journal_db=args.journal_db,
                              exchange_date=args.date)
@@ -373,6 +481,13 @@ def main(argv: list[str] | None = None) -> int:
         args.output.write_text(encoded, encoding="utf-8")
     else:
         sys.stdout.write(encoded)
+    if args.proof_dir:
+        args.proof_dir.mkdir(parents=True, exist_ok=True)
+        for session in report["sessions"]:
+            session_key = hashlib.sha256(session["session_id"].encode("utf-8")).hexdigest()[:16]
+            proof_path = args.proof_dir / f"session-{session_key}.md"
+            proof_path.parent.mkdir(parents=True, exist_ok=True)
+            proof_path.write_text(render_one_page_proof(report, session), encoding="utf-8")
     return 0 if report["status"] == "PASS" else 2
 
 

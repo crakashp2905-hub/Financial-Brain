@@ -934,9 +934,12 @@ def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_pat
     runner.close()
 
     script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
+    proof_dir = Path.cwd() / ".pytest-pa14-proof"
+    proof_dir.mkdir(exist_ok=True)
     result = subprocess.run(
         [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
-         "--journal-db", str(tmp_path / "journal.sqlite"), "--date", "2026-11-13"],
+         "--journal-db", str(tmp_path / "journal.sqlite"), "--date", "2026-11-13",
+         "--proof-dir", str(proof_dir)],
         cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr + result.stdout
     report = json.loads(result.stdout)
@@ -949,6 +952,20 @@ def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_pat
     assert session["decision_quote_lineage_valid"] is True
     assert session["raw_market_event_count"] == 2
     assert session["filled_receipt_count"] == 1
+    proof = session["one_page_proof"]
+    assert proof["generated_signal_count"] == 1
+    assert proof["matched_fill_count"] == 1
+    assert proof["missing_fill_count"] == 0
+    assert proof["eligible_count"] is None
+    assert proof["gross_pnl_inr"] is None
+    assert proof["net_pnl_inr"] is None
+    proof_path = next(proof_dir.glob("session-*.md"))
+    page = proof_path.read_text(encoding="utf-8")
+    assert "Eligible strategy count | Unknown" in page
+    assert "Matched fills | 1" in page
+    assert "Benchmark comparison | Unknown" in page
+    proof_path.unlink()
+    proof_dir.rmdir()
     assert session["issues"] == []
 
 
