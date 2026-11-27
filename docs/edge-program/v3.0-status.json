@@ -9372,12 +9372,24 @@
     {
       "id": "PA-07-18",
       "text": "Require predeclared degradation/pause criteria, including deterioration vs benchmark, drawdown, observed cost stress and source quality, with no auto-relaxing to preserve candidate status.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk.degradation`, `risk.killswitch`, and `forward_edge.operating_mode` provide related signal, drawdown and manual pause mechanisms, but no frozen evaluator joined benchmark excess, drawdown, realized cost stress, and market-data quality.",
+        "Commit pending adds `forward_edge.pause_criteria`: strategy/version-specific immutable thresholds for a fixed benchmark window, benchmark excess floor, max drawdown, max observed cost-to-gross ratio, source-quality floor, and maximum quote age.",
+        "`PauseCriteriaLedger` requires consecutive versions and rejects any automated relaxation of thresholds or benchmark window. It appends hash-verified, idempotent per-session CONTINUE/PAUSE decisions; missing and out-of-domain evidence fails closed to PAUSE.",
+        "The criteria and decision ledger is not yet called from `ForwardSessionRunner`, does not automatically set its operating mode to SAFE_HOLD, and does not itself authenticate an owner approval or independent source quality attestation."
+      ],
+      "blocker": "Partial: frozen multi-signal pause criteria and immutable evaluation records are implemented, but runner wiring, automatic operating-mode enforcement, and authenticated policy/evidence ownership remain absent.",
+      "last_audited_at_utc": "2026-11-27T06:00:18Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0718-pause-final tests/test_forward_edge_pause_criteria.py -q: 5 passed, covering all five degradation domains, missing/out-of-range data, immutable decisions and no-threshold-relaxation.",
+        "Ruff on pause_criteria and its tests: passed.",
+        "mypy src/financial_brain/forward_edge/pause_criteria.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Predeclared benchmark/drawdown/cost/source gates are persisted and cannot be relaxed by automated policy updates; the decision ledger fails closed and is immutable per session. Forward runner enforcement remains incomplete; PA-07-18 remains PARTIAL."
     },
     {
       "id": "PA-08-01",
@@ -21138,6 +21150,7 @@
       "PA-07-15",
       "PA-07-16",
       "PA-07-17",
+      "PA-07-18",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21576,11 +21589,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 970,
+    "audited_count": 971,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 840,
-      "UNASSESSED": 408,
+      "PARTIAL": 841,
+      "UNASSESSED": 407,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21729,8 +21742,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 840,
-    "UNASSESSED": 408,
+    "PARTIAL": 841,
+    "UNASSESSED": 407,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }
