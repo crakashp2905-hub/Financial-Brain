@@ -141,8 +141,9 @@ class PortfolioEvent:
         elif kind is EventKind.MARK:
             if not row["asset_class"] or not row["instrument_id"] or _required_decimal(self.price, "price") <= 0:
                 raise CanonicalLedgerError("a mark needs asset class, instrument id and positive price")
-            if self.quantity is not None or self.cash_delta is not None:
-                raise CanonicalLedgerError("a mark cannot change quantity or cash")
+            if (self.quantity is not None or self.cash_delta is not None
+                    or row["side"] is not None or row["position_action"] is not None):
+                raise CanonicalLedgerError("a mark cannot carry execution side/action, quantity or cash")
         elif kind in {EventKind.CASH_FLOW, EventKind.FEE}:
             amount = _required_decimal(self.cash_delta, "cash_delta")
             if self.quantity is not None or self.price is not None or self.instrument_id is not None:

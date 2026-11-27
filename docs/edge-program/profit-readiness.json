@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "66f72d82650973222db9b233f8cf6c9e3e2e7ca63339d39962daed2ba5fab5f0",
-  "audit_export_sha256": "fa96c7309069248a2d093171ad548f8273ed2210690a4260ba9d7993281fc636",
+  "status_ledger_sha256": "2c5d4d3486d2c9c3f8f8583c0452b89e523447964845abf72a8dfafbda89fc08",
+  "audit_export_sha256": "c8c22b5ff480b1a5a8fd77dee8f4643c774b8682f8a669dd07622e6195464bb8",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1436,16 +1436,17 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Treat PR #39's stale last-good quote close as a **valuation estimate** and unresolved liquidation, not an observed executable `SELL` fill; release P&L only when exit evidence exists."
           },
-          "commit": "PENDING",
-          "blocker": "Other legacy/forward paper books still need a shared execution-evidence gate so valuation marks cannot be posted as realized P&L across every ledger and reconciliation path.",
+          "commit": "pending",
+          "blocker": "Partial: stale last-good closeouts and mislabeled canonical MARK events are blocked, but a shared execution-evidence gate is not enforced across every legacy/forward paper book and reconciliation path.",
           "evidence": [
-            "`src/financial_brain/paper/intraday_runner.py`: on feed failure at/after the 15:15 flatten, the runner no longer closes positions at a stale last-good quote or persists a synthetic SELL. It records unresolved position count and `valuation_estimate_only=true`; API response sets `realized_pnl_released=false`.",
-            "`tests/test_phase5_intraday_runner.py::test_feed_failure_at_flatten_keeps_positions_open_and_last_quote_valuation_only` passes: exit reason/price/time remain NULL and open-trade realized P&L remains zero under a feed outage.",
-            "Ruff passed for the changed runner and regression test."
+            "`src/financial_brain/paper/intraday_runner.py`: on feed failure at/after the 15:15 flatten, the runner no longer closes positions at a stale last-good quote or persists a synthetic SELL. It records unresolved position count and `valuation_estimate_only=true`; API response sets `realized_pnl_released=false`. The focused outage regression verifies exit reason/price/time remain NULL and realized P&L remains zero.",
+            "`CanonicalPortfolioLedger` treats MARK as valuation-only and now rejects a mark carrying execution `side` or `position_action` labels, in addition to forbidding quantity/cash mutation. A regression proves a stale mark changes unrealized valuation only and leaves position quantity and realized P&L unchanged.",
+            "The canonical ledger focused mark/P&L tests passed (2 tests); Ruff and targeted mypy passed for the ledger. A full canonical ledger file attempt had one unrelated Windows pytest temporary-database path open error in its 1,000-sequence test; the focused tests passed."
           ],
           "tests": [
-            "`python -m pytest tests/test_phase5_intraday_runner.py -q -k feed_failure_at_flatten --basetemp .tmp/pytest-pa0408`: 1 passed in 65.63s.",
-            "The complete runner file was also attempted; local Windows sandbox path-length errors affected two unrelated live-view/replay cases."
+            "`python -m pytest tests/test_phase5_intraday_runner.py -q -k feed_failure_at_flatten --basetemp .tmp/pytest-pa0408`: prior focused regression passed.",
+            "`python -m pytest tests/test_canonical_portfolio_ledger.py -q -k \"valuation_mark_cannot or cross_asset_fills_cash_marks\"`: 2 passed.",
+            "Ruff and targeted mypy passed. Full canonical-ledger test run had a Windows pytest temp-path SQLite open failure in the seeded 1,000-event test."
           ]
         },
         {
@@ -3236,5 +3237,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "f6f26448888e00d5f0fea5fb58a3d1e1fc289353c442ce6383bee6f7f3e84fb3"
+  "report_sha256": "8551e2ce5e8fe528d66a4f49e443a6c923632c16b1dcbef3a21843c87f00d34a"
 }

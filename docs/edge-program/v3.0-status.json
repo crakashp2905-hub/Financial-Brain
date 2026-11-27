@@ -8108,18 +8108,19 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`src/financial_brain/paper/intraday_runner.py`: on feed failure at/after the 15:15 flatten, the runner no longer closes positions at a stale last-good quote or persists a synthetic SELL. It records unresolved position count and `valuation_estimate_only=true`; API response sets `realized_pnl_released=false`.",
-        "`tests/test_phase5_intraday_runner.py::test_feed_failure_at_flatten_keeps_positions_open_and_last_quote_valuation_only` passes: exit reason/price/time remain NULL and open-trade realized P&L remains zero under a feed outage.",
-        "Ruff passed for the changed runner and regression test."
+        "`src/financial_brain/paper/intraday_runner.py`: on feed failure at/after the 15:15 flatten, the runner no longer closes positions at a stale last-good quote or persists a synthetic SELL. It records unresolved position count and `valuation_estimate_only=true`; API response sets `realized_pnl_released=false`. The focused outage regression verifies exit reason/price/time remain NULL and realized P&L remains zero.",
+        "`CanonicalPortfolioLedger` treats MARK as valuation-only and now rejects a mark carrying execution `side` or `position_action` labels, in addition to forbidding quantity/cash mutation. A regression proves a stale mark changes unrealized valuation only and leaves position quantity and realized P&L unchanged.",
+        "The canonical ledger focused mark/P&L tests passed (2 tests); Ruff and targeted mypy passed for the ledger. A full canonical ledger file attempt had one unrelated Windows pytest temporary-database path open error in its 1,000-sequence test; the focused tests passed."
       ],
-      "blocker": "Other legacy/forward paper books still need a shared execution-evidence gate so valuation marks cannot be posted as realized P&L across every ledger and reconciliation path.",
-      "last_audited_at_utc": "2026-11-25T05:05:00Z",
-      "commit": "PENDING",
+      "blocker": "Partial: stale last-good closeouts and mislabeled canonical MARK events are blocked, but a shared execution-evidence gate is not enforced across every legacy/forward paper book and reconciliation path.",
+      "last_audited_at_utc": "2026-11-27T02:06:57Z",
+      "commit": "pending",
       "test_evidence": [
-        "`python -m pytest tests/test_phase5_intraday_runner.py -q -k feed_failure_at_flatten --basetemp .tmp/pytest-pa0408`: 1 passed in 65.63s.",
-        "The complete runner file was also attempted; local Windows sandbox path-length errors affected two unrelated live-view/replay cases."
+        "`python -m pytest tests/test_phase5_intraday_runner.py -q -k feed_failure_at_flatten --basetemp .tmp/pytest-pa0408`: prior focused regression passed.",
+        "`python -m pytest tests/test_canonical_portfolio_ledger.py -q -k \"valuation_mark_cannot or cross_asset_fills_cash_marks\"`: 2 passed.",
+        "Ruff and targeted mypy passed. Full canonical-ledger test run had a Windows pytest temp-path SQLite open failure in the seeded 1,000-event test."
       ],
-      "test_result": "Focused stale-feed flatten regression passed and proves no close is saved or P&L realized. PA-04-08 remains PARTIAL because evidence-gated close semantics are not yet universal across all paper books."
+      "test_result": "Valuation-only mark and P&L invariants: 2 focused canonical ledger tests passed; existing stale-feed regression passed. PA-04-08 remains PARTIAL pending a universal execution-evidence gate."
     },
     {
       "id": "PA-04-09",

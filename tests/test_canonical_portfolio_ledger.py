@@ -63,6 +63,21 @@ def test_cross_asset_fills_cash_marks_and_realized_unrealized_pnl_replay(tmp_pat
     assert snapshot["projection_complete"] is False  # other open holdings still need explicit marks
 
 
+def test_valuation_mark_cannot_carry_sell_semantics_or_realize_pnl(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "valuation-only.sqlite")
+    ledger.append(event("buy", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                        instrument_id="NSE:INFY", side="BUY", quantity="10", price="100"))
+    with pytest.raises(CanonicalLedgerError, match="execution side/action"):
+        ledger.append(event("forged-mark", EventKind.MARK, asset_class=AssetClass.EQUITY,
+                            instrument_id="NSE:INFY", price="90", side="SELL"))
+    ledger.append(event("last-good-mark", EventKind.MARK, asset_class=AssetClass.EQUITY,
+                        instrument_id="NSE:INFY", price="90"))
+    position = ledger.snapshot("paper-main")["positions"][0]
+    assert position["quantity"] == Decimal("10")
+    assert position["realized_pnl"] == Decimal("0")
+    assert position["unrealized_pnl"] == Decimal("-100")
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,
