@@ -9828,12 +9828,18 @@
     {
       "id": "PA-09-09",
       "text": "Train simple regularized linear/logistic models and gradient-boosted baselines before optional heavier sequence models; justify added complexity with held-out gains.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_models.py fits a StandardScaler plus regularized logistic classifier and a conservative HistGradientBoostingClassifier using fixed, explicit hyperparameters and caller-provided training rows.",
+        "The model API rejects nonfinite/misaligned inputs and maps probabilities to the full UP/DOWN/FLAT class set, inserting zero for classes absent from training.",
+        "tests/test_forecasting_index_models.py covers both estimators, probability normalization, feature validation and training-label alignment; 31 focused forecasting-index tests passed, Ruff and mypy passed.",
+        "No chronological nested evaluation or held-out comparison against hard baselines is wired or run, so the tree model has no demonstrated incremental benefit and must not be promoted."
+      ],
+      "blocker": "Evaluate both models only inside nested chronological/purged folds against the PA-09-05 hard baselines, and retain gradient boosting only if frozen held-out gains are meaningful.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "5bb99b5b",
+      "test_result": "31 focused forecasting-index tests passed; Ruff and mypy passed for index-model module."
     },
     {
       "id": "PA-09-10",
@@ -21222,6 +21228,7 @@
       "PA-09-06",
       "PA-09-07",
       "PA-09-08",
+      "PA-09-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21645,13 +21652,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 979,
+    "audited_count": 980,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 849,
-      "UNASSESSED": 399
+      "PARTIAL": 850,
+      "UNASSESSED": 398
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21800,7 +21807,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 849,
-    "UNASSESSED": 399
+    "PARTIAL": 850,
+    "UNASSESSED": 398
   }
 }
