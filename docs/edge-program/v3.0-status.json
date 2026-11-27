@@ -9304,12 +9304,24 @@
     {
       "id": "PA-07-15",
       "text": "Analyze 2024 weakness, recent-half and last-36-month degradation explicitly; give current data higher descriptive weight but do not re-select based on a repeatedly checked holdout.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Existing evaluation.economic performs walk-forward horizon selection and evaluates baselines, but did not provide a fixed report of 2024, recent-half and last-36-month outcomes for an unchanged monthly candidate configuration.",
+        "Commit pending adds paper.zoo_edges.monthly_candidate_subperiod_report, which runs the same paper.engine configuration over 2024, the second half of the supplied history, and the final 36 months; each window returns net return, matched-universe and market-index excess, max drawdown, cost drag and trades.",
+        "The report handles no-data/insufficient windows explicitly, labels outputs DESCRIPTIVE_ONLY, states historical close-price fill limitations, and warns that these overlapping windows must not be used to repeatedly retune or promote a candidate.",
+        "The helper is on-demand for one feature/configuration rather than automatically producing a version-frozen report for every paper candidate; forward cohorts and scheduled reporting remain."
+      ],
+      "blocker": "Partial: fixed-parameter period analysis is implemented, but automated cohort-wide reporting, frozen strategy adapters and forward prospective degradation evidence are not yet integrated.",
+      "last_audited_at_utc": "2026-11-27T05:43:21Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0715-subperiod tests/test_zoo_h_targets.py -q: 21 passed, including 2024/recent-half/36-month outputs and descriptive-only warnings.",
+        "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+        "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "The fixed-window report compares the same candidate settings across the specified calendar periods and labels the results descriptive, after cost and non-prospective. Automated all-candidate and forward reporting remain; PA-07-15 remains PARTIAL."
     },
     {
       "id": "PA-07-16",
@@ -21097,6 +21109,7 @@
       "PA-07-12",
       "PA-07-13",
       "PA-07-14",
+      "PA-07-15",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21535,11 +21548,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 967,
+    "audited_count": 968,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 837,
-      "UNASSESSED": 411,
+      "PARTIAL": 838,
+      "UNASSESSED": 410,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21688,8 +21701,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 837,
-    "UNASSESSED": 411,
+    "PARTIAL": 838,
+    "UNASSESSED": 410,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }

@@ -377,3 +377,21 @@ def test_monthly_book_diversification_report_marks_absent_industry_map_and_short
     assert result["status"] == "INSUFFICIENT_COMMON_HISTORY"
     assert result["industry_concentration"]["edge_p1_residual_mom"]["status"] == \
         "UNAVAILABLE_NO_AS_OF_INDUSTRY_MAP"
+
+
+def test_monthly_candidate_subperiod_report_keeps_fixed_params_and_descriptive_boundaries():
+    from datetime import timedelta
+    # Reuse the paper-engine market fixture with >3 years of sessions and deterministic signals.
+    from tests.test_phase4_paper_engine import START, _db
+    con = _db(names=4, sessions=1200, drift=0.001, minute_bars=False)
+    report = ZE.monthly_candidate_subperiod_report(
+        con, feature="dist_52w_high", start=START,
+        end=START + timedelta(days=1199), rebalance=20, max_positions=3,
+        min_adv=0.0, capital_inr=1_000_000.0)
+    assert report["status"] == "DESCRIPTIVE_NOT_FOR_SELECTION"
+    assert set(report["periods"]) == {"2024", "recent_half", "last_36_months"}
+    assert report["periods"]["2024"]["status"] == "DESCRIPTIVE_ONLY"
+    assert report["periods"]["last_36_months"]["sessions"] >= 40
+    assert report["periods"]["2024"]["benchmark_variant"] == "PRICE"
+    assert "Do not use them" in report["selection_warning"]
+    assert "not prospective" in report["fills_note"]

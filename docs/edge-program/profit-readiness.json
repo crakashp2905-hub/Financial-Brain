@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "1d87aaae5afaffce1060f68dfc4cade0d6a02a8077a3f256dba50aaae66fc8a4",
-  "audit_export_sha256": "5bbca6bb13cd0a4586ccd4f44650d7da83be49c9ac90b5bf28f41b0137db8755",
+  "status_ledger_sha256": "12a34abd8170a2152be10513a6754d80c3e8b9d552dc8bcc513197d2df986ded",
+  "audit_export_sha256": "061a2c9acc79744730a0e941bd0b6b61497752b0692902c4f38c73bf67b05d7d",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 837,
-    "UNASSESSED": 411
+    "PARTIAL": 838,
+    "UNASSESSED": 410
   },
-  "assessed_count": 967,
-  "unassessed_count": 411,
+  "assessed_count": 968,
+  "unassessed_count": 410,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 57,
-        "UNASSESSED": 4
+        "PARTIAL": 58,
+        "UNASSESSED": 3
       },
       "evidence": [
         {
@@ -3077,16 +3077,26 @@
         },
         {
           "item_id": "PA-07-15",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1075,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Analyze 2024 weakness, recent-half and last-36-month degradation explicitly; give current data higher descriptive weight but do not re-select based on a repeatedly checked holdout."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: fixed-parameter period analysis is implemented, but automated cohort-wide reporting, frozen strategy adapters and forward prospective degradation evidence are not yet integrated.",
+          "evidence": [
+            "Existing evaluation.economic performs walk-forward horizon selection and evaluates baselines, but did not provide a fixed report of 2024, recent-half and last-36-month outcomes for an unchanged monthly candidate configuration.",
+            "Commit pending adds paper.zoo_edges.monthly_candidate_subperiod_report, which runs the same paper.engine configuration over 2024, the second half of the supplied history, and the final 36 months; each window returns net return, matched-universe and market-index excess, max drawdown, cost drag and trades.",
+            "The report handles no-data/insufficient windows explicitly, labels outputs DESCRIPTIVE_ONLY, states historical close-price fill limitations, and warns that these overlapping windows must not be used to repeatedly retune or promote a candidate.",
+            "The helper is on-demand for one feature/configuration rather than automatically producing a version-frozen report for every paper candidate; forward cohorts and scheduled reporting remain."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0715-subperiod tests/test_zoo_h_targets.py -q: 21 passed, including 2024/recent-half/36-month outputs and descriptive-only warnings.",
+            "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+            "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-16",
@@ -3498,5 +3508,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "4911b5fd80098450882951fdc12f8d135adc48e3a3313ae221f6962efb34c150"
+  "report_sha256": "b81236be6fc78caa348e1d11336765fce5063fca3e21ea268b5a61f6337450fe"
 }

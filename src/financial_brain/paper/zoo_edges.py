@@ -636,6 +636,81 @@ def monthly_book_diversification_report(z, *, strategies: tuple[str, ...] = MONT
     }
 
 
+def monthly_candidate_subperiod_report(con, *, feature: str, start: date, end: date,
+                                      direction: int = 1, rebalance: int = 20,
+                                      max_positions: int = 40, min_adv: float = 1e7,
+                                      capital_inr: float = 10_000_000.0,
+                                      eligible_lineages: set[str] | None = None) -> dict:
+    """Run fixed-parameter descriptive subperiods without selecting a winner.
+
+    Reports 2024, the second half of the supplied history, and the final ~36 months.
+    The same engine, universe, sizing and cost settings are used in every window. These
+    overlapping diagnostics are not independent holdouts and must not be fed into tuning,
+    promotion, or repeated candidate selection.
+    """
+    from datetime import timedelta
+    from . import engine
+
+    if not isinstance(feature, str) or not feature.replace("_", "").isalnum():
+        raise ValueError("feature must be a simple feature column name")
+    if direction not in (-1, 1):
+        raise ValueError("direction must be -1 or 1")
+    if rebalance <= 0 or max_positions <= 0 or min_adv < 0 or capital_inr <= 0:
+        raise ValueError("rebalance, positions, capital and ADV settings are invalid")
+    calendar = engine._calendar(con, start, end)
+    if not calendar:
+        return {"status": "NO_SESSIONS", "feature": feature, "periods": {}}
+    midpoint = calendar[len(calendar) // 2]
+    last_36_start = max(calendar[0], calendar[-1] - timedelta(days=365 * 3 + 1))
+    requested = {
+        "2024": (max(start, date(2024, 1, 1)), min(end, date(2024, 12, 31))),
+        "recent_half": (midpoint, calendar[-1]),
+        "last_36_months": (last_36_start, calendar[-1]),
+    }
+    periods = {}
+    for label, (lo, hi) in requested.items():
+        if lo > hi:
+            periods[label] = {"status": "NO_DATA_IN_WINDOW", "start": lo.isoformat(),
+                              "end": hi.isoformat()}
+            continue
+        try:
+            run = engine.run(
+                con, feature=feature, start=lo, end=hi, direction=direction,
+                rebalance=rebalance, max_positions=max_positions, min_adv=min_adv,
+                capital_inr=capital_inr, eligible_lineages=eligible_lineages,
+                simulate_fills=False, charge_costs=True,
+                universe_label=f"fixed subperiod diagnostic {label}")
+        except engine.PaperError as exc:
+            periods[label] = {"status": "INSUFFICIENT_DATA", "start": lo.isoformat(),
+                              "end": hi.isoformat(), "reason": str(exc)}
+            continue
+        summary = run.summary()
+        periods[label] = {
+            "status": "DESCRIPTIVE_ONLY", "requested_start": lo.isoformat(),
+            "requested_end": hi.isoformat(), "first_session": str(summary["first"]),
+            "last_session": str(summary["last"]), "sessions": summary["sessions"],
+            "net_return": summary["total_return"],
+            "matched_universe_return": summary["universe_return"],
+            "excess_over_matched_universe": summary["excess_over_universe"],
+            "benchmark": summary["benchmark"],
+            "benchmark_variant": summary["benchmark_variant"],
+            "excess_over_market_index": summary["excess_over_benchmark"],
+            "max_drawdown": summary["max_drawdown"],
+            "cost_drag": summary["cost_drag"], "trades": summary["trades"],
+        }
+    return {
+        "status": "DESCRIPTIVE_NOT_FOR_SELECTION",
+        "feature": feature, "direction": direction, "rebalance_sessions": rebalance,
+        "max_positions": max_positions, "capital_inr": capital_inr,
+        "input_history": [str(calendar[0]), str(calendar[-1])],
+        "periods": periods,
+        "selection_warning": "These fixed, overlapping subperiod diagnostics are descriptive. "
+            "Do not use them to repeatedly retune, promote, or choose the reported candidate.",
+        "fills_note": "Historical fills use the engine's close-price fallback; these are not "
+            "prospective execution results.",
+    }
+
+
 def monthly_target_hashes(targets: dict[str, dict]) -> dict[str, str]:
     """Stable per-book hashes for intended-versus-persisted monthly target audits."""
     hashes = {}
