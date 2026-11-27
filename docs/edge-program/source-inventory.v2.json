@@ -12226,6 +12226,7 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
         "contextlib",
         "dataclasses",
         "datetime",
@@ -12240,7 +12241,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/portfolio/equity_reconciliation.py",
-      "source_sha256": "2556b9cd79775d46220e8c88b24a8ce94ad6678067351361ecc24f19382b3019",
+      "source_sha256": "ee8eb6a5e98b4b4df73e6965a0f565b9a84d237c7fb7d20d4c0861a60cd448ce",
       "test_paths": []
     },
     {

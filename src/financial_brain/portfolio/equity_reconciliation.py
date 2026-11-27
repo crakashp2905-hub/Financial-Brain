@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from collections.abc import Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
@@ -59,6 +60,116 @@ class EquityReconciliation:
     report_sha256: str
     registry_status: str = "UNREGISTERED"
     registry_path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SourceEventReconciliation:
+    """Exact row-set comparison between one canonical source and supplied statement events."""
+
+    account_id: str
+    source_system: str
+    period_start: datetime
+    period_end: datetime
+    canonical_event_count: int
+    source_event_count: int
+    matched_event_count: int
+    statement_only_event_ids: tuple[str, ...]
+    ledger_only_event_ids: tuple[str, ...]
+    mismatched_event_ids: tuple[str, ...]
+    canonical_events_sha256: str
+    source_events_sha256: str
+    report_sha256: str
+    reconciled: bool
+    limitations: tuple[str, ...]
+
+
+def _event_economics(row: dict[str, object]) -> dict[str, object]:
+    """Select the event fields that an independent statement can economically confirm."""
+    return {key: row.get(key) for key in (
+        "source_system", "source_event_id", "event_kind", "occurred_at", "currency",
+        "asset_class", "instrument_id", "side", "position_action", "quantity", "price",
+        "multiplier", "cash_delta", "metadata",
+    )}
+
+
+def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str,
+                            source_system: str, period_start: datetime, period_end: datetime,
+                            source_events: Sequence[PortfolioEvent]) -> SourceEventReconciliation:
+    """Compare source statement events with the canonical journal by stable event identity.
+
+    A reconciled result proves only that the caller-supplied event rows match this journal for
+    the named source and time window. It does not authenticate the source document or prove
+    that the supplied statement covers the full account period.
+    """
+    start = _as_of(period_start, "period_start")
+    end = _as_of(period_end, "period_end")
+    if not account_id.strip() or not source_system.strip() or end <= start:
+        raise EquityReconciliationError("account, source and increasing statement period are required")
+    account = account_id.strip()
+    source_name = source_system.strip()
+
+    normalized_source: dict[str, dict[str, object]] = {}
+    for event in source_events:
+        row = event.normalized()
+        if row["account_id"] != account or row["source_system"] != source_name:
+            raise EquityReconciliationError("statement event account or source does not match its report")
+        occurred = datetime.fromisoformat(str(row["occurred_at"]))
+        if not (start < occurred <= end):
+            raise EquityReconciliationError("statement event is outside the declared period")
+        event_id = str(row["source_event_id"])
+        if event_id in normalized_source:
+            raise EquityReconciliationError("statement contains duplicate source event identities")
+        normalized_source[event_id] = row
+
+    canonical: dict[str, dict[str, object]] = {}
+    try:
+        with _stable_ledger_cutoff(ledger):
+            all_rows = ledger.events(account)
+            verified = ledger.verify_import([_event(row) for row in all_rows])
+            if verified != {"verified": len(all_rows), "missing": 0, "mismatched": 0}:
+                raise EquityReconciliationError("canonical event payload hashes did not verify")
+            for row in all_rows:
+                if row.get("source_system") != source_name:
+                    continue
+                occurred = datetime.fromisoformat(str(row["occurred_at"]).replace("Z", "+00:00"))
+                if start < occurred <= end:
+                    event_id = str(row["source_event_id"])
+                    canonical[event_id] = _event_economics(row)
+    except EquityReconciliationError:
+        raise
+    except Exception as exc:
+        raise EquityReconciliationError("canonical source event set could not be verified") from exc
+
+    source_economics = {event_id: _event_economics(row)
+                        for event_id, row in normalized_source.items()}
+    canonical_ids, source_ids = set(canonical), set(source_economics)
+    common = canonical_ids & source_ids
+    mismatched = tuple(sorted(event_id for event_id in common
+                              if canonical[event_id] != source_economics[event_id]))
+    statement_only = tuple(sorted(source_ids - canonical_ids))
+    ledger_only = tuple(sorted(canonical_ids - source_ids))
+    matched = len(common) - len(mismatched)
+    canonical_hash = _digest([canonical[key] for key in sorted(canonical)])
+    source_hash = _digest([source_economics[key] for key in sorted(source_economics)])
+    reconciled = not statement_only and not ledger_only and not mismatched
+    limitations = (
+        "Caller-supplied statement rows are not authenticated by this comparison.",
+        "Matching the supplied period does not prove that the external statement is complete.",
+    )
+    body = {
+        "account_id": account, "source_system": source_name,
+        "period_start": start.isoformat(), "period_end": end.isoformat(),
+        "canonical_event_count": len(canonical), "source_event_count": len(source_economics),
+        "matched_event_count": matched, "statement_only_event_ids": statement_only,
+        "ledger_only_event_ids": ledger_only, "mismatched_event_ids": mismatched,
+        "canonical_events_sha256": canonical_hash, "source_events_sha256": source_hash,
+        "reconciled": reconciled, "limitations": limitations,
+    }
+    return SourceEventReconciliation(
+        account, source_name, start, end, len(canonical), len(source_economics), matched,
+        statement_only, ledger_only, mismatched, canonical_hash, source_hash,
+        _digest(body), reconciled, limitations,
+    )
 
 
 class EquityReconciliationRegistry:
@@ -365,4 +476,5 @@ def _digest(value: object) -> str:
 
 
 __all__ = ["EquityReconciliation", "EquityReconciliationError", "EquityReconciliationRegistry",
-           "reconcile_account_equity", "require_reconciled"]
+           "SourceEventReconciliation", "reconcile_account_equity", "reconcile_source_events",
+           "require_reconciled"]
