@@ -49,6 +49,25 @@ def _request(reservation_id, **amounts):
     return ReservationRequest(reservation_id, "paper-account", "intraday", NOW, values, "b" * 64)
 
 
+def _equity_fill(event_id, quantity, *, price="100", fee_amount="0"):
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id=event_id, source_sha256="c" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity=str(quantity),
+        price=str(price), multiplier="1",
+    )
+    fee = None
+    if Decimal(fee_amount) > 0:
+        fee = PortfolioEvent(
+            account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+            source_event_id=f"{event_id}:fee", source_sha256="c" * 64, event_kind=EventKind.FEE,
+            occurred_at="2026-11-25T09:02:00+05:30", cash_delta=f"-{fee_amount}",
+            metadata={"fill_event_id": event_id},
+        )
+    return fill, fee
+
+
 def test_atomic_reservation_covers_multiple_resource_caps_and_replay(tmp_path):
     ledger = DurableReservationLedger(tmp_path / "reservations.sqlite")
     request = _request("order-1", CASH="1000", RISK_CAPITAL="300",
@@ -179,6 +198,36 @@ def test_paper_fill_and_reservation_receipt_commit_atomically_and_replay_once(tm
         "events": 2, "mismatched": 0, "reservations_missing_receipts": 0,
         "released_reservations_missing_receipts": 0,
     }
+
+
+@pytest.mark.parametrize(
+    ("limits", "first", "second", "message"),
+    [
+        ({"CASH": "1000", "INSTRUMENT_QUANTITY:NSE:ABC": "5"},
+         ("fill-1", "3", "100", "0"), ("fill-2", "3", "100", "0"), "quantity exceeds"),
+        ({"CASH": "300", "PAPER_COST_BUFFER": "10", "INSTRUMENT_QUANTITY:NSE:ABC": "5"},
+         ("fill-1", "2", "100", "1"), ("fill-2", "2", "100", "1"), "cash reservation"),
+        ({"CASH": "1000", "PAPER_COST_BUFFER": "1.50",
+          "INSTRUMENT_QUANTITY:NSE:ABC": "5"},
+         ("fill-1", "1", "100", "1"), ("fill-2", "1", "100", "1"), "cost-buffer reservation"),
+    ],
+)
+def test_partial_fills_cannot_cumulatively_exceed_order_reservation(
+        tmp_path, limits, first, second, message):
+    path = tmp_path / "partial-fill-reservation.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(_policy(**{key: Decimal(value) for key, value in limits.items()}),
+                         _request("partial-order", **limits))
+    first_fill, first_fee = _equity_fill(first[0], first[1], price=first[2], fee_amount=first[3])
+    reservations.record_paper_fill(reservation_id="partial-order", fill=first_fill, fee=first_fee)
+    second_fill, second_fee = _equity_fill(second[0], second[1], price=second[2], fee_amount=second[3])
+
+    with pytest.raises(ReservationError, match=message):
+        reservations.record_paper_fill(reservation_id="partial-order", fill=second_fill, fee=second_fee)
+
+    snapshot = CanonicalPortfolioLedger(path).snapshot("paper-account")
+    assert snapshot["positions"][0]["quantity"] == Decimal(first[1])
+    assert reservations.verify("paper-account")["mismatched"] == 0
 
 
 def test_paper_fill_and_source_bound_fee_commit_atomically_and_replay_once(tmp_path):

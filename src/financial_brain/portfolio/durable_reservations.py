@@ -19,6 +19,7 @@ from types import MappingProxyType
 from typing import Mapping
 
 from financial_brain.portfolio.canonical_ledger import (
+    AssetClass,
     CanonicalLedgerError,
     CanonicalPortfolioLedger,
     EventKind,
@@ -360,30 +361,8 @@ class DurableReservationLedger:
             position_action = row["position_action"] or row["side"]
             fee_amount = (-Decimal(str(fee_row["cash_delta"]))
                           if fee_row is not None else Decimal(0))
-            if fee_amount > Decimal(reserved.get("PAPER_COST_BUFFER", "0")):
-                raise ReservationError("paper fees exceed their frozen cost-buffer reservation")
-            if fee_amount > Decimal(reserved.get("CASH", "0")):
-                raise ReservationError("paper fees exceed their frozen cash reservation")
-            if Decimal(reserved.get(quantity_resource, "0")) < fill_quantity:
-                raise ReservationError("paper fill quantity exceeds its frozen instrument reservation")
-            if position_action == "SELL":
-                inventory_resource = f"SELLABLE_INVENTORY:{row['instrument_id']}"
-                if Decimal(reserved.get(inventory_resource, "0")) < fill_quantity:
-                    raise ReservationError("paper sell fill exceeds its frozen sellable-inventory reservation")
-            elif position_action == "BUY" and row["asset_class"] != "FUTURE":
-                required_cash = (fill_quantity * Decimal(str(row["price"]))
-                                 * Decimal(str(row["multiplier"])) + fee_amount)
-                if Decimal(reserved.get("CASH", "0")) < required_cash:
-                    raise ReservationError("paper buy fill exceeds its frozen cash reservation")
-                if (row["asset_class"] == "OPTION"
-                        and Decimal(reserved.get("OPTION_BUYING_POWER", "0"))
-                        < fill_quantity * Decimal(str(row["price"])) * Decimal(str(row["multiplier"]))
-                        + fee_amount):
-                    raise ReservationError("option fill exceeds its frozen options-buying-power reservation")
-            elif row["asset_class"] == "FUTURE" and position_action == "BUY":
-                if any(Decimal(reserved.get(resource, "0")) <= 0
-                       for resource in ("MARGIN", "RISK_CAPITAL")):
-                    raise ReservationError("futures fill requires frozen margin and risk-capital reservations")
+            if fee_amount < 0:
+                raise ReservationError("paper fill fee must not be a negative charge")
             prior_transfer = connection.execute(
                 "SELECT event_sha256 FROM reservation_events WHERE account_id=? AND event_id=?",
                 (account_id, position_event_id),
@@ -391,6 +370,43 @@ class DurableReservationLedger:
             transfer_sha = _digest(position_receipt)
             if prior_transfer is not None and prior_transfer["event_sha256"] != transfer_sha:
                 raise ReservationError("paper position fill replay conflicts with prior transfer evidence")
+
+            used = self._position_resource_usage(connection, account_id, reservation_id)
+            # A retry of a fill already bound to this reservation is not a new resource use.
+            increment = prior_transfer is None
+            new_quantity = used.get(quantity_resource, _ZERO) + (fill_quantity if increment else _ZERO)
+            new_fee_total = used.get("PAPER_COST_BUFFER", _ZERO) + (fee_amount if increment else _ZERO)
+            new_cash_fees = used.get("CASH_FEES", _ZERO) + (fee_amount if increment else _ZERO)
+            if new_fee_total > Decimal(reserved.get("PAPER_COST_BUFFER", "0")):
+                raise ReservationError("paper fees exceed their frozen cost-buffer reservation")
+            if new_cash_fees > Decimal(reserved.get("CASH", "0")):
+                raise ReservationError("paper fees exceed their frozen cash reservation")
+            if Decimal(reserved.get(quantity_resource, "0")) < new_quantity:
+                raise ReservationError("paper fill quantity exceeds its frozen instrument reservation")
+            if position_action == "SELL":
+                inventory_resource = f"SELLABLE_INVENTORY:{row['instrument_id']}"
+                new_inventory = used.get(inventory_resource, _ZERO) + (fill_quantity if increment else _ZERO)
+                if Decimal(reserved.get(inventory_resource, "0")) < new_inventory:
+                    raise ReservationError("paper sell fill exceeds its frozen sellable-inventory reservation")
+            elif position_action == "BUY" and row["asset_class"] != "FUTURE":
+                required_cash = used.get("BUY_NOTIONAL_AND_FEES", _ZERO)
+                if increment:
+                    required_cash += (fill_quantity * Decimal(str(row["price"]))
+                                      * Decimal(str(row["multiplier"])) + fee_amount)
+                if Decimal(reserved.get("CASH", "0")) < required_cash:
+                    raise ReservationError("paper buy fill exceeds its frozen cash reservation")
+                if row["asset_class"] == "OPTION":
+                    option_required = used.get("OPTION_NOTIONAL_AND_FEES", _ZERO)
+                    if increment:
+                        option_required += (fill_quantity * Decimal(str(row["price"]))
+                                            * Decimal(str(row["multiplier"])) + fee_amount)
+                    if Decimal(reserved.get("OPTION_BUYING_POWER", "0")) < option_required:
+                        raise ReservationError(
+                            "option fill exceeds its frozen options-buying-power reservation")
+            elif row["asset_class"] == "FUTURE" and position_action == "BUY":
+                if any(Decimal(reserved.get(resource, "0")) <= 0
+                       for resource in ("MARGIN", "RISK_CAPITAL")):
+                    raise ReservationError("futures fill requires frozen margin and risk-capital reservations")
 
             existing = connection.execute(
                 "SELECT payload_sha256 FROM portfolio_events WHERE account_id=? AND source_system=? "
@@ -430,6 +446,77 @@ class DurableReservationLedger:
             if prior_transfer is None:
                 self._append_event(connection, position_receipt)
             return payload_sha
+
+    @staticmethod
+    def _position_resource_usage(connection: sqlite3.Connection, account_id: str,
+                                 reservation_id: str) -> dict[str, Decimal]:
+        """Sum resource usage from fills already attached to this reservation.
+
+        The receipt-to-fill hash binding is verified before these rows influence another
+        reservation decision. This makes a sequence of partial fills obey one cumulative
+        order budget instead of granting the full reservation to every fill independently.
+        """
+        receipts = connection.execute(
+            "SELECT event_json,event_sha256 FROM reservation_events WHERE account_id=? AND reservation_id=? "
+            "AND event_kind='POSITION_FILL_RECORDED' ORDER BY sequence",
+            (account_id, reservation_id),
+        ).fetchall()
+        usage: dict[str, Decimal] = {}
+        for receipt_row in receipts:
+            receipt = json.loads(receipt_row["event_json"])
+            if _digest(receipt) != receipt_row["event_sha256"]:
+                raise ReservationError("paper position receipt hash verification failed")
+            event_id = receipt.get("position_event_id")
+            expected_sha = receipt.get("position_payload_sha256")
+            if not isinstance(event_id, str) or not isinstance(expected_sha, str):
+                raise ReservationError("paper position receipt is malformed")
+            fills = connection.execute(
+                "SELECT event_json,payload_sha256 FROM portfolio_events "
+                "WHERE account_id=? AND source_event_id=?",
+                (account_id, event_id),
+            ).fetchall()
+            matching = [row for row in fills if row["payload_sha256"] == expected_sha]
+            if len(matching) != 1:
+                raise ReservationError("paper position receipt does not match exactly one canonical fill")
+            fill = json.loads(matching[0]["event_json"])
+            quantity = Decimal(str(fill["quantity"]))
+            quantity_key = f"INSTRUMENT_QUANTITY:{fill['instrument_id']}"
+            usage[quantity_key] = usage.get(quantity_key, _ZERO) + quantity
+            action = fill.get("position_action") or fill.get("side")
+            if action == "SELL":
+                inventory_key = f"SELLABLE_INVENTORY:{fill['instrument_id']}"
+                usage[inventory_key] = usage.get(inventory_key, _ZERO) + quantity
+            notional = quantity * Decimal(str(fill["price"])) * Decimal(str(fill["multiplier"]))
+            if action == "BUY" and fill["asset_class"] != AssetClass.FUTURE.value:
+                usage["BUY_NOTIONAL_AND_FEES"] = usage.get("BUY_NOTIONAL_AND_FEES", _ZERO) + notional
+                if fill["asset_class"] == AssetClass.OPTION.value:
+                    usage["OPTION_NOTIONAL_AND_FEES"] = (
+                        usage.get("OPTION_NOTIONAL_AND_FEES", _ZERO) + notional)
+            fee_sha = receipt.get("fee_payload_sha256")
+            if fee_sha is not None:
+                fee_rows = connection.execute(
+                    "SELECT event_json,payload_sha256 FROM portfolio_events WHERE account_id=? "
+                    "AND source_system=?",
+                    (account_id, fill["source_system"]),
+                ).fetchall()
+                linked_fees = [row for row in fee_rows if row["payload_sha256"] == fee_sha]
+                if len(linked_fees) != 1:
+                    raise ReservationError("paper position receipt does not match exactly one canonical fee")
+                fee_event = json.loads(linked_fees[0]["event_json"])
+                metadata = fee_event.get("metadata")
+                if (fee_event.get("event_kind") != EventKind.FEE.value
+                        or fee_event.get("occurred_at") != fill.get("occurred_at")
+                        or not isinstance(metadata, dict)
+                        or metadata.get("fill_event_id") != event_id):
+                    raise ReservationError("paper position fee receipt is not bound to its fill")
+                fee = -Decimal(str(fee_event["cash_delta"]))
+                usage["PAPER_COST_BUFFER"] = usage.get("PAPER_COST_BUFFER", _ZERO) + fee
+                usage["CASH_FEES"] = usage.get("CASH_FEES", _ZERO) + fee
+                if action == "BUY" and fill["asset_class"] != AssetClass.FUTURE.value:
+                    usage["BUY_NOTIONAL_AND_FEES"] += fee
+                    if fill["asset_class"] == AssetClass.OPTION.value:
+                        usage["OPTION_NOTIONAL_AND_FEES"] += fee
+        return usage
 
     def active_amounts(self, account_id: str) -> Mapping[str, Decimal]:
         with self._connection() as connection:
