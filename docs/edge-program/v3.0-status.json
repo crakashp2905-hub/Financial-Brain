@@ -8059,7 +8059,7 @@
       ],
       "blocker": "The durable reservation and cost-buffer boundary is integrated only in ForwardSessionRunner. All desk guards and OMS paths still need to share the transaction boundary, reconcile filled/cancelled orders to position-level resource usage, and source current margin, settlement, options buying-power and inventory limits.",
       "last_audited_at_utc": "2026-11-27T16:58:59+00:00",
-      "commit": "912255aac74498c59eb4508516e5152d4646c93d",
+      "commit": "08cb9e00325d279851a160c8690e6051a628bfcc",
       "test_evidence": [
         "`python -m pytest --basetemp=.pytest-pa0404-cost-buffer-full tests/test_forward_edge_session_runner.py tests/test_portfolio_durable_reservations.py tests/test_canonical_portfolio_ledger.py tests/test_exit_coverage.py -q`: 134 passed in 375.67s.",
         "`python -m pytest --basetemp=.pytest-pa0404-cost-buffer-rerun tests/test_portfolio_durable_reservations.py tests/test_forward_edge_session_runner.py::test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net -q`: 15 passed.",
@@ -8067,7 +8067,8 @@
         "`python -m ruff check src/financial_brain/portfolio/durable_reservations.py src/financial_brain/forward_edge/session_runner.py tests/test_portfolio_durable_reservations.py tests/test_forward_edge_session_runner.py`: passed.",
         "`python -m mypy src/financial_brain/portfolio/durable_reservations.py src/financial_brain/forward_edge/session_runner.py --follow-imports=silent`: passed.",
         "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 20 passed, including the 1,000-intent stress case and cumulative partial-fill quantity, cash, fee-buffer, option-buying-power, and sellable-inventory overrun cases.",
-        "`ruff check src/financial_brain/portfolio/durable_reservations.py tests/test_portfolio_durable_reservations.py`: passed; `mypy src/financial_brain/portfolio/durable_reservations.py`: passed."
+        "`ruff check src/financial_brain/portfolio/durable_reservations.py tests/test_portfolio_durable_reservations.py`: passed; `mypy src/financial_brain/portfolio/durable_reservations.py`: passed.",
+        "Test-only follow-up commit `912255aac74498c59eb4508516e5152d4646c93d` adds cumulative option buying-power and sellable-inventory cases."
       ],
       "test_result": "Cumulative partial fills now consume a single frozen per-order quantity/cash/options/fee/inventory budget, with receipt-bound retry idempotence. The durable reservation suite passed 20 tests, including the 1,000-intent stress, cumulative option buying-power and sellable-inventory cases; Ruff and targeted mypy passed. PA-04-04 remains PARTIAL because shared reservations are not integrated into every OMS/desk and active fills are not yet substituted into position-level resource accounting."
     },
