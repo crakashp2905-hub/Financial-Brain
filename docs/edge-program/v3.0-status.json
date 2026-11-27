@@ -9748,12 +9748,18 @@
     {
       "id": "PA-09-04",
       "text": "Specify adaptive FLAT band derived only from training-period noise and trading-cost reality, not hand-tuned on profitable test outcomes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_15m.py cost_aware_flat_band sets the frozen FLAT threshold to max(training-only absolute-return quantile, nonnegative all-in round-trip cost fraction).",
+        "The helper documents the fraction convention, requires fold-local training inputs, and explicitly does not claim after-cost profitability.",
+        "tests/test_forecasting_index_15m.py verifies noise-dominated and cost-dominated thresholds and rejects negative costs; 21 focused index tests passed, with Ruff and mypy passing.",
+        "No fold-level runner applies and freezes this threshold against real execution-cost estimates; costs and forecast targets are not connected to a validated market dataset."
+      ],
+      "blocker": "Integrate the helper into chronological fold training with authorized, instrument/time-appropriate all-in cost estimates, freeze the threshold before validation/test, and report forward performance on real data.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "5c904c49",
+      "test_result": "21 focused forecasting-index tests passed; Ruff and mypy passed for both forecast modules."
     },
     {
       "id": "PA-09-05",
@@ -21187,6 +21193,7 @@
       "PA-09-01",
       "PA-09-02",
       "PA-09-03",
+      "PA-09-04",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21610,13 +21617,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 974,
+    "audited_count": 975,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 844,
-      "UNASSESSED": 404
+      "PARTIAL": 845,
+      "UNASSESSED": 403
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21765,7 +21772,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 844,
-    "UNASSESSED": 404
+    "PARTIAL": 845,
+    "UNASSESSED": 403
   }
 }
