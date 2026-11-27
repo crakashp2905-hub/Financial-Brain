@@ -9270,7 +9270,7 @@
       ],
       "blocker": "Partial: an equal-weight same-universe control and explicit TRI-first market benchmark exist, but portfolio risk/exposure/turnover matching and broad TRI data coverage are not yet validated.",
       "last_audited_at_utc": "2026-11-27T05:37:13Z",
-      "commit": null,
+      "commit": "3c8aa7da",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0713-final tests/test_phase4_paper_engine.py -q: 33 passed, including TRI selection and fallback tests.",
         "Ruff on paper.engine and tests/test_phase4_paper_engine.py: passed.",

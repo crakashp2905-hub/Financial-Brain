@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "19ecef4ffe397c8a9020f8e6743e92dfad0af91546f62d5f89318134e39ba3f2",
-  "audit_export_sha256": "9be6be682681a6de17db665308db61c793d6a5355885de55eb4c735b3ec65490",
+  "status_ledger_sha256": "3fe6d6a0dd94361c97223c6cf14e34aab94385cde140feddfaf347546dd67a75",
+  "audit_export_sha256": "126ae48f38079956d457f76e869424b18b80ca598fafb6646e025364d36f2928",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3037,7 +3037,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Score each candidate against Nifty 500 TRI or a predefined genuinely matched investable universe benchmark, with matching risk/exposure/turnover controls as appropriate."
           },
-          "commit": null,
+          "commit": "3c8aa7da",
           "blocker": "Partial: an equal-weight same-universe control and explicit TRI-first market benchmark exist, but portfolio risk/exposure/turnover matching and broad TRI data coverage are not yet validated.",
           "evidence": [
             "paper.engine._control computes a point-in-time eligible-universe equal-weight benchmark rebalanced on the same schedule as the candidate, with a no-cost control; paper.engine.Run reports excess over that control and an index benchmark.",
@@ -3488,5 +3488,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "f24f1dc0f93612d8e5868688a421b3621a84a966d6145c63c0b4e15ff9de7b82"
+  "report_sha256": "3bf499d937a0bf035fa763dafe8695856c985b802c4092d951b88e553c181389"
 }
