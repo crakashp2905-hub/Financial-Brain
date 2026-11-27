@@ -61,8 +61,8 @@ def evaluate_opening_range(
         raise ValueError("session open must be timezone-aware")
     if minutes not in (5, 15) or not isfinite(buffer) or buffer < 0:
         raise ValueError("only 5/15-minute ranges and a finite nonnegative buffer are supported")
-    if not isfinite(volume_multiplier) or volume_multiplier < 0:
-        raise ValueError("volume multiplier must be finite and nonnegative")
+    if not isfinite(volume_multiplier) or volume_multiplier <= 0:
+        raise ValueError("volume multiplier must be finite and positive")
     for bar in bars:
         bar.validate()
     if any(left.closed_at >= right.closed_at for left, right in zip(bars, bars[1:])):
@@ -75,6 +75,8 @@ def evaluate_opening_range(
     high = max(bar.high for bar in range_bars)
     low = min(bar.low for bar in range_bars)
     baseline = sum(bar.volume for bar in range_bars) / minutes
+    if baseline <= 0:
+        return None
     threshold_volume = baseline * volume_multiplier
     later = [bar for bar in bars if bar.closed_at > range_end]
     side: Literal["LONG", "SHORT"] | None = None

@@ -30,6 +30,7 @@ def test_bearish_gap_and_inversion_are_point_in_time_events():
     assert (gap.side, gap.lower, gap.upper) == ("BEARISH", 103, 104)
     inverted = advance_gap(gap, candle(3, 104, 107, close=105))
     assert inverted.state == "INVERTED"
+    assert inverted.inverted_side == "BULLISH"
     assert inverted.state_changed_by == "c3"
     assert gap.state == "ACTIVE"  # Earlier snapshot does not repaint.
 

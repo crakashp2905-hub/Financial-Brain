@@ -46,6 +46,7 @@ class FairValueGap:
     state: GapState = "ACTIVE"
     state_changed_at: datetime | None = None
     state_changed_by: str | None = None
+    inverted_side: Side | None = None
 
 
 def detect_fair_value_gaps(candles: list[Candle]) -> list[FairValueGap]:
@@ -83,7 +84,8 @@ def advance_gap(gap: FairValueGap, candle: Candle) -> FairValueGap:
                 or gap.side == "BEARISH" and candle.close > gap.upper)
     if inverted:
         return replace(gap, state="INVERTED", state_changed_at=candle.closed_at,
-                       state_changed_by=candle.candle_id)
+                       state_changed_by=candle.candle_id,
+                       inverted_side="BEARISH" if gap.side == "BULLISH" else "BULLISH")
     if candle.low <= gap.upper and candle.high >= gap.lower:
         return replace(gap, state="MITIGATED", state_changed_at=candle.closed_at,
                        state_changed_by=candle.candle_id)

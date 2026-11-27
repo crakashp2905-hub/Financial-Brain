@@ -47,7 +47,14 @@ def test_fifteen_minute_short_breakout_and_incomplete_range():
     assert result is not None and result.side == "SHORT"
     missing = [item for item in opening if item.candle_id != "m8"]
     assert evaluate_opening_range(missing, session_open=OPEN, minutes=15,
-                                  buffer=0, volume_multiplier=0) is None
+                                  buffer=0, volume_multiplier=0.1) is None
+
+
+def test_zero_volume_range_fails_closed():
+    opening = [bar(i, 99, 100, 99.5, volume=0) for i in range(1, 6)]
+    assert evaluate_opening_range(opening + [bar(6, 100, 102, 101.5, volume=100)],
+                                  session_open=OPEN, minutes=5, buffer=0,
+                                  volume_multiplier=0.5) is None
 
 
 def test_rejects_unsupported_window_naive_open_and_bad_bars():
