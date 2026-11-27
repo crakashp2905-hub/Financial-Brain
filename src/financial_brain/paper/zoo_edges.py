@@ -47,40 +47,73 @@ def _panel(rcon, day: date):
     return P
 
 
+MONTHLY_BOOKS = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan",
+                 "edge_h003_riskadj_mom", "edge_h005_industry_mom")
+
+
+def _capture_target(name: str, compute, targets: dict[str, dict], errors: dict[str, str]) -> None:
+    """Isolate one paper book's data/selection failure and preserve its prior targets upstream."""
+    try:
+        targets[name] = compute()
+    except Exception as exc:  # noqa: BLE001 - one desk's missing data must not skip other books
+        errors[name] = f"{type(exc).__name__}: {str(exc)}"[:200]
+
+
+def _equal_weight_pick(pick, name: str) -> dict[str, float]:
+    if len(pick) == 0:
+        raise ValueError(f"{name} has no eligible holdings at this rebalance")
+    return {str(lineage): 1.0 / len(pick) for lineage in pick}
+
+
 def monthly_targets(rcon, day: date) -> dict[str, dict]:
     """P1, P2, P3 targets on ``day``'s close (equal weight; P2 scaled)."""
     from ..evaluation import edges as E
-    P = _panel(rcon, day)
-    last = P["C"].index[-1]
     out: dict[str, dict] = {}
-    mom = E.momentum_scores(P)
-    res = E.residual_scores(P)
-    idd = E.info_discreteness(P)
-    uni = P["U"].loc[last][P["U"].loc[last]].index
-    for name, s in (("edge_p1_residual_mom", res.loc[last, uni]),):
-        pick = s.dropna().nlargest(20).index
-        out[name] = {k: 1.0 / len(pick) for k in pick}
-    m = mom.loc[last, uni].dropna()
-    low = idd.loc[last, m.index] <= idd.loc[last, uni].median()
-    pick = m[low.fillna(False)].nlargest(20).index
-    out["edge_p3_frog_in_pan"] = {k: 1.0 / len(pick) for k in pick}
-    out.update(h_targets(rcon, P))
-    # P2: the plain momentum book's monthly net history decides the scale
-    # A P2 failure must not block the other books: on 2026-11-02 a gap in P2's history
-    # (2023-11-30, INE509F01029) raised here and every monthly book kept October's targets.
-    # When P2 cannot be computed it is left out, and the caller keeps P2's previous targets.
+    errors: dict[str, str] = {}
     try:
+        P = _panel(rcon, day)
+    except Exception as exc:  # noqa: BLE001 - record shared source failure for each book
+        message = f"{type(exc).__name__}: {str(exc)}"[:200]
+        return {"_errors": {name: message for name in MONTHLY_BOOKS}}
+
+    last = P["C"].index[-1]
+    uni = P["U"].loc[last][P["U"].loc[last]].index
+
+    def p1_target():
+        residual = E.residual_scores(P)
+        return _equal_weight_pick(residual.loc[last, uni].dropna().nlargest(20).index,
+                                  "P1 residual momentum")
+
+    def p3_target():
+        momentum = E.momentum_scores(P)
+        discreteness = E.info_discreteness(P)
+        scores = momentum.loc[last, uni].dropna()
+        low_discreteness = discreteness.loc[last, scores.index] <= discreteness.loc[last, uni].median()
+        return _equal_weight_pick(scores[low_discreteness.fillna(False)].nlargest(20).index,
+                                  "P3 frog-in-pan")
+
+    _capture_target("edge_p1_residual_mom", p1_target, out, errors)
+    _capture_target("edge_p3_frog_in_pan", p3_target, out, errors)
+    h = h_targets(rcon, P)
+    h_errors = h.pop("_errors", {})
+    out.update(h)
+    errors.update(h_errors)
+
+    # Compute P2 weights separately so a missing return in its training history cannot
+    # suppress P1/P3/H003/H005. The stored scale remains the existing volatility policy.
+    def p2_scaled_target():
+        mom = E.momentum_scores(P)
         picks = E.top_picks(P, mom)
+        m = mom.loc[last, uni].dropna()
         picks[last] = list(m.nlargest(20).index)
         hist = E.monthly_selection(P, picks)["net"]
-    except ValueError as e:
-        out["_errors"] = {"edge_p2_volmanaged_mom": str(e)[:200]}
-        return out
-    vol = hist.tail(6).std(ddof=1) * np.sqrt(12) if len(hist) >= 6 else np.nan
-    w = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
-    top = m.nlargest(20).index
-    out["edge_p2_volmanaged_mom"] = {k: w / len(top) for k in top}
-    return out
+        vol = hist.tail(6).std(ddof=1) * np.sqrt(12) if len(hist) >= 6 else np.nan
+        weight = float(min(1.5, 0.12 / vol)) if vol == vol and vol > 0 else 1.0
+        top = m.nlargest(20).index
+        return {str(lineage): weight / len(top) for lineage in top}
+
+    _capture_target("edge_p2_volmanaged_mom", p2_scaled_target, out, errors)
+    return out | ({"_errors": errors} if errors else {})
 
 
 VERDICT.update({
@@ -116,19 +149,25 @@ def h_targets(rcon, P: dict) -> dict[str, dict]:
     mom = C.shift(21) / C.shift(252) - 1
     vol = C.pct_change(fill_method=None).rolling(250, min_periods=200).std()
     out: dict[str, dict] = {}
-    s = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
-    pick = s.nlargest(20).index
-    out["edge_h003_riskadj_mom"] = {k: 1.0 / len(pick) for k in pick}
-    ind = _industries(rcon, C.columns, last.date())
-    r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
-    g = r6.groupby(ind).mean().dropna()
-    cnt = u.groupby(ind).sum()
-    g = g[cnt.reindex(g.index) >= 8]
-    best = set(g.nlargest(3).index)
-    s = mom.loc[last].where(u & ind.isin(best)).dropna()
-    pick = s.nlargest(20).index
-    out["edge_h005_industry_mom"] = {k: 1.0 / len(pick) for k in pick}
-    return out
+    errors: dict[str, str] = {}
+
+    def h003_target() -> dict[str, float]:
+        scores = (mom.loc[last] / vol.loc[last]).where(u).replace([np.inf, -np.inf], np.nan).dropna()
+        return _equal_weight_pick(scores.nlargest(20).index, "H003 risk-adjusted momentum")
+
+    def h005_target() -> dict[str, float]:
+        ind = _industries(rcon, C.columns, last.date())
+        r6 = (C.loc[last] / C.shift(126).loc[last] - 1).where(u)
+        industry_return = r6.groupby(ind).mean().dropna()
+        industry_count = u.groupby(ind).sum()
+        industry_return = industry_return[industry_count.reindex(industry_return.index) >= 8]
+        best = set(industry_return.nlargest(3).index)
+        scores = mom.loc[last].where(u & ind.isin(best)).dropna()
+        return _equal_weight_pick(scores.nlargest(20).index, "H005 industry momentum")
+
+    _capture_target("edge_h003_riskadj_mom", h003_target, out, errors)
+    _capture_target("edge_h005_industry_mom", h005_target, out, errors)
+    return out | ({"_errors": errors} if errors else {})
 
 
 def s1_targets(rcon, day: date, uni: list[str], bars_close: pd.DataFrame) -> dict:

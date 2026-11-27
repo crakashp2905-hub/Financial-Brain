@@ -4,6 +4,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 
+from financial_brain.evaluation import edges as E
 from financial_brain.paper import zoo_edges as ZE
 from financial_brain.evaluation.edges import load as load_edge_panel
 
@@ -44,6 +45,43 @@ def test_h003_and_h005_pick_twenty_equal_weighted_names():
     # H005 holds only names from the three best industries (the drift rises with the column index)
     assert h5 and set(h5) <= set(cols[10:])
     assert abs(sum(h5.values()) - 1) < 1e-9
+
+
+def test_h005_data_failure_does_not_suppress_h003_target():
+    P, cols = _panel()
+    con = _rcon(cols)
+    original = ZE._industries
+
+    def fail_industries(*args, **kwargs):
+        raise ValueError("missing industry membership")
+
+    ZE._industries = fail_industries
+    try:
+        out = ZE.h_targets(con, P)
+    finally:
+        ZE._industries = original
+
+    assert len(out["edge_h003_riskadj_mom"]) == 20
+    assert "edge_h005_industry_mom" not in out
+    assert "missing industry membership" in out["_errors"]["edge_h005_industry_mom"]
+
+
+def test_monthly_p2_history_failure_does_not_suppress_other_books(monkeypatch):
+    P, cols = _panel()
+    con = _rcon(cols)
+    last = P["C"].index[-1]
+    monkeypatch.setattr(ZE, "_panel", lambda *_args: P)
+    monkeypatch.setattr(E, "residual_scores", lambda panel: panel["C"].rank(axis=1))
+    monkeypatch.setattr(E, "momentum_scores", lambda panel: panel["C"].rank(axis=1))
+    monkeypatch.setattr(E, "info_discreteness", lambda panel: panel["C"].rank(axis=1))
+    monkeypatch.setattr(E, "top_picks", lambda *_args: (_ for _ in ()).throw(ValueError("missing P2 history")))
+
+    out = ZE.monthly_targets(con, last.date())
+
+    assert "edge_p2_volmanaged_mom" not in out
+    assert "missing P2 history" in out["_errors"]["edge_p2_volmanaged_mom"]
+    assert {"edge_p1_residual_mom", "edge_p3_frog_in_pan", "edge_h003_riskadj_mom",
+            "edge_h005_industry_mom"} <= out.keys()
 
 
 def test_h005_skips_industries_with_fewer_than_eight_names():

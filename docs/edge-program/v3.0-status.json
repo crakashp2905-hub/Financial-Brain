@@ -7731,12 +7731,23 @@
     {
       "id": "PA-03-07",
       "text": "Restore and verify monthly rebalance processing for H003/H005/P3 after the PR #39 missing-return exception; one bad holding cannot freeze the whole desk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/zoo_edges.py: monthly_targets captures failures per P1/P2/P3/H003/H005 book; h_targets captures H003 and H005 independently, and empty selections are recorded as failures rather than raising out of the whole rebalance.",
+        "src/financial_brain/paper/zoo.py: edge_strategies retains prior targets for failed books and settles every monthly book, so a failed book does not suppress peer desks.",
+        "tests/test_zoo_h_targets.py::test_h005_data_failure_does_not_suppress_h003_target and ::test_monthly_p2_history_failure_does_not_suppress_other_books exercise independent failure cases.",
+        "python -m pytest tests/test_zoo_h_targets.py tests/test_phase5_zoo_edges.py tests/test_phase5_zoo.py -q --basetemp=.pytest-pa0307-wide: 14 passed.",
+        "ruff check src/financial_brain/paper/zoo_edges.py tests/test_zoo_h_targets.py and mypy src/financial_brain/paper/zoo_edges.py passed."
+      ],
+      "blocker": "A production-data monthly rebalance run with persisted evidence and prior-target retention has not yet been demonstrated.",
+      "last_audited_at_utc": "2026-11-27T00:35:00+00:00",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest tests/test_zoo_h_targets.py tests/test_phase5_zoo_edges.py tests/test_phase5_zoo.py -q --basetemp=.pytest-pa0307-wide: 14 passed.",
+        "ruff and mypy passed on changed source and tests."
+      ],
+      "test_result": "Per-book rebalance failures are isolated and successful peer books still produce targets; production-data scheduling and persisted monthly evidence remain unverified, so this item is PARTIAL."
     },
     {
       "id": "PA-03-08",
@@ -20145,7 +20156,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:26:41Z",
+    "as_of_utc": "2026-11-27T00:37:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20602,6 +20613,7 @@
       "PA-03-04",
       "PA-03-05",
       "PA-03-06",
+      "PA-03-07",
       "PA-03-09",
       "PA-03-10",
       "PA-03-15",
@@ -21079,13 +21091,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 931,
+    "audited_count": 932,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 801,
-      "UNASSESSED": 447
+      "PARTIAL": 802,
+      "UNASSESSED": 446
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21234,7 +21246,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 801,
-    "UNASSESSED": 447
+    "PARTIAL": 802,
+    "UNASSESSED": 446
   }
 }

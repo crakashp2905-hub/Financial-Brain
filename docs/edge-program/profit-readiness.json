@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:26:41Z",
+  "as_of_utc": "2026-11-27T00:37:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "5939993254af4f146d467097b9e9ab65a59f2a56912cf0ebbc04eda38a70378b",
-  "audit_export_sha256": "280bafdbd616a805ff9c25dec7104fd758b4e4150f48ebfb73756af4dd4e1132",
+  "status_ledger_sha256": "38e34ea60df9c566a48d285c6fe143af10f2c829b42f9683c69ade50b732d811",
+  "audit_export_sha256": "62e7866b2c65a1a6383f82196d68819b3a8cf7e3154f1a1fd44f877dd828a466",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 801,
-    "UNASSESSED": 447
+    "PARTIAL": 802,
+    "UNASSESSED": 446
   },
-  "assessed_count": 931,
-  "unassessed_count": 447,
+  "assessed_count": 932,
+  "unassessed_count": 446,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 21,
-        "UNASSESSED": 7
+        "PARTIAL": 22,
+        "UNASSESSED": 6
       },
       "evidence": [
         {
@@ -1024,16 +1024,25 @@
         },
         {
           "item_id": "PA-03-07",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 964,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Restore and verify monthly rebalance processing for H003/H005/P3 after the PR #39 missing-return exception; one bad holding cannot freeze the whole desk."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "A production-data monthly rebalance run with persisted evidence and prior-target retention has not yet been demonstrated.",
+          "evidence": [
+            "src/financial_brain/paper/zoo_edges.py: monthly_targets captures failures per P1/P2/P3/H003/H005 book; h_targets captures H003 and H005 independently, and empty selections are recorded as failures rather than raising out of the whole rebalance.",
+            "src/financial_brain/paper/zoo.py: edge_strategies retains prior targets for failed books and settles every monthly book, so a failed book does not suppress peer desks.",
+            "tests/test_zoo_h_targets.py::test_h005_data_failure_does_not_suppress_h003_target and ::test_monthly_p2_history_failure_does_not_suppress_other_books exercise independent failure cases.",
+            "python -m pytest tests/test_zoo_h_targets.py tests/test_phase5_zoo_edges.py tests/test_phase5_zoo.py -q --basetemp=.pytest-pa0307-wide: 14 passed.",
+            "ruff check src/financial_brain/paper/zoo_edges.py tests/test_zoo_h_targets.py and mypy src/financial_brain/paper/zoo_edges.py passed."
+          ],
+          "tests": [
+            "python -m pytest tests/test_zoo_h_targets.py tests/test_phase5_zoo_edges.py tests/test_phase5_zoo.py -q --basetemp=.pytest-pa0307-wide: 14 passed.",
+            "ruff and mypy passed on changed source and tests."
+          ]
         },
         {
           "item_id": "PA-03-08",
@@ -3153,5 +3162,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "1128bba29f15d82c92e4e6b161efb91359086de3fbe4b74f4303159ee594b0ad"
+  "report_sha256": "daee0a59afd68c29645c83976a7fd6106f86ae3917771cdf283cb767464cb607"
 }
