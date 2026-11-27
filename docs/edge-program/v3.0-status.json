@@ -10900,11 +10900,15 @@
     {
       "id": "PA-13-13",
       "text": "Ensure rejected and stopped strategies retain outcome evidence for postmortem and retraining without turning rejected fills into observed market fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/option_counterfactuals.py stores rights-gated rejected option candidates and later outcomes in append-only rows; resolved records explicitly set counterfactual_trade=false, and missing future quotes remain NO_EXIT_QUOTE.",
+        "tests/test_paper_option_counterfactuals.py verifies append-only resolution, licensed-source rights, predeclared horizons and unresolved outcomes; src/financial_brain/learning/trajectory.py prohibits fills for REJECTED/NO_TRADE/ABSTAINED/PENDING/UNKNOWN transitions.",
+        "Coverage remains partial: the rejected-candidate counterfactual ledger is option-specific and is not automatically wired to every strategy stop/rejection cohort or a common retraining pipeline."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T10:10:00Z",
       "commit": null
     },
     {
@@ -21655,6 +21659,7 @@
       "PA-13-10",
       "PA-13-11",
       "PA-13-12",
+      "PA-13-13",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22078,13 +22083,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1050,
+    "audited_count": 1051,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 911,
-      "UNASSESSED": 328
+      "PARTIAL": 912,
+      "UNASSESSED": 327
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22233,7 +22238,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 911,
-    "UNASSESSED": 328
+    "PARTIAL": 912,
+    "UNASSESSED": 327
   }
 }
