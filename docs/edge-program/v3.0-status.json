@@ -9860,12 +9860,18 @@
     {
       "id": "PA-09-11",
       "text": "Build a 'forecast-issued' journal at every completed interval including probabilities UP/DOWN/FLAT, timestamp, quote freshness and model SHA.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_journal.py defines an append-only issue ledger for ISSUED, ABSTAINED and MISSED interval outcomes with UP/DOWN/FLAT probabilities when available, model SHA, feature-manifest SHA and explicit miss/abstention reason.",
+        "Issued rows require completed-interval, decision and issue timestamps plus source observation/availability clocks; stale quote issues are rejected. Idempotent replay and conflicting replay checks are implemented, with explicit expected-interval gap reporting.",
+        "tests/test_forecasting_index_journal.py covers issue validation, quote freshness, idempotency, conflict detection, misses, abstentions and append-only enforcement; 37 focused index forecasting tests passed, Ruff and mypy passed.",
+        "No live or paper session runner is wired to journal each actual completed interval, so operational completeness and quote-freshness coverage are not established."
+      ],
+      "blocker": "Connect the actual session runner and authorized index quote feed to the journal; record every completed interval including outages, then reconcile the daily expected schedule with zero unexplained gaps.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "89ff6f20",
+      "test_result": "37 focused forecasting-index tests passed; Ruff and mypy passed for journal module."
     },
     {
       "id": "PA-09-12",
@@ -21236,6 +21242,7 @@
       "PA-09-08",
       "PA-09-09",
       "PA-09-10",
+      "PA-09-11",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21659,13 +21666,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 981,
+    "audited_count": 982,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 851,
-      "UNASSESSED": 397
+      "PARTIAL": 852,
+      "UNASSESSED": 396
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21814,7 +21821,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 851,
-    "UNASSESSED": 397
+    "PARTIAL": 852,
+    "UNASSESSED": 396
   }
 }
