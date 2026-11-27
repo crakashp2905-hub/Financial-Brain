@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "fd3803bb44458d0e3658e3b0ca3345e6996e3a0015b8136b0fd86830c24a06e0",
-  "audit_export_sha256": "e9766b083c3177f7e092199453ec24100e676e2e67aa3e1f991226ea597ce076",
+  "status_ledger_sha256": "00735a0d078b2b5ddf64704e96ac4b541fe9cdcb10bcc8cd61b725633c78b40c",
+  "audit_export_sha256": "378760a61d1e72d53023a9d2606d6dfb2c6c7bb83f033beffa9bd9bff8468bb7",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3154,7 +3154,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Require predeclared degradation/pause criteria, including deterioration vs benchmark, drawdown, observed cost stress and source quality, with no auto-relaxing to preserve candidate status."
           },
-          "commit": null,
+          "commit": "e741193e",
           "blocker": "Partial: frozen multi-signal pause criteria and immutable evaluation records are implemented, but runner wiring, automatic operating-mode enforcement, and authenticated policy/evidence ownership remain absent.",
           "evidence": [
             "`risk.degradation`, `risk.killswitch`, and `forward_edge.operating_mode` provide related signal, drawdown and manual pause mechanisms, but no frozen evaluator joined benchmark excess, drawdown, realized cost stress, and market-data quality.",
@@ -3540,5 +3540,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "f1cc4eabfd279557fbcb1fa700ea4e3eebb6455acfadd8e3cd6b596f3766e7db"
+  "report_sha256": "a26bd8329a464348d4cd94d9bc2a9c093a94cbfefe321dc16db05aae0395df6b"
 }
