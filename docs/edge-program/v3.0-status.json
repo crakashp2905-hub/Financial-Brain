@@ -9248,7 +9248,7 @@
       ],
       "blocker": "Partial: a persistent, cash-reconciled monthly actual-versus-target ledger is implemented and tested, but monthly target/fill execution runners do not yet call it and its outputs are not yet surfaced in paper reporting.",
       "last_audited_at_utc": "2026-11-27T05:32:48Z",
-      "commit": null,
+      "commit": "9cdeda45",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0712-ledger-final tests/test_zoo_h_targets.py -q: 18 passed, including filled position state, weights/drift, cash/equity, idempotent retry, conflicting replay and oversell rejection.",
         "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
