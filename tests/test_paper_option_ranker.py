@@ -1,0 +1,54 @@
+from datetime import date, datetime, timedelta, timezone
+
+from financial_brain.paper.options import Quote
+from financial_brain.paper.option_ranker import (
+    OptionRankCandidate,
+    rank_long_option_contracts,
+)
+
+
+AS_OF = datetime(2026, 11, 22, 5, tzinfo=timezone.utc)
+
+
+def _candidate(candidate_id, right, *, ask=102, ask_qty=500, expected_exit=140):
+    quote = Quote(123 if right == "CE" else 124,
+                  f"NIFTY26NOV25000{right}", date(2026, 11, 26), 25,
+                  AS_OF - timedelta(seconds=2), 100, ask, 500, ask_qty)
+    return OptionRankCandidate(candidate_id, "NIFTY", right, 25_000, quote,
+                               0.25, expected_exit, 4 / 365)
+
+
+def test_ranker_reports_executable_quote_greeks_risk_size_and_selection():
+    result = rank_long_option_contracts(
+        candidates=(_candidate("call", "CE"),
+                    _candidate("put", "PE", expected_exit=110)),
+        underlying_price=25_100, as_of=AS_OF, risk_budget_inr=10_000,
+        max_quote_age_seconds=5, max_spread_bps=500,
+    )
+    assert result["selected_candidate_id"] == "call"
+    call, put = result["candidates"]
+    assert call["status"] == "SELECTED" and put["status"] == "NOT_SELECTED"
+    assert call["entry_price_reference"] == "OBSERVED_ASK"
+    assert call["expected_exit_bid_is_observed"] is False
+    assert call["break_even_price"] == 25_102
+    assert call["recommended_lots"] > 0
+    assert call["maximum_loss_inr"] > 0
+    assert call["greeks"]["gamma"] > 0
+    assert call["gamma_exposure_per_lot"] > 0
+    assert call["theta_exposure_per_day_per_lot"] < 0
+    assert len(result["report_sha256"]) == 64
+
+
+def test_ranker_explains_no_selection_for_spread_depth_and_risk_failures():
+    result = rank_long_option_contracts(
+        candidates=(_candidate("wide", "CE", ask=103),
+                    _candidate("thin", "PE", ask_qty=10)),
+        underlying_price=25_100, as_of=AS_OF, risk_budget_inr=1,
+        max_quote_age_seconds=5, max_spread_bps=100,
+    )
+    assert result["selected_candidate_id"] is None
+    assert result["selection_reason"] == "NO_CANDIDATE_CLEARED_ALL_GATES"
+    reasons = {row["candidate_id"]: set(row["reason_codes"]) for row in result["candidates"]}
+    assert "SPREAD_EXCEEDS_POLICY" in reasons["wide"]
+    assert "RISK_BUDGET_BELOW_ONE_LOT" in reasons["thin"]
+    assert "INSUFFICIENT_ASK_DEPTH" in reasons["thin"]
