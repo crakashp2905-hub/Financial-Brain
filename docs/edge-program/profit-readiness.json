@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T04:49:22Z",
+  "as_of_utc": "2026-11-27T04:51:23Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "3e2d148a81d75c6d1f5a40bdd759bc06ea7143d4883f32f853f4de818448d204",
-  "audit_export_sha256": "b5e4d299fdd9d3a35931267764979c23ba247dafbda04ae32b959ff3aaef5461",
+  "status_ledger_sha256": "a6f3261c23337573c10ada84316df9a7322ef78cd9278b64f130ed1f40c14787",
+  "audit_export_sha256": "85dad115db72d3c4ec9a4e1af49fb00f4468e75a0ef6ae6ab7e3b1f778da84a4",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3158,16 +3158,18 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement turnover and rebalancing budgets to prevent monthly momentum excess from being consumed by execution costs."
           },
-          "commit": "04282783",
-          "blocker": "Partial: cost-aware bands and scheduled cadence exist, but a binding turnover budget, monthly momentum integration, and prospective evidence that turnover costs stay below incremental alpha are absent.",
+          "commit": "569a5960",
+          "blocker": "Partial: a binding opt-in turnover cap and cost-aware rebalance planner exist, but the cap is not mandatory at all call sites; monthly momentum integration and prospective evidence that turnover costs stay below incremental alpha remain absent.",
           "evidence": [
             "`portfolio.rebalance.plan_rebalance` applies explicit no-trade bands, fixed and proportional charges, horizon-matched expected improvement, and rejects a rebalance when estimated costs consume its benefit; it reports proposed turnover and total cost.",
             "`portfolio.cadence` provides frozen, ordered rebalance schedules and avoids fabricating trades or exit events.",
-            "No hard turnover/rebalance budget caps total proposed notional, and monthly momentum paper-book scheduling/turnover attribution is not wired to this planner."
+            "Commit 569a5960 adds an explicit non-negative `turnover_budget_inr`. If the proposed batch exceeds the cap, every proposed line is rejected, current weights are preserved, plan turnover/cost/benefit totals are zero, and the refusal reason is visible. Exact-budget trades remain eligible.",
+            "The budget parameter is opt-in; monthly momentum paper-book scheduling/turnover attribution is not wired to this planner, and forward evidence that turnover costs stay below incremental alpha is absent."
           ],
           "tests": [
-            "`python -m pytest --basetemp .pytest-pa0807 tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 7 passed.",
-            "Ruff and targeted mypy passed for rebalance and cadence modules."
+            "`python -m pytest --basetemp .pytest-pa0807-turnover tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 8 passed, including over-budget refusal, exact-cap acceptance, fixed/proportional costs and frozen cadence.",
+            "`python -m ruff check src/financial_brain/portfolio/rebalance.py tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py`: passed.",
+            "`python -m mypy src/financial_brain/portfolio/rebalance.py --follow-imports=silent`: passed; `git diff --check`: passed."
           ]
         },
         {
@@ -3324,5 +3326,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "ae1aaedc0ce5a0bfb8d9c4c4ec802723a56b32255fa0a542b1752ec80d48827e"
+  "report_sha256": "ff338579dbd4af7df72da46fab0130581bd3bc44674e9532c0ed924a781fe63e"
 }

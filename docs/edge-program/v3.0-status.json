@@ -9338,16 +9338,18 @@
       "evidence": [
         "`portfolio.rebalance.plan_rebalance` applies explicit no-trade bands, fixed and proportional charges, horizon-matched expected improvement, and rejects a rebalance when estimated costs consume its benefit; it reports proposed turnover and total cost.",
         "`portfolio.cadence` provides frozen, ordered rebalance schedules and avoids fabricating trades or exit events.",
-        "No hard turnover/rebalance budget caps total proposed notional, and monthly momentum paper-book scheduling/turnover attribution is not wired to this planner."
+        "Commit 569a5960 adds an explicit non-negative `turnover_budget_inr`. If the proposed batch exceeds the cap, every proposed line is rejected, current weights are preserved, plan turnover/cost/benefit totals are zero, and the refusal reason is visible. Exact-budget trades remain eligible.",
+        "The budget parameter is opt-in; monthly momentum paper-book scheduling/turnover attribution is not wired to this planner, and forward evidence that turnover costs stay below incremental alpha is absent."
       ],
-      "blocker": "Partial: cost-aware bands and scheduled cadence exist, but a binding turnover budget, monthly momentum integration, and prospective evidence that turnover costs stay below incremental alpha are absent.",
-      "last_audited_at_utc": "2026-11-27T04:49:22Z",
-      "commit": "04282783",
+      "blocker": "Partial: a binding opt-in turnover cap and cost-aware rebalance planner exist, but the cap is not mandatory at all call sites; monthly momentum integration and prospective evidence that turnover costs stay below incremental alpha remain absent.",
+      "last_audited_at_utc": "2026-11-27T04:51:23Z",
+      "commit": "569a5960",
       "test_evidence": [
-        "`python -m pytest --basetemp .pytest-pa0807 tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 7 passed.",
-        "Ruff and targeted mypy passed for rebalance and cadence modules."
+        "`python -m pytest --basetemp .pytest-pa0807-turnover tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 8 passed, including over-budget refusal, exact-cap acceptance, fixed/proportional costs and frozen cadence.",
+        "`python -m ruff check src/financial_brain/portfolio/rebalance.py tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py`: passed.",
+        "`python -m mypy src/financial_brain/portfolio/rebalance.py --follow-imports=silent`: passed; `git diff --check`: passed."
       ],
-      "test_result": "Cost-aware rebalance planning and frozen cadence tests: 7 passed; Ruff and targeted mypy passed. PA-08-07 remains PARTIAL pending binding turnover caps and strategy-book integration."
+      "test_result": "Cost-aware planning plus binding turnover cap: 8 tests passed, including refusal above budget while preserving existing weights and acceptance exactly at budget. Ruff and targeted mypy passed. PA-08-07 remains PARTIAL pending mandatory planner wiring and strategy-book evaluation."
     },
     {
       "id": "PA-08-08",
@@ -20347,7 +20349,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T04:49:22Z",
+    "as_of_utc": "2026-11-27T04:51:23Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
