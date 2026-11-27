@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "ab27aac84c4b1972055de6c318a2323b49e54aca7b1bd3b56fc30d27319cfef4",
-  "audit_export_sha256": "887075f439b8df5875138f13a3ce2cbfefe0410cf3e7829cd5d72800730e3648",
+  "status_ledger_sha256": "364d6999d614e66e7e690f96eaf3666c1952176bc3cfeb4b1f3bdc942e7a603c",
+  "audit_export_sha256": "244c26beb4e33f72b190fd789450b3635dc521b5901e342870868f868dbfe463",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 135,
     "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
-    "PARTIAL": 960,
-    "UNASSESSED": 259
+    "PARTIAL": 961,
+    "UNASSESSED": 258
   },
-  "assessed_count": 1119,
-  "unassessed_count": 259,
+  "assessed_count": 1120,
+  "unassessed_count": 258,
   "verified_complete_count": 135,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -3542,8 +3542,8 @@
       "evidence": [
         {
           "path": "docs/edge-program/forward-evidence-gate.v1.json",
-          "input_sha256": "59135a4121b9c386067ec3457939bea32a0c785d1b46b1033033faa930b6b9d4",
-          "report_sha256": "76c3d1be15dc7a798d0cd2d570cc96c5d0d22598a1f2d3ec8befce4ae1bd8d25",
+          "input_sha256": "970d1f6789e6d1543c9db88d275496a4be6dcb998824ee0810b7fc36b71a3e3f",
+          "report_sha256": "238ccd8a1d231f926bca854c7ab5caee1238acf271ab40abc11211c7db13b7f8",
           "gate_status": "RED",
           "release_blocked": true,
           "checks": {
@@ -3551,9 +3551,11 @@
             "all_expected_sessions_present_and_clean": false,
             "all_sessions_independently_attested": false,
             "attribution_complete_and_reconciled": false,
-            "benchmark_superiority_observed": false
+            "benchmark_superiority_observed": false,
+            "monetary_invariants_resolved": false
           },
           "issues": [
+            "monetary invariant incident register has not been audited",
             "frozen evidence-window plan is missing",
             "session evidence cannot qualify without a valid frozen plan",
             "complete ledger-reconciled attribution for the exact frozen window is missing",
@@ -3568,5 +3570,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "db6b9e04005656a4c50ec6d5da568c9d9ec20195b3cee4216e71eb4adbc41a09"
+  "report_sha256": "ca0685814bbe9ddb29deca75331e17d8bc056a7fe76397dc9ab914ff18517a6c"
 }

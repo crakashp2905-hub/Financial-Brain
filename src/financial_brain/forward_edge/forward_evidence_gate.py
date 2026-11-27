@@ -47,16 +47,43 @@ def _report_digest_valid(value: Any) -> bool:
 def evaluate_forward_evidence_gate(*, plan: dict[str, Any] | None,
                                    sessions: list[dict[str, Any]] | None,
                                    attribution: dict[str, Any] | None,
-                                   benchmark: dict[str, Any] | None) -> dict[str, Any]:
-    """Return RED until the complete frozen session, attribution and benchmark scope is met."""
+                                   benchmark: dict[str, Any] | None,
+                                   unresolved_monetary_invariants: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Return RED unless evidence is complete and no unresolved monetary invariant exists.
+
+    ``None`` means incident state was not audited and therefore fails closed. An explicit
+    empty list is affirmative evidence that the incident register was checked and clear.
+    """
     checks: dict[str, bool] = {
         "frozen_plan_valid": False,
         "all_expected_sessions_present_and_clean": False,
         "all_sessions_independently_attested": False,
         "attribution_complete_and_reconciled": False,
         "benchmark_superiority_observed": False,
+        "monetary_invariants_resolved": False,
     }
     issues: list[str] = []
+    if unresolved_monetary_invariants is None:
+        issues.append("monetary invariant incident register has not been audited")
+    elif not isinstance(unresolved_monetary_invariants, list):
+        issues.append("monetary invariant incident register is malformed")
+    elif unresolved_monetary_invariants:
+        ids = []
+        valid_register = True
+        for incident in unresolved_monetary_invariants:
+            if (not isinstance(incident, dict) or not isinstance(incident.get("incident_id"), str)
+                    or not incident["incident_id"].strip()
+                    or not isinstance(incident.get("invariant"), str) or not incident["invariant"].strip()
+                    or incident.get("resolved") is not False):
+                valid_register = False
+                break
+            ids.append(incident["incident_id"])
+        if not valid_register:
+            issues.append("monetary invariant register must contain unresolved, identified incidents only")
+        else:
+            issues.append(f"unresolved monetary invariants block release: {sorted(set(ids))[:10]}")
+    else:
+        checks["monetary_invariants_resolved"] = True
     expected_dates: list[str] = []
     benchmark_id: str | None = None
     if not isinstance(plan, dict):

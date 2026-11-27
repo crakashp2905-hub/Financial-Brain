@@ -136,7 +136,8 @@ def build(root: Path) -> dict[str, Any]:
         raise ValueError("forward evidence gate input schema is invalid")
     expected_gate = evaluate_forward_evidence_gate(
         plan=evidence_input.get("plan"), sessions=evidence_input.get("sessions"),
-        attribution=evidence_input.get("attribution"), benchmark=evidence_input.get("benchmark"))
+        attribution=evidence_input.get("attribution"), benchmark=evidence_input.get("benchmark"),
+        unresolved_monetary_invariants=evidence_input.get("unresolved_monetary_invariants"))
     expected_gate["input_sha256"] = _sha256(evidence_input_bytes)
     if (not evidence_gate_path.is_file()
             or json.loads(_canonical_text_bytes(evidence_gate_path).decode("utf-8")) != expected_gate):

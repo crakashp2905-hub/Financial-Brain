@@ -3,5 +3,6 @@
   "plan": null,
   "sessions": [],
   "attribution": null,
-  "benchmark": null
+  "benchmark": null,
+  "unresolved_monetary_invariants": null
 }

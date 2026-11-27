@@ -22,12 +22,13 @@ def build(input_path: Path = INPUT) -> dict[str, Any]:
     payload = json.loads(raw.decode("utf-8"))
     if payload.get("schema") != "fb.forward-evidence-gate-input.v1":
         raise ValueError("unsupported forward evidence gate input schema")
-    expected = {"schema", "plan", "sessions", "attribution", "benchmark"}
+    expected = {"schema", "plan", "sessions", "attribution", "benchmark", "unresolved_monetary_invariants"}
     if set(payload) != expected:
         raise ValueError("forward evidence gate input fields differ from the versioned contract")
     report = evaluate_forward_evidence_gate(
         plan=payload["plan"], sessions=payload["sessions"],
-        attribution=payload["attribution"], benchmark=payload["benchmark"])
+        attribution=payload["attribution"], benchmark=payload["benchmark"],
+        unresolved_monetary_invariants=payload["unresolved_monetary_invariants"])
     return report | {"input_sha256": hashlib.sha256(raw).hexdigest()}
 
 
