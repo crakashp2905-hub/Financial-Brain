@@ -8086,7 +8086,7 @@
       ],
       "blocker": "Partial: the canonical snapshot can now be audited, but account/book aggregation, a universal pre-entry gate, durable monitor scheduling across every book, and operational restart drills remain unproven.",
       "last_audited_at_utc": "2026-11-27T03:28:24Z",
-      "commit": "pending",
+      "commit": "749b3446",
       "test_evidence": [
         "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots.",
         "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",

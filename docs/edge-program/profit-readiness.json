@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "97e7ce961865ab9d61f735de2e01a71d982933745a3bee081d620f7c03f8ce30",
-  "audit_export_sha256": "7416027e3a3e6288583f5119a6cd021769b1daef73e894ff88a73752abbe1739",
+  "status_ledger_sha256": "b6e3da2f7fa8c71cc4ff660b9a8c89cb38f1f2f3fe692c8ce793ae66082407d8",
+  "audit_export_sha256": "a03bc1e72720dfa8a097d894e2fbbbba2cc6e433c8cde57ac29f045f94ea39ae",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1401,7 +1401,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Pair **all** open positions with an exit policy and a crash-resumable monitor; require auditable exceptions for product types like NAV-based mutual funds."
           },
-          "commit": "pending",
+          "commit": "749b3446",
           "blocker": "Partial: the canonical snapshot can now be audited, but account/book aggregation, a universal pre-entry gate, durable monitor scheduling across every book, and operational restart drills remain unproven.",
           "evidence": [
             "kernel.exit_policy defines immutable, versioned exit rules and requires hard-stop protection for its exchange-traded position contract.",
@@ -3259,5 +3259,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "639eeb1f40f721ec1a81f1a5ca6ecf3d2d41048702dbe4fcca7c3fdee4e0aa51"
+  "report_sha256": "9ba31a4f5fb06ccfcdf44341288d3fabb09c39874264702791590b77dabf5538"
 }
