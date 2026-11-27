@@ -226,6 +226,31 @@ def _validate_completed_bar(event: MarketEvent, session_open_at: datetime,
         raise ForwardSessionRunnerError(f"completed bar rejected: {exc}") from exc
 
 
+def _canonical_sha256(value: object) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False,
+                         ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _validate_live_paper_freeze(config: ForwardRunConfig) -> None:
+    """Require a complete, hash-bound strategy and policy snapshot before LIVE_PAPER opens."""
+    constraints = config.constraints
+    parameters = constraints.get("strategy_parameters")
+    parameter_sha = constraints.get("strategy_parameters_sha256")
+    risk_limits = constraints.get("risk_limits")
+    interval = constraints.get("signal_interval_seconds")
+    if not isinstance(parameters, dict) or not parameters:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires frozen strategy_parameters")
+    if parameter_sha != _canonical_sha256(parameters):
+        raise ForwardSessionRunnerError("LIVE_PAPER strategy parameter hash differs from frozen parameters")
+    if not isinstance(risk_limits, dict) or not risk_limits:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires explicit frozen risk_limits")
+    if type(interval) is not int or interval not in {60, 300, 900}:
+        raise ForwardSessionRunnerError("LIVE_PAPER requires a supported frozen signal_interval_seconds")
+    if not isinstance(constraints.get("cost_schedule"), dict):
+        raise ForwardSessionRunnerError("LIVE_PAPER requires a versioned frozen cost_schedule")
+
+
 class ForwardSessionRunner:
     """Persist event and decision evidence from any adapter using normalized MarketEvent rows.
 
@@ -410,12 +435,21 @@ class ForwardSessionRunner:
     def begin(self, session_id: str, config: ForwardRunConfig, *, now: datetime | None = None,
               preflight: dict[str, bool]) -> SessionState:
         """Create or resume a session, recording every preflight check before opening it."""
+        if config.mode == "LIVE_PAPER":
+            _validate_live_paper_freeze(config)
         try:
             profiles_from_constraints(config.constraints, config.instrument_universe)
         except DataProfileError as exc:
             raise ForwardSessionRunnerError(f"invalid frozen instrument data profiles: {exc}") from exc
         now = now or capture_local_time(self.clock, label="session start")
         self.state_store.create(session_id, config, now=now)
+        if config.mode == "LIVE_PAPER":
+            try:
+                self._resolved_cost_schedule(session_id)
+            except ForwardSessionRunnerError as exc:
+                self.state_store.transition(session_id, SessionState.REJECTED, now=now,
+                                            reason=f"frozen cost schedule rejected: {exc}")
+                raise
         try:
             self.operating_modes.initialize(session_id, occurred_at=now)
         except OperatingModeError as exc:
@@ -869,6 +903,8 @@ class ForwardSessionRunner:
         """Durably accept normalized source events available during the frozen session."""
         if self.state_store.state(session_id) is not SessionState.OPEN:
             raise ForwardSessionRunnerError("market events are accepted only in an OPEN session")
+        if config.sha256() != self.state_store.config_sha256(session_id):
+            raise ForwardSessionRunnerError("ingest config differs from the frozen session configuration")
         expected = set(config.instrument_universe)
         counts = {"received": 0, "persisted": 0, "duplicate": 0}
         batch = list(events)
@@ -1303,6 +1339,22 @@ class ForwardSessionRunner:
         manifest_at = datetime.fromisoformat(manifest["decision_at_utc"].replace("Z", "+00:00"))
         if manifest["decision_id"] != decision_id or manifest["day"] != config.exchange_date.isoformat():
             raise ForwardSessionRunnerError("decision manifest identity or exchange date mismatches session")
+        if config.mode == "LIVE_PAPER":
+            expected_universe_sha = _canonical_sha256(sorted(config.instrument_universe))
+            expected_risk_sha = _canonical_sha256(config.constraints["risk_limits"])
+            expected_cost_sha = self._resolved_cost_schedule(session_id).digest()
+            if manifest["strategy_sha256"] != config.strategy_sha256:
+                raise ForwardSessionRunnerError("decision strategy hash differs from the frozen session strategy")
+            if manifest["benchmark_id"] != config.benchmark:
+                raise ForwardSessionRunnerError("decision benchmark differs from the frozen session benchmark")
+            if Decimal(manifest["capital_inr"]) != Decimal(config.capital):
+                raise ForwardSessionRunnerError("decision capital differs from frozen session capital")
+            if manifest["universe_sha256"] != expected_universe_sha:
+                raise ForwardSessionRunnerError("decision universe hash differs from the frozen session universe")
+            if manifest["risk_limits_sha256"] != expected_risk_sha:
+                raise ForwardSessionRunnerError("decision risk hash differs from frozen session risk limits")
+            if manifest["cost_model_sha256"] != expected_cost_sha:
+                raise ForwardSessionRunnerError("decision cost hash differs from the frozen session cost schedule")
         if manifest_at.astimezone(timezone.utc) != decision_at.astimezone(timezone.utc):
             raise ForwardSessionRunnerError("decision manifest time differs from the durable decision")
         source_ids = {source["source_id"] for source in manifest["sources"]}
@@ -1315,6 +1367,10 @@ class ForwardSessionRunner:
             if row is None or row[0] != source["sha256"]:
                 raise ForwardSessionRunnerError("decision manifest source hash differs from journaled market event")
             event = json.loads(row[1])
+            if config.mode == "LIVE_PAPER" and event["kind"] == EventKind.BAR.value:
+                if event["payload"].get("interval_seconds") != config.constraints["signal_interval_seconds"]:
+                    raise ForwardSessionRunnerError(
+                        "decision source bar interval differs from frozen signal_interval_seconds")
             for manifest_key, event_key in (("published_at_utc", "event_time"),
                                             ("received_at_utc", "received_at"),
                                             ("available_at_utc", "available_at")):

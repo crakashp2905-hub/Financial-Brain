@@ -10986,11 +10986,16 @@
     {
       "id": "PA-14-03",
       "text": "Lock exact strategy code, parameters, universe, signal interval, costs, risk and benchmark before each prospective session starts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "ForwardRunConfig hashes strategy code, cohort, universe, benchmark, capital, mode, constraints and ledger into immutable session identity. LIVE_PAPER now requires frozen strategy_parameters plus matching parameter SHA-256, explicit risk_limits, signal_interval_seconds and a valid versioned effective cost schedule before session open.",
+        "ForwardSessionRunner ingest rejects a supplied config whose hash differs from the stored session configuration. Decision manifests in LIVE_PAPER are checked against the frozen strategy hash, benchmark, capital, sorted universe digest, risk-limit digest and resolved cost schedule digest; sourced BAR inputs must match the frozen signal interval.",
+        "tests/test_forward_edge_session_runner.py focused live-paper freeze, manifest-binding and config-mutation cases: 5 passed; Ruff passed.",
+        "Still partial: prospective LIVE_PAPER operation remains blocked pending external data-rights approval, and no production strategy-launch service yet constructs these frozen configs from the approved strategy registry automatically."
+      ],
+      "blocker": "Operational use additionally depends on PA-14-02 written rights; frozen strategy configuration must be supplied by the owner until registry launch wiring exists.",
+      "last_audited_at_utc": "2026-11-27T14:00:00Z",
       "commit": null
     },
     {
@@ -21687,6 +21692,7 @@
       "PA-13-16",
       "PA-14-01",
       "PA-14-02",
+      "PA-14-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22110,13 +22116,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1056,
+    "audited_count": 1057,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 7,
       "NOT_STARTED": 17,
-      "PARTIAL": 916,
-      "UNASSESSED": 322
+      "PARTIAL": 917,
+      "UNASSESSED": 321
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22265,7 +22271,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
-    "PARTIAL": 916,
-    "UNASSESSED": 322
+    "PARTIAL": 917,
+    "UNASSESSED": 321
   }
 }

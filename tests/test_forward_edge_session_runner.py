@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 from dataclasses import replace
 from decimal import Decimal
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -74,6 +75,34 @@ def make_config(*, max_quote_age_ms=None):
                             ("NSE:INFY",), Decimal("100000"), constraints, "ledger-1")
 
 
+def make_live_paper_config(*, include_prospective_rights=False):
+    from dataclasses import replace
+    from financial_brain.costs.india import CostModel
+
+    base = make_config()
+    parameters = {"lookback_bars": 20, "entry_threshold": "0.75"}
+    risk_limits = {"daily_loss_inr": "2500", "max_order_value_inr": "100000"}
+    constraints = dict(base.constraints)
+    constraints.update({
+        "strategy_parameters": parameters,
+        "strategy_parameters_sha256": hashlib.sha256(json.dumps(
+            parameters, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+        "risk_limits": risk_limits,
+        "signal_interval_seconds": 60,
+        "cost_schedule": {
+            "schedule_id": "test-india", "version": "v1", "effective_from": "2026-01-01",
+            "effective_to": None, "segment": "delivery", "model": CostModel().as_dict(),
+            "source_ref": "test tariff fixture", "source_sha256": "c" * 64,
+        },
+    })
+    if include_prospective_rights:
+        constraints["data_permissions"] = [*constraints["data_permissions"], {
+            "source_id": "KITE_CONNECT_READ_ONLY", "use": "PROSPECTIVE_PAPER_CAPTURE",
+            "status": "USE_ALLOWED", "effective_from": "2026-11-13", "effective_through": None,
+            "evidence_ref": "test-only-explicit-provider-approval", "reviewer": "test-owner"}]
+    return replace(base, mode="LIVE_PAPER", constraints=constraints)
+
+
 def make_config_with_constraints(constraints):
     constraints = {"session_phase": "CONTINUOUS",
                    "allow_synthetic_fixture_events": True,
@@ -115,6 +144,20 @@ def test_event_loop_requires_a_profile_for_every_frozen_instrument(tmp_path):
             evaluate_protective_exits=lambda *_: None)
     with pytest.raises(SessionStateError, match="unknown forward session"):
         runner.state_store.state("unprofiled")
+    runner.close()
+
+
+def test_market_ingest_rejects_mutated_or_replaced_session_configuration(tmp_path):
+    from dataclasses import replace
+
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    event = make_event()
+    changed = replace(config, capital=Decimal("200000"))
+    with pytest.raises(ForwardSessionRunnerError, match="differs from the frozen session configuration"):
+        runner.ingest("s", changed, [event])
+    assert runner.records("s")["events"] == []
     runner.close()
 
 
@@ -942,6 +985,19 @@ def record_manifest(runner, *, session_id, decision_id, event, decided_at, quant
                                          "available_at_utc": event.available_at.isoformat()}],
         "no_trade_reasons": [],
     }
+    session_config = runner.state_store.config(session_id)
+    if session_config.mode == "LIVE_PAPER":
+        manifest.update({
+            "strategy_sha256": session_config.strategy_sha256,
+            "universe_sha256": hashlib.sha256(json.dumps(
+                sorted(session_config.instrument_universe), separators=(",", ":")).encode()).hexdigest(),
+            "risk_limits_sha256": hashlib.sha256(json.dumps(
+                session_config.constraints["risk_limits"], sort_keys=True,
+                separators=(",", ":")).encode()).hexdigest(),
+            "cost_model_sha256": runner._resolved_cost_schedule(session_id).digest(),
+            "benchmark_id": session_config.benchmark,
+            "capital_inr": format(session_config.capital, "f"),
+        })
     if persist:
         return runner.record_decision_manifest(session_id=session_id, decision_id=decision_id, manifest=manifest)
     return manifest
@@ -1700,10 +1756,8 @@ def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
 
 
 def test_live_paper_capture_requires_distinct_provider_permission(tmp_path):
-    from dataclasses import replace
-
     runner = make_runner(tmp_path)
-    config = replace(make_config(), mode="LIVE_PAPER")
+    config = make_live_paper_config()
     opened(runner, config=config)
     quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
              "depth": {"buy": [{"price": 99.95, "quantity": 20}],
@@ -1716,15 +1770,7 @@ def test_live_paper_capture_requires_distinct_provider_permission(tmp_path):
 
 
 def test_live_paper_capture_accepts_only_explicit_effective_scoped_permission(tmp_path):
-    from dataclasses import replace
-
-    config = make_config()
-    permissions = [*config.constraints["data_permissions"], {
-        "source_id": "KITE_CONNECT_READ_ONLY", "use": "PROSPECTIVE_PAPER_CAPTURE",
-        "status": "USE_ALLOWED", "effective_from": "2026-11-13", "effective_through": None,
-        "evidence_ref": "test-only-explicit-provider-approval", "reviewer": "test-owner"}]
-    config = replace(config, mode="LIVE_PAPER",
-                     constraints={**config.constraints, "data_permissions": permissions})
+    config = make_live_paper_config(include_prospective_rights=True)
     runner = make_runner(tmp_path)
     opened(runner, config=config)
     quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
@@ -1732,6 +1778,47 @@ def test_live_paper_capture_accepts_only_explicit_effective_scoped_permission(tm
                        "sell": [{"price": 100.05, "quantity": 3}]}}
     event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
     assert runner.ingest("s", config, [event])["persisted"] == 1
+    runner.close()
+
+
+def test_live_paper_manifest_binds_frozen_strategy_benchmark_capital_universe_cost_and_risk(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    runner, _fill_event, decided = trade_setup(tmp_path, config=config, include_manifest=False)
+    decision = json.loads(runner._con.execute(
+        "SELECT record_json FROM runner_decisions WHERE session_id='s' AND decision_id='trade-1'").fetchone()[0])
+    event_json = runner._con.execute(
+        "SELECT event_json FROM runner_events WHERE session_id='s' AND event_id=?",
+        [decision["input_event_ids"][0]]).fetchone()[0]
+    event = MarketEvent.from_dict(json.loads(event_json))
+    manifest = record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                               decided_at=decided, quantity=11, persist=False)
+    digest = runner.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest)
+    assert len(digest) == 64
+
+    runner2, _fill_event2, decided2 = trade_setup(tmp_path / "mismatch", config=config, include_manifest=False)
+    decision2 = json.loads(runner2._con.execute(
+        "SELECT record_json FROM runner_decisions WHERE session_id='s' AND decision_id='trade-1'").fetchone()[0])
+    event2_json = runner2._con.execute(
+        "SELECT event_json FROM runner_events WHERE session_id='s' AND event_id=?",
+        [decision2["input_event_ids"][0]]).fetchone()[0]
+    event2 = MarketEvent.from_dict(json.loads(event2_json))
+    manifest2 = record_manifest(runner2, session_id="s", decision_id="trade-1", event=event2,
+                                decided_at=decided2, quantity=11, persist=False)
+    manifest2["benchmark_id"] = "OTHER"
+    with pytest.raises(ForwardSessionRunnerError, match="benchmark differs"):
+        runner2.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest2)
+    runner.close()
+    runner2.close()
+
+
+def test_live_paper_session_rejects_missing_frozen_parameters_before_creation(tmp_path):
+    from dataclasses import replace
+
+    runner = make_runner(tmp_path)
+    with pytest.raises(ForwardSessionRunnerError, match="frozen strategy_parameters"):
+        opened(runner, config=replace(make_config(), mode="LIVE_PAPER"))
+    with pytest.raises(SessionStateError, match="unknown forward session"):
+        runner.state_store.state("s")
     runner.close()
 
 
