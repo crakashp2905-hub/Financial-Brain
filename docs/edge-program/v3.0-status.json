@@ -10226,12 +10226,16 @@
     {
       "id": "PA-10-18",
       "text": "Conduct targeted prospective option paper sessions with precommitted contracts, bid/ask evidence, timestamps, fill probability and reconciled net P&L before any real-money readiness claim.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/paper/options_forward.py: local immutable pre-entry option paper intent/outcome ledger; actual session rows absent",
+        "src/financial_brain/paper/options_forward.py: cohort_report reconciles pending, no-entry and P&L cohort rows while retaining full intent denominator",
+        "Local ledger explicitly reports no independent timestamp attestation; prospective results are not real-money readiness evidence"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "ec1e88a5"
     },
     {
       "id": "PA-10-19",
@@ -21391,6 +21395,7 @@
       "PA-10-15",
       "PA-10-16",
       "PA-10-17",
+      "PA-10-18",
       "PA-10-19",
       "SL-00-01",
       "SL-00-02",
@@ -21815,13 +21820,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1006,
+    "audited_count": 1007,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 875,
-      "UNASSESSED": 372
+      "PARTIAL": 876,
+      "UNASSESSED": 371
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21970,7 +21975,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 875,
-    "UNASSESSED": 372
+    "PARTIAL": 876,
+    "UNASSESSED": 371
   }
 }
