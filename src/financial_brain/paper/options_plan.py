@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
+from ..costs.india import CostModel
 from .options import OptionPaperError, Quote, cost_hurdle, option_lot_count
 from ..kernel.units import OptionLots
 from ..forecasting.index_sizing import (SizingEligibility,
@@ -36,6 +37,7 @@ def build_long_option_plan(
     max_quote_age: timedelta,
     calibrated_confidence: float | None = None,
     sizing_eligibility: SizingEligibility | None = None,
+    costs: CostModel | None = None,
 ) -> dict[str, Any]:
     """Return a complete contract-qualified BUY plan or fail closed.
 
@@ -84,7 +86,8 @@ def build_long_option_plan(
     if contract.option_type == "PE" and invalidation_price <= underlying_price:
         raise OptionPaperError("put thesis invalidation must be above the underlying decision price")
 
-    hurdle = cost_hurdle(contract.quote, lots=lot_count, expected_exit_bid=target_premium)
+    hurdle = cost_hurdle(contract.quote, lots=lot_count, expected_exit_bid=target_premium,
+                         costs=costs)
     if not hurdle["passes"]:
         raise OptionPaperError("target premium does not clear estimated round-trip charges")
     return {

@@ -6,6 +6,7 @@ from financial_brain.paper.options import OptionPaperError, Quote
 from financial_brain.paper.options_plan import OptionContract, build_long_option_plan
 from financial_brain.kernel.units import OptionLots
 from financial_brain.forecasting.index_sizing import SizingEligibility
+from financial_brain.costs.india import CostModel
 
 
 NOW = datetime(2026, 11, 22, 5, 0, tzinfo=timezone.utc)
@@ -95,3 +96,16 @@ def test_plan_rejects_tradingsymbol_that_disagrees_with_declared_contract():
         build_long_option_plan(c, decision_at=NOW, underlying_price=25_100,
                                invalidation_price=25_000, lots=1, stop_premium=80,
                                target_premium=140, max_quote_age=timedelta(seconds=5))
+
+
+def test_ce_and_pe_candidates_use_the_same_explicit_cost_schedule():
+    costs = CostModel(stt_options_sell=0.002, exch_txn_options=0.0005,
+                      brokerage_rate=0.0001, brokerage_cap_flat=10)
+    plans = [build_long_option_plan(
+        _contract(kind), decision_at=NOW,
+        underlying_price=25_100 if kind == "CE" else 24_900,
+        invalidation_price=25_000, lots=1, stop_premium=80, target_premium=140,
+        max_quote_age=timedelta(seconds=5), costs=costs,
+    ) for kind in ("CE", "PE")]
+    assert {plan["option_type"] for plan in plans} == {"CE", "PE"}
+    assert all(plan["projected_round_trip_charges_inr"] > 0 for plan in plans)

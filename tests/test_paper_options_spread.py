@@ -4,6 +4,7 @@ import pytest
 
 from financial_brain.paper.options import OptionPaperError, Quote
 from financial_brain.paper.options_spread import Leg, debit_vertical
+from financial_brain.costs.india import CostModel
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -31,3 +32,14 @@ def test_put_debit_vertical_and_invalid_leg_pair():
         debit_vertical(leg(1, 25000, 100, 101), leg(2, 25100, 40, 41, kind="PE"))
     with pytest.raises(OptionPaperError, match="quantity"):
         debit_vertical(leg(1, 25000, 100, 101, qty=1), leg(2, 25100, 40, 41))
+
+
+def test_vertical_uses_caller_cost_schedule_and_rejects_missing_leg_depth():
+    costs = CostModel(stt_options_sell=0.002, exch_txn_options=0.0005,
+                      brokerage_rate=0.0001, brokerage_cap_flat=10)
+    result = debit_vertical(leg(1, 25000, 100, 101), leg(2, 25100, 40, 41),
+                            costs=costs)
+    assert result["entry_charges_inr"] > 0
+    with pytest.raises(OptionPaperError, match="visible two-leg quantity"):
+        debit_vertical(leg(1, 25000, 100, 101, qty=10), leg(2, 25100, 40, 41),
+                       costs=costs)
