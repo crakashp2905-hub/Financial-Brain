@@ -49,11 +49,7 @@ def build() -> dict[str, Any]:
         dimensions = {
             "private_research": permission("RESEARCH"),
             "retained_history": permission("RETENTION"),
-            "real_time_algorithmic_use": {
-                "status": "UNKNOWN_RIGHTS", "blocks_operational_use": True,
-                "permission_use": None, "evidence_ref": None,
-                "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category.",
-            },
+            "real_time_algorithmic_use": permission("PROSPECTIVE_PAPER_CAPTURE"),
             "derivatives_depth": ({
                 "status": "UNKNOWN_RIGHTS", "blocks_operational_use": True,
                 "permission_use": None, "evidence_ref": None,

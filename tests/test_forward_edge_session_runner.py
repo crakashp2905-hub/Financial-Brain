@@ -1699,6 +1699,42 @@ def test_paper_intent_requires_an_explicit_allowed_risk_verdict(tmp_path):
     runner.close()
 
 
+def test_live_paper_capture_requires_distinct_provider_permission(tmp_path):
+    from dataclasses import replace
+
+    runner = make_runner(tmp_path)
+    config = replace(make_config(), mode="LIVE_PAPER")
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    with pytest.raises(ForwardSessionRunnerError, match="prospective_paper_capture.*blocked"):
+        runner.ingest("s", config, [event])
+    assert runner.records("s")["events"] == []
+    runner.close()
+
+
+def test_live_paper_capture_accepts_only_explicit_effective_scoped_permission(tmp_path):
+    from dataclasses import replace
+
+    config = make_config()
+    permissions = [*config.constraints["data_permissions"], {
+        "source_id": "KITE_CONNECT_READ_ONLY", "use": "PROSPECTIVE_PAPER_CAPTURE",
+        "status": "USE_ALLOWED", "effective_from": "2026-11-13", "effective_through": None,
+        "evidence_ref": "test-only-explicit-provider-approval", "reviewer": "test-owner"}]
+    config = replace(config, mode="LIVE_PAPER",
+                     constraints={**config.constraints, "data_permissions": permissions})
+    runner = make_runner(tmp_path)
+    opened(runner, config=config)
+    quote = {"timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+             "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                       "sell": [{"price": 100.05, "quantity": 3}]}}
+    event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
+    assert runner.ingest("s", config, [event])["persisted"] == 1
+    runner.close()
+
+
 def test_risk_breach_latch_persists_across_runner_restart_and_blocks_entries(tmp_path):
     runner, _event, _decided = trade_setup(tmp_path, risk_allowed=False)
     assert runner.paper_kill_switch.active

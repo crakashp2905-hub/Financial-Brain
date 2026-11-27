@@ -10971,11 +10971,16 @@
     {
       "id": "PA-14-02",
       "text": "Check legal scope of real-time data paper trading before prospective live paper capture; if not permitted, stay in delayed/replay evidence and say forward executable testing is blocked.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
+      "source_checked": true,
+      "status": "EXTERNAL_BLOCKED",
+      "evidence": [
+        "Published Kite Connect terms (https://www.kite.trade/terms/, sections 2(a), 4(b), checked 2026-11-27) allow private personal interfaces generally but prohibit API/live-data use for virtual/mock trading apps and restrict permanent copies absent permission; the exact private single-user paper-research case is not resolved by the public terms.",
+        "NSE Data & Analytics Non-Display Usage Policy (https://nsearchives.nseindia.com/web/sites/default/files/inline-files/Non_Display_Policy.pdf, checked 2026-11-27) defines algorithmic decision support and internal derived analysis as non-display use and describes an agreement/undertaking and fees; application to this Kite account requires provider confirmation. SEBI 2024 real-time third-party sharing circular (https://www.sebi.gov.in/legal/circulars/may-2024/norms-for-sharing-of-real-time-price-data-to-third-parties_83572.html) is recorded as separate context, not treated as a ban on private use.",
+        "docs/edge-program/prospective-live-paper-data-gate.md records the exact unresolved questions and deny-by-default control. All 17 source-specific PROSPECTIVE_PAPER_CAPTURE permissions are UNKNOWN_RIGHTS in docs/edge-program/data-permissions.v1.json.",
+        "ForwardSessionRunner blocks LIVE_PAPER ingest without the distinct permission; tests/test_forward_edge_session_runner.py prospective permission tests: 2 passed; tests/test_forward_edge_data_gate.py: 16 passed; Ruff passed. Delayed/replay paths remain separately permission-gated."
+      ],
+      "blocker": "External owner action required: obtain written account- and product-specific permission from Zerodha and, if applicable, NSE Data & Analytics for private prospective paper simulation, algorithmic/non-display use, quote/depth retention and evidence storage. Until then, do not run prospective live-paper capture; use only delayed/replay data with its own approved rights.",
+      "last_audited_at_utc": "2026-11-27T13:25:00Z",
       "commit": null
     },
     {
@@ -21681,6 +21686,7 @@
       "PA-13-15",
       "PA-13-16",
       "PA-14-01",
+      "PA-14-02",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22104,13 +22110,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1055,
+    "audited_count": 1056,
     "status_counts": {
       "COMPLETE": 116,
-      "EXTERNAL_BLOCKED": 6,
+      "EXTERNAL_BLOCKED": 7,
       "NOT_STARTED": 17,
       "PARTIAL": 916,
-      "UNASSESSED": 323
+      "UNASSESSED": 322
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22257,9 +22263,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 116,
-    "EXTERNAL_BLOCKED": 6,
+    "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
     "PARTIAL": 916,
-    "UNASSESSED": 323
+    "UNASSESSED": 322
   }
 }

@@ -894,21 +894,25 @@ class ForwardSessionRunner:
                         raise ForwardSessionRunnerError(
                             "fixture market events require an explicit frozen synthetic-fixture session constraint")
                 else:
+                    permission_use = (DataUse.PROSPECTIVE_PAPER_CAPTURE
+                                      if config.mode == "LIVE_PAPER" else DataUse.PAPER_SIMULATION)
                     permission_rows = config.constraints.get("data_permissions", [])
                     matching = [row for row in permission_rows if isinstance(row, dict)
                                 and row.get("source_id") == event.source
-                                and row.get("use") == DataUse.PAPER_SIMULATION.value]
+                                and row.get("use") == permission_use.value]
                     if len(matching) != 1:
                         raise ForwardSessionRunnerError(
-                            f"market data rights are unknown for source {event.source!r} and paper simulation")
+                            f"market data rights are unknown for source {event.source!r} and "
+                            f"{permission_use.value.lower()}; forward executable paper testing is blocked")
                     try:
                         permission = DataPermission.from_dict(matching[0])
                     except (KeyError, TypeError, ValueError) as exc:
                         raise ForwardSessionRunnerError(f"invalid market data permission: {exc}") from exc
                     local_date = event.available_at.astimezone(IST).date()
-                    if not permission.allows(source_id=event.source, use=DataUse.PAPER_SIMULATION, on=local_date):
+                    if not permission.allows(source_id=event.source, use=permission_use, on=local_date):
                         raise ForwardSessionRunnerError(
-                            f"market data permission does not allow paper simulation for {event.source!r}")
+                            f"market data permission does not allow {permission_use.value.lower()} "
+                            f"for {event.source!r}; forward executable paper testing is blocked")
                     permission_evidence = dict(matching[0])
                 if event.event_time.astimezone(IST).date() != config.exchange_date:
                     raise ForwardSessionRunnerError("event exchange date differs from frozen session date")

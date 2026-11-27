@@ -2,8 +2,8 @@
   "schema": "fb.market_data_use_matrix.v1",
   "as_of": "2026-11-26",
   "source_registry_sha256": "f62b835b482b1d4a30ba88d4d6d42d75e657aed1ea7e25d63804843a9779f323",
-  "permission_register_sha256": "da2a825fc26ef1c6e086668633a4b369f831284d063efb886a9c01a5d123439d",
-  "rights_review_sha256": "ff33843617ad2b8edd6b73d1abf1338ec9ef61cfa30e3fb1d50d88af8cae55da",
+  "permission_register_sha256": "d843ab8a50fb4c8af0e3cd6e0ea24d1878ec70bc011b73f65555d9a0cb28175a",
+  "rights_review_sha256": "852e1c2f4d0eec84b66fee0b4ae429b52c39da952851aa5de605b25bddb218c5",
   "dimension_definitions": {
     "private_research": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
     "retained_history": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
@@ -44,9 +44,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -115,9 +115,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -184,9 +184,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -253,9 +253,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "UNKNOWN_RIGHTS",
@@ -322,9 +322,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -393,9 +393,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "UNKNOWN_RIGHTS",
@@ -462,9 +462,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -531,9 +531,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -600,9 +600,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -670,9 +670,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -739,9 +739,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -808,9 +808,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -879,9 +879,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -948,9 +948,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "UNKNOWN_RIGHTS",
@@ -1020,9 +1020,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "UNKNOWN_RIGHTS",
@@ -1089,9 +1089,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
@@ -1158,9 +1158,9 @@
         "real_time_algorithmic_use": {
           "status": "UNKNOWN_RIGHTS",
           "blocks_operational_use": true,
-          "permission_use": null,
-          "evidence_ref": null,
-          "scope_gap": "The permission register has no explicit real-time algorithmic/non-display use category."
+          "permission_use": "PROSPECTIVE_PAPER_CAPTURE",
+          "evidence_ref": "docs/edge-program/prospective-live-paper-data-gate.md",
+          "scope_gap": "No written source/product-specific authorization is recorded for prospective live-data paper capture; general PAPER_SIMULATION does not grant this scope."
         },
         "derivatives_depth": {
           "status": "NOT_APPLICABLE",
