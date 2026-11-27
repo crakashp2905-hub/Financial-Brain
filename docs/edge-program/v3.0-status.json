@@ -10160,7 +10160,7 @@
       ],
       "blocker": "Integrate sequential spread fills and legging exposure into durable OMS/portfolio state, add cancellation/restart reconciliation, and validate with authorized live quote/depth timing data.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "5ddc64bf",
+      "commit": "46984e9e",
       "test_result": "13 focused asynchronous spread, paper spread and forward spread tests passed; Ruff and mypy passed."
     },
     {
