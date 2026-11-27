@@ -10,8 +10,12 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
+import sys
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from financial_brain.forward_edge.forward_evidence_gate import evaluate_forward_evidence_gate
 
 SCHEMA = "fb.profit_readiness.v1"
 STATUS_PATH = Path("docs/edge-program/v3.0-status.json")
@@ -123,6 +127,32 @@ def build(root: Path) -> dict[str, Any]:
                        "gate_id": key, "current_state": value,
                        "status": external_status[str(value)]}
                       for key, value in sorted(external.items())],
+    })
+    evidence_input_path = root / "docs/edge-program/forward-evidence-gate-input.v1.json"
+    evidence_gate_path = root / "docs/edge-program/forward-evidence-gate.v1.json"
+    evidence_input_bytes = _canonical_text_bytes(evidence_input_path)
+    evidence_input = json.loads(evidence_input_bytes.decode("utf-8"))
+    if evidence_input.get("schema") != "fb.forward-evidence-gate-input.v1":
+        raise ValueError("forward evidence gate input schema is invalid")
+    expected_gate = evaluate_forward_evidence_gate(
+        plan=evidence_input.get("plan"), sessions=evidence_input.get("sessions"),
+        attribution=evidence_input.get("attribution"), benchmark=evidence_input.get("benchmark"))
+    expected_gate["input_sha256"] = _sha256(evidence_input_bytes)
+    if (not evidence_gate_path.is_file()
+            or json.loads(_canonical_text_bytes(evidence_gate_path).decode("utf-8")) != expected_gate):
+        raise ValueError("forward evidence gate report is missing or stale")
+    evidence_gate_status = ("RED" if expected_gate["status"] == "RED" else "AMBER")
+    gates.append({
+        "id": "forward_evidence_gate",
+        "status": evidence_gate_status,
+        "item_count": 1,
+        "counts_by_status": {},
+        "evidence": [{"path": "docs/edge-program/forward-evidence-gate.v1.json",
+                       "input_sha256": expected_gate["input_sha256"],
+                       "report_sha256": expected_gate["report_sha256"],
+                       "gate_status": expected_gate["status"],
+                       "release_blocked": expected_gate["release_blocked"],
+                       "checks": expected_gate["checks"], "issues": expected_gate["issues"]}],
     })
     overall = max((gate["status"] for gate in gates), key=lambda value: SEVERITY[value])
     body: dict[str, Any] = {

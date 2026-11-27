@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import shutil
 
 import pytest
 
 from scripts.profit_readiness import _canonical_text_bytes, build, validate
+from scripts.forward_evidence_gate import build as build_evidence_gate
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +28,9 @@ def test_readiness_is_derived_from_canonical_ledger_and_bound_to_evidence() -> N
     assert report["assessed_count"] == status["assessment_summary"]["audited_count"]
     assert "completion_percentage" not in report
     assert report["overall_status"] in {"RED", "AMBER", "GREEN"}
+    forward_gate = next(gate for gate in report["gates"] if gate["id"] == "forward_evidence_gate")
+    assert forward_gate["status"] == "RED"
+    assert forward_gate["evidence"][0]["release_blocked"] is True
     assert all(gate["evidence"] for gate in report["gates"])
     assert all("status" in item for gate in report["gates"] for item in gate["evidence"]
                if "item_id" in item)
@@ -50,13 +53,16 @@ def test_artifact_validator_rejects_hand_edited_counts_and_gate_states(tmp_path)
 def test_canonical_status_ledger_hand_edits_fail_before_report_generation(tmp_path) -> None:
     docs = tmp_path / "docs/edge-program"
     docs.mkdir(parents=True)
-    for name in ("v3.0-status.json", "v3.0-audit.jsonl"):
-        shutil.copy2(ROOT / "docs/edge-program" / name, docs / name)
+    for name in ("v3.0-status.json", "v3.0-audit.jsonl", "forward-evidence-gate-input.v1.json"):
+        (docs / name).write_bytes((ROOT / "docs/edge-program" / name).read_bytes())
+    gate_report = build_evidence_gate(docs / "forward-evidence-gate-input.v1.json")
+    (docs / "forward-evidence-gate.v1.json").write_text(
+        json.dumps(gate_report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for relative in ("src/financial_brain/execution/order_policy.py",
                      "src/financial_brain/forward_edge/modes.py"):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / relative, target)
+        target.write_bytes((ROOT / relative).read_bytes())
     status_path = docs / "v3.0-status.json"
     status = json.loads(status_path.read_text(encoding="utf-8"))
     status["counts_by_status"]["COMPLETE"] += 1
