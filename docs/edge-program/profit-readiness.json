@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "0c220bdd144365b23c1f5beb6fc1eac7cdff3281e3af076ed732cdaeb50a7f50",
-  "audit_export_sha256": "35f9daa4fe042ed631087ae691664c4f1db4299c6d034746161d88d5d8bc1430",
+  "status_ledger_sha256": "05fff374d362f6b429f0ab6bb024599f79596f3f3d7f2178212d5d912baa0887",
+  "audit_export_sha256": "7396ab3ea0125ed649fe9d5b6a3654335170b20086cb17694cf243534481d02b",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 831,
-    "UNASSESSED": 417
+    "PARTIAL": 833,
+    "UNASSESSED": 415
   },
-  "assessed_count": 961,
-  "unassessed_count": 417,
+  "assessed_count": 963,
+  "unassessed_count": 415,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 51,
-        "UNASSESSED": 10
+        "PARTIAL": 53,
+        "UNASSESSED": 8
       },
       "evidence": [
         {
@@ -2958,16 +2958,23 @@
         },
         {
           "item_id": "PA-07-10",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1070,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Regression-test the November 2026 monthly freeze caused by a missing future price; price-history errors must not freeze unrelated books."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "ff9814c0",
+          "blocker": "Partial: missing held returns are now explicit and isolated in settlement, but the specific November 2026 freeze fixture and full monthly runner/replay acceptance case are still absent.",
+          "evidence": [
+            "Commit ff9814c0 changes `paper.zoo.settle` to record `gross/net/benchmark` as unavailable when any prior holding lacks a finite next-session return; it no longer substitutes a false zero return.",
+            "A `zoo_pnl_quality` row records `INCOMPLETE_MISSING_RETURN` and the sorted missing keys. The regression settles a separate strategy with valid data on the same day, proving one missing holding does not stop unrelated books.",
+            "The exact November 2026 production freeze scenario and full `paper.zoo.run` replay are not included in this regression; upstream source gaps and end-to-end monthly behavior remain unverified."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0710-missing-return tests/test_phase5_zoo.py tests/test_zoo_h_targets.py -q: 19 passed, including a missing-held-return case where the unaffected strategy still records its return.",
+            "Ruff on paper.zoo/paper.zoo_edges and focused tests, mypy on both source modules, and git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-11",
@@ -2984,16 +2991,23 @@
         },
         {
           "item_id": "PA-07-12",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1072,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Track target weights, actual simulated holdings, residual cash, drift, entry/exits and actionable vs no-trade reasons."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "ff9814c0",
+          "blocker": "Partial: sizing and missing-data outcome evidence exist separately, but the actual simulated holdings/fill lifecycle, target-versus-actual drift, and joined decision reasons are not stored as a canonical book.",
+          "evidence": [
+            "The monthly candidate sizing receipt now records a target hash, desired-share positions, lineages, prices, deployed notional, entry fees, expected round-trip charges, residual cash and skipped reasons.",
+            "Commit ff9814c0 adds per-strategy/day P&L quality with explicit missing-return keys; summary output preserves an unavailable latest net value rather than showing an older result as current.",
+            "There is no durable monthly candidate position lifecycle containing fills, cost basis, drift, exits and actionable/no-trade explanations; the sizing receipt and P&L quality table are not yet joined."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0710-missing-return tests/test_phase5_zoo.py tests/test_zoo_h_targets.py -q: 19 passed, including a missing-held-return case where the unaffected strategy still records its return.",
+            "Ruff on paper.zoo/paper.zoo_edges and focused tests, mypy on both source modules, and git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-13",
@@ -3444,5 +3458,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "d25e86b14befdb7a9e93146101b3520a88493a71bc6d246bc8143aa91a74f548"
+  "report_sha256": "9a44464b4caf125c202b92314582218a676848d707d1bbcb71a11fbbfed8c605"
 }
