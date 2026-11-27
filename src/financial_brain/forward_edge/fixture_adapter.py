@@ -358,7 +358,16 @@ def record_fixture_decision(fx: dict[str, Any], legacy_result: dict[str, Any], *
                 "net_pnl_eligible": accounting["net_pnl_eligible"],
                 "costs_assessed": accounting["charges_assessed"],
                 "order_ids": order_ids,
-                "unknown_order_ids": accounting["unresolved_order_ids"]}
+                "unknown_order_ids": accounting["unresolved_order_ids"],
+                "decision_trace": [{"decision_id": row["decision_id"], "outcome": row["outcome"],
+                                    "reason_codes": row.get("reason_codes", [])}
+                                   for row in records["decisions"]],
+                "risk_trace": [{"decision_id": row["decision_id"], "allowed": row["allowed"],
+                                "reason_codes": row.get("reason_codes", [])}
+                               for row in records["risk_verdicts"]],
+                "execution_trace": [{"order_id": row.get("order_id"), "status": row.get("status"),
+                                     "reject_reason": row.get("reject_reason")}
+                                    for row in records["execution_receipts"]]}
     finally:
         runner.close()
         runner.state_store.close()

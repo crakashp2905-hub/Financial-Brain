@@ -4,6 +4,7 @@
       "divergences_and_explanations": [],
       "expected_contract_outcome": "LOSS",
       "fixture": "adverse_fill",
+      "input_contract_sha256": "1685a6f56fc9641b3aa61f0a47ca92a9512e8a0ec7de4a8e3369ed2400f7362f",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "LOSS",
@@ -14,7 +15,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-34.001499999999999",
         "receipt_count": 2,
-        "records_sha256": "01b755d8b7fcfe3264ac5c48780070db298f5a0a55dd81f678071c578e7eb844",
+        "records_sha256": "05cda9238eb94e25369a087b9c6c5252b110884216235388ac42624c2ae04c68",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -22,12 +23,20 @@
         "outcome": "LOSS",
         "reason": "FILLED_FILLED",
         "signature": "3e306dadb1995ef9bdfede7cc0b7d0a6ce9282148b2453d402abf22aea45810a"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [],
+        "legacy_execution_rejection_codes": [],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [],
       "expected_contract_outcome": "LATE_QUOTE",
       "fixture": "late_quote",
+      "input_contract_sha256": "70d7c339736621ab4be149a248baaa920e003691ac221d94c5bf2c4b01967281",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "LATE_QUOTE",
@@ -38,7 +47,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "270d9796a73a45e77de8b753a488942b5fd7fa70b2e1542b0ce5a9e9accd84db",
+        "records_sha256": "9845814d34c71b9a46eca0a9d7c67c084e7c35ccea35c41033e4500b19a167de",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -46,12 +55,24 @@
         "outcome": "LATE_QUOTE",
         "reason": "FIRST_QUOTE_AFTER_MAX_WAIT",
         "signature": "e0eb4f3e1b5fb126854d6573d85eab04ce26d73e7a463994fbba321a8589ed29"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [
+          "FIRST_QUOTE_AFTER_MAX_WAIT"
+        ],
+        "legacy_execution_rejection_codes": [
+          "FIRST_QUOTE_AFTER_MAX_WAIT"
+        ],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [],
       "expected_contract_outcome": "LOSS",
       "fixture": "loss",
+      "input_contract_sha256": "dfc2c64b636337dccf8b0a27311f7c06ca3c1ff36ac2708147b56543ad04e7fe",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "LOSS",
@@ -62,7 +83,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "-209.4401499999999995",
         "receipt_count": 2,
-        "records_sha256": "3a95242c04c213aa1e8e1f7a7c4c20373e061ba05d049817fa0c72e527229b33",
+        "records_sha256": "f15541e7ba3190761e07ffa69fea0af36e74e2143d2ddf475c5a754867e6b051",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -70,12 +91,22 @@
         "outcome": "LOSS",
         "reason": "FILLED_FILLED",
         "signature": "a2c0fccd189e19903e374e97ff1dfd47002972b4e766e7e67af7291f645b693d"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [],
+        "legacy_execution_rejection_codes": [],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
-      "divergences_and_explanations": [],
+      "divergences_and_explanations": [
+        "Execution rejection taxonomy differs across adapters; review the recorded legacy/integrated codes before claiming replay parity."
+      ],
       "expected_contract_outcome": "MISSED_FILL",
       "fixture": "missed_fill",
+      "input_contract_sha256": "12621fe7b020c03861d353145bbbbebb85a5f378be82f78672e5675b8919a436",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "MISSED_FILL",
@@ -86,7 +117,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "d8f010ba5b5244c8084f044c7cbf35e3c48761f62ba2d289f3f68d958fb1356b",
+        "records_sha256": "6f93c1feaf09171c508324d136dd271a6675998bca6d09428339460e6b100bd5",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -94,14 +125,25 @@
         "outcome": "MISSED_FILL",
         "reason": "NO_TRADE_THROUGH_LIMIT",
         "signature": "db081d803371c5db4a7663fab188d5c69ce292b5d6f499b26bbc30bb36cce4de"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [
+          "NO_TRADE_THROUGH_LIMIT"
+        ],
+        "legacy_execution_rejection_codes": [],
+        "matched": false,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [
+        "Execution rejection taxonomy differs across adapters; review the recorded legacy/integrated codes before claiming replay parity.",
         "No-trade parity is explicitly checked: legacy NO_TRADE maps to integrated NO_TRADE, with zero paper intents and no physical orders."
       ],
       "expected_contract_outcome": "NO_TRADE",
       "fixture": "no_trade",
+      "input_contract_sha256": "68c92e4d4a53e4196865a855d87a5e8de13e0ed4f06e1da3f86dfeb21a5e3f96",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "NO_TRADE",
@@ -112,7 +154,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 0,
-        "records_sha256": "f50c9ae36416298ecf22873580a3a50cb481d1614f8e73f48d1af550c643a642",
+        "records_sha256": "66ec261b7644c04ca17d7e35982a20bdb2d26472cdf6f45e5c58a2148cf47bbb",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -120,12 +162,24 @@
         "outcome": "NO_TRADE",
         "reason": "STALE_QUOTE",
         "signature": "df26a29031b6e4f7883af60e4cb247d87833f38a0dcdb2ade3972d561ace96d6"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [
+          "FIXTURE_NO_TRADE"
+        ],
+        "legacy_execution_rejection_codes": [
+          "STALE_QUOTE"
+        ],
+        "matched": false,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [],
       "expected_contract_outcome": "REJECTED",
       "fixture": "rejection",
+      "input_contract_sha256": "063edcaa75cbe5b30e438505477ef4463886994c4be8e1c6b6273ce839482cf2",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "REJECTED",
@@ -136,7 +190,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 1,
-        "records_sha256": "1a6694a77e04b3b478ec14cdaed335a1b0d3dbde028ecd287a30b4315d24b0f9",
+        "records_sha256": "447cd784495fe579a1985a17feba6c39db77f9885f30715376cf90d6b5add54f",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -144,7 +198,18 @@
         "outcome": "REJECTED",
         "reason": "PRICE_BAND",
         "signature": "abf1bbe66dd7c408c59a6bb05732bdf809accdb06afb0b1fae7832f92d18fb85"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [
+          "PRICE_BAND"
+        ],
+        "legacy_execution_rejection_codes": [
+          "PRICE_BAND"
+        ],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [
@@ -152,6 +217,7 @@
       ],
       "expected_contract_outcome": "UNKNOWN_ORDER",
       "fixture": "unknown_order",
+      "input_contract_sha256": "aee6ac49a7ab20d1bbf7287e6a4dc7713e516cf223936efa6743ee26c0313825",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "UNKNOWN_ORDER",
@@ -162,7 +228,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": null,
         "receipt_count": 0,
-        "records_sha256": "339fc08fa6765290526dc07e01e4eb781f33354b9c65a868925358c905b47d17",
+        "records_sha256": "a3e9bf7bce67e5bdbeac35fd267e39fa2402356a992a5e499f68bcc4b1e32da7",
         "report_status": "INCOMPLETE"
       },
       "legacy_pipeline": {
@@ -170,12 +236,20 @@
         "outcome": "UNKNOWN_ORDER",
         "reason": "ACK_LOST_NO_RESEND",
         "signature": "c9823b6a1f62181a3594f8174ac1522707e9deba0527b316dc925da348694b2e"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [],
+        "legacy_execution_rejection_codes": [],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     },
     {
       "divergences_and_explanations": [],
       "expected_contract_outcome": "WIN",
       "fixture": "win",
+      "input_contract_sha256": "91bd7e490480245f421adebe0b8a8ff01830b12352f71cae968dfe0ed3015a33",
       "integrated_paper_journal": {
         "cash_reconciled": true,
         "economic_outcome": "WIN",
@@ -186,7 +260,7 @@
         "physical_orders": false,
         "realized_net_pnl_inr": "190.43985",
         "receipt_count": 2,
-        "records_sha256": "7e37042c0167025b9624d9f7226ce6b6df5eca2edeb4fa62a9e282eea8d5d531",
+        "records_sha256": "f402a1cb2b594d7c9795487c778e7ded66a7c4a62a526a9ecb9cc7962c69ead7",
         "report_status": "CLOSED"
       },
       "legacy_pipeline": {
@@ -194,11 +268,19 @@
         "outcome": "WIN",
         "reason": "FILLED_FILLED",
         "signature": "d3587cf3efa4299b96204d7c1e2669551a29ac82ebaa79b366f111d806283fae"
-      }
+      },
+      "rejection_comparison": {
+        "integrated_execution_rejection_codes": [],
+        "legacy_execution_rejection_codes": [],
+        "matched": true,
+        "scope": "fixture execution and decision rejection reasons; separate risk policy is not exercised"
+      },
+      "same_ordered_input_replay_matches": true
     }
   ],
   "limitations": [
     "The frozen legacy oracle stores SHA-256 signatures, not complete prior-version decision records, so historic field-by-field migration diffs cannot be reconstructed from it.",
+    "Rejection comparisons cover the shared fixture contract and execution/decision rejection taxonomy; fixtures currently use an allowed integrated risk verdict, so independent legacy-vs-integrated risk-policy parity is not established.",
     "The fixtures are synthetic and establish software compatibility, not market edge, profitability, or execution fidelity.",
     "A future strategy migration needs archived versioned inputs and full decision outputs for each old and new implementation."
   ],
@@ -208,6 +290,8 @@
     "all_integrated_fixture_contracts_match": true,
     "all_legacy_fixture_contracts_match": true,
     "all_physical_orders_disabled": true,
+    "all_rejection_codes_match": false,
+    "all_same_ordered_input_replays_match": true,
     "fixtures": 8,
     "golden_signatures_sha256": "61408f2c20fe5454d929b72eaed19874edd3655de8486132ce8660aa5ab1af6a",
     "no_trade_fixture_has_zero_intents": true
