@@ -76,6 +76,111 @@ class InstrumentError(ValueError):
 
 
 @dataclass(frozen=True)
+class NFOContractRecord:
+    """One provider-listed NFO option identity as observed in an effective-dated master."""
+
+    exchange: str
+    underlying: str
+    right: str
+    strike: Decimal
+    expiry: date
+    instrument_token: int
+    tradingsymbol: str
+    effective_from: date
+    effective_to: date | None = None
+    status: str = "ACTIVE"
+
+    def __post_init__(self) -> None:
+        from decimal import InvalidOperation
+
+        values = (self.exchange, self.underlying, self.right, self.tradingsymbol)
+        if not all(isinstance(value, str) and value.strip() for value in values):
+            raise InstrumentError("NFO contract exchange, underlying, right and listed symbol are required")
+        exchange = self.exchange.strip().upper()
+        right = self.right.strip().upper()
+        symbol = self.tradingsymbol.strip().upper()
+        underlying = self.underlying.strip().upper()
+        if exchange != "NFO":
+            raise InstrumentError("option contract exchange must be NFO")
+        if right not in {"CE", "PE"}:
+            raise InstrumentError("option right must be CE or PE")
+        try:
+            strike = to_decimal(self.strike)
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise InstrumentError("option strike must be a finite positive decimal") from exc
+        if not strike.is_finite() or strike <= 0:
+            raise InstrumentError("option strike must be a finite positive decimal")
+        if type(self.instrument_token) is not int or self.instrument_token <= 0:
+            raise InstrumentError("effective provider instrument token must be a positive integer")
+        if self.expiry < self.effective_from:
+            raise InstrumentError("option expiry precedes the contract effective date")
+        if self.effective_to is not None and self.effective_to < self.effective_from:
+            raise InstrumentError("contract effective_to precedes effective_from")
+        status = self.status.strip().upper()
+        if status not in {"ACTIVE", "DELISTED", "EXPIRED", "SUSPENDED"}:
+            raise InstrumentError("unsupported listed-contract status")
+        object.__setattr__(self, "exchange", exchange)
+        object.__setattr__(self, "underlying", underlying)
+        object.__setattr__(self, "right", right)
+        object.__setattr__(self, "strike", strike)
+        object.__setattr__(self, "tradingsymbol", symbol)
+        object.__setattr__(self, "status", status)
+
+    def canonical_id(self) -> str:
+        """Return canonical JSON including exchange, terms and the effective provider token."""
+        return json.dumps((self.exchange, self.underlying, self.right, format(self.strike, "f"),
+                           self.expiry.isoformat(), self.instrument_token,
+                           self.effective_from.isoformat()),
+                          ensure_ascii=True, separators=(",", ":"))
+
+    def eligible_on(self, day: date) -> bool:
+        return (self.status == "ACTIVE" and self.effective_from <= day <= self.expiry
+                and (self.effective_to is None or day <= self.effective_to))
+
+
+class NFOContractMaster:
+    """Resolve only exact, uniquely listed provider contracts; never construct a guessed symbol."""
+
+    def __init__(self, records: tuple[NFOContractRecord, ...] = ()) -> None:
+        self._records: dict[str, NFOContractRecord] = {}
+        self._symbols: dict[str, str] = {}
+        self._tokens: dict[int, str] = {}
+        for record in records:
+            self.add(record)
+
+    def add(self, record: NFOContractRecord) -> None:
+        key = record.canonical_id()
+        symbol_key = (record.exchange, record.tradingsymbol)
+        prior_key = self._symbols.get("|".join(symbol_key))
+        token_key = self._tokens.get(record.instrument_token)
+        if key in self._records:
+            raise InstrumentError("duplicate canonical NFO contract")
+        if prior_key is not None or token_key is not None:
+            raise InstrumentError("conflicting NFO symbol or effective provider token")
+        for prior in self._records.values():
+            same_terms = (prior.exchange, prior.underlying, prior.right, prior.strike, prior.expiry) == (
+                record.exchange, record.underlying, record.right, record.strike, record.expiry)
+            if same_terms and max(prior.effective_from, record.effective_from) <= min(
+                    prior.effective_to or date.max, record.effective_to or date.max):
+                raise InstrumentError("overlapping effective NFO contract identities")
+        self._records[key] = record
+        self._symbols["|".join(symbol_key)] = key
+        self._tokens[record.instrument_token] = key
+
+    def resolve(self, *, exchange: str, underlying: str, right: str, strike: Decimal,
+                expiry: date, instrument_token: int, on: date) -> NFOContractRecord:
+        requested = (exchange.strip().upper(), underlying.strip().upper(), right.strip().upper(),
+                     to_decimal(strike), expiry, instrument_token)
+        matches = [record for record in self._records.values()
+                   if (record.exchange, record.underlying, record.right, record.strike,
+                       record.expiry, record.instrument_token) == requested
+                   and record.eligible_on(on)]
+        if len(matches) != 1:
+            raise InstrumentError("unknown, stale, delisted, expired or ambiguous NFO contract; no trade is possible")
+        return matches[0]
+
+
+@dataclass(frozen=True)
 class InstrumentId:
     """Canonical point-in-time identity; ``venue`` remains the legacy exchange argument."""
 
