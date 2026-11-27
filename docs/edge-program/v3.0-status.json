@@ -10344,11 +10344,12 @@
       "evidence": [
         "src/financial_brain/strategies/four_node/indicators.py: Wilder SMMA seeds from an n-value SMA, applies exact recurrence, emits warmup None and has explicit session reset policy; 20C bands use aligned SMMA streams",
         "src/financial_brain/strategies/four_node/nodes.py and tests/test_four_node_replay.py: pivots are observable only after right-side confirmation; prefix-only replay tests confirmation latency",
-        "No separately specified continuation-pullback signal adapter or independent edge evaluation is present; existing Four-Node ambiguity gates remain unresolved"
+        "src/financial_brain/strategies/continuation_pullback.py and tests/test_continuation_pullback.py: explicit higher-low/lower-high 20C pullback rule gates on confirmed pivots and next-bar actionability",
+        "The detector is not connected to paper books and has no independent edge evaluation; existing Four-Node ambiguity gates remain unresolved"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "964710ee"
+      "commit": "f7a7ad68"
     },
     {
       "id": "PA-11-08",
