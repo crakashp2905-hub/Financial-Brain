@@ -4984,7 +4984,7 @@
       ],
       "blocker": "Partial: prospective acceptance requires an authorized, preregistered protected exit cohort, immutable pre-entry receipts, independently attested live session data, validated costs and completed after-cost results. Historical replay output remains non-prospective.",
       "last_audited_at_utc": "2026-11-24T17:35:00Z",
-      "commit": "PENDING",
+      "commit": "ad80b87f",
       "test_evidence": [
         "python -m pytest tests/test_kernel_exit_scenarios.py -q --basetemp=.pytest-tmp-exitbench: 6 passed.",
         "ruff check src/financial_brain/kernel/exit_scenarios.py tests/test_kernel_exit_scenarios.py: passed.",
@@ -6972,12 +6972,23 @@
     {
       "id": "PA-00-12",
       "text": "Emit a machine-readable `profit_readiness.json` listing current `RED/AMBER/GREEN` gates and links to exact evidence; reject hand-edited status percentages.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "COMPLETE",
+      "evidence": [
+        "`scripts/profit_readiness.py` deterministically generates `docs/edge-program/profit-readiness.json` from the v3 status ledger, per-item audit export, launch-gates contract and physical-order build policy.",
+        "Report includes RED/AMBER/GREEN evidence gates for engineering integrity, data/rights, paper execution/accounting, strategy economics, physical-order safety and external launch prerequisites. Each checklist evidence record includes source path/line, status, evidence, blocker, commit and tests.",
+        "Counts and gate states are recomputed from canonical item statuses; the report omits hand-editable completion percentages, hashes its inputs/output, and `--check` rejects modified or stale report bytes. The CLI check is required in GitHub Actions.",
+        "Live trading authorization remains false; current external permission/custody/broker prerequisites produce an overall RED readiness status rather than an inferred GREEN."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-25T03:16:00Z",
+      "commit": "83f29d38",
+      "test_evidence": [
+        "`python -m pytest tests/test_profit_readiness.py -q`: 3 passed, including edited report and hand-edited ledger count rejection.",
+        "`python scripts/profit_readiness.py --check`: passed for the generated report.",
+        "Ruff and targeted mypy passed; GitHub Actions freshness check added."
+      ],
+      "test_result": "Profit readiness output, canonical-count invariants, gate evidence links and tamper/staleness rejection verified; 3 focused tests passed."
     },
     {
       "id": "PA-01-01",
@@ -7602,32 +7613,63 @@
     {
       "id": "PA-04-15",
       "text": "Reconcile beginning equity + trades + fees + distributions + external flows + mark changes = ending equity to paise-level accounting tolerances.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.equity_reconciliation.reconcile_account_equity` reconciles canonical-ledger opening/closing equity, explicitly classified external cash flows, and derived net investment P&L using paise-quantized values and an explicit INR tolerance.",
+        "An independently reported net investment P&L is required; the report compares it with marked equity change after external flows and reports the actual discrepancy rather than using the residual itself as reported P&L.",
+        "The auditor verifies every stored account event payload hash, binds opening/closing snapshots and the event set by SHA-256, requires complete INR-only marked positions, opening balance, complete projection and no unresolved positions, and fails closed for stale/future marks or ledger uncertainty.",
+        "Trade cashflows, fees, distributions and mark changes are reflected through the canonical ledger dated fills/cash events/marks and ending valuation; distributions remain investment P&L unless explicitly classified as external contributions.",
+        "This verifies the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions; concurrent event insertion/atomic close cutoff and broker statement reconciliation are not yet integrated.",
+        "Durable source-event comparison reports are stored in SQLite and bind canonical/source row-set hashes. A receipt is invalidated when late/backdated source events change the canonical set through the declared period end; events after the cutoff do not invalidate the historical report. The acceptance helper rechecks registry state.",
+        "`fb reconcile-source-events` accepts the normalized statement JSON schema, hashes exact input bytes, emits row differences as JSON, persists its cutoff receipt, and exits nonzero for invalid input or mismatches. Exact decimal strings are required; the output cannot overwrite the source file.",
+        "The source comparison covers caller-supplied normalized rows only. A raw digest does not authenticate the provider or prove full-period coverage; universal production OMS/paper close adoption remains open."
+      ],
+      "blocker": "Provider authenticity, complete source-period coverage, and universal production OMS/paper-close adoption remain unverified; reconciliation is over supplied data only.",
+      "last_audited_at_utc": "2026-11-27T16:22:27Z",
+      "commit": "f30a2895",
+      "test_evidence": [
+        "`python -m pytest tests/test_cli_source_event_reconciliation.py tests/test_portfolio_equity_reconciliation.py -q`: 18 passed, including exact match, statement-only/ledger-only rows, changed amounts, duplicate identities, invalid input, durable late-event invalidation, and post-cutoff stability.",
+        "`ruff check src/financial_brain/cli.py src/financial_brain/portfolio/equity_reconciliation.py tests/test_cli_source_event_reconciliation.py tests/test_portfolio_equity_reconciliation.py`: passed.",
+        "`python -m mypy src/financial_brain/portfolio/equity_reconciliation.py --follow-imports=silent`: passed."
+      ],
+      "test_result": "Eighteen focused CLI/equity reconciliation tests pass. The CLI hashes exact statement bytes, persists a cutoff receipt, reports row differences and refuses unsafe output. Late/backdated events invalidate receipts; post-period events do not. Ruff and targeted mypy pass. PA-04-15 remains PARTIAL pending authenticated complete upstream data and production consumer adoption."
     },
     {
       "id": "PA-04-16",
       "text": "Add replay tests for lost acknowledgement, duplicated response, crash between outbox and fill, stale quote, forced EOD flatten and cross-process restarts.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`tests/test_forward_edge_f01.py` covers failed/lost acknowledgements, durable outbox replay after restart, reconciliation before retry, duplicate postback idempotency and stale acknowledgement rejection.",
+        "`tests/test_forward_edge_session_runner.py` covers interrupted drain/resume, stale quote rejection, durable paper outbox, restart restoration without duplicate fills, unknown outbox receipt reconciliation and crash-before-receipt recovery.",
+        "`tests/test_exit_protection_ledger.py::test_position_close_requires_all_recorded_exit_fills_and_survives_restart` covers durable position-close recovery."
+      ],
+      "blocker": "No evidence found for a forced end-of-day flatten drill or a distinct cross-process restart/concurrency test spanning all requested crash points; option/legacy OMS integration is not covered by these forward-session tests.",
+      "last_audited_at_utc": "2026-11-25T03:10:00Z",
+      "commit": "f1e57d61",
+      "test_evidence": [
+        "Source audit of named test cases; existing tests were not re-run in this package turn."
+      ],
+      "test_result": "Partial replay/restart coverage is present; full PA-04-16 acceptance matrix remains unverified."
     },
     {
       "id": "PA-04-17",
       "text": "Emit an `unresolved_positions` audit and deny capital deployment when any material unknown order/position exceeds an explicit zero-tolerance gate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.canonical_ledger.snapshot` emits an explicit `unresolved_positions` collection with source event IDs and preserves unknown legacy positions without inferring fills.",
+        "`portfolio.aggregate_risk_budget.evaluate_aggregate_risk_budget` uses a zero-tolerance gate: any unresolved position blocks the account as `BLOCKED_LEDGER_UNCERTAIN`; `tests/test_portfolio_aggregate_risk_budget.py::test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed` verifies order permission remains false.",
+        "Implementation evidence is in commit `25b88bc7` (SL-22-16 package; currently present in the open PR stack, not yet merged to main)."
+      ],
+      "blocker": "Unknown pending-order audit and universal order-path/OMS enforcement are not integrated; only canonical unresolved position rows are gated, and the implementation is not yet merged to main.",
+      "last_audited_at_utc": "2026-11-25T03:05:00Z",
+      "commit": "25b88bc7",
+      "test_evidence": [
+        "`python -m pytest tests/test_portfolio_aggregate_risk_budget.py tests/test_canonical_portfolio_ledger.py -q`: unresolved-position and ledger regressions passed (14 focused tests on the implementation package)."
+      ],
+      "test_result": "Canonical unresolved-position reporting and aggregate-risk deny path verified in the SL-22-16 test package; unknown pending-order integration remains open."
     },
     {
       "id": "PA-05-01",
@@ -16412,15 +16454,18 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "`attribution/pipeline.py` and `forward_edge/portfolio_alpha.py` attribute strategy and portfolio P&L layers; a complete sizing/beta/timing/execution/tax decomposition from one canonical account remains unverified."
+        "`attribution/pipeline.py::decompose_trader_layers` now combines strategy selection, sizing, market beta, timing, execution, taxes and other costs as additive decimal returns on a common opening-capital denominator. The available-evidence wrapper returns no total and lists missing components rather than silently substituting zero. This is an arithmetic combiner, not a causal attribution estimator.",
+        "Existing `attribution/pnl.py` and `forward_edge/portfolio_alpha.py` provide complementary benchmark and account-return reports; inputs are not yet auto-derived and reconciled from every desk and canonical account ledger."
       ],
-      "blocker": "Attribution source coverage and reconciliation across all desks remain incomplete.",
-      "last_audited_at_utc": "2026-11-24T18:41:44Z",
-      "commit": "013b0640",
+      "blocker": "Component inputs remain caller supplied; beta/timing identification, canonical account ledger integration, cross-desk reconciliation and prospective validation remain open.",
+      "last_audited_at_utc": "2026-11-25T03:30:00Z",
+      "commit": "PENDING",
       "test_evidence": [
-        "Portfolio allocation verification: 33 passed across tests/test_portfolio_constraints.py, test_phase5_risk_controls.py, test_capital_allocator.py, test_forward_edge_capital_allocation.py and test_portfolio_stress.py; Ruff and mypy passed for portfolio/constraints.py."
+        "`python -m pytest tests/test_portfolio_trader_layer_attribution.py tests/test_phase5_trader_layers.py tests/test_forward_edge_portfolio_alpha.py -q --basetemp=.pytest-sl2217`: 33 passed.",
+        "Ruff and targeted mypy passed for attribution/pipeline.py.",
+        "Source inventory, capability ownership, dependency graph and checklist audit export validators passed."
       ],
-      "test_result": "Portfolio controls suite: 33 passed; Ruff and targeted mypy passed for the new projection."
+      "test_result": "Trader-layer attribution tests: 33 passed; Ruff and targeted mypy passed."
     },
     {
       "id": "SL-22-18",
@@ -19214,7 +19259,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-25T03:10:00Z",
+    "as_of_utc": "2026-11-25T03:16:00Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -19621,6 +19666,10 @@
       "FB-2542",
       "FB-2543",
       "FB-2544",
+      "PA-00-12",
+      "PA-04-15",
+      "PA-04-16",
+      "PA-04-17",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -20044,15 +20093,15 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 827,
+    "audited_count": 831,
     "status_counts": {
-      "COMPLETE": 83,
+      "COMPLETE": 84,
       "EXTERNAL_BLOCKED": 5,
       "NOT_STARTED": 17,
-      "PARTIAL": 722,
-      "UNASSESSED": 551
+      "PARTIAL": 725,
+      "UNASSESSED": 547
     },
-    "verified_complete_count": 83,
+    "verified_complete_count": 84,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
     "artifact_updates": [
       "docs/RUNBOOK-LIVE.md",
@@ -20178,10 +20227,10 @@
     "evidence_update": "FB-0713 COMPLETE in paper-book scope: explicit folio identity now controls lot creation, redemption capacity, accepted unit-redemption orders, cashless systematic flows, valuation display and multi-folio reinvestment. Legacy lots remain unassigned until an operator records hash-pinned ownership evidence; that evidence is not independently verified against a registrar. Nine MF lifecycle/migration suites passed (58 tests), with Ruff, targeted mypy, terminal checks and generated architecture inventory checks passing. FB-0501 is now PARTIAL: fixed-horizon comparable-ETF momentum candidate implemented and contract-tested, but not performance-evaluated; research authorization, costs, capacity, and prospective evidence remain required. Evidence pointers reconciled to the latest implementation commits for FB-0103, FB-0105 and FB-0501. ETF momentum v1.1.0 now also requires close availability at or before as_of, endpoint source hashes, and an ordered unique sourced-session calendar; performance evaluation remains unauthorized/pending. FB-1104 is now PARTIAL: a durable, candidate-hash-bound human paper decision journal exists; user interaction and runner/book integration are still missing. FB-1104 now includes the fb paper-decision local CLI capture path, still without cockpit or runner/book integration. FB-0502 is PARTIAL: pre-registered ETF trend, moving-average, medium-horizon mean-reversion and volatility-sizing candidates are implemented and contract-tested; research evaluation is not authorized and no profitability claim is made. FB-0503 is PARTIAL: a frozen equity/debt/gold/silver rotation candidate and inverse-volatility, buy-and-hold, same-risk, and cash controls are implemented; performance evaluation remains unauthorized. FB-0504 is PARTIAL: a point-in-time ETF opening-range candidate is gated by observed spread, top depth, liquidity, and cost proxy; full quoted spread is used for round-trip spread cost. No profitability or calibrated execution claim is made. FB-1108 is PARTIAL: a durable decision-only workflow records and displays SUBSCRIBE/REDEEM/SWITCH/SIP/HOLD without creating orders; authenticated identity and context attestation are still absent. FB-1603/FB-1604 are PARTIAL: costed net EV, execution feasibility, registered parameter freezes, decision/session/instrument/budget/approval/portfolio hurdles, and reason-coded TRADE/WATCH/REJECT/CASH now have a tested gate; ForwardSessionRunner integration, independent runtime attestations, and prospective calibration remain outstanding. FB-1605 is PARTIAL: current executable quote must satisfy hash-pinned entry zone, price-gap, slippage, spread and TTL checks, with expired signals requiring a new decision. FB-1608 is PARTIAL: deterministic tests reject gross edge erased by costs and refuse missing costed EV or quote evidence. End-to-end paper runner integration remains open. FB-1606 is PARTIAL: a quote-bound economics receipt now itemizes scheduled charges, gross/net target, stop risk, iterated break-even and comparison with a sourced cash benchmark. Durable runner/fill reconciliation and verified live cost/yield inputs remain open. FB-1607 is PARTIAL: versioned OOT Brier/log-loss and reliability scoring now enforces training/holdout separation and marks low-sample buckets uncalibrated; forecast-pipeline integration, fitted calibration and real prospective samples remain open. TRADE decisions now require a matching economics receipt; missing receipts return WATCH and provenance mismatches block. FB-1701..FB-1708 are now PARTIAL: new in-process CapitalAllocator serializes shared OMS cash and exposure reservation, requires every configured policy gate to explicitly pass, and rolls back cash on exposure denial. Six allocator tests and five exposure reservation tests pass; Ruff and targeted mypy pass. Durable multi-asset settlement, lookthrough, full limit/quarantine policies, and session-runner/restart integration remain open. FB-1801..FB-1808 are now PARTIAL: the existing forward runner persists source/receipt/availability/ingest clocks, decisions, order events and simulated receipts; Kite streaming reports health and now forces NO_ENTRY/DEGRADED evidence for known stale, malformed, dropped, reconnecting or non-executable-option states; historical exit replay handles ambiguous bars adversely. 66 runner/stream tests passed with Ruff and targeted mypy. Captured licensed trace parity, reliable provider sequence semantics, cockpit aggregation, and several complete execution/shortfall requirements remain open. FB-1901..FB-1908 audited: versioned policy/OCO/partial-exit and conservative gap replay primitives exist (six partial items); no portfolio-wide exit guard or prospective after-cost exit benchmark was found (two not started). The policy still lacks ATR/invalidation rules, option active-contract checks, cross-asset circuit/NAV execution, and complete fill-price/fees/P&L closure evidence. 32 focused tests and Ruff passed. FB-2001..FB-2008 are PARTIAL after audit. Executable multi-leg option quote/legging/expiry risk, ETF quote-vs-iNAV/liquidity, MF peer/lot/settlement primitives exist. A new option surface builder rejects bad/stale quotes and checks European bounds, call monotonicity and butterfly convexity; five new tests pass, with 58 focused options/ETF/MF tests, Ruff and targeted mypy passing. Calendar arbitrage, chain scoring, full cross-asset routing/holdings lookthrough, complete MF tax optimization, and permitted production snapshots remain open. FB-2101..FB-2108 are PARTIAL: canonical ledger, strategy net-P&L attribution/dashboard, risk metrics, matched human/autonomous paper comparison and rejected-signal counterfactual primitives exist; 47 focused accounting/report tests pass with Ruff. Daily all-desk closeout, canonical event-bound report totals, full market/factor/timing attribution, integrated XIRR, complete selection-regret uncertainty and production sleeve wiring remain open. FB-2305..FB-2308 are PARTIAL: explicit cockpit readiness, stream-health counters, durable idempotent order/event journals, persistent kill-switch, operational runbooks and session close gates exist. Twenty focused cockpit/order-journal/kill-switch/runbook tests passed with Ruff; the runner/stream set also passed 66 tests. Full combined live-health coverage, performed backup/restore drills and cross-asset session reconciliation remain open. FB-1907 moved from NOT_STARTED to PARTIAL: historical exit variants now have a frozen shared-sample, hash-pinned-cost after-cost comparison harness with paired deltas and Holm family adjustment; tests pass. The harness cannot claim prospective evidence; authorized, independently attested exit cohort and live validated costs remain required. SL-04-01..SL-04-20 source-audited as PARTIAL: immutable market events, durable session/order evidence, risk/cost gates, execution scenarios and conservative exit replay exist, but are fragmented and no unified RL/POMDP state/action/reward simulator, episode manager, common risk projection, reward event pipeline, replay snapshots, shared baselines, transition-level differential tests or fidelity manifest was found. SL-10-01..SL-10-16 source-audited PARTIAL: seeded forecast nulls, walk-forward calibration/ensemble, after-cost comparisons, trade admissibility and protected-trial governance exist separately. No same-simulator financial baseline suite, Fitted Q Evaluation, comprehensive comparable scorecard, baseline registry or explicit pre-deep-RL evidence gate was found. SL-07-01..SL-07-18 source-audited PARTIAL: runner and decision artifacts retain pieces of behavior, timing, fills, outcomes and no-trade evidence, while a simple IPS helper exists. There is no joined immutable RL trajectory dataset, explicit missing propensities, action-support/OOD diagnostics, session/expiry builder, offline-RL schema split, corruption suite, portable export or dataset adequacy policy. SL-07 implementation adds immutable EpisodeKey/Transition contracts with explicit missing propensity, action support validation, UTC decision/fill clocks, evidence-tier separation, no-trade reasons and deterministic row SHA-256. Seven focused tests, Ruff and targeted mypy pass. Dataset persistence/build, OPE support diagnostics, leakage-safe trajectory folds, Parquet export and cross-platform reproducibility remain incomplete; SL-07 stays PARTIAL. SL-01-01..SL-01-18 source-audited: clocks, selected permission gates, calendars, quote archives and asset catalogues exist, but a unified revision/entitlement RawObservation, complete point-in-time universes, availability ledger, all-consumer gate, standardized ingest/snapshot/deletion pipeline and comprehensive leakage tests are missing. SL-01-18 is EXTERNAL_BLOCKED pending owner/provider terms or an alternate permission-cleared source; other items are PARTIAL. SL-05-01..SL-05-18 source-audited PARTIAL: after-cost portfolio alpha includes cash days and explicit costs; attribution/accounting/ledger, risk and asset-class books exist in separate components. There is no RL step reward tied to executable marked equity, one-time per-action costs, hard risk constraints, cross-asset lifecycle valuation, episode liquidation, action-level reconciliation or held-out reward-misspecification audit; reward coefficients are not required by the protected charter. SL-06-01..SL-06-18 source-audited PARTIAL: effective-dated cost schedules, quote-after-latency fills, explicit cost stresses, visible-depth gates, capacity curves, cost attribution and canonical ledger primitives exist. Universal all-asset schedules and minimum charges, calibrated impact/adverse selection, live depth confidence bands, same-arrival TWAP/VWAP studies, comprehensive circuit/expiry/ETF fixtures and all-book ledger parity remain incomplete. SL-11-01..SL-11-18 source-audited PARTIAL: only a minimal unsupported IPS average exists; new trajectory rows preserve explicit action support and propensity. No registered bandit context/arms, UCB/Thompson/epsilon policies, support-valid OPE, delayed outcome queue, risk-governed selector, shadow evaluator, confidence abstention or selection attribution is implemented. SL-12-01..SL-12-18 source-audited PARTIAL. A new deterministic tabular Bellman target/FQI math primitive handles terminal state correctly, updates observed state-action pairs only and passes hand-derived two-step/three-step tests. No market learner, logged-data OPE, BC, OOD support, policy fallback, shared simulator, chronological trajectory buffer, portfolio-economics evaluation or policy governance is present; existing execution QLearner is only an execution-scheduling study. SL-13-01..SL-13-18 audited PARTIAL. Added conservative_q_values(), a deterministic CQL-style tabular support penalty screening operator with seeded toy ranking tests; explicitly not a full CQL optimizer. There is no CQL/IQL training, expectile or advantage-weighted policy, uncertainty ensemble, market environment, baseline comparison, model archive or conservative improvement gate. SL-19-01..SL-19-20 were source-audited: 17 PARTIAL and 3 NOT_STARTED. The repo has quote-based paper replay, IV/Greek surface, debit spreads and expiry scenarios but lacks the index-specific integrated forecasting/policy loop; 56 focused existing options tests passed. No new Nifty 15-minute model or option RL claim is made. SL-20-01..SL-20-18 execution timing/order-learning requirements were source-audited: 17 PARTIAL and 1 NOT_STARTED. Added learning.execution_reward with signed shortfall, fees, residual alpha-decay cost, immutable parent-quantity bounds and evidence labels; 105 execution-focused tests passed, Ruff and targeted mypy passed. Existing TWAP/POV, OMS reconciliation and bar-based Q learning do not establish a calibrated order-state execution learner or live-market edge. SL-21-01..SL-21-18 desk-adapter requirements were source-audited: 15 PARTIAL and 3 NOT_STARTED. ETF quote/iNAV fail-closed primitives, NAV-settled MF books/decisions and futures roll economics exist, but their portfolios and rewards are not integrated. Six representative ETF/MF/futures suites passed 34 tests after fixing one stale hard-coded date in the MF terminal test. SL-22-01..SL-22-18 portfolio allocation requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Added a long-only/short-enabled feasibility projection with per-sleeve bounds and signed gross/net exposure budgets; 33 portfolio-control tests passed, Ruff and mypy passed. Cross-desk exposure look-through and contextual/RL allocation remain absent. SL-23-01..SL-23-18 robustness requirements were source-audited: one COMPLETE, 15 PARTIAL and 2 NOT_STARTED. Regime v3 now emits REGIME_UNKNOWN immediately for missing/non-finite required inputs and the frozen risk throttle defaults unknown regimes to zero risk; 13 paired regime/guard tests and one explicit REGIME_UNKNOWN test passed. Broad cross-desk stress, provider-distribution drift and policy comparison remain missing. SL-24-01..SL-24-20 off-policy evaluation requirements were source-audited: 3 COMPLETE, 16 PARTIAL and 1 NOT_STARTED. Added support-checked contextual DM/IPS/SNIPS/DR estimates with positivity/ESS gates and explicit NO_VALID_OPE refusal; 24 OPE/learning/evaluation tests passed, Ruff and mypy passed. Sequential trajectory OPE, confidence intervals, registered sensitivity variants and fully captured trial multiplicity remain open. SL-25-01..SL-25-18 champion/retraining requirements were source-audited: 4 COMPLETE, 13 PARTIAL and 1 NOT_STARTED. Added an append-only policy registry with immutable code/weights/reward/data/features/risk/rights/protocol artifact binding, reasoned hash-chained events, generator transition denial and human approval for REVIEW_ELIGIBLE; 35 governance tests passed. Automated retraining, sequential alpha spending, cohort-bound model snapshots and release-time gating remain incomplete. SL-22-04 moved from NOT_STARTED to PARTIAL after a coverage-aware cross-desk overlap primitive was added; real H005/H003/P3, options, ETF and MF adapters remain absent."
   },
   "counts_by_status": {
-    "COMPLETE": 83,
+    "COMPLETE": 84,
     "EXTERNAL_BLOCKED": 5,
     "NOT_STARTED": 17,
-    "PARTIAL": 722,
-    "UNASSESSED": 551
+    "PARTIAL": 725,
+    "UNASSESSED": 547
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "fb.source-inventory.v2",
   "scope": "Python source only; role hints are not owner assignments",
-  "source_count": 739,
+  "source_count": 740,
   "sources": [
     {
       "capability_ids": [],
@@ -169,7 +169,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/attribution/pipeline.py",
-      "source_sha256": "16b3cbed0140d1ca6fb23620566e6767dc5fdd32412ab3a7aa82ee4353bb09c9",
+      "source_sha256": "31becf4b87882d33220c827b76605fd0eda4da8bd56d3a24ca834760b691e2bd",
       "test_paths": []
     },
     {
@@ -233,6 +233,7 @@
         "costs",
         "costs.india",
         "costs.tax",
+        "dataclasses",
         "datetime",
         "decimal",
         "decisions",
@@ -247,6 +248,7 @@
         "forward_edge.cli",
         "forward_edge.manual_paper_decisions",
         "graph",
+        "hashlib",
         "ingest",
         "ingest.announcements",
         "ingest.job",
@@ -271,6 +273,8 @@
         "pathlib",
         "pit.observations",
         "portfolio",
+        "portfolio.canonical_ledger",
+        "portfolio.equity_reconciliation",
         "providers",
         "providers.kite",
         "providers.kite_login_server",
@@ -294,7 +298,7 @@
       "owner_role_hint": "Unassigned",
       "parse_status": "ok",
       "source": "src/financial_brain/cli.py",
-      "source_sha256": "4a9e2354c476341fcab9dc054193c786642dedad3053997e56221226ce6e1662",
+      "source_sha256": "e2bbc54ca5a556430d9f033123ca9f59821087eae8543ca2b0d64a9a83ee5f7c",
       "test_paths": [
         "tests/test_mf_decisions.py"
       ]
@@ -11148,6 +11152,29 @@
       "human_owner": null,
       "imports": [
         "__future__",
+        "collections.abc",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "decimal",
+        "financial_brain.portfolio.canonical_ledger",
+        "hashlib",
+        "json",
+        "pathlib",
+        "sqlite3"
+      ],
+      "maturity": "unassessed",
+      "owner_role_hint": "Unassigned",
+      "parse_status": "ok",
+      "source": "src/financial_brain/portfolio/equity_reconciliation.py",
+      "source_sha256": "950d8601e7d59fb213abe14f2b47918a0311b6842cbd54457fd98876fc84893b",
+      "test_paths": []
+    },
+    {
+      "capability_ids": [],
+      "human_owner": null,
+      "imports": [
+        "__future__",
         "dataclasses",
         "datetime",
         "decisions",
@@ -13269,6 +13296,6 @@
       "test_paths": []
     }
   ],
-  "unassessed_count": 709,
-  "unassigned_role_count": 442
+  "unassessed_count": 710,
+  "unassigned_role_count": 443
 }
