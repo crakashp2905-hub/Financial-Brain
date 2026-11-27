@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "12a34abd8170a2152be10513a6754d80c3e8b9d552dc8bcc513197d2df986ded",
-  "audit_export_sha256": "061a2c9acc79744730a0e941bd0b6b61497752b0692902c4f38c73bf67b05d7d",
+  "status_ledger_sha256": "a1bf3c48caf9bf2f365f2998529a0cefe34ca4aa776bf2989b421f909d8e1e25",
+  "audit_export_sha256": "2277156013f1629b6ac3e0a8cb68099dbccc20b0cecffbddb6bdc2e25c21f926",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3083,7 +3083,7 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Analyze 2024 weakness, recent-half and last-36-month degradation explicitly; give current data higher descriptive weight but do not re-select based on a repeatedly checked holdout."
           },
-          "commit": null,
+          "commit": "03439521",
           "blocker": "Partial: fixed-parameter period analysis is implemented, but automated cohort-wide reporting, frozen strategy adapters and forward prospective degradation evidence are not yet integrated.",
           "evidence": [
             "Existing evaluation.economic performs walk-forward horizon selection and evaluates baselines, but did not provide a fixed report of 2024, recent-half and last-36-month outcomes for an unchanged monthly candidate configuration.",
@@ -3508,5 +3508,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "b81236be6fc78caa348e1d11336765fce5063fca3e21ea268b5a61f6337450fe"
+  "report_sha256": "10f0a111a38f4b5f38cd4754ad1a56385a0c96b2763e2a3c4d0a353814c4d7cd"
 }

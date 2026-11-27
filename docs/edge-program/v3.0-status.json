@@ -9314,7 +9314,7 @@
       ],
       "blocker": "Partial: fixed-parameter period analysis is implemented, but automated cohort-wide reporting, frozen strategy adapters and forward prospective degradation evidence are not yet integrated.",
       "last_audited_at_utc": "2026-11-27T05:43:21Z",
-      "commit": null,
+      "commit": "03439521",
       "test_evidence": [
         "python -m pytest --basetemp .pytest-pa0715-subperiod tests/test_zoo_h_targets.py -q: 21 passed, including 2024/recent-half/36-month outputs and descriptive-only warnings.",
         "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
