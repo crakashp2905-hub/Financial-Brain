@@ -10535,11 +10535,13 @@
       "status": "PARTIAL",
       "evidence": [
         "src/financial_brain/evaluation/event_response.py measures market-adjusted reaction already made at the first close at/after publication and preserves later 1/3/5/20-session returns",
-        "Existing event response controls do not separately report opening gap, after-hours release classification, intraday publication delay, turnover shock and day-of-week matched benchmarks"
+        "src/financial_brain/evaluation/event_pricing_controls.py adds opening-gap suppression for intraday events, overnight-release timing, first post-publication intraday delay/move, prior-only turnover shock and supplied same-weekday benchmark excess",
+        "tests/test_event_pricing_controls.py: overnight, intraday, prior-session, missing control, chronology and timestamp cases; 5 passed",
+        "The controls remain a reusable function and are not yet populated by the production event-response pipeline or evaluated across the historical disclosure universe"
       ],
       "blocker": null,
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "a791a227"
+      "commit": "e2ab93c6"
     },
     {
       "id": "PA-12-06",
