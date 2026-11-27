@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:55:20Z",
+  "as_of_utc": "2026-11-27T01:06:17Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "88b356534cae8bb9e4ea52830b4f425fffc59d2015a5b5b6724227ec6ef5a97a",
-  "audit_export_sha256": "15fba6832b08e172e6cf6aecdcc29fc7662b22bbb2564a32d6135ea5282a3059",
+  "status_ledger_sha256": "41e44a109fd8833a9195c8be6a86e113ea79f2c79f3699871ca5dfb03ead2e3a",
+  "audit_export_sha256": "4b2ca8245fca4e69f18a6d77d13f08024e68e054b6c22ae7406d2ddeb21b5b88",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 805,
-    "UNASSESSED": 443
+    "PARTIAL": 806,
+    "UNASSESSED": 442
   },
-  "assessed_count": 935,
-  "unassessed_count": 443,
+  "assessed_count": 936,
+  "unassessed_count": 442,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 25,
-        "UNASSESSED": 3
+        "PARTIAL": 26,
+        "UNASSESSED": 2
       },
       "evidence": [
         {
@@ -1157,16 +1157,27 @@
         },
         {
           "item_id": "PA-03-13",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 970,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build bounded circuit-breaker recovery with exponential retry, feed priority and log deduplication; all open-position state remains durable."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "bc875c34",
+          "blocker": "No autonomous supervisor currently wakes handlers at retry_at or applies priority across multiple external feed producers; operators must rerun the session consumer, and callback side effects still require their own idempotency contracts.",
+          "evidence": [
+            "src/financial_brain/forward_edge/session_recovery.py persists per-handler attempts, capped exponential retry times, terminal HALTED state, hash-chained retry events and one alert per stable root-cause hash.",
+            "src/financial_brain/forward_edge/session_runner.py wraps market, completed-bar and protective-exit handlers; failures latch DEGRADED/HALTED, keep the consumer offset unacknowledged, defer retries until their persisted time, and retry the unacknowledged prefix before admitting new events.",
+            "Existing durable event, order, position-accounting and checkpoint journals remain the source of state during handler recovery; recovery never clears or advances the failed event cursor.",
+            "tests/test_forward_edge_session_recovery.py verifies capped exponential delays, attempt limits and alert deduplication; session-runner regressions verify restart replay, retry deferral, cursor preservation and HALTED behavior.",
+            "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_operating_mode.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0313: 84 passed; focused recovery integration cases: 5 passed.",
+            "Ruff and mypy passed for changed modules."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_operating_mode.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0313: 84 passed.",
+            "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_session_runner.py::test_event_loop_replays_unacknowledged_event_after_restart tests/test_forward_edge_session_runner.py::test_event_loop_defers_retry_without_acknowledging_event tests/test_forward_edge_session_runner.py::test_event_loop_halts_after_handler_retry_budget_is_exhausted -q --basetemp=.pytest-pa0313-focus2: 5 passed.",
+            "ruff check on changed source/tests passed; mypy on session_recovery.py and session_runner.py passed."
+          ]
         },
         {
           "item_id": "PA-03-14",
@@ -3192,5 +3203,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "ddc1054c3c2bcf799998d78d242df863a60595bd388029e97d1ff854a440a847"
+  "report_sha256": "765f55dfb23e6be9a1cc7d6c1887ab3f71a0f283af7475025ee2c3b76cc2d3f0"
 }

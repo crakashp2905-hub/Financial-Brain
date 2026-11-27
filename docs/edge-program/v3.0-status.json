@@ -7858,12 +7858,25 @@
     {
       "id": "PA-03-13",
       "text": "Build bounded circuit-breaker recovery with exponential retry, feed priority and log deduplication; all open-position state remains durable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_recovery.py persists per-handler attempts, capped exponential retry times, terminal HALTED state, hash-chained retry events and one alert per stable root-cause hash.",
+        "src/financial_brain/forward_edge/session_runner.py wraps market, completed-bar and protective-exit handlers; failures latch DEGRADED/HALTED, keep the consumer offset unacknowledged, defer retries until their persisted time, and retry the unacknowledged prefix before admitting new events.",
+        "Existing durable event, order, position-accounting and checkpoint journals remain the source of state during handler recovery; recovery never clears or advances the failed event cursor.",
+        "tests/test_forward_edge_session_recovery.py verifies capped exponential delays, attempt limits and alert deduplication; session-runner regressions verify restart replay, retry deferral, cursor preservation and HALTED behavior.",
+        "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_operating_mode.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0313: 84 passed; focused recovery integration cases: 5 passed.",
+        "Ruff and mypy passed for changed modules."
+      ],
+      "blocker": "No autonomous supervisor currently wakes handlers at retry_at or applies priority across multiple external feed producers; operators must rerun the session consumer, and callback side effects still require their own idempotency contracts.",
+      "last_audited_at_utc": "2026-11-27T01:06:17+00:00",
+      "commit": "bc875c34",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_operating_mode.py tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0313: 84 passed.",
+        "python -m pytest tests/test_forward_edge_session_recovery.py tests/test_forward_edge_session_runner.py::test_event_loop_replays_unacknowledged_event_after_restart tests/test_forward_edge_session_runner.py::test_event_loop_defers_retry_without_acknowledging_event tests/test_forward_edge_session_runner.py::test_event_loop_halts_after_handler_retry_budget_is_exhausted -q --basetemp=.pytest-pa0313-focus2: 5 passed.",
+        "ruff check on changed source/tests passed; mypy on session_recovery.py and session_runner.py passed."
+      ],
+      "test_result": "Event handler failures now have durable bounded retries, deduplicated alerts, fail-closed circuit breaking and preserved event/position state. Autonomous retry scheduling, cross-feed priority and universal callback idempotency remain open, so status is PARTIAL."
     },
     {
       "id": "PA-03-14",
@@ -20192,7 +20205,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:55:20Z",
+    "as_of_utc": "2026-11-27T01:06:17Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20655,6 +20668,7 @@
       "PA-03-10",
       "PA-03-11",
       "PA-03-12",
+      "PA-03-13",
       "PA-03-15",
       "PA-04-01",
       "PA-04-02",
@@ -21130,13 +21144,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 935,
+    "audited_count": 936,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 805,
-      "UNASSESSED": 443
+      "PARTIAL": 806,
+      "UNASSESSED": 442
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21285,7 +21299,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 805,
-    "UNASSESSED": 443
+    "PARTIAL": 806,
+    "UNASSESSED": 442
   }
 }
