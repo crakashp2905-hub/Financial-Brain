@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "ca45f8a00cd3ce40369414b00f74c9b5392666ea3f79e17b72503ea359b472ed",
-  "audit_export_sha256": "a1e1edde4c508afe9001dfefb1f42f467c382af8bd7af5263813c0a7848a5a9d",
+  "status_ledger_sha256": "a4d1fe6ab5011d94b63431efcd452debcec71d137e1593a05adaa27b92137b09",
+  "audit_export_sha256": "c0bbe5fffc9b32eb8e3b5944649b3d5dffdb76d1f0dba91ee3cb2bb0f7e9a1db",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1372,12 +1372,15 @@
             "portfolio.canonical_ledger validates fill identity and positive finite quantity/price before append; database uniqueness makes identical source replays no-ops and conflicting replays fail. Short positions are intentionally representable, so the ledger alone is not an oversell guard.",
             "kernel.exit_protection_ledger checks entry fills against intent and pre-armed protection, exit fills against open quantity and emitted intent, and duplicate/conflicting fill IDs before append.",
             "forward_edge.options_risk now rejects unsupported non-vertical structures and inverted two-leg debit verticals: calls require long lower strike, puts require long higher strike. Correctly oriented call and put debit verticals are covered by focused tests.",
-            "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation."
+            "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation.",
+            "`CanonicalPortfolioLedger.append` and `import_events` now run state-dependent explicit position-action validation against the candidate account history inside the write transaction; invalid SELL/SELL_SHORT/BUY_TO_COVER transitions and currency/multiplier changes roll back before persistence. Legacy rows without `position_action` retain documented v1 compatibility semantics.",
+            "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`."
           ],
           "tests": [
             "Focused options, daily-budget, canonical-portfolio-ledger, and exit-protection suites: 33 passed.",
             "OMS state-machine suite: 21 passed.",
-            "Ruff and targeted mypy passed for the options risk module and tests."
+            "Ruff and targeted mypy passed for the options risk module and tests.",
+            "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed."
           ]
         },
         {
@@ -3245,5 +3248,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "6af13148afea6a045de95935f26b29dc603e8a9cf349294603c43613b638561b"
+  "report_sha256": "6bed6fbb2670f317fd59a990ec3e096c122f3fe095e906e11f85b8eb0c0c375f"
 }

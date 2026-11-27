@@ -203,37 +203,37 @@ def test_explicit_short_open_and_buy_to_cover_preserve_direction_and_realized_pn
 
 def test_explicit_long_close_cannot_open_or_cross_into_a_short(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
-    ledger.append(event("short-with-sell", EventKind.FILL, asset_class=AssetClass.EQUITY,
-                        instrument_id="NSE:INFY", side="SELL", position_action="SELL",
-                        quantity="1", price="100"))
     with pytest.raises(CanonicalLedgerError, match="SELL must close no more than an existing long"):
-        ledger.snapshot("paper-main")
+        ledger.append(event("short-with-sell", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                           instrument_id="NSE:INFY", side="SELL", position_action="SELL",
+                           quantity="1", price="100"))
+    assert ledger.event_count() == 0  # the invalid close never becomes durable
 
 
 def test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory(tmp_path):
     crossed = CanonicalPortfolioLedger(tmp_path / "crossed.sqlite")
-    crossed.import_events([
-        event("long-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
-              side="BUY", position_action="BUY", quantity="5", price="100",
-              occurred_at="2026-11-20T09:00:00+05:30"),
-        event("crossing-short", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
-              side="SELL", position_action="SELL_SHORT", quantity="6", price="100",
-              occurred_at="2026-11-20T09:01:00+05:30"),
-    ])
     with pytest.raises(CanonicalLedgerError, match="SELL_SHORT cannot increase or cross"):
-        crossed.snapshot("paper-main")
+        crossed.import_events([
+            event("long-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="BUY", position_action="BUY", quantity="5", price="100",
+                  occurred_at="2026-11-20T09:00:00+05:30"),
+            event("crossing-short", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="SELL", position_action="SELL_SHORT", quantity="6", price="100",
+                  occurred_at="2026-11-20T09:01:00+05:30"),
+        ])
+    assert crossed.event_count() == 0  # batch rejection is atomic across the valid first row
 
     overcovered = CanonicalPortfolioLedger(tmp_path / "overcovered.sqlite")
-    overcovered.import_events([
-        event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
-              side="SELL", position_action="SELL_SHORT", quantity="5", price="100",
-              occurred_at="2026-11-20T09:00:00+05:30"),
-        event("excess-cover", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
-              side="BUY", position_action="BUY_TO_COVER", quantity="6", price="90",
-              occurred_at="2026-11-20T09:01:00+05:30"),
-    ])
     with pytest.raises(CanonicalLedgerError, match="BUY_TO_COVER must not exceed"):
-        overcovered.snapshot("paper-main")
+        overcovered.import_events([
+            event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="SELL", position_action="SELL_SHORT", quantity="5", price="100",
+                  occurred_at="2026-11-20T09:00:00+05:30"),
+            event("excess-cover", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+                  side="BUY", position_action="BUY_TO_COVER", quantity="6", price="90",
+                  occurred_at="2026-11-20T09:01:00+05:30"),
+        ])
+    assert overcovered.event_count() == 0
 
 
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):

@@ -263,7 +263,7 @@ class CanonicalPortfolioLedger:
             con.close()
 
     def append(self, event: PortfolioEvent) -> bool:
-        """Append an event; identical source replays are no-ops, conflicting replays are refused."""
+        """Append an event after validating its account transition in the same transaction."""
         row = event.normalized()
         body = json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False)
         payload_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()
@@ -281,6 +281,7 @@ class CanonicalPortfolioLedger:
                 VALUES (?,?,?,?,?,?,?)""",
                         (row["account_id"], row["sleeve_id"], row["source_system"], row["source_event_id"],
                          row["source_sha256"], payload_hash, body))
+            self._validate_position_transitions(con, str(row["account_id"]))
         return True
 
     def import_events(self, events: list[PortfolioEvent]) -> dict[str, int]:
@@ -289,6 +290,7 @@ class CanonicalPortfolioLedger:
         payloads = [json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False) for row in normalized]
         hashes = [hashlib.sha256(body.encode("utf-8")).hexdigest() for body in payloads]
         added = 0
+        changed_accounts: set[str] = set()
         with self._connection() as con:
             con.execute("BEGIN IMMEDIATE")
             for row, body, payload_hash in zip(normalized, payloads, hashes):
@@ -305,7 +307,51 @@ class CanonicalPortfolioLedger:
                             (row["account_id"], row["sleeve_id"], row["source_system"], row["source_event_id"],
                              row["source_sha256"], payload_hash, body))
                 added += 1
+                changed_accounts.add(str(row["account_id"]))
+            for account_id in sorted(changed_accounts):
+                self._validate_position_transitions(con, account_id)
         return {"received": len(events), "added": added, "already_present": len(events) - added}
+
+    @staticmethod
+    def _validate_position_transitions(con: sqlite3.Connection, account_id: str) -> None:
+        """Reject state-invalid explicit position actions before their transaction commits.
+
+        Snapshot projection repeats these checks defensively. Running them against the
+        transaction's candidate state first prevents a bad fill from becoming durable.
+        Legacy rows without position_action retain their documented v1 projection rules.
+        """
+        rows = con.execute(
+            "SELECT event_json FROM portfolio_events WHERE account_id=? "
+            "ORDER BY json_extract(event_json, '$.occurred_at'), sequence", (account_id,)
+        ).fetchall()
+        positions: dict[tuple[str, str, str], tuple[Decimal, str, Decimal]] = {}
+        for stored in rows:
+            row = json.loads(stored[0])
+            if row.get("event_kind") not in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
+                continue
+            key = (str(row["asset_class"]), str(row["instrument_id"]), str(row["sleeve_id"]))
+            quantity = Decimal(str(row["quantity"]))
+            multiplier = Decimal(str(row["multiplier"]))
+            old_quantity, old_currency, old_multiplier = positions.get(
+                key, (Decimal(0), str(row["currency"]), multiplier))
+            if old_currency != row["currency"]:
+                raise CanonicalLedgerError("one instrument position cannot mix currencies")
+            if old_multiplier != multiplier:
+                raise CanonicalLedgerError("one instrument position cannot mix contract multipliers")
+            action = row.get("position_action")
+            if action is None:
+                action = str(row["side"])
+            if action == "SELL_SHORT" and old_quantity > 0:
+                raise CanonicalLedgerError("SELL_SHORT cannot increase or cross an open long position")
+            if action == "BUY_TO_COVER" and (old_quantity >= 0 or quantity > abs(old_quantity)):
+                raise CanonicalLedgerError("BUY_TO_COVER must not exceed an existing short position")
+            if action == "SELL" and row.get("position_action") is not None \
+                    and (old_quantity <= 0 or quantity > old_quantity):
+                raise CanonicalLedgerError("SELL must close no more than an existing long position")
+            if action == "BUY" and row.get("position_action") is not None and old_quantity < 0:
+                raise CanonicalLedgerError("BUY cannot cover an existing short; use BUY_TO_COVER")
+            signed = quantity if action in {"BUY", "BUY_TO_COVER"} else -quantity
+            positions[key] = (old_quantity + signed, old_currency, old_multiplier)
 
     def events(self, account_id: str, *, as_of: str | None = None) -> list[dict[str, object]]:
         """Read immutable source events up to an optional timezone-aware as-of timestamp."""

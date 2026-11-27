@@ -8044,17 +8044,20 @@
         "portfolio.canonical_ledger validates fill identity and positive finite quantity/price before append; database uniqueness makes identical source replays no-ops and conflicting replays fail. Short positions are intentionally representable, so the ledger alone is not an oversell guard.",
         "kernel.exit_protection_ledger checks entry fills against intent and pre-armed protection, exit fills against open quantity and emitted intent, and duplicate/conflicting fill IDs before append.",
         "forward_edge.options_risk now rejects unsupported non-vertical structures and inverted two-leg debit verticals: calls require long lower strike, puts require long higher strike. Correctly oriented call and put debit verticals are covered by focused tests.",
-        "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation."
+        "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation.",
+        "`CanonicalPortfolioLedger.append` and `import_events` now run state-dependent explicit position-action validation against the candidate account history inside the write transaction; invalid SELL/SELL_SHORT/BUY_TO_COVER transitions and currency/multiplier changes roll back before persistence. Legacy rows without `position_action` retain documented v1 compatibility semantics.",
+        "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`."
       ],
       "blocker": "Partial: option debit vertical orientation and several local transition invariants now fail closed, but no common mutation boundary covers every desk/OMS/book path. Cross-path oversell/ghost-lot checks and atomic reservation-to-position reconciliation remain incomplete.",
-      "last_audited_at_utc": "2026-11-25T03:36:36Z",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "d1b31a9a",
       "test_evidence": [
         "Focused options, daily-budget, canonical-portfolio-ledger, and exit-protection suites: 33 passed.",
         "OMS state-machine suite: 21 passed.",
-        "Ruff and targeted mypy passed for the options risk module and tests."
+        "Ruff and targeted mypy passed for the options risk module and tests.",
+        "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed."
       ],
-      "test_result": "33 focused option/budget/portfolio/exit-ledger tests and 21 OMS tests passed; Ruff and targeted mypy passed."
+      "test_result": "Explicit canonical position transitions are validated before the append/import transaction commits; invalid single events and multi-event batches roll back atomically. Twenty-five affected ledger/risk/adjudication tests, Ruff and targeted mypy pass. PA-04-05 remains partial because legacy compatibility and cross-system reservations, option legs and OMS/book routes still need one mutation boundary."
     },
     {
       "id": "PA-04-06",
