@@ -8307,7 +8307,7 @@
       ],
       "blocker": "Canonical-ledger completeness is not equivalent to complete source capture: upstream OMS/broker statements and distributions still need independent matching, and production consumers must use the persisted report gate rather than rely on an earlier in-memory reconciliation result.",
       "last_audited_at_utc": "2026-11-27T16:06:55Z",
-      "commit": "65181035",
+      "commit": "28603aaf",
       "test_evidence": [
         "`python -m pytest --basetemp=.pytest-pa0415-registry-rerun tests/test_portfolio_equity_reconciliation.py tests/test_canonical_portfolio_ledger.py -q`: 24 passed.",
         "Regression verifies late/backdated event invalidation, post-cutoff historical validity, concurrent append invalidation, and refusal to pass an invalidated report through `require_reconciled`.",
