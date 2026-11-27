@@ -3133,7 +3133,6 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     with pytest.raises(ForwardSessionRunnerError, match="accounting projection is incomplete"):
         execute(runner, event, decided)
     runner.close()
-
     runner = make_runner(tmp_path)
     recovery = runner.resume("s")
     assert recovery["manual_reconciliation_required"] is True
@@ -3146,3 +3145,59 @@ def test_crash_before_paper_receipt_reconciles_no_effect_then_creates_one_receip
     assert runner._con.execute("SELECT COUNT(*) FROM paper_execution_receipts").fetchone()[0] == 1
     assert len(runner.records("s")["execution_receipts"]) == 1
     runner.close()
+
+
+def test_crash_after_quote_before_intent_resumes_without_inventing_order(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_config()
+    opened(runner, config=config)
+    quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.0, "volume": 1000,
+        "depth": {"buy": [{"price": 99.95, "quantity": 20}],
+                  "sell": [{"price": 100.05, "quantity": 3}]},
+    }, received_at=NOW)
+    runner.ingest("s", config, [quote])
+    assert len(runner.records("s")["events"]) == 1
+    assert runner.records("s")["intents"] == []
+    runner.close()  # process loss after durable observation, before decision/intent
+
+    recovered = make_runner(tmp_path)
+    state = recovered.resume("s")
+    records = state["records"]
+    assert state["state"] == "OPEN"
+    assert len(records["events"]) == 1
+    assert records["intents"] == []
+    assert records["execution_receipts"] == []
+    assert records["accounting"]["positions"] == {}
+    assert recovered._con.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 0
+    recovered.close()
+
+
+def test_crash_after_canonical_fill_booking_reconciles_exactly_once_on_restart(tmp_path, monkeypatch):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+
+    runner, event, decided = trade_setup(tmp_path)
+    record_fill = runner._record_canonical_paper_fill
+
+    def commit_then_crash(**kwargs):
+        record_fill(**kwargs)
+        raise RuntimeError("simulated crash during ledger reconciliation")
+
+    monkeypatch.setattr(runner, "_record_canonical_paper_fill", commit_then_crash)
+    with pytest.raises(RuntimeError, match="ledger reconciliation"):
+        execute(runner, event, decided)
+    runner.close()
+
+    recovered = make_runner(tmp_path)
+    state = recovered.resume("s")
+    assert state["manual_reconciliation_required"] is False
+    records = recovered.records("s")
+    assert len(records["execution_receipts"]) == 1
+    assert records["accounting"]["positions"] == {"NSE:INFY": 2}
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["cash"]["INR"] == Decimal("-200.40")
+    assert recovered._con.execute(
+        "SELECT COUNT(*) FROM reservation_events WHERE event_kind='POSITION_FILL_RECORDED'"
+    ).fetchone()[0] == 1
+    recovered.close()
