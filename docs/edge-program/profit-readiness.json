@@ -4,19 +4,19 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "aebbefa0e12dd581dff18a3177a3f4ad120c2e6f9fa88d163fbea58dbf13cfac",
-  "audit_export_sha256": "abe924f993690fa5c6a51400c412211cf0e48a315692e949bf378cde1edb7748",
+  "status_ledger_sha256": "3f34219c72b9debea06665bd7ae263f969dccecb346912ae2e72826341146a03",
+  "audit_export_sha256": "3869399083e92121ea560e820990a0d6de05ebbc7a1ad40b37fafcf40be81314",
   "total_items": 1378,
   "counts_by_status": {
-    "COMPLETE": 134,
+    "COMPLETE": 135,
     "EXTERNAL_BLOCKED": 7,
     "NOT_STARTED": 17,
     "PARTIAL": 957,
-    "UNASSESSED": 263
+    "UNASSESSED": 262
   },
-  "assessed_count": 1115,
-  "unassessed_count": 263,
-  "verified_complete_count": 134,
+  "assessed_count": 1116,
+  "unassessed_count": 262,
+  "verified_complete_count": 135,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
     "amber": "at least one item is PARTIAL or UNASSESSED and none are NOT_STARTED or EXTERNAL_BLOCKED",
@@ -3568,5 +3568,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c82df63835822cb8b3224419ee327624db16e91ea3453cce5f21647c59fd9e0a"
+  "report_sha256": "0b2e3e48e552ea5fead894fff690c0c93c52fa2d86b5ac02d5298c68e2809b7c"
 }

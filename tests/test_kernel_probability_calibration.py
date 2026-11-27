@@ -93,6 +93,18 @@ def test_low_sample_context_bucket_is_explicitly_uncalibrated():
     assert report.reliability_bins[0].sample_count == 3
 
 
+def test_validation_only_or_training_data_cannot_be_reused_as_promotion_holdout():
+    # A row whose outcome was already visible before the nominal prediction is
+    # validation/training leakage, even if its timestamp is relabeled to holdout.
+    from dataclasses import replace
+
+    row = _row(0, outcome=1)
+    leaked = replace(row, outcome_available_at=row.predicted_at - timedelta(seconds=1))
+    with pytest.raises(CalibrationError, match="matured"):
+        evaluate_probability_calibration(policy=_policy(), observations=(leaked,),
+                                         evaluation_as_of=AS_OF)
+
+
 def test_training_overlap_future_maturity_and_model_mismatch_are_rejected():
     bad_rows = (
         _row(0, context="valid"),
