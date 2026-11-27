@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "05fff374d362f6b429f0ab6bb024599f79596f3f3d7f2178212d5d912baa0887",
-  "audit_export_sha256": "7396ab3ea0125ed649fe9d5b6a3654335170b20086cb17694cf243534481d02b",
+  "status_ledger_sha256": "26e240f5c1309b8f88e6a2ac82569b681372586997040ee4828a6b69af1bb550",
+  "audit_export_sha256": "2ff85a7e3cba3c284fde34d24ec6e359b49a52ff74082fabf592147b744c9ea4",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 833,
-    "UNASSESSED": 415
+    "PARTIAL": 834,
+    "UNASSESSED": 414
   },
-  "assessed_count": 963,
-  "unassessed_count": 415,
+  "assessed_count": 964,
+  "unassessed_count": 414,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 53,
-        "UNASSESSED": 8
+        "PARTIAL": 54,
+        "UNASSESSED": 7
       },
       "evidence": [
         {
@@ -2945,16 +2945,24 @@
         },
         {
           "item_id": "PA-07-09",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1069,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build monthly candidate generation, next-executable-session fill planning, turnover limits, cash buffers and rejected-order logs."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "f882b163",
+          "blocker": "Partial: cash/turnover/cost-aware next-session paper planning exists, but monthly runner integration, exchange-calendar sourced scheduling, durable rejected-order persistence and fill/account reconciliation remain absent.",
+          "evidence": [
+            "Commit f882b163 adds `paper.zoo_edges.plan_monthly_rebalance`, which creates next-session paper intents from versioned monthly targets and current whole-share positions, with explicit decision/next-session dates.",
+            "The planner requires a current ticker mapping, reference price and liquidity cost bucket for each target/current holding; it reconciles free cash plus marked positions to account capital, prices order-side fees/impact, preserves a configurable cash reserve, and rejects the full plan when requested turnover exceeds its INR cap.",
+            "Buy sizing never uses unsettled sale proceeds; unaffordable buys are reduced to affordable whole shares or logged as rejected. The output carries target hash, planned/rejected quantities and reasons and asserts that no physical orders were submitted.",
+            "The planner is not wired into the monthly zoo runner, the next-session date and market inputs are caller-supplied rather than exchange-calendar/feed verified, and proposals are not persisted or filled through the durable paper OMS."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0709-plan tests/test_zoo_h_targets.py -q: 15 passed, covering next-session intent dates, whole-plan turnover rejection, cost/cash reserve, and non-use of unsettled sale proceeds.",
+            "Ruff on paper.zoo_edges/tests, mypy on paper.zoo_edges, and git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-10",
@@ -3458,5 +3466,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "9a44464b4caf125c202b92314582218a676848d707d1bbcb71a11fbbfed8c605"
+  "report_sha256": "f7dda8d8a42cb4e281a62e71680c3bae03c94a7c5a05f30a4a8cdba5686602d8"
 }
