@@ -23,6 +23,8 @@ class OptionRankCandidate:
     implied_volatility: float
     expected_exit_bid: float
     time_to_expiry_years: float
+    minutes_to_expiry: float | None = None
+    stress_tail_loss_per_lot_inr: float | None = None
 
 
 def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
@@ -30,6 +32,7 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
                                risk_budget_inr: float, max_quote_age_seconds: float,
                                max_spread_bps: float, rate: float = 0.0,
                                dividend_yield: float = 0.0,
+                               near_expiry_minutes: float = 60.0,
                                costs: CostModel | None = None) -> dict[str, object]:
     """Rank quoted CE/PE candidates using after-cost reward per risk, failing closed.
 
@@ -39,9 +42,10 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
     if (not candidates or as_of.tzinfo is None or as_of.utcoffset() is None
             or not all(math.isfinite(value) for value in
                        (underlying_price, risk_budget_inr, max_quote_age_seconds,
-                        max_spread_bps, rate, dividend_yield))
+                        max_spread_bps, rate, dividend_yield, near_expiry_minutes))
             or underlying_price <= 0 or risk_budget_inr <= 0
-            or max_quote_age_seconds < 0 or max_spread_bps <= 0):
+            or max_quote_age_seconds < 0 or max_spread_bps <= 0
+            or near_expiry_minutes < 0):
         raise OptionPaperError("valid candidates, aware decision time and finite risk policies are required")
     if len({row.candidate_id for row in candidates}) != len(candidates):
         raise OptionPaperError("candidate IDs must be unique")
@@ -64,6 +68,14 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
                 or not math.isfinite(candidate.time_to_expiry_years)
                 or candidate.time_to_expiry_years <= 0):
             reasons.append("INVALID_SCENARIO_INPUT")
+        if (candidate.minutes_to_expiry is not None
+                and (not math.isfinite(candidate.minutes_to_expiry)
+                     or candidate.minutes_to_expiry < 0)):
+            reasons.append("INVALID_EXPIRY_CLOCK")
+        if (candidate.stress_tail_loss_per_lot_inr is not None
+                and (not math.isfinite(candidate.stress_tail_loss_per_lot_inr)
+                     or candidate.stress_tail_loss_per_lot_inr < 0)):
+            reasons.append("INVALID_STRESS_TAIL_LOSS")
         if quote.observed_at.tzinfo is None or quote.observed_at.utcoffset() is None:
             reasons.append("QUOTE_CLOCK_MISSING")
         else:
@@ -109,6 +121,11 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
         max_loss = quote.ask * quantity + entry_fee
         net_reward = ((candidate.expected_exit_bid - quote.ask) * quantity
                       - entry_fee - exit_fee)
+        entry_fee_per_lot = fee_for(quote.ask * quantity_per_lot, Side.BUY)
+        exit_fee_per_lot = fee_for(candidate.expected_exit_bid * quantity_per_lot, Side.SELL)
+        expected_alpha_per_lot = ((candidate.expected_exit_bid - quote.ask) * quantity_per_lot
+                                  - entry_fee_per_lot - exit_fee_per_lot)
+        spread_cost_per_lot = (quote.ask - quote.bid) * quantity_per_lot
         break_even = (candidate.strike + quote.ask if call
                       else candidate.strike - quote.ask)
         break_even_move_pct = (break_even - underlying_price) / underlying_price * 100
@@ -120,6 +137,15 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
             reasons.append("RISK_BUDGET_BELOW_ONE_LOT")
         if net_reward <= 0:
             reasons.append("EXPECTED_NET_REWARD_NON_POSITIVE")
+        near_expiry = (candidate.minutes_to_expiry is not None
+                       and candidate.minutes_to_expiry <= near_expiry_minutes)
+        if spread_cost_per_lot >= expected_alpha_per_lot:
+            reasons.append("SPREAD_COST_EXCEEDS_EXPECTED_ALPHA")
+        if near_expiry and candidate.stress_tail_loss_per_lot_inr is None:
+            reasons.append("NEAR_EXPIRY_TAIL_RISK_UNMEASURED")
+        elif (candidate.stress_tail_loss_per_lot_inr is not None
+              and candidate.stress_tail_loss_per_lot_inr >= expected_alpha_per_lot):
+            reasons.append("TAIL_GAP_EXCEEDS_EXPECTED_ALPHA")
         rows.append({"candidate_id": candidate.candidate_id,
                      "contract": quote.symbol, "token": quote.token,
                      "underlying": candidate.underlying, "option_type": candidate.option_type,
@@ -132,6 +158,10 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
                      "theta_exposure_per_day_per_lot": greek_values["theta"] * quantity_per_lot / 365,
                      "observed_bid": quote.bid, "observed_ask": quote.ask,
                      "spread_bps": spread_bps, "visible_ask_contracts": quantity_available,
+                     "spread_cost_per_lot_inr": spread_cost_per_lot,
+                     "expected_alpha_per_lot_inr": expected_alpha_per_lot,
+                     "minutes_to_expiry": candidate.minutes_to_expiry,
+                     "stress_tail_loss_per_lot_inr": candidate.stress_tail_loss_per_lot_inr,
                      "risk_capped_lots": risk_lots, "depth_capped_lots": depth_lots,
                      "recommended_lots": lots if not reasons else 0,
                      "maximum_loss_inr": max_loss,

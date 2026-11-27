@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 
 from financial_brain.paper.options import Quote
@@ -52,3 +53,24 @@ def test_ranker_explains_no_selection_for_spread_depth_and_risk_failures():
     assert "SPREAD_EXCEEDS_POLICY" in reasons["wide"]
     assert "RISK_BUDGET_BELOW_ONE_LOT" in reasons["thin"]
     assert "INSUFFICIENT_ASK_DEPTH" in reasons["thin"]
+
+
+def test_near_expiry_and_spread_or_tail_cost_can_block_even_high_expected_reward():
+    base = _candidate("near-expiry", "CE")
+    unmeasured = replace(base, minutes_to_expiry=30)
+    tail_exceeds_alpha = replace(base, candidate_id="tail-risk", minutes_to_expiry=30,
+                                 stress_tail_loss_per_lot_inr=2_000)
+    wide_quote = Quote(125, "NIFTY26NOV25000CE", date(2026, 11, 26), 25,
+                       AS_OF - timedelta(seconds=1), 50, 102, 500, 500)
+    wide = replace(base, candidate_id="wide-near-expiry", quote=wide_quote,
+                   minutes_to_expiry=30, stress_tail_loss_per_lot_inr=0)
+    result = rank_long_option_contracts(
+        candidates=(unmeasured, tail_exceeds_alpha, wide),
+        underlying_price=25_100, as_of=AS_OF, risk_budget_inr=10_000,
+        max_quote_age_seconds=5, max_spread_bps=20_000,
+    )
+    reasons = {row["candidate_id"]: set(row["reason_codes"]) for row in result["candidates"]}
+    assert "NEAR_EXPIRY_TAIL_RISK_UNMEASURED" in reasons["near-expiry"]
+    assert "TAIL_GAP_EXCEEDS_EXPECTED_ALPHA" in reasons["tail-risk"]
+    assert "SPREAD_COST_EXCEEDS_EXPECTED_ALPHA" in reasons["wide-near-expiry"]
+    assert result["selected_candidate_id"] is None
