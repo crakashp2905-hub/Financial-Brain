@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:26:02+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "950952c6873bb42de1e544e3d599311dfb5599afbc8ce6971dd9316c26d7a5c2",
-  "audit_export_sha256": "bda9a5c824d7cb22245a6b044b40b3bb189b7a712ac1059edbbd61cf9b6ccc53",
+  "status_ledger_sha256": "2037544eb9b282bb444095051326c9855947d61f8350f8b7825aa9bcf83afc56",
+  "audit_export_sha256": "3b2b879c44f04976acc9c6802e206579eecee662097318e55f468cb8bfe5832c",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1187,14 +1187,16 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Record overnight carry and option expiry handling separately from intraday forced flatten; disallow trading after exchange cutoff."
           },
-          "commit": "2b0c66a9",
-          "blocker": "Integrate close-session positions with sourced expiry/settlement marks and explicit carry authorization; record forced-flatten outcomes separately. No trusted option settlement source is currently wired into the runner.",
+          "commit": "af125685",
+          "blocker": "Runner does not yet submit and reconcile forced intraday flatten intents, consume sourced option settlement/expiry marks, or persist carry valuations. These outcomes remain explicitly unresolved and block a complete session close.",
           "evidence": [
-            "src/financial_brain/forward_edge/session_runner.py rejects paper execution before sourced session open and at or after sourced session close; it consumes the persisted exchange calendar plan.",
-            "src/financial_brain/forward_edge/session_close.py separately classifies carry authorization and option expiry using supplied marks; the forward runner does not yet integrate those close dispositions."
+            "src/financial_brain/forward_edge/session_runner.py rejects paper execution before sourced session open and at or after sourced session close using the persisted exchange calendar plan.",
+            "ForwardSessionRunner.close_session now records open inventory dispositions: OVERNIGHT_CARRY_AUTHORIZED, INTRADAY_FLATTEN_REQUIRED, INSTRUMENT_RULE_MISSING, EXPIRY_RULE_MISSING, or EXPIRY_SETTLEMENT_REQUIRED. Complete close refuses unhandled inventory; report explicitly records valuation_status=NOT_PROVIDED and execution_or_settlement_fill_created=false.",
+            "src/financial_brain/forward_edge/session_close.py continues to provide mark-aware carry and expiry classification as a separate primitive; no settlement mark is synthesized by the runner."
           ],
           "tests": [
-            "python -m pytest tests/test_forward_edge_session_runner.py::test_paper_execution_is_rejected_at_sourced_exchange_close -q --basetemp=.pytest-pa0314-final: 1 passed.",
+            "python -m pytest tests/test_forward_edge_session_runner.py -q --basetemp=.pytest-pa0314-close-final: 86 passed.",
+            "Focused carry authorization, intraday flatten-required, expiry settlement-required, cross-session carry and restart regression cases: 9 passed.",
             "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed.",
             "mypy src/financial_brain/forward_edge/session_runner.py: passed."
           ]
@@ -3217,5 +3219,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "fa21308ac75f4da5df5ba4c1b9440694c80a28159ff3bb5b7cfa2c60bf3b6aba"
+  "report_sha256": "41874d2eb719248d9b181c8eda012df316285b359bb337e95a4403501600303f"
 }
