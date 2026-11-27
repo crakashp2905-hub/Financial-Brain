@@ -10872,11 +10872,15 @@
     {
       "id": "PA-13-11",
       "text": "Detect performance drift using calibrated rolling metrics and sequential monitoring that controls false alarms from repeated peeking.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/risk/degradation.py implements one-sided standardized CUSUM and a rolling-window t-statistic; baseline is taken from earlier observations and assess combines detector alarms.",
+        "tests/test_phase5_risk_controls.py covers synthetic sustained-drop detection, stable-edge behavior, baseline exclusion and minimum-sample refusal.",
+        "No repeated-peeking control (e.g., calibrated sequential alpha spending/always-valid boundaries) or empirical false-alarm calibration is implemented; thresholds are fixed defaults, so the full requirement is not met."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T09:50:00Z",
       "commit": null
     },
     {
@@ -21645,6 +21649,7 @@
       "PA-13-08",
       "PA-13-09",
       "PA-13-10",
+      "PA-13-11",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22068,13 +22073,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1048,
+    "audited_count": 1049,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 909,
-      "UNASSESSED": 330
+      "PARTIAL": 910,
+      "UNASSESSED": 329
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22223,7 +22228,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 909,
-    "UNASSESSED": 330
+    "PARTIAL": 910,
+    "UNASSESSED": 329
   }
 }
