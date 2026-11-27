@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "a7a229ef629508b6ac6ffad69f568532ec0298646a4ef810376f6f86bf2cb974",
-  "audit_export_sha256": "0f29b5b47a1dd8f62c5e066ffd9c5bc1376aea0215bd8d530df94caf30f229c8",
+  "status_ledger_sha256": "b2a4ad19918e1af2a4cc5bb8a3e4f252a9cc91e7873f61036c91a6591720cff5",
+  "audit_export_sha256": "bac2ac569147a17a996754603759a7a257f437ab97df9923af9729713483acc3",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 135,
@@ -1293,14 +1293,16 @@
             "text": "Unify buy/close/sell-short/buy-to-cover, options premium and spreads, ETF shares, corporate cash actions and mutual-fund NAV-order events without losing asset-specific semantics."
           },
           "commit": "727958fe",
-          "blocker": "Partial: explicit short/cover actions are now preserved and bounded in the canonical portfolio projection, but ForwardSessionRunner and OMS remain long-only; all books still lack one transactional asset-aware order/accounting boundary. ETF corporate actions, MF NAV lifecycle, option-spread margin/settlement reconciliation and universal runner import remain open.",
+          "blocker": "Partial: source-bound equity/ETF split accounting is implemented, but no official corporate-action feed importer/authentication or dividend/distribution connector exists; mutual-fund NAV lifecycle imports, margin/settlement handling and universal desk/OMS transaction wiring remain open.",
           "evidence": [
             "CanonicalPortfolioLedger provides one append-only consolidated paper event projection with asset-class-specific fills, marks, cash flows, fees and unresolved positions; it does not infer executions.",
             "The new derivatives adapter maps the verified option subledger event chain into canonical events. Cash settlement closes each option at intrinsic value. Physical settlement closes the option at zero and records sourced strike delivery plus an underlying mark; premium fills remain the original per-leg events.",
             "Canonical expiry events are explicitly limited to option positions and allow a zero price only for expiry closure, avoiding invented positive-price exits or synthetic cash flows.",
             "This is a partial multi-asset integration: all desks do not import through one transactional OMS/accounting boundary; ETF corporate actions, MF NAV/order lifecycle reconciliation, margin/settlement calendars, current account opening balances and universal OMS integration remain open.",
             "src/financial_brain/portfolio/canonical_ledger.py adds an explicit position_action to source-bound fills while retaining BUY/SELL as the execution side. SELL_SHORT opens/increases only an existing short or flat position; BUY_TO_COVER closes no more than existing short inventory; explicit SELL closes no more than existing long inventory. Ambiguous legacy BUY/SELL events retain v1 projection compatibility.",
-            "tests/test_canonical_portfolio_ledger.py verifies short opening, partial buy-to-cover, realized and unrealized P&L, cash projection, explicit source event action retention, and rejection of short crossing/over-cover. ForwardSessionRunner remains long-only and does not yet consume these canonical position actions."
+            "tests/test_canonical_portfolio_ledger.py verifies short opening, partial buy-to-cover, realized and unrealized P&L, cash projection, explicit source event action retention, and rejection of short crossing/over-cover. ForwardSessionRunner remains long-only and does not yet consume these canonical position actions.",
+            "EventKind.POSITION_ADJUSTMENT now supports source-identified equity/ETF SPLIT events at account level, across all matching sleeves, with a non-unit positive ratio, explicit action id/reference, no execution price or cash posting, and an existing-position requirement. Projection scales units and inversely adjusts average cost while preserving total basis, clears pre-split marks pending a post-action mark, and applies the split in chronological transition validation. The capital-efficiency report mirrors quantity/basis handling and removes stale pre-split marks.",
+            "tests/test_canonical_portfolio_ledger.py and tests/test_capital_efficiency.py cover split accounting, unchanged cash/realized P&L, replay idempotency, missing-position/invalid-ratio rejection, stale-mark invalidation, and capital-efficiency basis/turnover."
           ],
           "tests": [
             "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-options-accounting-final: 27 passed.",
@@ -1308,7 +1310,9 @@
             "Ruff check and targeted mypy passed for seven changed source/test modules.",
             "python -m pytest tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-pa0402-short-final: 13 passed.",
             "ruff check src/financial_brain/portfolio/canonical_ledger.py tests/test_canonical_portfolio_ledger.py: passed.",
-            "mypy src/financial_brain/portfolio/canonical_ledger.py: passed."
+            "mypy src/financial_brain/portfolio/canonical_ledger.py: passed.",
+            "python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-split-final2: 26 passed.",
+            "Ruff passed for canonical_ledger.py, capital_efficiency.py and their two focused test modules; targeted mypy passed for both source modules."
           ]
         },
         {
@@ -3577,5 +3581,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "3af7cdabe96aa59213b511512d5f60cf5ac7a4a242cc10df07426a81b2432450"
+  "report_sha256": "1ae2cd12e6db302ce959b2ed4dd799eea0412d00403412b0efd9e0267168a203"
 }

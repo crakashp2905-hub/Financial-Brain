@@ -7984,10 +7984,12 @@
         "Canonical expiry events are explicitly limited to option positions and allow a zero price only for expiry closure, avoiding invented positive-price exits or synthetic cash flows.",
         "This is a partial multi-asset integration: all desks do not import through one transactional OMS/accounting boundary; ETF corporate actions, MF NAV/order lifecycle reconciliation, margin/settlement calendars, current account opening balances and universal OMS integration remain open.",
         "src/financial_brain/portfolio/canonical_ledger.py adds an explicit position_action to source-bound fills while retaining BUY/SELL as the execution side. SELL_SHORT opens/increases only an existing short or flat position; BUY_TO_COVER closes no more than existing short inventory; explicit SELL closes no more than existing long inventory. Ambiguous legacy BUY/SELL events retain v1 projection compatibility.",
-        "tests/test_canonical_portfolio_ledger.py verifies short opening, partial buy-to-cover, realized and unrealized P&L, cash projection, explicit source event action retention, and rejection of short crossing/over-cover. ForwardSessionRunner remains long-only and does not yet consume these canonical position actions."
+        "tests/test_canonical_portfolio_ledger.py verifies short opening, partial buy-to-cover, realized and unrealized P&L, cash projection, explicit source event action retention, and rejection of short crossing/over-cover. ForwardSessionRunner remains long-only and does not yet consume these canonical position actions.",
+        "EventKind.POSITION_ADJUSTMENT now supports source-identified equity/ETF SPLIT events at account level, across all matching sleeves, with a non-unit positive ratio, explicit action id/reference, no execution price or cash posting, and an existing-position requirement. Projection scales units and inversely adjusts average cost while preserving total basis, clears pre-split marks pending a post-action mark, and applies the split in chronological transition validation. The capital-efficiency report mirrors quantity/basis handling and removes stale pre-split marks.",
+        "tests/test_canonical_portfolio_ledger.py and tests/test_capital_efficiency.py cover split accounting, unchanged cash/realized P&L, replay idempotency, missing-position/invalid-ratio rejection, stale-mark invalidation, and capital-efficiency basis/turnover."
       ],
-      "blocker": "Partial: explicit short/cover actions are now preserved and bounded in the canonical portfolio projection, but ForwardSessionRunner and OMS remain long-only; all books still lack one transactional asset-aware order/accounting boundary. ETF corporate actions, MF NAV lifecycle, option-spread margin/settlement reconciliation and universal runner import remain open.",
-      "last_audited_at_utc": "2026-11-27T01:42:43+00:00",
+      "blocker": "Partial: source-bound equity/ETF split accounting is implemented, but no official corporate-action feed importer/authentication or dividend/distribution connector exists; mutual-fund NAV lifecycle imports, margin/settlement handling and universal desk/OMS transaction wiring remain open.",
+      "last_audited_at_utc": "2026-11-27T15:00:00+00:00",
       "commit": "727958fe",
       "test_evidence": [
         "python -m pytest tests/test_derivatives_portfolio_adapter.py tests/test_derivatives_subledger.py tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-options-accounting-final: 27 passed.",
@@ -7995,9 +7997,11 @@
         "Ruff check and targeted mypy passed for seven changed source/test modules.",
         "python -m pytest tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-pa0402-short-final: 13 passed.",
         "ruff check src/financial_brain/portfolio/canonical_ledger.py tests/test_canonical_portfolio_ledger.py: passed.",
-        "mypy src/financial_brain/portfolio/canonical_ledger.py: passed."
+        "mypy src/financial_brain/portfolio/canonical_ledger.py: passed.",
+        "python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_capital_efficiency.py -q --basetemp .pytest-pa0402-split-final2: 26 passed.",
+        "Ruff passed for canonical_ledger.py, capital_efficiency.py and their two focused test modules; targeted mypy passed for both source modules."
       ],
-      "test_result": "Canonical portfolio fills now preserve explicit SELL_SHORT and BUY_TO_COVER semantics and reject oversell/cross-through transitions while keeping physical side separately recorded. 13 ledger tests, Ruff and mypy pass. Overall multi-asset OMS integration remains partial."
+      "test_result": "Canonical position accounting now handles account-level source-identified equity/ETF split adjustments across all sleeves without synthetic fills or cash, preserves total historical basis, invalidates pre-split marks, and supports replay-safe capital-efficiency reporting. The 26-test focused ledger/capital-efficiency suite, Ruff and targeted mypy pass. Official corporate-action ingestion and the broader all-desk multi-asset transaction boundary remain open."
     },
     {
       "id": "PA-04-03",

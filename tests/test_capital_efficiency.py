@@ -98,3 +98,46 @@ def test_capital_efficiency_treats_zero_value_expiry_as_option_close(tmp_path):
                                        risk_budget_inr=Decimal("1000"))
     assert report.net_pnl_inr == Decimal("-10")
     assert report.annualized_turnover_inr == Decimal(10) * Decimal(365) / Decimal(181)
+
+
+def test_capital_efficiency_preserves_basis_across_split_and_requires_post_split_mark(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "split.sqlite3")
+    ledger.import_events([
+        event("total", EventKind.CASH_FLOW, START, cash_delta="100000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "TOTAL"}),
+        event("deployed", EventKind.CASH_FLOW, START, cash_delta="50000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "DEPLOYED"}),
+        event("buy", EventKind.FILL, START.replace(day=10), asset_class=AssetClass.ETF,
+              instrument_id="NSE:ABC", side="BUY", quantity="10", price="100"),
+        event("split", EventKind.POSITION_ADJUSTMENT, START.replace(day=20),
+              asset_class=AssetClass.ETF, instrument_id="NSE:ABC", quantity="2",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-split-1",
+                        "source_reference": "NSE:CA:2026-01-20:ABC"}),
+        event("post-split-mark", EventKind.MARK, START.replace(day=21), asset_class=AssetClass.ETF,
+              instrument_id="NSE:ABC", price="55"),
+    ])
+    report = report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
+                                       risk_budget_inr=Decimal("1000"))
+    assert report.net_pnl_inr == Decimal("100")
+    assert report.annualized_turnover_inr == Decimal(1000) * Decimal(365) / Decimal(181)
+
+
+def test_capital_efficiency_refuses_pre_split_mark_as_interval_mark(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "stale-split-mark.sqlite3")
+    ledger.import_events([
+        event("total", EventKind.CASH_FLOW, START, cash_delta="100000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "TOTAL"}),
+        event("deployed", EventKind.CASH_FLOW, START, cash_delta="50000",
+              metadata={"cash_flow_type": "OPENING_BALANCE", "capital_type": "DEPLOYED"}),
+        event("buy", EventKind.FILL, START.replace(day=10), asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:ABC", side="BUY", quantity="10", price="100"),
+        event("pre-split-mark", EventKind.MARK, START.replace(day=15), asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:ABC", price="110"),
+        event("split", EventKind.POSITION_ADJUSTMENT, START.replace(day=20),
+              asset_class=AssetClass.EQUITY, instrument_id="NSE:ABC", quantity="2",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-split-2",
+                        "source_reference": "NSE:CA:2026-01-20:ABC"}),
+    ])
+    with pytest.raises(CapitalEfficiencyError, match="lacks an interval-end mark"):
+        report_capital_efficiency(ledger=ledger, account_id="paper", start=START, end=END,
+                                  risk_budget_inr=100)

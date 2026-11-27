@@ -96,6 +96,72 @@ def test_futures_notional_is_not_booked_as_cash_and_variation_margin_is(tmp_path
     assert snapshot["cash"]["INR"] == Decimal("12500")
 
 
+def test_sourced_split_adjusts_units_and_basis_without_fabricating_cash_or_mark(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "split.sqlite")
+    split_events = [
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="5000"),
+        event("etf-buy", EventKind.FILL, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", side="BUY", quantity="10", price="500",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("pre-split-mark", EventKind.MARK, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", price="510",
+              occurred_at="2026-11-20T15:00:00+05:30"),
+        event("two-for-one", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.ETF,
+              instrument_id="NSE:NIFTYBEES", quantity="2",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-1",
+                        "source_reference": "NSE:CA:2026-11-21:ABC"}),
+    ]
+    assert ledger.import_events(split_events) == {"received": 4, "added": 4, "already_present": 0}
+    assert ledger.import_events(split_events) == {"received": 4, "added": 0, "already_present": 4}
+
+    snapshot = ledger.snapshot("paper-main")
+    position = snapshot["positions"][0]
+    assert position["quantity"] == Decimal("20")
+    assert position["average_cost"] == Decimal("250")
+    assert position["mark"] is None  # pre-split price must not be reused as a current mark
+    assert position["unrealized_pnl"] is None
+    assert position["realized_pnl"] == Decimal(0)
+    assert snapshot["cash"]["INR"] == Decimal(0)
+
+
+def test_split_adjustment_rejects_missing_position_and_invalid_ratio_atomically(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "bad-split.sqlite")
+    split = event("orphan-split", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.EQUITY,
+                  instrument_id="NSE:INFY", quantity="2",
+                  metadata={"action_type": "SPLIT", "action_id": "exchange-action-2",
+                            "source_reference": "NSE:CA:2026-11-21:INFY"})
+    with pytest.raises(CanonicalLedgerError, match="existing open position"):
+        ledger.append(split)
+    assert ledger.event_count() == 0
+
+    with pytest.raises(CanonicalLedgerError, match="non-unit positive ratio"):
+        event("unit-split", EventKind.POSITION_ADJUSTMENT, asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", quantity="1",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-3",
+                        "source_reference": "NSE:CA:2026-11-21:INFY"}).normalized()
+
+
+def test_one_account_split_adjusts_matching_positions_across_sleeves_once(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "multi-sleeve-split.sqlite")
+    ledger.import_events([
+        event("swing-buy", EventKind.FILL, sleeve_id="swing", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="3", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("intraday-buy", EventKind.FILL, sleeve_id="intraday", asset_class=AssetClass.EQUITY,
+              instrument_id="NSE:INFY", side="BUY", quantity="2", price="100",
+              occurred_at="2026-11-20T09:01:00+05:30"),
+        event("account-split", EventKind.POSITION_ADJUSTMENT, sleeve_id="corporate-actions",
+              asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY", quantity="2",
+              occurred_at="2026-11-21T09:00:00+05:30",
+              metadata={"action_type": "SPLIT", "action_id": "exchange-action-multi",
+                        "source_reference": "NSE:CA:2026-11-21:INFY"}),
+    ])
+    positions = {row["sleeve_id"]: row for row in ledger.snapshot("paper-main")["positions"]}
+    assert positions["swing"]["quantity"] == Decimal("6")
+    assert positions["intraday"]["quantity"] == Decimal("4")
+
+
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     row = event("legacy-position", EventKind.UNRESOLVED_POSITION, asset_class=AssetClass.ETF,

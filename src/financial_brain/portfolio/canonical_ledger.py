@@ -35,6 +35,7 @@ class EventKind(StrEnum):
     CASH_FLOW = "CASH_FLOW"
     FILL = "FILL"
     EXPIRY_SETTLEMENT = "EXPIRY_SETTLEMENT"
+    POSITION_ADJUSTMENT = "POSITION_ADJUSTMENT"
     FEE = "FEE"
     MARK = "MARK"
     UNRESOLVED_POSITION = "UNRESOLVED_POSITION"
@@ -145,6 +146,21 @@ class PortfolioEvent:
             if (self.quantity is not None or self.cash_delta is not None
                     or row["side"] is not None or row["position_action"] is not None):
                 raise CanonicalLedgerError("a mark cannot carry execution side/action, quantity or cash")
+        elif kind is EventKind.POSITION_ADJUSTMENT:
+            metadata = row["metadata"]
+            ratio = _required_decimal(self.quantity, "quantity")
+            if (not row["asset_class"] or AssetClass(str(row["asset_class"])) not in
+                    {AssetClass.EQUITY, AssetClass.ETF} or not row["instrument_id"]):
+                raise CanonicalLedgerError("a split adjustment needs an equity or ETF instrument")
+            if (not isinstance(metadata, dict) or metadata.get("action_type") != "SPLIT"
+                    or ratio <= 0 or ratio == 1):
+                raise CanonicalLedgerError("a split adjustment needs a non-unit positive ratio")
+            if not all(isinstance(metadata.get(key), str) and metadata[key].strip()
+                       for key in ("action_id", "source_reference")):
+                raise CanonicalLedgerError("a split adjustment needs source action identity and reference")
+            if row["side"] is not None or row["position_action"] is not None \
+                    or self.price is not None or self.cash_delta is not None:
+                raise CanonicalLedgerError("a split adjustment cannot carry execution price, side or cash")
         elif kind in {EventKind.CASH_FLOW, EventKind.FEE}:
             amount = _required_decimal(self.cash_delta, "cash_delta")
             if self.quantity is not None or self.price is not None or self.instrument_id is not None:
@@ -329,7 +345,21 @@ class CanonicalPortfolioLedger:
         broker_trade_ids: set[str] = set()
         for stored in rows:
             row = json.loads(stored[0])
-            if row.get("event_kind") not in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
+            kind = row.get("event_kind")
+            if kind == EventKind.POSITION_ADJUSTMENT.value:
+                identity = (str(row["asset_class"]), str(row["instrument_id"]))
+                matched = [key for key, value in positions.items()
+                           if key[:2] == identity and value[0] != 0]
+                if not matched:
+                    raise CanonicalLedgerError("split adjustment requires an existing open position")
+                ratio = Decimal(str(row["quantity"]))
+                for key in matched:
+                    old_quantity, old_currency, old_multiplier = positions[key]
+                    if old_currency != row["currency"] or old_multiplier != Decimal(str(row["multiplier"])):
+                        raise CanonicalLedgerError("split adjustment position identity does not match")
+                    positions[key] = (old_quantity * ratio, old_currency, old_multiplier)
+                continue
+            if kind not in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
                 continue
             metadata = row.get("metadata")
             if row.get("evidence_class") == "BROKER_EXECUTION_RECEIPT":
@@ -469,6 +499,20 @@ class CanonicalPortfolioLedger:
                 if previous_mark is not None and previous_mark[2] != currency:
                     raise CanonicalLedgerError("one instrument mark cannot mix currencies")
                 marks[mark_key] = mark_value
+                continue
+            if kind is EventKind.POSITION_ADJUSTMENT:
+                identity = (str(event["asset_class"]), str(event["instrument_id"]))
+                matched = [pos for key, pos in positions.items()
+                           if key[:2] == identity and pos.quantity != 0]
+                if not matched:
+                    raise CanonicalLedgerError("split adjustment requires an existing open position")
+                ratio = Decimal(str(event["quantity"]))
+                for pos in matched:
+                    pos.quantity *= ratio
+                    pos.average_cost /= ratio
+                # A pre-action mark is no longer an observed comparable price. Wait for a
+                # post-action quote/mark instead of manufacturing one from the split ratio.
+                marks.pop(identity, None)
                 continue
             sleeve = str(event["sleeve_id"])
             key = (asset_class, instrument, sleeve)

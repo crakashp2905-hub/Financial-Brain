@@ -119,6 +119,14 @@ def report_capital_efficiency(*, ledger: CanonicalPortfolioLedger, account_id: s
         elif kind == EventKind.MARK.value:
             key = (str(row["asset_class"]), str(row["instrument_id"]))
             marks[key] = _money(row["price"], "mark")
+        elif kind == EventKind.POSITION_ADJUSTMENT.value:
+            key = (str(row["asset_class"]), str(row["instrument_id"]))
+            if key not in positions or positions[key] == 0:
+                raise CapitalEfficiencyError("split adjustment requires existing interval inventory")
+            positions[key] *= _money(row["quantity"], "split ratio")
+            # Preserve total historical cost basis; a pre-split mark is not executable
+            # post-action evidence and must be replaced by a later observed mark.
+            marks.pop(key, None)
         elif kind == EventKind.FEE.value:
             fee_delta = _money(row["cash_delta"], "fee")
             fees += -fee_delta
