@@ -207,6 +207,62 @@ def frequency_baseline(train_labels: list[str]) -> Callable[[], dict[str, float]
     return lambda: dict(probabilities)
 
 
+def _deterministic_forecast(method: str, expected_return: float, flat_band: float,
+                            predicted_label: str) -> dict[str, float | str]:
+    probabilities = {name: float(name == predicted_label) for name in ("UP", "DOWN", "FLAT")}
+    return {"method": method, "expected_return": expected_return,
+            "flat_band": flat_band, "predicted_label": predicted_label,
+            "p_up": probabilities["UP"], "p_down": probabilities["DOWN"],
+            "p_flat": probabilities["FLAT"]}
+
+
+def random_walk_baseline(flat_band: float) -> dict[str, float | str]:
+    """Zero expected price change, classified with a training-frozen FLAT band."""
+    if not isfinite(flat_band) or flat_band <= 0:
+        raise SeriesError("random-walk baseline needs a positive finite flat band")
+    return _deterministic_forecast("RANDOM_WALK", 0.0, flat_band,
+                                   label(0.0, flat_band) or "FLAT")
+
+
+def volatility_aware_no_direction_baseline(
+        train_returns: list[float], round_trip_cost_fraction: float) -> dict[str, float | str]:
+    """Always abstain directionally; set its expected-move band from training volatility and cost."""
+    band = cost_aware_flat_band(train_returns, round_trip_cost_fraction)
+    variance = sum(value * value for value in train_returns) / len(train_returns)
+    volatility = variance ** 0.5
+    band = max(band, volatility)
+    forecast = _deterministic_forecast("VOLATILITY_AWARE_NO_DIRECTION", 0.0, band, "FLAT")
+    forecast["expected_move_abs"] = volatility
+    return forecast
+
+
+def previous_bar_baseline(previous_return: float, flat_band: float) -> dict[str, float | str]:
+    """Repeat the previous bar's return only when it clears the frozen FLAT band."""
+    if not isfinite(previous_return) or not isfinite(flat_band) or flat_band <= 0:
+        raise SeriesError("previous-bar baseline needs finite return and positive flat band")
+    predicted = previous_return if abs(previous_return) > flat_band else 0.0
+    predicted_label = label(predicted, flat_band) or "FLAT"
+    return _deterministic_forecast("PREVIOUS_BAR", predicted, flat_band, predicted_label)
+
+
+def same_time_of_day_baseline(
+        train_labels_by_bucket: dict[str, list[str]], train_labels: list[str]
+        ) -> Callable[[str], dict[str, float]]:
+    """Use training-only class frequencies for each time bucket, with global fallback."""
+    if not train_labels:
+        raise SeriesError("same-time-of-day baseline needs training labels")
+    fallback = frequency_baseline(train_labels)()
+    by_bucket = {bucket: frequency_baseline(labels)()
+                 for bucket, labels in train_labels_by_bucket.items() if labels}
+
+    def predict(bucket: str) -> dict[str, float]:
+        if not bucket:
+            raise SeriesError("time-of-day bucket is required")
+        return dict(by_bucket.get(bucket, fallback))
+
+    return predict
+
+
 def check_probabilities(probabilities: dict[str, float], tolerance: float = 1e-9) -> None:
     if (set(probabilities) != {"UP", "DOWN", "FLAT"}
             or any(not isfinite(value) or value < 0 or value > 1 for value in probabilities.values())
@@ -226,5 +282,7 @@ __all__ = [
     "Bar", "IndexForwardTarget", "SeriesError", "bars_15m", "brier", "check_probabilities", "completed_before",
     "features_at", "forward_return", "forward_targets", "frequency_baseline", "label", "leak_check",
     "summarize_forward_distributions",
-    "cost_aware_flat_band", "noise_threshold", "purged_splits", "purged_time_splits",
+    "cost_aware_flat_band", "noise_threshold", "previous_bar_baseline", "random_walk_baseline",
+    "same_time_of_day_baseline", "volatility_aware_no_direction_baseline",
+    "purged_splits", "purged_time_splits",
 ]

@@ -16,8 +16,12 @@ from financial_brain.forecasting.index_15m import (
     label,
     leak_check,
     noise_threshold,
+    previous_bar_baseline,
     purged_splits,
     purged_time_splits,
+    random_walk_baseline,
+    same_time_of_day_baseline,
+    volatility_aware_no_direction_baseline,
 )
 from financial_brain.forecasting.index_market import IndexMinute, build_15m_bars, forward_return
 
@@ -121,3 +125,28 @@ def test_cost_aware_flat_band_uses_training_noise_or_all_in_cost_floor():
     assert cost_aware_flat_band(returns, 0.02) == 0.02
     with pytest.raises(SeriesError, match="finite and nonnegative"):
         cost_aware_flat_band(returns, -0.001)
+
+
+def test_index_forecast_hard_baselines_are_explicit_and_training_only():
+    walk = random_walk_baseline(0.01)
+    assert walk["method"] == "RANDOM_WALK"
+    assert walk["expected_return"] == 0.0
+    assert walk["predicted_label"] == "FLAT"
+
+    no_direction = volatility_aware_no_direction_baseline([0.01, -0.02, 0.03], 0.005)
+    assert no_direction["method"] == "VOLATILITY_AWARE_NO_DIRECTION"
+    assert no_direction["predicted_label"] == "FLAT"
+    assert no_direction["flat_band"] >= no_direction["expected_move_abs"]
+
+    previous = previous_bar_baseline(0.04, 0.01)
+    assert previous["method"] == "PREVIOUS_BAR"
+    assert previous["predicted_label"] == "UP"
+    assert previous["expected_return"] == 0.04
+    assert previous_bar_baseline(0.005, 0.01)["predicted_label"] == "FLAT"
+
+    climatology = same_time_of_day_baseline(
+        {"open": ["UP", "UP", "FLAT"]}, ["UP", "DOWN", "FLAT", "FLAT"])
+    assert climatology("open") == {"UP": 2 / 3, "DOWN": 0.0, "FLAT": 1 / 3}
+    assert climatology("midday") == {"UP": 0.25, "DOWN": 0.25, "FLAT": 0.5}
+    with pytest.raises(SeriesError, match="training labels"):
+        same_time_of_day_baseline({}, [])
