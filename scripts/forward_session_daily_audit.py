@@ -18,6 +18,7 @@ from typing import Any
 
 
 GENESIS = "0" * 64
+DEFAULT_MAX_QUOTE_AGE_MS = 5_000
 
 
 def canonical(value: Any) -> str:
@@ -372,6 +373,51 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
                       else None)
     eligible_status = ("FROZEN_SESSION_CONFIG" if eligible_count is not None else
                        "UNKNOWN: raw session does not carry a frozen eligible-strategy denominator")
+    terminal_receipt_states = {"FILLED", "CANCELED", "REJECTED", "MISSED", "EXPIRED"}
+    unaccounted_order_ids = sorted(
+        order_id for order_id in intents
+        if order_id not in receipts or receipts[order_id].get("status") not in terminal_receipt_states
+    )
+    max_quote_age = config.get("constraints", {}).get("max_quote_age_ms", DEFAULT_MAX_QUOTE_AGE_MS)
+    decision_quote_ages = [decision.get("last_good_quote_age_ms") for decision in decisions.values()
+                           if decision.get("input_event_ids")]
+    source_freshness_pass = (
+        isinstance(max_quote_age, (int, float)) and not isinstance(max_quote_age, bool)
+        and bool(decision_quote_ages)
+        and all(isinstance(age, (int, float)) and not isinstance(age, bool)
+                and 0 <= age <= max_quote_age for age in decision_quote_ages)
+    )
+    unsupported_fill_order_ids = []
+    for order_id, receipt in receipts.items():
+        try:
+            quantity = int(receipt.get("filled_quantity", 0) or 0)
+        except (TypeError, ValueError, OverflowError):
+            quantity = 0
+        if (receipt.get("status") in {"FILLED", "PARTIAL"} and quantity > 0
+                and not isinstance(receipt.get("quote_provenance"), dict)):
+            unsupported_fill_order_ids.append(order_id)
+    unsupported_fill_order_ids.sort()
+    close_body = ({key: value for key, value in session_close.items() if key != "report_sha256"}
+                  if isinstance(session_close, dict) else None)
+    close_report_hash_valid = (isinstance(close_body, dict)
+                               and session_close.get("report_sha256") == digest(close_body))
+    operational_checks = {
+        "unaccounted_open_orders_zero": len(unaccounted_order_ids) == 0,
+        "unaccounted_order_ids": unaccounted_order_ids,
+        "unsupported_fills_zero": len(unsupported_fill_order_ids) == 0,
+        "unsupported_fill_order_ids": unsupported_fill_order_ids,
+        "unauthorized_broker_calls_zero": None,
+        "broker_call_audit_status": "UNKNOWN: ForwardSessionRunner raw logs contain no broker-call audit source",
+        "source_freshness_pass": source_freshness_pass,
+        "source_freshness_status": "PASS" if source_freshness_pass else "FAIL_OR_UNVERIFIED",
+        "complete_hashed_close_output": bool(close_report_hash_valid),
+        "close_report_hash_valid": bool(close_report_hash_valid),
+    }
+    operational_checks["gate_status"] = (
+        "PASS" if all(operational_checks[key] is True for key in (
+            "unaccounted_open_orders_zero", "unsupported_fills_zero",
+            "source_freshness_pass", "complete_hashed_close_output"))
+        and operational_checks["unauthorized_broker_calls_zero"] is True else "INCOMPLETE")
     intents_by_decision: dict[str, list[str]] = {}
     for order_id, intent in intents.items():
         decision_id = intent.get("decision_id")
@@ -436,6 +482,7 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
         "session_close_status": session_close.get("status") if isinstance(session_close, dict) else None,
         "financial_reconciliation_status": day_end.get("reconciled") if isinstance(day_end, dict) else None,
         "performance_dimensions": performance_dimensions,
+        "operational_checks": operational_checks,
     }
     return {
         "session_id": session_id,
@@ -513,6 +560,12 @@ def render_one_page_proof(report: dict[str, Any], session: dict[str, Any]) -> st
         f"- Worst loss: {proof['worst_loss_status']}",
         f"- Benchmark: {proof['benchmark_status']}",
         f"- Attribution gaps: {', '.join(proof['performance_dimensions']['unavailable_dimensions'])}",
+        f"- Operational gate: {proof['operational_checks']['gate_status']}",
+        f"- Unaccounted orders: {len(proof['operational_checks']['unaccounted_order_ids'])}",
+        f"- Unsupported fills: {len(proof['operational_checks']['unsupported_fill_order_ids'])}",
+        f"- Unauthorized broker calls: {proof['operational_checks']['broker_call_audit_status']}",
+        f"- Source freshness: {proof['operational_checks']['source_freshness_status']}",
+        f"- Hashed close output valid: {proof['operational_checks']['close_report_hash_valid']}",
         f"- Financial reconciliation: {value('financial_reconciliation_status')}",
         f"- Decision lineage valid: {session['decision_quote_lineage_valid']}",
         f"- Raw hash chain valid: {session['raw_hash_chain_valid']}",
