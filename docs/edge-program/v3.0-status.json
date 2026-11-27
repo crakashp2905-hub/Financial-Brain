@@ -9349,12 +9349,25 @@
     {
       "id": "PA-07-17",
       "text": "Publish a session-by-session shadow-versus-paper ledger and monthly post-cost P&L decomposition; only prospectively filled paper positions count as paper returns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`forward_edge.strategy_attribution` and `pnl_dashboard` can decompose ledger-reconciled after-cost P&L, but the repo tracker shows that live paper ledgers and benchmark feeds are not connected to those views.",
+        "Commit pending adds `forward_edge.prospective_pnl.build_session_pnl`: it reconciles canonical previous/current OMS accounting, marks, cumulative itemized fill costs and prospectively sealed fill receipts; net paper P&L is admitted only when actual filled receipts reconcile exactly to the current paper inventory.",
+        "The report separates realized gross P&L, unrealized change, total transaction charges and net P&L; it keeps frozen target-weight shadow gross/estimated-cost/net results distinct from paper fills and supports explicit cash-only sessions with no position P&L eligibility.",
+        "`ProspectivePnlLedger` stores session reports append-only in SQLite, verifies payload hashes, allows identical retries, rejects conflicting or out-of-order sessions, and aggregates monthly paper/shadow gross, costs and net P&L.",
+        "The ledger builder is not yet wired to `ForwardSessionRunner`, automatic daily marks, shadow-scan feeds or the existing P&L dashboard. Mark/source and shadow-cost evidence are caller-supplied, so recurring publication and full source custody remain incomplete."
+      ],
+      "blocker": "Partial: a durable, hash-verified session P&L builder and monthly aggregate are implemented, with actual net returns tied to prospectively sealed fills; automatic runner/mark/shadow/dashboard integration and independent evidence custody remain.",
+      "last_audited_at_utc": "2026-11-27T05:56:05Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0717-ledgerfinal tests/test_forward_edge_prospective_pnl.py -q: 5 passed, covering filled inventory reconciliation, paper/shadow split, monthly sums, immutable replay, unsealed-fill rejection, held-position P&L and cash-only status.",
+        "Ruff on prospective_pnl and its tests: passed.",
+        "mypy src/financial_brain/forward_edge/prospective_pnl.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Session P&L uses only canonical paper inventory reconciled to sealed prospective fill receipts; it separates gross/cost/net and shadow results, writes idempotently to a hash-verified session ledger and rolls up monthly. Scheduled forward-runner/report wiring is incomplete; PA-07-17 remains PARTIAL."
     },
     {
       "id": "PA-07-18",
@@ -21124,6 +21137,7 @@
       "PA-07-14",
       "PA-07-15",
       "PA-07-16",
+      "PA-07-17",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21562,11 +21576,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 969,
+    "audited_count": 970,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 839,
-      "UNASSESSED": 409,
+      "PARTIAL": 840,
+      "UNASSESSED": 408,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21715,8 +21729,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 839,
-    "UNASSESSED": 409,
+    "PARTIAL": 840,
+    "UNASSESSED": 408,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }

@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "cf61fce10670c31add822d198dded038f7ea231677b1ce093edb39bcb431e3e8",
-  "audit_export_sha256": "b4124cf8c0b7bd9409ecef413a9934b25059e31a8fde7e07d62bb0771b827c91",
+  "status_ledger_sha256": "2138349fcd5affff0a50d758fbfb9d58a687479a02f2e6e68e04a7bed247bd5a",
+  "audit_export_sha256": "ba3a8fb1144d0ba3b1f3759b482b7f04e29a48faad2698f062a6370ee978ad17",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 839,
-    "UNASSESSED": 409
+    "PARTIAL": 840,
+    "UNASSESSED": 408
   },
-  "assessed_count": 969,
-  "unassessed_count": 409,
+  "assessed_count": 970,
+  "unassessed_count": 408,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 59,
-        "UNASSESSED": 2
+        "PARTIAL": 60,
+        "UNASSESSED": 1
       },
       "evidence": [
         {
@@ -3124,16 +3124,27 @@
         },
         {
           "item_id": "PA-07-17",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1077,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Publish a session-by-session shadow-versus-paper ledger and monthly post-cost P&L decomposition; only prospectively filled paper positions count as paper returns."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: a durable, hash-verified session P&L builder and monthly aggregate are implemented, with actual net returns tied to prospectively sealed fills; automatic runner/mark/shadow/dashboard integration and independent evidence custody remain.",
+          "evidence": [
+            "`forward_edge.strategy_attribution` and `pnl_dashboard` can decompose ledger-reconciled after-cost P&L, but the repo tracker shows that live paper ledgers and benchmark feeds are not connected to those views.",
+            "Commit pending adds `forward_edge.prospective_pnl.build_session_pnl`: it reconciles canonical previous/current OMS accounting, marks, cumulative itemized fill costs and prospectively sealed fill receipts; net paper P&L is admitted only when actual filled receipts reconcile exactly to the current paper inventory.",
+            "The report separates realized gross P&L, unrealized change, total transaction charges and net P&L; it keeps frozen target-weight shadow gross/estimated-cost/net results distinct from paper fills and supports explicit cash-only sessions with no position P&L eligibility.",
+            "`ProspectivePnlLedger` stores session reports append-only in SQLite, verifies payload hashes, allows identical retries, rejects conflicting or out-of-order sessions, and aggregates monthly paper/shadow gross, costs and net P&L.",
+            "The ledger builder is not yet wired to `ForwardSessionRunner`, automatic daily marks, shadow-scan feeds or the existing P&L dashboard. Mark/source and shadow-cost evidence are caller-supplied, so recurring publication and full source custody remain incomplete."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0717-ledgerfinal tests/test_forward_edge_prospective_pnl.py -q: 5 passed, covering filled inventory reconciliation, paper/shadow split, monthly sums, immutable replay, unsealed-fill rejection, held-position P&L and cash-only status.",
+            "Ruff on prospective_pnl and its tests: passed.",
+            "mypy src/financial_brain/forward_edge/prospective_pnl.py --follow-imports=silent: passed.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-18",
@@ -3519,5 +3530,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "4175fc176b0c76aec8232aa4c3c34e2f81ccce45112eb7296ea5e923e021d42f"
+  "report_sha256": "12a6f5ec0eee03d4342bd3266732951412d53178985c4ccf66bc7a18de674d46"
 }
