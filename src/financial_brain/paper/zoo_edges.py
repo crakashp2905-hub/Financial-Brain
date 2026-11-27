@@ -28,6 +28,8 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
+from ..costs.india import CostModel
+
 VERDICT = {"edge_p1_residual_mom": "failed (t -0.3 / +1.8)", "edge_p2_volmanaged_mom": "failed (t +2.3 / +1.2; halves drawdown)",
            "edge_p3_frog_in_pan": "failed (t +3.3 / +1.7)", "edge_s1_no_news_reversal": "failed (t -4.3 / -0.6)",
            "edge_s2_reaction_drift": "failed (t -0.8 / +0.8)", "edge_f1_long_buildup": "failed (t +0.2 / -2.0)",
@@ -51,6 +53,67 @@ def _panel(rcon, day: date):
 
 MONTHLY_BOOKS = ("edge_p1_residual_mom", "edge_p2_volmanaged_mom", "edge_p3_frog_in_pan",
                  "edge_h003_riskadj_mom", "edge_h005_industry_mom")
+
+
+def size_monthly_candidate(*, strategy: str, targets: dict[str, float],
+                           lineage_to_ticker: dict[str, str], prices: dict[str, float],
+                           capital_inr: float, min_order_inr: float = 5_000.0,
+                           costs: CostModel | None = None) -> dict:
+    """Convert one frozen monthly target set to whole-share, cost-aware paper quantities.
+
+    This reuses the human-review ticket sizer. It does not submit or persist orders.
+    Missing instrument mappings and prices are retained as explicit skipped rows; no
+    unresolved lineage is silently dropped.
+    """
+    from ..execution.ticket import size_book
+
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    normalized: dict[str, float] = {}
+    for lineage, raw_weight in targets.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(raw_weight, bool) or not isinstance(raw_weight, (int, float)) \
+                or not np.isfinite(raw_weight) or not 0 <= raw_weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized[lineage] = float(raw_weight)
+    if sum(normalized.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    book: list[dict] = []
+    lineage_by_ticker: dict[str, str] = {}
+    skipped: list[dict] = []
+    for lineage, weight in sorted(normalized.items()):
+        ticker = lineage_to_ticker.get(lineage)
+        if not isinstance(ticker, str) or not ticker.strip():
+            skipped.append({"lineage": lineage, "why": "no point-in-time ticker mapping"})
+            continue
+        if ticker in lineage_by_ticker:
+            raise ValueError(f"multiple target lineages map to ticker {ticker}")
+        lineage_by_ticker[ticker] = lineage
+        book.append({"ticker": ticker, "weight": weight})
+
+    sized = size_book(book, capital_inr=capital_inr, prices=prices,
+                      min_order_inr=min_order_inr, costs=costs)
+    positions = [{**row, "lineage": lineage_by_ticker[row["ticker"]]}
+                 for row in sized["positions"]]
+    skipped.extend({**row, "lineage": lineage_by_ticker[row["ticker"]]}
+                   for row in sized["skipped"])
+    return {
+        "strategy": strategy,
+        "target_hash": monthly_target_hashes({strategy: normalized})[strategy],
+        "status": ("NO_CANDIDATES" if not normalized else
+                   "SIZED" if positions else "NO_EXECUTABLE_POSITIONS"),
+        "capital_inr": sized["capital"],
+        "positions": positions,
+        "skipped": skipped,
+        "deployed_inr": sized["deployed"],
+        "cash_committed_inr": sized["cash_committed"],
+        "cash_inr": sized["cash"],
+        "entry_fees_inr": sized["entry_fees_total"],
+        "expected_round_trip_fees_inr": sized["fees_total"],
+        "physical_orders_submitted": False,
+    }
 
 
 def _capture_target(name: str, compute, targets: dict[str, dict], errors: dict[str, str]) -> None:

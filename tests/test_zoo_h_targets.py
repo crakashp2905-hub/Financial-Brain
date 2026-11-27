@@ -60,6 +60,53 @@ def test_h003_abstains_on_short_history_or_zero_volatility(n_days):
     assert "no eligible holdings" in out["_errors"]["edge_h003_riskadj_mom"]
 
 
+def test_monthly_candidate_sizing_returns_whole_shares_cash_and_costs():
+    result = ZE.size_monthly_candidate(
+        strategy="edge_h003_riskadj_mom",
+        targets={"L1": 0.5, "L2": 0.5},
+        lineage_to_ticker={"L1": "AAA", "L2": "BBB"},
+        prices={"AAA": 100.0, "BBB": 120.0},
+        capital_inr=100_000.0,
+        min_order_inr=1_000.0,
+    )
+
+    assert result["status"] == "SIZED"
+    assert {row["lineage"] for row in result["positions"]} == {"L1", "L2"}
+    assert all(isinstance(row["shares"], int) and row["shares"] > 0 for row in result["positions"])
+    assert result["cash_committed_inr"] <= result["capital_inr"]
+    assert result["cash_inr"] >= 0
+    assert result["expected_round_trip_fees_inr"] > 0
+    assert result["physical_orders_submitted"] is False
+
+
+def test_monthly_candidate_sizing_preserves_missing_mapping_and_price_rejections():
+    result = ZE.size_monthly_candidate(
+        strategy="edge_h005_industry_mom",
+        targets={"NO-MAP": 0.5, "NO-PRICE": 0.5},
+        lineage_to_ticker={"NO-PRICE": "BBB"}, prices={}, capital_inr=100_000.0,
+        min_order_inr=1_000.0,
+    )
+
+    assert result["status"] == "NO_EXECUTABLE_POSITIONS"
+    assert {row["lineage"] for row in result["skipped"]} == {"NO-MAP", "NO-PRICE"}
+    assert result["cash_inr"] == result["capital_inr"]
+
+
+def test_monthly_candidate_sizing_rejects_duplicate_symbol_aliases_and_overspend_weights():
+    with pytest.raises(ValueError, match="multiple target lineages"):
+        ZE.size_monthly_candidate(
+            strategy="edge_p3_frog_in_pan", targets={"L1": 0.5, "L2": 0.5},
+            lineage_to_ticker={"L1": "AAA", "L2": "AAA"}, prices={"AAA": 100.0},
+            capital_inr=100_000.0,
+        )
+    with pytest.raises(ValueError, match="cannot exceed"):
+        ZE.size_monthly_candidate(
+            strategy="edge_p3_frog_in_pan", targets={"L1": 0.75, "L2": 0.75},
+            lineage_to_ticker={"L1": "AAA", "L2": "BBB"}, prices={"AAA": 100.0, "BBB": 100.0},
+            capital_inr=100_000.0,
+        )
+
+
 def test_h005_data_failure_does_not_suppress_h003_target():
     P, cols = _panel()
     con = _rcon(cols)
