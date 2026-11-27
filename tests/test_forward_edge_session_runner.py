@@ -144,11 +144,14 @@ def test_event_loop_replays_unacknowledged_event_after_restart(tmp_path):
 
 def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks(tmp_path):
     runner = make_runner(tmp_path)
+    bar_start = datetime.fromisoformat("2026-11-13T10:15:00+05:30")
+    bar_end = datetime.fromisoformat("2026-11-13T10:16:00+05:30")
     completed = MarketEvent(
-        "completed-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=2),
-        NOW + timedelta(seconds=2), NOW + timedelta(seconds=2),
+        "completed-bar", EventKind.BAR, "NSE", "NSE:INFY", bar_end,
+        bar_end + timedelta(seconds=1), bar_end + timedelta(seconds=1),
         {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
-         "complete": True}, "FIXTURE")
+         "complete": True, "interval_seconds": 60,
+         "bar_start_at": bar_start.isoformat(), "bar_end_at": bar_end.isoformat()}, "FIXTURE")
     partial = MarketEvent(
         "partial-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=1),
         NOW + timedelta(seconds=1), NOW + timedelta(seconds=1),
@@ -164,11 +167,33 @@ def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_check
         consumer_id="strategy:cadence",
         on_market_event=lambda event, _: market_events.append(event.event_id),
         on_completed_bar=lambda event, _: forecast_bars.append(event.event_id),
+        venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE",
         evaluate_protective_exits=lambda event, _: exit_checks.append(event.event_id))
 
     assert market_events == ["interbar-quote", "partial-bar", "completed-bar"]
     assert forecast_bars == ["completed-bar"]
     assert exit_checks == market_events
+    runner.close()
+
+
+def test_completed_bar_rejects_interval_not_aligned_to_sourced_session_open(tmp_path):
+    runner = make_runner(tmp_path)
+    start = datetime.fromisoformat("2026-11-13T10:16:00+05:30")
+    end = start + timedelta(minutes=15)
+    event = MarketEvent(
+        "misaligned-15m", EventKind.BAR, "NSE", "NSE:INFY", end,
+        end + timedelta(seconds=1), end + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "complete": True, "interval_seconds": 900,
+         "bar_start_at": start.isoformat(), "bar_end_at": end.isoformat()}, "FIXTURE")
+    with pytest.raises(ForwardSessionRunnerError, match="not aligned to the official exchange session open"):
+        runner.run_event_loop(
+            session_id="misaligned", config=make_config(), events=[event],
+            session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+            consumer_id="strategy:misaligned", on_market_event=lambda *_: None,
+            evaluate_protective_exits=lambda *_: None, on_completed_bar=lambda *_: None,
+            venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE")
+    assert runner.records("misaligned")["events"] == []
     runner.close()
 
 

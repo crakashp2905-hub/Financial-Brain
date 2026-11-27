@@ -43,6 +43,13 @@ def test_naive_clock_or_event_not_available_at_decision_is_rejected() -> None:
         _event(EventKind.TICK, {"price": 10}, decision_time=T0)
 
 
+def test_bar_completion_marker_must_be_an_explicit_boolean() -> None:
+    payload = {"open": 100, "high": 103, "low": 99, "close": 102, "volume": 10}
+    for invalid in (1, 0, "true", None):
+        with pytest.raises(MarketEventError, match="complete marker must be boolean"):
+            _event(EventKind.BAR, payload | {"complete": invalid})
+
+
 def test_explicit_source_exchange_and_publication_timestamps_roundtrip() -> None:
     published = T0 - timedelta(seconds=1)
     event = _event(EventKind.TICK, {"price": 10}, source_at=T0 - timedelta(seconds=2),

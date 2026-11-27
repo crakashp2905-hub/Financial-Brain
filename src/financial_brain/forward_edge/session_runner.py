@@ -157,6 +157,41 @@ class ForwardSessionRunnerError(ValueError):
     """Session runner rejected an event, decision or lifecycle operation."""
 
 
+def _validate_completed_bar(event: MarketEvent, session_open_at: datetime,
+                            session_close_at: datetime) -> None:
+    """Require a complete bar to fit an official session-relative interval."""
+    payload = event.payload
+    try:
+        if (session_open_at.tzinfo is None or session_open_at.utcoffset() is None or
+                session_close_at.tzinfo is None or session_close_at.utcoffset() is None):
+            raise ValueError("sourced session bounds must be timezone-aware")
+        interval = payload.get("interval_seconds")
+        if type(interval) is not int or interval not in {60, 900}:
+            raise ValueError("bar interval must be 60 or 900 seconds")
+        raw_start, raw_end = payload.get("bar_start_at"), payload.get("bar_end_at")
+        if not isinstance(raw_start, str) or not isinstance(raw_end, str):
+            raise ValueError("bar start and end timestamps are required")
+        start, end = datetime.fromisoformat(raw_start), datetime.fromisoformat(raw_end)
+        if (start.tzinfo is None or start.utcoffset() is None or
+                end.tzinfo is None or end.utcoffset() is None):
+            raise ValueError("bar start and end timestamps must include timezone offsets")
+        start, end = start.astimezone(timezone.utc), end.astimezone(timezone.utc)
+        opens = session_open_at.astimezone(timezone.utc)
+        closes = session_close_at.astimezone(timezone.utc)
+        interval_delta = timedelta(seconds=interval)
+        if end - start != interval_delta or event.event_time != end:
+            raise ValueError("bar timestamps do not match the declared complete interval")
+        if start < opens or end > closes:
+            raise ValueError("bar interval is outside the official exchange session")
+        elapsed = start - opens
+        if elapsed % interval_delta != timedelta(0):
+            raise ValueError("bar interval is not aligned to the official exchange session open")
+        if event.received_at < end or event.available_at < end:
+            raise ValueError("completed bar arrived before its interval ended")
+    except (TypeError, ValueError) as exc:
+        raise ForwardSessionRunnerError(f"completed bar rejected: {exc}") from exc
+
+
 class ForwardSessionRunner:
     """Persist event and decision evidence from any adapter using normalized MarketEvent rows.
 
@@ -348,6 +383,7 @@ class ForwardSessionRunner:
                        on_market_event: Callable[[MarketEvent, "ForwardSessionRunner"], None],
                        evaluate_protective_exits: Callable[[MarketEvent, "ForwardSessionRunner"], None],
                        on_completed_bar: Callable[[MarketEvent, "ForwardSessionRunner"], None] | None = None,
+                       venue_calendar: VenueCalendar | None = None, venue: str | None = None,
                        on_close: Callable[["ForwardSessionRunner"], None] | None = None,
                        session_close_at: datetime | None = None,
                        close_complete: bool = False) -> dict[str, Any]:
@@ -377,6 +413,11 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("session close handler must be callable")
         if on_completed_bar is not None and not callable(on_completed_bar):
             raise ForwardSessionRunnerError("completed-bar handler must be callable")
+        if on_completed_bar is not None and venue_calendar is None:
+            raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+        if venue_calendar is not None:
+            if venue is None or not venue.strip():
+                raise ForwardSessionRunnerError("venue is required with a sourced session calendar")
         if type(close_complete) is not bool:
             raise ForwardSessionRunnerError("close_complete must be boolean")
         if close_complete and (session_close_at is None or session_close_at.tzinfo is None or
@@ -392,10 +433,17 @@ class ForwardSessionRunner:
         ordered = sorted(event_batch, key=lambda event: (
             event.available_at, event.event_time,
             -1 if event.sequence is None else event.sequence, event.event_id))
-        self.state_store.create(session_id, config, now=session_open_at)
-        state = self.state_store.state(session_id)
-        if state is SessionState.PLANNED:
-            state = self.begin(session_id, config, now=session_open_at, preflight=preflight)
+        if venue_calendar is not None:
+            if venue is None:
+                raise ForwardSessionRunnerError("venue is required with a sourced session calendar")
+            state = self.plan_calendar_day(
+                session_id, config, venue=venue, calendar=venue_calendar,
+                now=session_open_at, preflight=preflight)
+        else:
+            self.state_store.create(session_id, config, now=session_open_at)
+            state = self.state_store.state(session_id)
+            if state is SessionState.PLANNED:
+                state = self.begin(session_id, config, now=session_open_at, preflight=preflight)
         if state is not SessionState.OPEN:
             return {"session_id": session_id, "status": state.value, "processed_event_ids": [],
                     "persisted_event_ids": [], "close_report": None}
@@ -407,6 +455,12 @@ class ForwardSessionRunner:
             while pending := self.read_events_after(session_id, consumer_id, limit=1):
                 row = pending[0]
                 event = MarketEvent.from_dict(row["event"])
+                if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
+                        on_completed_bar is not None):
+                    if venue_calendar is None:
+                        raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+                    opens, closes = venue_calendar.session_bounds_utc(event.venue, config.exchange_date)
+                    _validate_completed_bar(event, opens, closes)
                 on_market_event(event, self)
                 # Forecast cadence is bar-driven and separate from the position monitor.
                 # Missing or false completion evidence fails closed for forecasting.
@@ -427,6 +481,12 @@ class ForwardSessionRunner:
         # prevents callbacks from seeing later events in the session ledger.
         drain_consumer()
         for event in ordered:
+            if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
+                    on_completed_bar is not None):
+                if venue_calendar is None:
+                    raise ForwardSessionRunnerError("completed-bar forecasts require a sourced venue calendar")
+                opens, closes = venue_calendar.session_bounds_utc(event.venue, config.exchange_date)
+                _validate_completed_bar(event, opens, closes)
             result = self.ingest(session_id, config, [event])
             if result["persisted"]:
                 persisted_event_ids.append(event.event_id)

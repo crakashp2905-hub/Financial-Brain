@@ -122,6 +122,8 @@ class MarketEvent:
         elif self.kind == EventKind.BAR:
             values = {key: _finite_number(p.get(key), key, allow_zero=key == "volume")
                       for key in ("open", "high", "low", "close", "volume")}
+            if "complete" in p and type(p["complete"]) is not bool:
+                raise MarketEventError("bar complete marker must be boolean")
             if values["volume"] < 0 or values["high"] < max(values["open"], values["close"], values["low"]) or \
                     values["low"] > min(values["open"], values["close"], values["high"]):
                 raise MarketEventError("bar OHLCV is inconsistent")
