@@ -2085,6 +2085,11 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
                      exchange_date=date(2026, 11, 13), completed_sessions_held={signal.signal_id: 0},
                      instrument_ids={"INFY": "NSE:INFY"},
                      quote_events={"NSE:INFY": entry_quote}) == ()
+    monitor_rows = [row for row in runner.durable.audit_records("s")
+                    if row["kind"] == "position_monitor"]
+    assert len(monitor_rows) == 1
+    assert monitor_rows[0]["record"]["evaluation"] == "HOLD"
+    assert monitor_rows[0]["record"]["quote_event_id"] == entry_quote.event_id
     runner.close_session("s", complete=True, now=entry_fill_at + timedelta(seconds=2))
 
     exit_day = date(2026, 11, 16)
@@ -2109,6 +2114,17 @@ def test_paper_book_stop_exit_uses_runner_quote_and_reconciles_sell(
                            instrument_ids={"INFY": "NSE:INFY"},
                            quote_events={"NSE:INFY": stop_quote})
     assert len(time_exits) == 1 and time_exits[0].reason == "TIME"
+    monitor_rows = [row for row in runner.durable.audit_records("s2")
+                    if row["kind"] == "position_monitor"]
+    assert [row["record"]["evaluation"] for row in monitor_rows] == ["STOP", "TIME"]
+    assert due_exits(book, runner=runner, session_id="s2", mode="live", version=version,
+                     exchange_date=exit_day,
+                     completed_sessions_held={signal.signal_id: signal.horizon_sessions},
+                     instrument_ids={"INFY": "NSE:INFY"},
+                     quote_events={"NSE:INFY": stop_quote}) == time_exits
+    replayed_monitor_rows = [row for row in runner.durable.audit_records("s2")
+                             if row["kind"] == "position_monitor"]
+    assert len(replayed_monitor_rows) == 2
     book.execute("UPDATE positions SET stop=95 WHERE version=?", [version])
     exit_decision_at = exit_start + timedelta(seconds=1)
     exit_decision_id = f"paper-book-exit:{signal.signal_id}:s2"

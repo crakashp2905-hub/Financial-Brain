@@ -362,6 +362,37 @@ def due_exits(book: Any, *, runner: ForwardSessionRunner, session_id: str,
         marks.append((signal, held, event, last, reason))
         if reason is not None:
             output.append(PaperBookExit(signal, reason, held, event.event_id, bid))
+    # Persist sourced per-position evaluations before updating the legacy book projection. If a
+    # process stops between these stores, replaying the same observation is idempotent and can
+    # safely reapply the mark; the audit never represents an exit fill.
+    for signal, held, event, last, reason in marks:
+        quote = executable_quote(event)
+        assert quote is not None  # validated above for every mark
+        monitor_record = {
+            "session_id": session_id,
+            "signal_id": signal.signal_id,
+            "book_version": version,
+            "book_mode": mode,
+            "exchange_date": exchange_date.isoformat(),
+            "instrument_id": event.instrument_id,
+            "quote_event_id": event.event_id,
+            "quote_source": event.source,
+            "quote_venue": event.venue,
+            "exchange_at": event.exchange_at.isoformat() if event.exchange_at else None,
+            "received_at": event.received_at.isoformat(),
+            "available_at": event.available_at.isoformat(),
+            "bid": float(quote["bid"]),
+            "last_price": last,
+            "stop_price": cast(float, signal.stop_price),
+            "completed_sessions_held": held,
+            "horizon_sessions": signal.horizon_sessions,
+            "evaluation": reason or "HOLD",
+        }
+        identity = json.dumps(monitor_record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        monitor_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        runner.record_position_monitor_sample(
+            session_id=session_id, monitor_id=monitor_id,
+            occurred_at=event.available_at, record=monitor_record)
     book.execute("BEGIN TRANSACTION")
     try:
         for signal, held, _event, last, _ in marks:

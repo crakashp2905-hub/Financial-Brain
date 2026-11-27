@@ -372,6 +372,24 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError(f"component heartbeat rejected: {exc}") from exc
         self.state_store.close()
 
+    def record_position_monitor_sample(self, *, session_id: str, monitor_id: str,
+                                       occurred_at: datetime, record: dict[str, Any]) -> bool:
+        """Persist a replay-idempotent position-monitor evaluation in session audit evidence."""
+        try:
+            self.state_store.state(session_id)
+        except (OrderJournalError, ValueError) as exc:
+            raise ForwardSessionRunnerError("position monitor requires a known forward session") from exc
+        if not monitor_id.strip() or record.get("session_id") != session_id:
+            raise ForwardSessionRunnerError("position monitor sample identity is invalid")
+        try:
+            inserted = self.durable.append_audit(session_id=session_id, kind="position_monitor",
+                                                 record_id=monitor_id, occurred_at=occurred_at,
+                                                 record=record)
+            self._con.commit()
+            return inserted
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+
     def set_operating_mode(self, *, session_id: str, mode: str | OperatingMode,
                            event_id: str, reason: str, occurred_at: datetime | None = None) -> bool:
         """Persist an explicit pause, degradation, recovery or halt decision."""
