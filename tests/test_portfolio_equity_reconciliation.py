@@ -18,7 +18,9 @@ from financial_brain.portfolio.equity_reconciliation import (
     EquityReconciliationError,
     EquityReconciliationRegistry,
     reconcile_account_equity,
+    reconcile_source_events,
     require_reconciled,
+    require_source_events_reconciled,
 )
 
 
@@ -79,6 +81,124 @@ def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_
     require_reconciled(result)
     registry = EquityReconciliationRegistry(tmp_path / "equity.sqlite")
     assert registry.status(report_sha256=result.report_sha256)["status"] == "CURRENT"
+
+
+def test_source_statement_rows_match_canonical_source_event_set(tmp_path):
+    ledger = _ledger(tmp_path / "source.db")
+    # Construct an independently supplied statement fixture instead of reading rows back
+    # from the canonical ledger under test.
+    source_rows = [
+        _event("external", EventKind.CASH_FLOW, START + timedelta(hours=1), cash_delta="500",
+               metadata={"flow_type": "EXTERNAL", "flow_id": "deposit-1"}),
+        _event("dividend", EventKind.CASH_FLOW, START + timedelta(hours=2), cash_delta="10",
+               metadata={"flow_type": "DISTRIBUTION", "source": "issuer"}),
+        _event("fee", EventKind.FEE, START + timedelta(hours=2), cash_delta="-20"),
+        _event("mark-close", EventKind.MARK, END, asset_class=AssetClass.EQUITY,
+               instrument_id="NSE:ABC", price="110"),
+    ]
+
+    report = reconcile_source_events(
+        ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+        period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
+    )
+
+    assert report.reconciled
+    assert report.canonical_event_count == report.source_event_count == report.matched_event_count == 4
+    assert report.canonical_events_sha256 == report.source_events_sha256
+    assert len(report.report_sha256) == 64
+    assert "not authenticated" in report.limitations[0]
+    assert report.registry_status == "CURRENT"
+    require_source_events_reconciled(report)
+
+
+def test_source_statement_comparison_reports_missing_extra_and_changed_rows(tmp_path):
+    ledger = _ledger(tmp_path / "diff.db")
+    source_rows = [_event("external-only", EventKind.CASH_FLOW, START + timedelta(hours=4),
+                          cash_delta="25")]
+    source_rows.append(_event("fee", EventKind.FEE, START + timedelta(hours=2), cash_delta="-19"))
+    report = reconcile_source_events(
+        ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+        period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
+    )
+
+    assert not report.reconciled
+    assert report.statement_only_event_ids == ("external-only",)
+    assert report.ledger_only_event_ids == ("dividend", "external", "mark-close")
+    assert report.mismatched_event_ids == ("fee",)
+
+
+def test_source_statement_comparison_rejects_duplicate_source_event_ids(tmp_path):
+    ledger = _ledger(tmp_path / "dupe.db")
+    duplicate = _event("same-ref", EventKind.CASH_FLOW, START + timedelta(hours=1), cash_delta="1")
+    with pytest.raises(EquityReconciliationError, match="duplicate source event"):
+        reconcile_source_events(
+            ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+            period_start=START, period_end=END, source_events=[duplicate, duplicate],
+        )
+
+
+def test_source_event_reconciliation_rejects_malformed_document_digest(tmp_path):
+    ledger = _ledger(tmp_path / "digest.db")
+    with pytest.raises(EquityReconciliationError, match="document SHA-256"):
+        reconcile_source_events(
+            ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+            period_start=START, period_end=END, source_events=[], source_document_sha256="bad",
+        )
+
+
+def test_source_event_receipt_invalidates_on_late_backdated_canonical_event(tmp_path):
+    ledger = _ledger(tmp_path / "late.db")
+    source_rows = [
+        _event("external", EventKind.CASH_FLOW, START + timedelta(hours=1), cash_delta="500",
+               metadata={"flow_type": "EXTERNAL", "flow_id": "deposit-1"}),
+        _event("dividend", EventKind.CASH_FLOW, START + timedelta(hours=2), cash_delta="10",
+               metadata={"flow_type": "DISTRIBUTION", "source": "issuer"}),
+        _event("fee", EventKind.FEE, START + timedelta(hours=2), cash_delta="-20"),
+        _event("mark-close", EventKind.MARK, END, asset_class=AssetClass.EQUITY,
+               instrument_id="NSE:ABC", price="110"),
+    ]
+    report = reconcile_source_events(
+        ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+        period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
+    )
+    ledger.append(_event("late-source-event", EventKind.CASH_FLOW,
+                         START + timedelta(hours=4), cash_delta="1"))
+
+    registry = EquityReconciliationRegistry(ledger.path)
+    assert registry.source_event_status(report_sha256=report.report_sha256) == {
+        "status": "INVALIDATED",
+        "invalidation_reason": "CANONICAL_SOURCE_EVENTS_CHANGED_THROUGH_PERIOD_END",
+    }
+    with pytest.raises(EquityReconciliationError, match="not current"):
+        require_source_events_reconciled(report)
+
+
+def test_source_event_receipt_ignores_post_period_canonical_events(tmp_path):
+    ledger = _ledger(tmp_path / "after.db")
+    source_rows = [
+        _event("external", EventKind.CASH_FLOW, START + timedelta(hours=1), cash_delta="500",
+               metadata={"flow_type": "EXTERNAL", "flow_id": "deposit-1"}),
+        _event("dividend", EventKind.CASH_FLOW, START + timedelta(hours=2), cash_delta="10",
+               metadata={"flow_type": "DISTRIBUTION", "source": "issuer"}),
+        _event("fee", EventKind.FEE, START + timedelta(hours=2), cash_delta="-20"),
+        _event("mark-close", EventKind.MARK, END, asset_class=AssetClass.EQUITY,
+               instrument_id="NSE:ABC", price="110"),
+    ]
+    report = reconcile_source_events(
+        ledger=ledger, account_id=ACCOUNT, source_system="paper-test",
+        period_start=START, period_end=END, source_events=source_rows,
+        source_document_sha256=HASH,
+    )
+    ledger.append(_event("future-source-event", EventKind.CASH_FLOW,
+                         END + timedelta(seconds=1), cash_delta="1"))
+
+    assert EquityReconciliationRegistry(ledger.path).source_event_status(
+        report_sha256=report.report_sha256,
+    ) == {"status": "CURRENT", "invalidation_reason": None}
+    require_source_events_reconciled(report)
 
 
 def test_missing_opening_mark_fails_closed(tmp_path):

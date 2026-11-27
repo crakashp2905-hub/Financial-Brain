@@ -6,6 +6,7 @@ idempotent jobs a scheduler can call, not an application.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import date, datetime, timedelta
@@ -88,6 +89,71 @@ def cmd_options_audit(args) -> int:
     print(json.dumps(report(root / "fo_history.duckdb", root / "options_quotes.duckdb"),
                      indent=2))
     return 0
+
+
+def cmd_reconcile_source_events(args: argparse.Namespace) -> int:
+    """Compare a normalized statement JSON file against the canonical event ledger."""
+    from dataclasses import asdict, fields
+    from pathlib import Path
+
+    from .portfolio.canonical_ledger import AssetClass, CanonicalPortfolioLedger, EventKind, PortfolioEvent
+    from .portfolio.equity_reconciliation import reconcile_source_events, require_source_events_reconciled
+
+    try:
+        statement_path = Path(args.statement)
+        raw = statement_path.read_bytes()
+        payload = json.loads(raw)
+        expected_fields = {"schema", "account_id", "source_system", "period_start", "period_end", "events"}
+        if not isinstance(payload, dict) or set(payload) != expected_fields:
+            raise ValueError("statement must have exactly the required v1 fields")
+        if payload.get("schema") != "fb.portfolio-source-statement.v1":
+            raise ValueError("unsupported portfolio source statement schema")
+        if not isinstance(payload["events"], list):
+            raise ValueError("statement events must be a list")
+
+        allowed_event_fields = {item.name for item in fields(PortfolioEvent)}
+        source_events = []
+        for raw_event in payload["events"]:
+            if not isinstance(raw_event, dict) or set(raw_event) - allowed_event_fields:
+                raise ValueError("each statement event must be an object with supported event fields")
+            event = dict(raw_event)
+            event.setdefault("account_id", payload["account_id"])
+            event.setdefault("source_system", payload["source_system"])
+            event["event_kind"] = EventKind(str(event["event_kind"]))
+            if event.get("asset_class") is not None:
+                event["asset_class"] = AssetClass(str(event["asset_class"]))
+            for key in ("quantity", "price", "multiplier", "cash_delta"):
+                if key in event and not isinstance(event[key], str):
+                    raise ValueError(f"statement event {key} must be an exact decimal string")
+            source_events.append(PortfolioEvent(**event))
+
+        report = reconcile_source_events(
+            ledger=CanonicalPortfolioLedger(args.ledger),
+            account_id=str(payload["account_id"]), source_system=str(payload["source_system"]),
+            period_start=datetime.fromisoformat(str(payload["period_start"]).replace("Z", "+00:00")),
+            period_end=datetime.fromisoformat(str(payload["period_end"]).replace("Z", "+00:00")),
+            source_events=source_events,
+            source_document_sha256=hashlib.sha256(raw).hexdigest(),
+        )
+        if report.reconciled:
+            require_source_events_reconciled(report)
+        result = asdict(report)
+        result.pop("registry_path", None)
+        rendered = json.dumps(result, indent=2, sort_keys=True, default=str, allow_nan=False) + "\n"
+        if args.output:
+            output = Path(args.output)
+            if output.resolve() == statement_path.resolve():
+                raise ValueError("report output must not overwrite the source statement")
+            output.parent.mkdir(parents=True, exist_ok=True)
+            temporary = output.with_name(output.name + ".tmp")
+            temporary.write_text(rendered, encoding="utf-8", newline="\n")
+            temporary.replace(output)
+        else:
+            print(rendered, end="")
+        return 0 if report.reconciled and report.registry_status == "CURRENT" else 2
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        print(f"source statement reconciliation failed: {exc}", file=sys.stderr)
+        return 2
 
 
 def cmd_tool_list(args) -> int:
@@ -2792,6 +2858,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(fn=cmd_trader_core)
     sub.add_parser("options-audit", help="read-only option daily-history and quote-quality audit").set_defaults(fn=cmd_options_audit)
+    g = sub.add_parser("reconcile-source-events",
+                       help="compare normalized source statement rows with the canonical portfolio ledger")
+    g.add_argument("--ledger", required=True, help="canonical paper ledger SQLite path")
+    g.add_argument("--statement", required=True, help="fb.portfolio-source-statement.v1 JSON input")
+    g.add_argument("--output", help="write the hashed reconciliation report JSON to this path")
+    g.set_defaults(fn=cmd_reconcile_source_events)
 
     g = sub.add_parser("inverse", help="read-only inverse-policy research")
     g.add_argument("--synthetic")
