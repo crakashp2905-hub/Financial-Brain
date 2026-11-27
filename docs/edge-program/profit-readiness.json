@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "b8ae38ee9f72375a25cac9c1a906acb4283a21ba0101d225aa62cf7da6bdec71",
-  "audit_export_sha256": "4a5a7bedf8f09c93a97055dcbe24d77d8fe5004dae16e93fe09e25025efb96fb",
+  "status_ledger_sha256": "0c220bdd144365b23c1f5beb6fc1eac7cdff3281e3af076ed732cdaeb50a7f50",
+  "audit_export_sha256": "35f9daa4fe042ed631087ae691664c4f1db4299c6d034746161d88d5d8bc1430",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 830,
-    "UNASSESSED": 418
+    "PARTIAL": 831,
+    "UNASSESSED": 417
   },
-  "assessed_count": 960,
-  "unassessed_count": 418,
+  "assessed_count": 961,
+  "unassessed_count": 417,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 50,
-        "UNASSESSED": 11
+        "PARTIAL": 51,
+        "UNASSESSED": 10
       },
       "evidence": [
         {
@@ -2925,16 +2925,23 @@
         },
         {
           "item_id": "PA-07-08",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1068,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Map each book's exact holdings to purchasable equity quantities under tick, whole-share, available cash and expected charges."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "052bc977",
+          "blocker": "Partial: candidate weights can now be converted to cash-constrained whole shares with modeled costs, but the adapter is not connected to monthly paper execution and does not reconcile fills or canonical cash.",
+          "evidence": [
+            "Commit 052bc977 adds `paper.zoo_edges.size_monthly_candidate`, which maps each H005/H003/P3/P1/P2 lineage to a ticker and reuses `execution.ticket.size_book` for whole-share quantities, available-cash/entry-fee constraints, expected round-trip charges and residual cash.",
+            "The sizing receipt retains a target hash, exact lineage/ticker/share rows, and explicit skips for missing point-in-time ticker mapping or missing price. It rejects duplicate symbol aliases and target weights above 100%; it never submits physical orders.",
+            "Sizing remains a callable adapter only: the monthly zoo runner does not invoke it, the point-in-time instrument/price mapping and owner-authorized capital sleeve are not wired, and actual partial fills/ledger balances are not represented."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0708-sizing tests/test_zoo_h_targets.py -q: 12 passed, including mapped holdings, whole-share/cash/fee limits, missing mapping/price skips and invalid aggregate weights.",
+            "Ruff on paper.zoo_edges/tests, mypy on paper.zoo_edges, and git diff --check passed."
+          ]
         },
         {
           "item_id": "PA-07-09",
@@ -3437,5 +3444,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "b11003ee8d8730f08aa6e1d3ba0b7de90b39f63ace48e026ef12c023c026f317"
+  "report_sha256": "d25e86b14befdb7a9e93146101b3520a88493a71bc6d246bc8143aa91a74f548"
 }

@@ -9159,12 +9159,21 @@
     {
       "id": "PA-07-08",
       "text": "Map each book's exact holdings to purchasable equity quantities under tick, whole-share, available cash and expected charges.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Commit 052bc977 adds `paper.zoo_edges.size_monthly_candidate`, which maps each H005/H003/P3/P1/P2 lineage to a ticker and reuses `execution.ticket.size_book` for whole-share quantities, available-cash/entry-fee constraints, expected round-trip charges and residual cash.",
+        "The sizing receipt retains a target hash, exact lineage/ticker/share rows, and explicit skips for missing point-in-time ticker mapping or missing price. It rejects duplicate symbol aliases and target weights above 100%; it never submits physical orders.",
+        "Sizing remains a callable adapter only: the monthly zoo runner does not invoke it, the point-in-time instrument/price mapping and owner-authorized capital sleeve are not wired, and actual partial fills/ledger balances are not represented."
+      ],
+      "blocker": "Partial: candidate weights can now be converted to cash-constrained whole shares with modeled costs, but the adapter is not connected to monthly paper execution and does not reconcile fills or canonical cash.",
+      "last_audited_at_utc": "2026-11-27T05:08:32Z",
+      "commit": "052bc977",
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0708-sizing tests/test_zoo_h_targets.py -q: 12 passed, including mapped holdings, whole-share/cash/fee limits, missing mapping/price skips and invalid aggregate weights.",
+        "Ruff on paper.zoo_edges/tests, mypy on paper.zoo_edges, and git diff --check passed."
+      ],
+      "test_result": "The candidate-sizing adapter and its fail-closed mapping/cash behavior are tested. Monthly runner integration, sourced point-in-time marks and filled-position reconciliation remain open. PA-07-08 remains PARTIAL."
     },
     {
       "id": "PA-07-09",
@@ -21015,6 +21024,7 @@
       "PA-07-05",
       "PA-07-06",
       "PA-07-07",
+      "PA-07-08",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21453,13 +21463,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 960,
+    "audited_count": 961,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 830,
-      "UNASSESSED": 418
+      "PARTIAL": 831,
+      "UNASSESSED": 417
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21608,7 +21618,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 830,
-    "UNASSESSED": 418
+    "PARTIAL": 831,
+    "UNASSESSED": 417
   }
 }
