@@ -10303,12 +10303,16 @@
     {
       "id": "PA-11-05",
       "text": "Implement five-minute and 15-minute opening range breakout with known session-open clock, close-through, buffer, volume gate and invalidation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/opening_range_breakout.py: exact timezone-aware session open, contiguous 5/15 one-minute range bars, buffered close-through, volume gate and close-back-through invalidation",
+        "tests/test_opening_range_breakout.py: tests both windows, incomplete data, volume rejection, entry/invalidation and invalid inputs",
+        "Research detector is not yet connected to portfolio paper execution or validated against independent Indian-market samples"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "29d151f9"
     },
     {
       "id": "PA-11-06",
@@ -21407,6 +21411,7 @@
       "PA-10-19",
       "PA-11-03",
       "PA-11-04",
+      "PA-11-05",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21830,13 +21835,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1009,
+    "audited_count": 1010,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 878,
-      "UNASSESSED": 369
+      "PARTIAL": 879,
+      "UNASSESSED": 368
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21985,7 +21990,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 878,
-    "UNASSESSED": 369
+    "PARTIAL": 879,
+    "UNASSESSED": 368
   }
 }
