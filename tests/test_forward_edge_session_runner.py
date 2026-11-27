@@ -50,6 +50,7 @@ READY_PREFLIGHT = {name: True for name in (
 def make_config(*, max_quote_age_ms=None):
     constraints = {"max_positions": 1, "session_phase": "CONTINUOUS",
                    "allow_synthetic_fixture_events": True,
+                   "carry_authorized_instruments": ["NSE:INFY"],
                    "instrument_rules": fixture_rule_book("NSE:INFY"),
                    "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
                                         "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
@@ -65,6 +66,7 @@ def make_config(*, max_quote_age_ms=None):
 def make_config_with_constraints(constraints):
     constraints = {"session_phase": "CONTINUOUS",
                    "allow_synthetic_fixture_events": True,
+                   "carry_authorized_instruments": ["NSE:INFY"],
                    "data_permissions": [{"source_id": "KITE_CONNECT_READ_ONLY",
                                         "use": "PAPER_SIMULATION", "status": "USE_ALLOWED",
                                         "effective_from": "2026-11-13", "effective_through": None,
@@ -1585,7 +1587,12 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
     runner, buy_quote, buy_decision_at = trade_setup(tmp_path)
     buy_receipt = execute(runner, buy_quote, buy_decision_at, order_id="same-local-order-id", qty=2)
     first_close_at = buy_decision_at + timedelta(seconds=2)
-    runner.close_session("s", complete=True, now=first_close_at)
+    close_report = runner.close_session("s", complete=True, now=first_close_at)
+    assert close_report["position_dispositions"] == [{
+        "instrument_id": "NSE:INFY", "quantity": 2, "quantity_unit": "SHARES", "expiry": None,
+        "disposition": "OVERNIGHT_CARRY_AUTHORIZED", "valuation_status": "NOT_PROVIDED",
+        "execution_or_settlement_fill_created": False,
+    }]
     first_day_accounting = runner.records("s")["accounting"]
     assert first_day_accounting["positions"] == {"NSE:INFY": 2}
     assert buy_receipt["filled_quantity"] == 2
@@ -1637,6 +1644,44 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
 
     # A later session must not mutate an earlier session's frozen account projection.
     assert runner.records("s")["accounting"] == first_day_accounting
+    runner.close()
+
+
+def test_complete_close_requires_explicit_carry_authorization_for_open_inventory(tmp_path):
+    config = make_config()
+    config = replace(config, constraints={**config.constraints, "carry_authorized_instruments": []})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided, order_id="open-position", qty=2)
+    assert receipt["filled_quantity"] == 2
+
+    with pytest.raises(ForwardSessionRunnerError, match="positions requiring flatten or expiry action"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="position not flattened")
+    assert report["position_dispositions"][0]["disposition"] == "INTRADAY_FLATTEN_REQUIRED"
+    assert report["position_dispositions"][0]["execution_or_settlement_fill_created"] is False
+    runner.close()
+
+
+def test_expiring_option_position_is_reported_separately_and_blocks_complete_close(tmp_path):
+    config = make_config()
+    rules = fixture_rule_book("NSE:INFY", quantity_unit="OPTION_CONTRACTS",
+                              expiry=config.exchange_date)
+    config = replace(config, constraints={**config.constraints, "instrument_rules": rules,
+                                          "carry_authorized_instruments": ["NSE:INFY"]})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided, order_id="expiring-option", qty=2)
+    assert receipt["filled_quantity"] == 2
+
+    with pytest.raises(ForwardSessionRunnerError, match="positions requiring flatten or expiry action"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="expiry settlement evidence unavailable")
+    position = report["position_dispositions"][0]
+    assert position["quantity_unit"] == "OPTION_CONTRACTS"
+    assert position["disposition"] == "EXPIRY_SETTLEMENT_REQUIRED"
+    assert position["valuation_status"] == "NOT_PROVIDED"
+    assert position["execution_or_settlement_fill_created"] is False
     runner.close()
 
 

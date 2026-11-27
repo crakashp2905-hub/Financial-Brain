@@ -2387,9 +2387,17 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("terminal session has no persisted close report")
         if state not in {SessionState.OPEN, SessionState.DRAINING}:
             raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
+        records = self.records(session_id)
+        position_dispositions = self._position_dispositions(
+            self.state_store.config(session_id), records["accounting"]["positions"])
         if complete:
             self._require_resolved_paper_intents(session_id)
-            accounting = self.records(session_id)["accounting"]
+            accounting = records["accounting"]
+            unresolved_positions = [row for row in position_dispositions
+                                    if row["disposition"] != "OVERNIGHT_CARRY_AUTHORIZED"]
+            if unresolved_positions:
+                raise ForwardSessionRunnerError(
+                    "cannot close complete with positions requiring flatten or expiry action")
             config = self.state_store.config(session_id)
             configured_costs_missing = (config.constraints.get("cost_schedule") is not None and
                                         accounting["filled_order_count"] > 0 and
@@ -2406,11 +2414,11 @@ class ForwardSessionRunner:
             self.state_store.transition(session_id, SessionState.INCOMPLETE, now=now,
                                         reason=reason or "session evidence incomplete")
             status = "INCOMPLETE"
-        records = self.records(session_id)
         body = {"session_id": session_id, "status": status, "closed_at": now.astimezone(timezone.utc).isoformat(),
                 "event_count": len(records["events"]), "decision_count": len(records["decisions"]),
                 "intent_count": len(records["intents"]),
                 "execution_receipt_count": len(records["execution_receipts"]),
+                "position_dispositions": position_dispositions,
                 "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -2421,6 +2429,53 @@ class ForwardSessionRunner:
         self._append_audit("session_report", session_id, session_id, now, report)
         self._con.commit()
         return report
+
+    @staticmethod
+    def _position_dispositions(config: ForwardRunConfig,
+                               positions: dict[str, int]) -> list[dict[str, Any]]:
+        """Classify open paper inventory without inventing a flatten or expiry fill."""
+        from financial_brain.forward_edge.instrument_rules import InstrumentRuleBook, InstrumentRuleError
+
+        authorized = config.constraints.get("carry_authorized_instruments", [])
+        if (not isinstance(authorized, list) or any(not isinstance(item, str) or not item.strip()
+                                                     for item in authorized)
+                or len(set(authorized)) != len(authorized)):
+            raise ForwardSessionRunnerError("carry_authorized_instruments must be a unique string list")
+        rule_data = config.constraints.get("instrument_rules")
+        try:
+            rule_book = InstrumentRuleBook(rule_data) if isinstance(rule_data, dict) else None
+        except InstrumentRuleError as exc:
+            raise ForwardSessionRunnerError(f"invalid instrument rules for session close: {exc}") from exc
+        result: list[dict[str, Any]] = []
+        for instrument, quantity in sorted(positions.items()):
+            if type(quantity) is not int or quantity == 0:
+                continue
+            rule = None
+            if rule_book is not None:
+                try:
+                    rule = rule_book.resolve(instrument, config.exchange_date)
+                except InstrumentRuleError:
+                    rule = None
+            quantity_unit = rule.quantity_unit if rule else "UNKNOWN"
+            expiry = rule.expiry if rule else None
+            derivative = quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}
+            if rule is None:
+                disposition = "INSTRUMENT_RULE_MISSING"
+            elif derivative and expiry is None:
+                disposition = "EXPIRY_RULE_MISSING"
+            elif derivative and expiry is not None and expiry <= config.exchange_date:
+                disposition = "EXPIRY_SETTLEMENT_REQUIRED"
+            elif instrument in authorized:
+                disposition = "OVERNIGHT_CARRY_AUTHORIZED"
+            else:
+                disposition = "INTRADAY_FLATTEN_REQUIRED"
+            result.append({"instrument_id": instrument, "quantity": quantity,
+                           "quantity_unit": quantity_unit,
+                           "expiry": expiry.isoformat() if expiry else None,
+                           "disposition": disposition,
+                           "valuation_status": "NOT_PROVIDED",
+                           "execution_or_settlement_fill_created": False})
+        return result
 
     def _require_resolved_paper_intents(self, session_id: str) -> None:
         intents = self._con.execute("SELECT order_id FROM paper_intents WHERE session_id=?",
