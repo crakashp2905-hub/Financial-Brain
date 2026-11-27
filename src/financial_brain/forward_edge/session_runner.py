@@ -1809,6 +1809,18 @@ class ForwardSessionRunner:
         quantity = quantity_value
         if simulated_at.tzinfo is None or simulated_at.utcoffset() is None:
             raise ForwardSessionRunnerError("simulated execution clock must be timezone aware")
+        calendar_plan = self._con.execute(
+            "SELECT event_json FROM runner_events WHERE session_id=? AND kind='calendar_plan'", [session_id]
+        ).fetchone()
+        if calendar_plan:
+            planned = json.loads(calendar_plan[0])
+            if planned.get("outcome") == "OPEN":
+                execution_at = simulated_at.astimezone(timezone.utc)
+                session_open = datetime.fromisoformat(planned["opens_at"]).astimezone(timezone.utc)
+                session_close = datetime.fromisoformat(planned["closes_at"]).astimezone(timezone.utc)
+                if execution_at < session_open or execution_at >= session_close:
+                    raise ForwardSessionRunnerError(
+                        "paper execution time is outside the sourced exchange session cutoff")
         if latency_ms < 0:
             raise ForwardSessionRunnerError("simulated latency cannot be negative")
         if max_wait_ms is not None and (type(max_wait_ms) is not int or max_wait_ms < 0):

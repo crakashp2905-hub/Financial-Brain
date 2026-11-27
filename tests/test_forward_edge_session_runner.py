@@ -667,6 +667,44 @@ def test_special_session_requires_explicit_support_and_enforces_sourced_bounds(t
     runner.close()
 
 
+def test_paper_execution_is_rejected_at_sourced_exchange_close(tmp_path):
+    config = make_config(max_quote_age_ms=5000)
+    calendar = _calendar(config.exchange_date, closes=time(10, 16))
+    runner = make_runner(tmp_path)
+    assert runner.plan_calendar_day("cutoff", config, venue="NSE", calendar=calendar,
+                                   now=NOW, preflight=READY_PREFLIGHT) is SessionState.OPEN
+    signal = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:00", "last_price": 100.05, "volume": 100,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 20}]},
+    }, received_at=NOW)
+    runner.ingest("cutoff", config, [signal])
+    decided = NOW + timedelta(seconds=1)
+    runner.decide(session_id="cutoff", strategy_id="momentum", decision_id="cutoff-trade",
+                  outcome="TRADE", input_event_ids=(signal.event_id,), decided_at=decided)
+    record_manifest(runner, session_id="cutoff", decision_id="cutoff-trade", event=signal,
+                    decided_at=decided, quantity=2)
+    runner.record_risk_verdict(session_id="cutoff", decision_id="cutoff-trade", verdict_id="cutoff-risk",
+                               allowed=True, policy_id="test-risk-v1", policy_sha256="a" * 64,
+                               assessed_at=decided)
+    fill_quote = normalize_kite_quote("NSE:INFY", {
+        "timestamp": "2026-11-13 10:15:59", "last_price": 100.05, "volume": 100,
+        "depth": {"buy": [{"price": 100.0, "quantity": 20}],
+                  "sell": [{"price": 100.1, "quantity": 20}]},
+    }, received_at=NOW + timedelta(seconds=59))
+    runner.ingest("cutoff", config, [fill_quote])
+
+    with pytest.raises(ForwardSessionRunnerError, match="outside the sourced exchange session cutoff"):
+        runner.execute_paper_intent(
+            session_id="cutoff", order_id="after-close", decision_id="cutoff-trade",
+            event_id=fill_quote.event_id, side="BUY", quantity=2, limit_price=Decimal("100.1"),
+            tick_size=Decimal("0.05"), freeze_limit=1000, slice_size=100,
+            adverse_slippage_bps=Decimal("0"), latency_ms=10,
+            simulated_at=NOW + timedelta(seconds=60), max_wait_ms=1000)
+    assert runner.records("cutoff")["intents"] == []
+    runner.close()
+
+
 def test_planned_session_resumed_after_source_close_becomes_durable_incomplete(tmp_path):
     calendar = _calendar(date(2026, 11, 13))
     runner = make_runner(tmp_path)
