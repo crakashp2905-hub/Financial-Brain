@@ -81,6 +81,8 @@ class SourceEventReconciliation:
     report_sha256: str
     reconciled: bool
     limitations: tuple[str, ...]
+    registry_status: str = "UNREGISTERED"
+    registry_path: str | None = None
 
 
 def _event_economics(row: dict[str, object]) -> dict[str, object]:
@@ -165,11 +167,16 @@ def reconcile_source_events(*, ledger: CanonicalPortfolioLedger, account_id: str
         "canonical_events_sha256": canonical_hash, "source_events_sha256": source_hash,
         "reconciled": reconciled, "limitations": limitations,
     }
-    return SourceEventReconciliation(
+    result = SourceEventReconciliation(
         account, source_name, start, end, len(canonical), len(source_economics), matched,
         statement_only, ledger_only, mismatched, canonical_hash, source_hash,
         _digest(body), reconciled, limitations,
     )
+    registry_state = EquityReconciliationRegistry(ledger.path).record_source_events(
+        ledger=ledger, report=result,
+    )
+    return replace(result, registry_status=str(registry_state["status"]),
+                   registry_path=str(ledger.path))
 
 
 class EquityReconciliationRegistry:
@@ -185,6 +192,17 @@ class EquityReconciliationRegistry:
                 event_sha256 TEXT,
                 report_json TEXT NOT NULL,
                 status TEXT NOT NULL CHECK(status IN ('CURRENT','INVALIDATED','UNVERIFIABLE')),
+                invalidation_reason TEXT
+            )""")
+            connection.execute("""CREATE TABLE IF NOT EXISTS source_event_reports (
+                report_sha256 TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                source_system TEXT NOT NULL,
+                period_start TEXT NOT NULL,
+                period_end TEXT NOT NULL,
+                canonical_events_sha256 TEXT NOT NULL,
+                report_json TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('CURRENT','INVALIDATED')),
                 invalidation_reason TEXT
             )""")
 
@@ -258,6 +276,92 @@ class EquityReconciliationRegistry:
                     connection.execute(
                         "UPDATE account_equity_reports SET status=?,invalidation_reason=? WHERE report_sha256=?",
                         (status, reason, report_sha256),
+                    )
+        return {"status": status, "invalidation_reason": reason}
+
+    @staticmethod
+    def _current_source_hash(ledger: CanonicalPortfolioLedger, *, account_id: str,
+                             source_system: str, period_start: datetime,
+                             period_end: datetime) -> str:
+        rows = ledger.events(account_id)
+        verified = ledger.verify_import([_event(row) for row in rows])
+        if verified != {"verified": len(rows), "missing": 0, "mismatched": 0}:
+            raise EquityReconciliationError("canonical event payload hashes did not verify")
+        events: dict[str, dict[str, object]] = {}
+        for row in rows:
+            if row.get("source_system") != source_system:
+                continue
+            occurred = datetime.fromisoformat(str(row["occurred_at"]).replace("Z", "+00:00"))
+            if period_start < occurred <= period_end:
+                event_id = str(row["source_event_id"])
+                events[event_id] = _event_economics(row)
+        return _digest([events[key] for key in sorted(events)])
+
+    def record_source_events(self, *, ledger: CanonicalPortfolioLedger,
+                             report: SourceEventReconciliation) -> dict[str, str | None]:
+        """Persist a row-set comparison and bind its validity to the canonical cutoff."""
+        body = json.dumps(asdict(report), sort_keys=True, separators=(",", ":"),
+                          default=str, allow_nan=False)
+        with sqlite3.connect(self.path, timeout=30) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            current_hash = self._current_source_hash(
+                ledger, account_id=report.account_id, source_system=report.source_system,
+                period_start=report.period_start, period_end=report.period_end,
+            )
+            if current_hash != report.canonical_events_sha256:
+                status = "INVALIDATED"
+                reason = "CANONICAL_SOURCE_EVENTS_CHANGED_THROUGH_PERIOD_END"
+            else:
+                status, reason = "CURRENT", None
+            existing = connection.execute(
+                "SELECT report_json,status,invalidation_reason FROM source_event_reports "
+                "WHERE report_sha256=?", (report.report_sha256,),
+            ).fetchone()
+            if existing is not None and existing[0] != body:
+                raise EquityReconciliationError("source report hash conflicts with stored report content")
+            if existing is None:
+                connection.execute(
+                    "INSERT INTO source_event_reports "
+                    "(report_sha256,account_id,source_system,period_start,period_end,"
+                    "canonical_events_sha256,report_json,status,invalidation_reason) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (report.report_sha256, report.account_id, report.source_system,
+                     report.period_start.isoformat(), report.period_end.isoformat(),
+                     report.canonical_events_sha256, body, status, reason),
+                )
+            elif existing[1] == "INVALIDATED":
+                status, reason = "INVALIDATED", str(existing[2])
+        return {"status": status, "invalidation_reason": reason}
+
+    def source_event_status(self, *, report_sha256: str,
+                            ledger: CanonicalPortfolioLedger | None = None) -> dict[str, str | None]:
+        """Recheck the persisted source comparison for late/backdated canonical events."""
+        canonical = ledger or CanonicalPortfolioLedger(self.path)
+        with sqlite3.connect(self.path, timeout=30) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT account_id,source_system,period_start,period_end,canonical_events_sha256,"
+                "status,invalidation_reason FROM source_event_reports WHERE report_sha256=?",
+                (report_sha256,),
+            ).fetchone()
+            if row is None:
+                raise EquityReconciliationError("unknown source event reconciliation report")
+            status = str(row["status"])
+            reason = row["invalidation_reason"]
+            if status == "CURRENT":
+                current_hash = self._current_source_hash(
+                    canonical, account_id=str(row["account_id"]),
+                    source_system=str(row["source_system"]),
+                    period_start=datetime.fromisoformat(str(row["period_start"])),
+                    period_end=datetime.fromisoformat(str(row["period_end"])),
+                )
+                if current_hash != row["canonical_events_sha256"]:
+                    status = "INVALIDATED"
+                    reason = "CANONICAL_SOURCE_EVENTS_CHANGED_THROUGH_PERIOD_END"
+                    connection.execute(
+                        "UPDATE source_event_reports SET status=?,invalidation_reason=? "
+                        "WHERE report_sha256=?", (status, reason, report_sha256),
                     )
         return {"status": status, "invalidation_reason": reason}
 
@@ -470,6 +574,30 @@ def require_reconciled(result: EquityReconciliation, *,
             f"blockers={result.blockers}")
 
 
+def require_source_events_reconciled(result: SourceEventReconciliation, *,
+                                    registry: EquityReconciliationRegistry | None = None,
+                                    ledger: CanonicalPortfolioLedger | None = None) -> None:
+    """Require an exact event-row match and a still-current persisted cutoff receipt."""
+    if (registry is None) != (ledger is None):
+        raise EquityReconciliationError("current source report verification requires both registry and ledger")
+    if registry is not None and ledger is not None:
+        status = registry.source_event_status(ledger=ledger, report_sha256=result.report_sha256)["status"]
+    elif result.registry_path is not None:
+        status = EquityReconciliationRegistry(result.registry_path).source_event_status(
+            report_sha256=result.report_sha256,
+        )["status"]
+    else:
+        status = result.registry_status
+    if status != "CURRENT":
+        raise EquityReconciliationError(f"source event report is not current: status={status}")
+    if not result.reconciled:
+        raise EquityReconciliationError(
+            "source event rows do not match canonical ledger: "
+            f"statement_only={result.statement_only_event_ids}, "
+            f"ledger_only={result.ledger_only_event_ids}, "
+            f"mismatched={result.mismatched_event_ids}")
+
+
 def _digest(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
                                   default=str, allow_nan=False).encode()).hexdigest()
@@ -477,4 +605,4 @@ def _digest(value: object) -> str:
 
 __all__ = ["EquityReconciliation", "EquityReconciliationError", "EquityReconciliationRegistry",
            "SourceEventReconciliation", "reconcile_account_equity", "reconcile_source_events",
-           "require_reconciled"]
+           "require_reconciled", "require_source_events_reconciled"]
