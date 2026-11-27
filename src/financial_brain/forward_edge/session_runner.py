@@ -2175,7 +2175,8 @@ class ForwardSessionRunner:
         if not existing:
             self._reserve_paper_intent(
                 config=config, session_id=session_id, order_id=order_id, desk_id=config.cohort,
-                instrument=event.instrument_id, side=side, quantity=quantity, limit_price=limit,
+                instrument=event.instrument_id, side=side, quantity=quantity,
+                quantity_unit=quantity_unit, limit_price=limit,
                 created_at=simulated_at, source_sha256=request_sha,
             )
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
@@ -2306,14 +2307,33 @@ class ForwardSessionRunner:
 
     def _reserve_paper_intent(self, *, config: ForwardRunConfig, session_id: str, order_id: str,
                               desk_id: str, instrument: str, side: str, quantity: int,
-                              limit_price: Decimal, created_at: datetime,
+                              quantity_unit: str, limit_price: Decimal, created_at: datetime,
                               source_sha256: str) -> None:
         setup = self._reservation_setup(config)
         ledger, policy = setup
         resource_amounts: dict[str, Decimal] = {}
         resource_amounts[f"INSTRUMENT_QUANTITY:{instrument}"] = Decimal(quantity)
-        if side == "BUY":
-            resource_amounts["CASH"] = limit_price * quantity
+        multiplier = Decimal("1")
+        if quantity_unit in {"OPTION_CONTRACTS", "FUTURES_CONTRACTS"}:
+            metadata = config.constraints.get("position_accounting", {})
+            instrument_metadata = metadata.get(instrument) if isinstance(metadata, dict) else None
+            if not isinstance(instrument_metadata, dict) or "multiplier" not in instrument_metadata:
+                raise ForwardSessionRunnerError(
+                    "derivative paper intent requires explicit position_accounting contract multiplier")
+            try:
+                multiplier = Decimal(str(instrument_metadata["multiplier"]))
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ForwardSessionRunnerError("derivative contract multiplier must be a positive decimal") from exc
+            if not multiplier.is_finite() or multiplier <= 0:
+                raise ForwardSessionRunnerError("derivative contract multiplier must be a positive decimal")
+        if side == "BUY" and quantity_unit == "FUTURES_CONTRACTS":
+            # Futures entry reserves supplied margin and risk capital, never full notional.
+            pass
+        elif side == "BUY":
+            cash_required = limit_price * quantity * multiplier
+            resource_amounts["CASH"] = cash_required
+            if quantity_unit == "OPTION_CONTRACTS":
+                resource_amounts["OPTION_BUYING_POWER"] = cash_required
         elif side == "SELL":
             resource_amounts[f"SELLABLE_INVENTORY:{instrument}"] = Decimal(quantity)
         # Optional, frozen per-unit inputs allow callers to reserve margin, risk capital,
@@ -2332,6 +2352,11 @@ class ForwardSessionRunner:
                     resource_amounts[str(resource)] = amount
             except (InvalidOperation, TypeError, ValueError) as exc:
                 raise ForwardSessionRunnerError(f"invalid per-unit reservation amount: {exc}") from exc
+        if side == "BUY" and quantity_unit == "FUTURES_CONTRACTS" and any(
+                resource_amounts.get(resource, Decimal(0)) <= 0
+                for resource in ("MARGIN", "RISK_CAPITAL")):
+            raise ForwardSessionRunnerError(
+                "futures paper intent requires frozen per-unit MARGIN and RISK_CAPITAL amounts")
         if not resource_amounts:
             raise ForwardSessionRunnerError("paper intent has no reservable account resources")
         request = ReservationRequest(

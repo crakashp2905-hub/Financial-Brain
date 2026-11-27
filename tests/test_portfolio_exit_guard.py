@@ -96,6 +96,20 @@ def test_mf_risk_reduction_is_a_nav_review_not_an_intraday_fill():
     assert "NAV_BASED_EXECUTION_ONLY" in proposal.reason_codes
 
 
+def test_futures_positions_are_eligible_for_exchange_exit_risk_reduction():
+    result = evaluate_portfolio_exit_guard(
+        positions=(_position("NIFTY-FUT", instrument_id="NFO:NIFTY-FUT", asset_class="FUTURE",
+                             quantity="50", quantity_step="25", current_pnl_inr="-900",
+                             visible_exit_quantity="50"),),
+        limits=ExitGuardLimits(max_open_stop_risk_inr="2500"),
+    )
+
+    proposal = result.proposals[0]
+    assert proposal.asset_class == "FUTURE"
+    assert proposal.action == "PAPER_EXIT_REVIEW"
+    assert proposal.requested_quantity == Decimal("25")
+
+
 def test_missing_quote_and_depth_fail_closed_for_exchange_exits():
     no_quote = evaluate_portfolio_exit_guard(
         positions=(_position("A", quote_executable=False, visible_exit_quantity="10"),),

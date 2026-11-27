@@ -58,7 +58,7 @@ def _decimal(value: Decimal | str | int, label: str) -> Decimal:
 class GuardPosition:
     position_id: str
     instrument_id: str
-    asset_class: Literal["EQUITY", "ETF", "OPTION", "MUTUAL_FUND"]
+    asset_class: Literal["EQUITY", "ETF", "OPTION", "FUTURE", "MUTUAL_FUND"]
     quantity: Decimal | str | int
     quantity_step: Decimal | str | int = Decimal("1")
     unit_stop_risk_inr: Decimal | str | int = Decimal("0")
@@ -73,7 +73,7 @@ class GuardPosition:
     def normalized(self) -> _NormalizedPosition:
         if not self.position_id.strip() or not self.instrument_id.strip():
             raise PortfolioExitGuardError("position and instrument identities are required")
-        if self.asset_class not in {"EQUITY", "ETF", "OPTION", "MUTUAL_FUND"}:
+        if self.asset_class not in {"EQUITY", "ETF", "OPTION", "FUTURE", "MUTUAL_FUND"}:
             raise PortfolioExitGuardError("unsupported asset class")
         quantity = _decimal(self.quantity, "quantity")
         step = _decimal(self.quantity_step, "quantity_step")

@@ -62,6 +62,8 @@ def make_config(*, max_quote_age_ms=None):
                        "frozen_at": "2026-11-12T00:00:00+00:00",
                        "source_sha256": "b" * 64,
                        "limits": {"CASH": "1000000000",
+                                  "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
+                                  "OPTION_BUYING_POWER": "1000000000",
                                   "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
                                   "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
                    }}
@@ -86,6 +88,8 @@ def make_config_with_constraints(constraints):
                        "frozen_at": "2026-11-12T00:00:00+00:00",
                        "source_sha256": "b" * 64,
                        "limits": {"CASH": "1000000000",
+                                  "MARGIN": "1000000000", "RISK_CAPITAL": "1000000000",
+                                  "OPTION_BUYING_POWER": "1000000000",
                                   "INSTRUMENT_QUANTITY:NSE:INFY": "1000000",
                                   "SELLABLE_INVENTORY:NSE:INFY": "1000000"},
                    }, **constraints}
@@ -1125,6 +1129,33 @@ def test_frozen_account_reservation_gates_paper_intent_and_retains_filled_exposu
     assert ledger.active_amounts("ledger-1") == {
         "CASH": Decimal("200.60"), "INSTRUMENT_QUANTITY:NSE:INFY": Decimal("2")}
     assert ledger.verify("ledger-1")["mismatched"] == 0
+    runner.close()
+
+
+def test_futures_paper_fill_reserves_margin_and_risk_without_notional_cash(tmp_path):
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
+    config = make_config_with_constraints({
+        "instrument_rules": fixture_rule_book("NSE:INFY", quantity_unit="FUTURES_CONTRACTS"),
+        "position_accounting": {"NSE:INFY": {
+            "asset_class": "FUTURE", "currency": "INR", "multiplier": "25"}},
+        "reservation_resource_amounts": {"NSE:INFY": {"MARGIN": "100", "RISK_CAPITAL": "50"}},
+    })
+    runner, event, decided = trade_setup(tmp_path, config=config)
+
+    receipt = execute(runner, event, decided, order_id="future-order")
+
+    assert receipt["status"] == "FILLED"
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["positions"][0]["asset_class"] == "FUTURE"
+    assert canonical["positions"][0]["quantity"] == Decimal("2")
+    assert canonical["positions"][0]["multiplier"] == Decimal("25")
+    assert canonical["cash"] == {}
+    active = DurableReservationLedger(tmp_path / "journal.sqlite").active_amounts("ledger-1")
+    assert active["MARGIN"] == Decimal("200")
+    assert active["RISK_CAPITAL"] == Decimal("100")
+    assert "CASH" not in active
     runner.close()
 
 

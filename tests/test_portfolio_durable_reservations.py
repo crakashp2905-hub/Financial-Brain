@@ -36,6 +36,7 @@ def _policy(**limits):
         "SETTLEMENT_CASH": Decimal("50000"),
         "INSTRUMENT_QUANTITY:NSE:ABC": Decimal("100"),
         "SELLABLE_INVENTORY:NSE:ABC": Decimal("50"),
+        "INSTRUMENT_QUANTITY:NFO:NIFTY-FUT": Decimal("10"),
     }
     default.update(limits)
     return ReservationPolicy("paper-account", "v1", FROZEN, default, SOURCE)
@@ -161,7 +162,8 @@ def test_failed_position_transition_rolls_back_fill_and_binding_receipt(tmp_path
     path = tmp_path / "atomic-rejection.sqlite"
     reservations = DurableReservationLedger(path)
     reservations.reserve(
-        _policy(), _request("s::sell", **{"SELLABLE_INVENTORY:NSE:ABC": "5"}))
+        _policy(), _request("s::sell", **{"SELLABLE_INVENTORY:NSE:ABC": "5",
+                                          "INSTRUMENT_QUANTITY:NSE:ABC": "5"}))
     invalid_close = PortfolioEvent(
         account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
         source_event_id="s:sell:fill", source_sha256="d" * 64, event_kind=EventKind.FILL,
@@ -175,3 +177,55 @@ def test_failed_position_transition_rolls_back_fill_and_binding_receipt(tmp_path
     assert CanonicalPortfolioLedger(path).event_count() == 0
     assert reservations.active_amounts("paper-account")["SELLABLE_INVENTORY:NSE:ABC"] == Decimal("5")
     assert reservations.verify("paper-account")["events"] == 1
+
+
+@pytest.mark.parametrize(
+    ("reserved_amounts", "fill_quantity", "fill_price", "asset_class", "multiplier", "message"),
+    [
+        ({"INSTRUMENT_QUANTITY:NSE:ABC": "4", "CASH": "1000"}, "5", "100", AssetClass.EQUITY,
+         "1", "quantity exceeds"),
+        ({"INSTRUMENT_QUANTITY:NSE:ABC": "5", "CASH": "499"}, "5", "100", AssetClass.EQUITY,
+         "1", "cash reservation"),
+        ({"INSTRUMENT_QUANTITY:NSE:ABC": "5", "CASH": "500", "OPTION_BUYING_POWER": "499"},
+         "5", "100", AssetClass.OPTION, "1", "options-buying-power"),
+    ],
+)
+def test_paper_fill_cannot_exceed_reserved_quantity_cash_or_option_buying_power(
+        tmp_path, reserved_amounts, fill_quantity, fill_price, asset_class, multiplier, message):
+    path = tmp_path / f"underreserved-{asset_class.value}.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(_policy(), _request("s::o", **reserved_amounts))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fill", source_sha256="e" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=asset_class,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity=fill_quantity,
+        price=fill_price, multiplier=multiplier,
+    )
+
+    with pytest.raises(ReservationError, match=message):
+        reservations.record_paper_fill(reservation_id="s::o", fill=fill)
+
+    assert CanonicalPortfolioLedger(path).event_count() == 0
+    assert reservations.verify("paper-account")["events"] == 1
+
+
+def test_futures_fill_requires_frozen_margin_and_risk_but_not_full_notional_cash(tmp_path):
+    path = tmp_path / "futures-reservation.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(_policy(), _request(
+        "s::future", MARGIN="50000", RISK_CAPITAL="10000",
+        **{"INSTRUMENT_QUANTITY:NFO:NIFTY-FUT": "2"}))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:future:fill", source_sha256="f" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.FUTURE,
+        instrument_id="NFO:NIFTY-FUT", side="BUY", position_action="BUY",
+        quantity="1", price="22000", multiplier="25",
+    )
+
+    reservations.record_paper_fill(reservation_id="s::future", fill=fill)
+
+    snapshot = CanonicalPortfolioLedger(path).snapshot("paper-account")
+    assert snapshot["positions"][0]["quantity"] == Decimal("1")
+    assert snapshot["cash"] == {}

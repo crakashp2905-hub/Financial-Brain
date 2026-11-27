@@ -499,7 +499,10 @@ class CanonicalPortfolioLedger:
                     raise CanonicalLedgerError("BUY cannot cover an existing short; use BUY_TO_COVER")
             signed = quantity if action in {"BUY", "BUY_TO_COVER"} else -quantity
             new_qty = old_qty + signed
-            cash[currency] = cash.get(currency, Decimal(0)) - signed * price * multiplier_value
+            # Futures are margined contracts: notional is never exchanged on entry or
+            # close. Variation-margin cash must arrive as its own sourced cash event.
+            if asset_class != AssetClass.FUTURE.value:
+                cash[currency] = cash.get(currency, Decimal(0)) - signed * price * multiplier_value
             if old_qty == 0 or old_qty * signed > 0:
                 pos.average_cost = ((abs(old_qty) * old_cost + abs(signed) * price) / abs(new_qty)
                                     if new_qty else Decimal(0))

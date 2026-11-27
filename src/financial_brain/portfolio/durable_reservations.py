@@ -329,13 +329,35 @@ class DurableReservationLedger:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             reservation = connection.execute(
-                "SELECT state FROM reservations WHERE account_id=? AND reservation_id=?",
+                "SELECT state,request_json FROM reservations WHERE account_id=? AND reservation_id=?",
                 (account_id, reservation_id),
             ).fetchone()
             if reservation is None:
                 raise ReservationError("paper fill has no matching account reservation")
             if reservation["state"] != "ACTIVE":
                 raise ReservationError("paper fill cannot attach to a released reservation")
+            reserved = json.loads(reservation["request_json"])["amounts"]
+            quantity_resource = f"INSTRUMENT_QUANTITY:{row['instrument_id']}"
+            fill_quantity = Decimal(str(row["quantity"]))
+            position_action = row["position_action"] or row["side"]
+            if Decimal(reserved.get(quantity_resource, "0")) < fill_quantity:
+                raise ReservationError("paper fill quantity exceeds its frozen instrument reservation")
+            if position_action == "SELL":
+                inventory_resource = f"SELLABLE_INVENTORY:{row['instrument_id']}"
+                if Decimal(reserved.get(inventory_resource, "0")) < fill_quantity:
+                    raise ReservationError("paper sell fill exceeds its frozen sellable-inventory reservation")
+            elif position_action == "BUY" and row["asset_class"] != "FUTURE":
+                required_cash = (fill_quantity * Decimal(str(row["price"]))
+                                 * Decimal(str(row["multiplier"])))
+                if Decimal(reserved.get("CASH", "0")) < required_cash:
+                    raise ReservationError("paper buy fill exceeds its frozen cash reservation")
+                if (row["asset_class"] == "OPTION"
+                        and Decimal(reserved.get("OPTION_BUYING_POWER", "0")) < required_cash):
+                    raise ReservationError("option fill exceeds its frozen options-buying-power reservation")
+            elif row["asset_class"] == "FUTURE" and position_action == "BUY":
+                if any(Decimal(reserved.get(resource, "0")) <= 0
+                       for resource in ("MARGIN", "RISK_CAPITAL")):
+                    raise ReservationError("futures fill requires frozen margin and risk-capital reservations")
             prior_transfer = connection.execute(
                 "SELECT event_sha256 FROM reservation_events WHERE account_id=? AND event_id=?",
                 (account_id, position_event_id),

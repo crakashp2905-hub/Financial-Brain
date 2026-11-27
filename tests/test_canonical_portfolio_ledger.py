@@ -78,19 +78,22 @@ def test_valuation_mark_cannot_carry_sell_semantics_or_realize_pnl(tmp_path):
     assert position["unrealized_pnl"] == Decimal("-100")
 
 
-def test_futures_contract_multiplier_is_applied_to_cash_and_position(tmp_path):
+def test_futures_notional_is_not_booked_as_cash_and_variation_margin_is(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "futures.sqlite")
-    ledger.append(event(
+    ledger.import_events([event(
         "future-buy", EventKind.FILL, asset_class=AssetClass.FUTURE,
         instrument_id="NFO:NIFTY-2026-12-31-FUT", side="BUY", position_action="BUY",
-        quantity="50", price="22000", multiplier="25"))
+        quantity="50", price="22000", multiplier="25"),
+        event("future-vm", EventKind.CASH_FLOW, cash_delta="12500",
+              occurred_at="2026-11-20T10:01:00+05:30",
+              metadata={"cash_flow_type": "FUTURES_VARIATION_MARGIN", "settlement_id": "vm-1"})])
 
     snapshot = ledger.snapshot("paper-main")
 
     assert snapshot["positions"][0]["asset_class"] == "FUTURE"
     assert snapshot["positions"][0]["quantity"] == Decimal("50")
     assert snapshot["positions"][0]["multiplier"] == Decimal("25")
-    assert snapshot["cash"]["INR"] == Decimal("-27500000")
+    assert snapshot["cash"]["INR"] == Decimal("12500")
 
 
 def test_unresolved_position_is_visible_but_never_becomes_a_fill(tmp_path):

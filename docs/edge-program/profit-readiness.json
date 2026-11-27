@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "b6e3da2f7fa8c71cc4ff660b9a8c89cb38f1f2f3fe692c8ce793ae66082407d8",
-  "audit_export_sha256": "a03bc1e72720dfa8a097d894e2fbbbba2cc6e433c8cde57ac29f045f94ea39ae",
+  "status_ledger_sha256": "13863e0c606c9ede8a1428e6ce31b47a2c10ceea9d0e9edda3aa39c6ff86d7c0",
+  "audit_export_sha256": "d3e86de37e172eb7797296878dcb15b8dc856fea5f1b4d91036f465763637e10",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1350,15 +1350,15 @@
             "A single reservation can cover cash, margin, risk capital, options buying power, settlement cash, instrument quantity and sellable inventory. Any overage rejects the whole request; stable request IDs are idempotent and conflicting replays fail.",
             "Release requires a source-hashed terminal order event (FILLED/CANCELLED/REJECTED/EXPIRED); released capacity is auditable and event payload integrity is checked.",
             "`ForwardSessionRunner` now reads an explicitly frozen `reservation_policy` from run constraints and stores reservation tables in its durable journal. Before writing a paper intent/order event, it atomically reserves computed limit-price cash and instrument quantity (or sellable inventory for a sell), plus optional configured per-unit resource amounts for that instrument. Policy/resource failures fail closed before order-journal mutation.",
-            "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because the position ledger does not yet atomically take over that exposure.",
+            "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because position-level resource substitution is not yet implemented.",
             "Every ForwardSessionRunner paper intent now fails closed unless the run config contains an explicitly frozen reservation_policy with explicit resource limits; the check precedes reservation-ledger initialization and intent/order journaling. The synthetic fixture adapter provides a separately labeled bounded fixture policy. Regression verifies no paper-intent row or reservation table is created when policy is absent.",
-            "Supported forward paper fills are appended to portfolio_events and bound to a POSITION_FILL_RECORDED reservation receipt in one SQLite BEGIN IMMEDIATE transaction. Replay verifies matching event hashes and does not duplicate either journal row; invalid canonical position transitions roll both writes back. Runner restart recovery retries the idempotent fill-to-book binding for dispatched receipts.",
-            "Forward runner maps share, ETF-unit, option-contract and futures-contract units to canonical asset classes; derivative fills require explicit position_accounting contract multipliers, and non-INR instruments require configured currency. Filled reservations remain active conservatively, so canonical-position resource accounting and reservation-to-position capacity substitution remain outstanding.",
+            "Supported forward paper fills are appended to portfolio_events and bound to a POSITION_FILL_RECORDED reservation receipt in one SQLite BEGIN IMMEDIATE transaction. Fill quantity, buy cash, option buying power, sellable inventory, and futures margin/risk are checked against the frozen order reservation before either journal write; invalid canonical position transitions roll both writes back. Replay verifies hashes and is idempotent, and runner restart recovery retries fill-to-book binding for dispatched receipts.",
+            "Forward runner maps share, ETF-unit, option-contract and futures-contract units to canonical asset classes; derivative fills require explicit position_accounting contract multipliers, and non-INR instruments require configured currency. Long-option fills reserve premium cash plus options buying power; futures entries require explicit margin and risk capital and do not reserve full notional as cash. Canonical futures cash changes only through separate sourced variation-margin flows. Filled reservations remain active conservatively, so position-level resource accounting and reservation-to-position capacity substitution remain outstanding.",
             "The module and runner are not wired into every desk/OMS path; order reservations remain active after fill rather than being replaced by shared position-level resource usage, and sourced margin/settlement/options buying-power limits remain caller provided."
           ],
           "tests": [
-            "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 92 passed.",
-            "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 7 passed; includes atomic fill replay and rollback on invalid position transition.",
+            "`python -m pytest tests/test_forward_edge_session_runner.py tests/test_portfolio_durable_reservations.py tests/test_canonical_portfolio_ledger.py tests/test_exit_coverage.py -q`: 131 passed.",
+            "`python -m pytest tests/test_portfolio_exit_guard.py -q`: 11 passed, including futures risk-reduction review.",
             "`python -m pytest tests/test_canonical_portfolio_ledger.py -q`: 16 passed, including futures multiplier cash projection.",
             "Runner reservation tests cover filled exposure persistence, atomic canonical position recording, missing-policy rejection before intent/order mutation, over-budget rejection, and refusal to override computed cash exposure.",
             "Ruff passed for runner, reservation module and affected tests; targeted mypy passed for runner and reservation module."
@@ -1410,11 +1410,11 @@
             "kernel.portfolio_exit_guard routes mutual-fund risk reduction to NAV_REDEMPTION_REVIEW and prohibits representing it as an intraday fill.",
             "portfolio.exit_coverage provides a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
             "New `audit_canonical_snapshot_exit_coverage` derives nonzero open positions directly from a `CanonicalPortfolioLedger.snapshot`, uses asset/instrument/sleeve identity so separate sleeves cannot share a receipt, maps mutual funds to NAV exceptions, and detects missing coverage for any open sleeve. A real SQLite canonical-ledger snapshot is exercised in regression tests.",
-            "Canonical snapshots now classify FUTURE positions as exchange-traded coverage requirements; uncovered future positions remain explicit gaps rather than unsupported-asset errors.",
+            "Canonical snapshots classify FUTURE positions as exchange-traded coverage requirements; uncovered future positions remain explicit gaps rather than unsupported-asset errors. The aggregate portfolio exit guard also accepts FUTURE positions and applies exchange quote, visible-depth, lot-alignment and portfolio risk checks.",
             "This adapter covers one supplied canonical account snapshot only; it is not yet a canonical cross-book inventory, a universal pre-entry coverage gate, or proof of operational restart scheduling/drills."
           ],
           "tests": [
-            "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots.",
+            "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots. `python -m pytest tests/test_portfolio_exit_guard.py -q`: 11 passed, including futures risk reduction.",
             "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",
             "Ruff and targeted mypy passed for the exit-coverage module and tests."
           ]
@@ -3259,5 +3259,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "9ba31a4f5fb06ccfcdf44341288d3fabb09c39874264702791590b77dabf5538"
+  "report_sha256": "1ef504fb4bb380bc1821a45142a2e13a4abd38f9d80d5cbdef718b8fe8c0b07d"
 }
