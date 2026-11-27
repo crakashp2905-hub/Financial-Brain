@@ -18,7 +18,7 @@ def signed_policy():
     public_b64 = base64.b64encode(private.public_key().public_bytes_raw()).decode()
     policy = SignedRiskPolicy(
         "owner-risk", "v1", "owner-1", NOW - timedelta(days=1), NOW + timedelta(days=30),
-        1_000_000, 5_000, 0.02, 0.05, 0.10, 10, 25, "")
+        1_000_000, 5_000, 0.02, 0.05, 0.10, 10, 500_000, 25, "")
     signature = base64.b64encode(private.sign(policy.canonical_bytes())).decode()
     return replace(policy, signature_b64=signature), public_b64
 

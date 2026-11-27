@@ -28,6 +28,7 @@ class SignedRiskPolicy:
     weekly_max_drawdown_fraction: float
     monthly_max_drawdown_fraction: float
     max_contract_exposure: int
+    max_nifty_direction_delta_inr: float
     max_slippage_bps: float
     signature_b64: str
 
@@ -55,12 +56,14 @@ def validate_policy(policy: SignedRiskPolicy, *, trusted_owner_public_key_b64: s
         raise SignedRiskPolicyError("policy is not currently effective")
     amounts = (policy.initial_capital_inr, policy.risk_per_trade_inr,
                policy.daily_max_drawdown_fraction, policy.weekly_max_drawdown_fraction,
-               policy.monthly_max_drawdown_fraction, policy.max_slippage_bps)
+               policy.monthly_max_drawdown_fraction, policy.max_nifty_direction_delta_inr,
+               policy.max_slippage_bps)
     if not all(isfinite(value) for value in amounts):
         raise SignedRiskPolicyError("risk limits must be finite")
     if (policy.initial_capital_inr <= 0 or policy.risk_per_trade_inr <= 0
             or policy.risk_per_trade_inr > policy.initial_capital_inr
-            or policy.max_contract_exposure <= 0 or policy.max_slippage_bps <= 0
+            or policy.max_contract_exposure <= 0 or policy.max_nifty_direction_delta_inr <= 0
+            or policy.max_slippage_bps <= 0
             or any(not 0 < value < 1 for value in amounts[2:5])):
         raise SignedRiskPolicyError("capital and limits are outside valid hard-bound ranges")
     try:
