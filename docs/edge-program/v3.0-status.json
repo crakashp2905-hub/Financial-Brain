@@ -10255,22 +10255,30 @@
     {
       "id": "PA-11-01",
       "text": "Preserve Four-Node v1 (128 variants), v2 and v3 results as failed evidence and keep their original source and parameter snapshots immutable.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/strategies/four_node/results/README.md and grid.json preserve the failed 128-variant v1 study, costs, parameter interpretations and holdout contamination disclosure",
+        "The v1 result is negative after costs in discovery and validation, and is explicitly research-only",
+        "No v2/v3 result snapshots or provenance were found in the checkout; capability-provenance references source paths that are absent, so full preservation cannot be verified"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e0586f29"
     },
     {
       "id": "PA-11-02",
       "text": "Refrain from optimizing Four-Node on the same 2016–2026 samples until a new preregistered economic mechanism and untouched validation source exist.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/strategies/four_node/README.md states the 2026Q4 protected trial budget is spent and any new test needs preregistration plus an owner amendment or 2027Q1",
+        "docs/strategies/four_node/results/README.md states the existing 2024+ test period is contaminated and no untouched historical test remains",
+        "scripts/research/four_node_grid.py remains directly runnable without checking the preregistry or protected-trial budget; the hold is documented but not enforced by the runner"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e0586f29"
     },
     {
       "id": "PA-11-03",
@@ -10375,12 +10383,15 @@
     {
       "id": "PA-11-10",
       "text": "Build visual-audit golden fixtures for every screenshot-inspired setup: candle times, known-at overlays, entry, SL, TP and condition failures.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "tests/test_price_action_gaps.py, tests/test_liquidity_sweeps.py, tests/test_opening_range_breakout.py and tests/test_confirmed_fibonacci.py now provide deterministic candle/time and condition fixtures for implemented detectors",
+        "No complete inventory of owner-provided screenshot-inspired setups or screenshot-to-candle golden overlays exists in the checkout; entry/SL/TP chart comparison remains incomplete"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "9b24e12b"
     },
     {
       "id": "PA-11-11",
@@ -21427,6 +21438,8 @@
       "PA-10-17",
       "PA-10-18",
       "PA-10-19",
+      "PA-11-01",
+      "PA-11-02",
       "PA-11-03",
       "PA-11-04",
       "PA-11-05",
@@ -21434,6 +21447,7 @@
       "PA-11-07",
       "PA-11-08",
       "PA-11-09",
+      "PA-11-10",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21857,13 +21871,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1014,
+    "audited_count": 1017,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 883,
-      "UNASSESSED": 364
+      "PARTIAL": 886,
+      "UNASSESSED": 361
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22012,7 +22026,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 883,
-    "UNASSESSED": 364
+    "PARTIAL": 886,
+    "UNASSESSED": 361
   }
 }
