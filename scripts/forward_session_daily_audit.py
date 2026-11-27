@@ -343,6 +343,52 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
                       else None)
     eligible_status = ("FROZEN_SESSION_CONFIG" if eligible_count is not None else
                        "UNKNOWN: raw session does not carry a frozen eligible-strategy denominator")
+    intents_by_decision: dict[str, list[str]] = {}
+    for order_id, intent in intents.items():
+        decision_id = intent.get("decision_id")
+        if isinstance(decision_id, str):
+            intents_by_decision.setdefault(decision_id, []).append(order_id)
+    strategy_rows: dict[str, dict[str, int]] = {}
+    for decision_id, decision in decisions.items():
+        strategy_id = decision.get("strategy_id")
+        if not isinstance(strategy_id, str) or not strategy_id:
+            strategy_id = "UNKNOWN"
+        row = strategy_rows.setdefault(strategy_id, {
+            "decision_count": 0, "generated_signal_count": 0, "matched_fill_order_count": 0,
+            "missing_fill_order_count": 0,
+        })
+        row["decision_count"] += 1
+        if decision.get("outcome") == "TRADE":
+            row["generated_signal_count"] += 1
+        for order_id in intents_by_decision.get(decision_id, []):
+            receipt = receipts.get(order_id)
+            try:
+                quantity = int(receipt.get("filled_quantity", 0) or 0) if receipt else 0
+                requested = int(intents[order_id].get("quantity", 0) or 0)
+            except (TypeError, ValueError, OverflowError):
+                quantity, requested = 0, 0
+            if receipt and quantity > 0:
+                row["matched_fill_order_count"] += 1
+            if (receipt is None or quantity <= 0 or requested <= 0 or quantity < requested
+                    or receipt.get("status") not in {"FILLED", "PARTIAL"}):
+                row["missing_fill_order_count"] += 1
+    performance_dimensions = {
+        "by_strategy": {key: strategy_rows[key] for key in sorted(strategy_rows)},
+        "by_asset_class": None,
+        "by_decision_origin": None,
+        "by_forward_regime": None,
+        "realized_vs_valuation_gross_pnl_inr": {
+            "realized": day_end.get("realized_gross_pnl_inr") if isinstance(day_end, dict) else None,
+            "unrealized_valuation_change": day_end.get("unrealized_gross_pnl_inr")
+            if isinstance(day_end, dict) else None,
+        },
+        "unavailable_dimensions": {
+            "asset_class": "Decision manifests and session config do not bind effective-dated asset-class labels.",
+            "decision_origin": "Raw decisions do not persist a validated MANUAL/AUTOMATIC origin.",
+            "forward_regime": "No frozen point-in-time regime label and source hash are attached to decisions.",
+            "strategy_pnl": "The OMS/accounting close is portfolio-level; realized and valuation P&L are not attributed by strategy.",
+        },
+    }
     proof = {
         "eligible_count": eligible_count,
         "eligible_count_status": eligible_status,
@@ -360,6 +406,7 @@ def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.
         "benchmark_status": "UNKNOWN: no same-session benchmark return/mark is persisted in raw runner logs",
         "session_close_status": session_close.get("status") if isinstance(session_close, dict) else None,
         "financial_reconciliation_status": day_end.get("reconciled") if isinstance(day_end, dict) else None,
+        "performance_dimensions": performance_dimensions,
     }
     return {
         "session_id": session_id,
@@ -419,14 +466,28 @@ def render_one_page_proof(report: dict[str, Any], session: dict[str, Any]) -> st
         f"| Worst realized loss (INR) | {value('worst_loss_inr')} |",
         f"| Frozen benchmark | {value('benchmark_id')} |",
         f"| Benchmark comparison | {value('benchmark_comparison')} |", "",
+        "## Attribution coverage", "",
+        "| Strategy | Decisions | Signals | Matched orders | Missing orders |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for strategy_id, counts in proof["performance_dimensions"]["by_strategy"].items():
+        lines.append(f"| {strategy_id} | {counts['decision_count']} | {counts['generated_signal_count']} | "
+                     f"{counts['matched_fill_order_count']} | {counts['missing_fill_order_count']} |")
+    realized_valuation = proof["performance_dimensions"]["realized_vs_valuation_gross_pnl_inr"]
+    lines.extend([
+        "",
+        f"Realized gross P&L: {realized_valuation['realized'] or 'Unknown'} INR; "
+        f"unrealized valuation change: {realized_valuation['unrealized_valuation_change'] or 'Unknown'} INR.",
+        "Asset class, decision origin, regime and strategy-level P&L are shown as unavailable when not sourced.", "",
         "## Evidence gaps", "",
         f"- Eligible count: {proof['eligible_count_status']}",
         f"- Worst loss: {proof['worst_loss_status']}",
         f"- Benchmark: {proof['benchmark_status']}",
+        f"- Attribution gaps: {', '.join(proof['performance_dimensions']['unavailable_dimensions'])}",
         f"- Financial reconciliation: {value('financial_reconciliation_status')}",
         f"- Decision lineage valid: {session['decision_quote_lineage_valid']}",
         f"- Raw hash chain valid: {session['raw_hash_chain_valid']}",
-    ]
+    ])
     return "\n".join(lines) + "\n"
 
 

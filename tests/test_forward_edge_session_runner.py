@@ -959,6 +959,13 @@ def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_pat
     assert proof["eligible_count"] is None
     assert proof["gross_pnl_inr"] is None
     assert proof["net_pnl_inr"] is None
+    assert proof["performance_dimensions"]["by_strategy"]["momentum"] == {
+        "decision_count": 1,
+        "generated_signal_count": 1,
+        "matched_fill_order_count": 1,
+        "missing_fill_order_count": 0,
+    }
+    assert proof["performance_dimensions"]["by_asset_class"] is None
     proof_path = next(proof_dir.glob("session-*.md"))
     page = proof_path.read_text(encoding="utf-8")
     assert "Eligible strategy count | Unknown" in page
