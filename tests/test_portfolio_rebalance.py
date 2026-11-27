@@ -62,3 +62,24 @@ def test_rebalance_refuses_incomplete_cost_inputs_and_bad_values():
         plan_rebalance(**{**kwargs, "nav_inr": 0})
     with pytest.raises(RebalanceError, match="cost rates"):
         plan_rebalance(**{**kwargs, "proportional_cost_rates": {"A": -0.1, "B": 0.001}})
+
+
+def test_turnover_budget_refuses_over_budget_batch_and_keeps_current_weights():
+    kwargs = dict(
+        current_weights={"A": 0.0, "B": 0.0}, target_weights={"A": 0.04, "B": 0.03},
+        nav_inr=100_000, no_trade_band_weights={"A": 0.0, "B": 0.0},
+        proportional_cost_rates={"A": 0.001, "B": 0.001},
+        fixed_charge_inr_per_order={"A": 5, "B": 5},
+        expected_improvement_inr={"A": 100, "B": 100},
+    )
+
+    over_budget = plan_rebalance(**kwargs, turnover_budget_inr=6_999)
+    at_budget = plan_rebalance(**kwargs, turnover_budget_inr=7_000)
+
+    assert over_budget.status == "NO_ACTION"
+    assert over_budget.turnover_inr == 0
+    assert over_budget.total_cost_inr == 0
+    assert over_budget.proposed_weights == kwargs["current_weights"]
+    assert {line.disposition for line in over_budget.lines} == {"REJECTED_TURNOVER_BUDGET"}
+    assert at_budget.status == "PAPER_REBALANCE_PROPOSED"
+    assert at_budget.turnover_inr == 7_000
