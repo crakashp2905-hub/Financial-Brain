@@ -8169,13 +8169,20 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "src/financial_brain/kernel/exit_accounting.py adds typed BUY/SELL_SHORT trailing-stop state with a fixed distance, favorable watermark updates, monotone stop protection for a frozen policy version, and explicit reset on a new policy version.",
-        "The same module accounts staged exit fills, cumulative realized P&L net of per-fill costs, remaining quantity, marked unrealized P&L, exact event replay idempotency, and rejects duplicate/conflicting events or over-closes.",
-        "The historical exit replay already applies partial target fractions, then realizes the remaining quantity on stop/time exit; this addition supplies separate auditable position accounting primitives."
+        "`src/financial_brain/kernel/exit_accounting.py` supplies typed BUY/SELL_SHORT trailing-stop state with fixed distance, favorable watermark updates, monotone protection within a frozen policy version, explicit reset on a new policy version, staged exit fills, realized P&L net of recorded per-fill costs, remaining quantity, marked unrealized P&L, replay idempotency and over-close refusal.",
+        "`ExitProtectionLedger.record_trailing_stop_update` now accepts only timezone-aware, source-hashed quote observations for an open position, verifies side against the entry signal, derives the expected watermark and stop from the observed quote, rejects non-monotone same-version updates and requires a reason plus new policy hash/version for reset. Updates are append-only and decision-linked in the position hash-chain.",
+        "`ExitProtectionLedger.trailing_stop_state` recovers the latest persisted trail from the journal after restart. Tests cover quote-bound progression, idempotency, monotonicity, explicit policy change and restart recovery.",
+        "`tests/test_exit_protection_ledger.py tests/test_exit_accounting.py`: 28 passed; Ruff and targeted mypy passed."
       ],
-      "blocker": "The new accounting and trailing primitives are not integrated into persistent protection ledger events, paper position books or ForwardSessionRunner. Executable trigger/fill selection, crash recovery and cross-book reconciliation remain required.",
-      "last_audited_at_utc": "2026-11-26T00:00:00Z",
-      "commit": null
+      "blocker": "Partial: trailing-state and partial-fill accounting are now durable within the position journal, but the runner does not yet schedule this state against every executable quote or atomically reconcile its fills across all paper books. Prospective execution and cross-book reconciliation remain required.",
+      "last_audited_at_utc": "2026-11-27T02:31:42Z",
+      "commit": "pending",
+      "test_evidence": [
+        "`python -m pytest tests/test_exit_protection_ledger.py tests/test_exit_accounting.py -q`: 28 passed.",
+        "`ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py`: passed.",
+        "`mypy src/financial_brain/kernel/exit_protection_ledger.py`: passed."
+      ],
+      "test_result": "Durable trailing-stop updates, restart recovery and staged exit accounting: 28 focused tests passed; Ruff and targeted mypy passed. PA-04-11 remains PARTIAL pending universal quote-monitor and paper-book integration."
     },
     {
       "id": "PA-04-12",

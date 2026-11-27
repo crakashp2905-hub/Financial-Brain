@@ -6,6 +6,7 @@ import pytest
 from financial_brain.forward_edge.durable import DurableJournal
 from financial_brain.kernel.exit_protection_ledger import ExitLedgerError, ExitProtectionLedger
 from financial_brain.kernel.exit_policy import ExitPolicy, ExitRule, ExitRuleAction
+from financial_brain.kernel.exit_accounting import TrailingStopState
 from financial_brain.kernel.position_signals import (
     ClosingAction, EmittedExitEvent, EntrySide, EntrySignal, ExitProtectionIntent, ExitSignal,
 )
@@ -483,3 +484,74 @@ def test_entry_decision_hash_binds_strategy_and_snapshot(tmp_path):
         ledger.record_entry_signal(entry, snapshot=snapshot, idempotency_key=f"entry:{index}")
         hashes.append(ledger.journal.records()[0]["decision_sha256"])
     assert hashes[0] != hashes[1]
+
+
+def test_trailing_stop_updates_are_quote_bound_monotone_and_restart_replayable(tmp_path):
+    path = tmp_path / "trailing-position.journal"
+    ledger = _armed(path)
+    state = TrailingStopState.start(side="BUY", policy_version="trail-v1",
+                                    distance="5", entry_price="100")
+    args = dict(observed_at=NOW + timedelta(seconds=1), quote_event_id="quote-1",
+                quote_evidence_sha256="d" * 64, policy_sha256="e" * 64,
+                idempotency_key="trail:1")
+    assert ledger.record_trailing_stop_update(state=state, observed_price=Decimal("100"), **args)
+    assert not ledger.record_trailing_stop_update(state=state, observed_price=Decimal("100"), **args)
+
+    advanced = state.observe("110", policy_version="trail-v1")
+    assert advanced.stop_price == Decimal("105")
+    assert ledger.record_trailing_stop_update(
+        state=advanced, observed_price=Decimal("110"), observed_at=NOW + timedelta(seconds=2),
+        quote_event_id="quote-2", quote_evidence_sha256="f" * 64,
+        policy_sha256="e" * 64, idempotency_key="trail:2")
+    retraced = advanced.observe("105", policy_version="trail-v1")
+    assert retraced.stop_price == advanced.stop_price
+    assert ledger.record_trailing_stop_update(
+        state=retraced, observed_price=Decimal("105"), observed_at=NOW + timedelta(seconds=3),
+        quote_event_id="quote-3", quote_evidence_sha256="1" * 64,
+        policy_sha256="e" * 64, idempotency_key="trail:3")
+
+    recovered = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    assert recovered.trailing_stop_state == retraced
+    trail_rows = [row for row in recovered.journal.records()
+                  if row.get("type") == "TRAILING_STOP_UPDATE"]
+    assert [row["stop_price"] for row in trail_rows] == ["95", "105", "105"]
+
+
+def test_trailing_stop_rejects_lower_watermark_without_policy_change(tmp_path):
+    ledger = _armed(tmp_path / "trailing-monotone.journal")
+    state = TrailingStopState.start(side="BUY", policy_version="trail-v1",
+                                    distance="5", entry_price="100").observe(
+                                        "110", policy_version="trail-v1")
+    ledger.record_trailing_stop_update(
+        state=state, observed_price=Decimal("110"), observed_at=NOW + timedelta(seconds=1),
+        quote_event_id="quote-high", quote_evidence_sha256="d" * 64,
+        policy_sha256="e" * 64, idempotency_key="trail:high")
+    lower = TrailingStopState.start(side="BUY", policy_version="trail-v1",
+                                    distance="5", entry_price="105")
+    with pytest.raises(ExitLedgerError, match="watermark does not follow"):
+        ledger.record_trailing_stop_update(
+            state=lower, observed_price=Decimal("105"), observed_at=NOW + timedelta(seconds=2),
+            quote_event_id="quote-low", quote_evidence_sha256="f" * 64,
+            policy_sha256="e" * 64, idempotency_key="trail:low")
+
+
+def test_trailing_stop_policy_change_requires_reason_and_starts_at_current_quote(tmp_path):
+    ledger = _armed(tmp_path / "trailing-policy.journal")
+    state = TrailingStopState.start(side="BUY", policy_version="trail-v1",
+                                    distance="5", entry_price="100")
+    ledger.record_trailing_stop_update(
+        state=state, observed_price=Decimal("100"), observed_at=NOW + timedelta(seconds=1),
+        quote_event_id="quote-v1", quote_evidence_sha256="d" * 64,
+        policy_sha256="e" * 64, idempotency_key="trail:v1")
+    changed = TrailingStopState.start(side="BUY", policy_version="trail-v2",
+                                      distance="6", entry_price="104")
+    with pytest.raises(ExitLedgerError, match="explicit reason"):
+        ledger.record_trailing_stop_update(
+            state=changed, observed_price=Decimal("104"), observed_at=NOW + timedelta(seconds=2),
+            quote_event_id="quote-v2", quote_evidence_sha256="f" * 64,
+            policy_sha256="1" * 64, idempotency_key="trail:v2-no-reason")
+    assert ledger.record_trailing_stop_update(
+        state=changed, observed_price=Decimal("104"), observed_at=NOW + timedelta(seconds=2),
+        quote_event_id="quote-v2", quote_evidence_sha256="f" * 64,
+        policy_sha256="1" * 64, idempotency_key="trail:v2",
+        policy_change_reason="Approved wider stop policy after review")

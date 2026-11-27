@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "2d723de4aaac7261ce4f7cc0acd05a27024fb18790b6fb1b7b9e4035252bf822",
-  "audit_export_sha256": "7512f720e6e186d7312f864aca4b747a33e9cdb35cde3425608d88250898544c",
+  "status_ledger_sha256": "fd1d5b442b646009187d8c0d5c715e8311d407c52e0e7ead336f7e2b6ef91533",
+  "audit_export_sha256": "e703927f2d169fd41232e7a2b96d0f8508171247ef4d8ab63637c4a3af12c949",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1500,14 +1500,19 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement trailing stops and partial take profits with total position accounting; trailing stops must be monotone in the protective direction unless policy version changes."
           },
-          "commit": null,
-          "blocker": "The new accounting and trailing primitives are not integrated into persistent protection ledger events, paper position books or ForwardSessionRunner. Executable trigger/fill selection, crash recovery and cross-book reconciliation remain required.",
+          "commit": "pending",
+          "blocker": "Partial: trailing-state and partial-fill accounting are now durable within the position journal, but the runner does not yet schedule this state against every executable quote or atomically reconcile its fills across all paper books. Prospective execution and cross-book reconciliation remain required.",
           "evidence": [
-            "src/financial_brain/kernel/exit_accounting.py adds typed BUY/SELL_SHORT trailing-stop state with a fixed distance, favorable watermark updates, monotone stop protection for a frozen policy version, and explicit reset on a new policy version.",
-            "The same module accounts staged exit fills, cumulative realized P&L net of per-fill costs, remaining quantity, marked unrealized P&L, exact event replay idempotency, and rejects duplicate/conflicting events or over-closes.",
-            "The historical exit replay already applies partial target fractions, then realizes the remaining quantity on stop/time exit; this addition supplies separate auditable position accounting primitives."
+            "`src/financial_brain/kernel/exit_accounting.py` supplies typed BUY/SELL_SHORT trailing-stop state with fixed distance, favorable watermark updates, monotone protection within a frozen policy version, explicit reset on a new policy version, staged exit fills, realized P&L net of recorded per-fill costs, remaining quantity, marked unrealized P&L, replay idempotency and over-close refusal.",
+            "`ExitProtectionLedger.record_trailing_stop_update` now accepts only timezone-aware, source-hashed quote observations for an open position, verifies side against the entry signal, derives the expected watermark and stop from the observed quote, rejects non-monotone same-version updates and requires a reason plus new policy hash/version for reset. Updates are append-only and decision-linked in the position hash-chain.",
+            "`ExitProtectionLedger.trailing_stop_state` recovers the latest persisted trail from the journal after restart. Tests cover quote-bound progression, idempotency, monotonicity, explicit policy change and restart recovery.",
+            "`tests/test_exit_protection_ledger.py tests/test_exit_accounting.py`: 28 passed; Ruff and targeted mypy passed."
           ],
-          "tests": []
+          "tests": [
+            "`python -m pytest tests/test_exit_protection_ledger.py tests/test_exit_accounting.py -q`: 28 passed.",
+            "`ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py`: passed.",
+            "`mypy src/financial_brain/kernel/exit_protection_ledger.py`: passed."
+          ]
         },
         {
           "item_id": "PA-04-12",
@@ -3238,5 +3243,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "6717577d5aff1e9588619536bf6d933e0db671ea43f86018836e2c48d2e6d992"
+  "report_sha256": "8c6e850fa81b444d09e73db75d51c98d9cc3cae132d72dccc1122997d3df1e39"
 }

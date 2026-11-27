@@ -20,6 +20,7 @@ from .position_signals import (
 )
 from .trader_signal import ExitTrigger
 from .exit_policy import ExitPolicy
+from .exit_accounting import TrailingStopState
 
 
 class ExitLedgerError(ValueError):
@@ -79,6 +80,19 @@ class ExitProtectionLedger:
             return False
         journal.append(record)
         return True
+
+    @property
+    def trailing_stop_state(self) -> TrailingStopState | None:
+        """Recover the latest quote-derived trail from the hash-chained position journal."""
+        record = next((row for row in reversed(self._position_records())
+                       if row.get("type") == "TRAILING_STOP_UPDATE"), None)
+        if record is None:
+            return None
+        return TrailingStopState(
+            side=str(record["side"]), policy_version=str(record["policy_version"]),
+            distance=Decimal(str(record["distance"])), watermark=Decimal(str(record["watermark"])),
+            stop_price=Decimal(str(record["stop_price"])),
+        )
 
     @property
     def state(self) -> ExitLedgerState:
@@ -435,6 +449,88 @@ class ExitProtectionLedger:
                   "exit_policy_version": exit_policy.policy_version,
                   "exit_policy_hash": exit_policy.policy_hash,
                   "idempotency_key": idempotency_key}
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def record_trailing_stop_update(self, *, state: TrailingStopState,
+                                    observed_price: Decimal, observed_at: datetime,
+                                    quote_event_id: str, quote_evidence_sha256: str,
+                                    policy_sha256: str, idempotency_key: str,
+                                    policy_change_reason: str | None = None) -> bool:
+        """Persist a quote-derived monotone trail in the position's hash-chained journal."""
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+            raise ExitLedgerError("trailing-stop observation time must be timezone-aware")
+        if not quote_event_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("trailing-stop quote and idempotency identities are required")
+        for label, digest in (("quote evidence", quote_evidence_sha256), ("policy", policy_sha256)):
+            if (len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest)):
+                raise ExitLedgerError(f"{label} hash must be lowercase SHA-256")
+        price = _decimal(observed_price, "trailing-stop observed price")
+        if price <= 0:
+            raise ExitLedgerError("trailing-stop observed price must be positive")
+        records = self._position_records()
+        entry = next((row for row in records if row.get("type") == "ENTRY_SIGNAL"), None)
+        if entry is None:
+            raise ExitLedgerError("trailing stop requires a journaled entry signal")
+        if state.side != entry["side"]:
+            raise ExitLedgerError("trailing-stop direction differs from the position entry")
+        record = {"type": "TRAILING_STOP_UPDATE", "position_id": self.position_id,
+                  "side": state.side, "policy_version": state.policy_version,
+                  "policy_sha256": policy_sha256, "distance": str(state.distance),
+                  "watermark": str(state.watermark), "stop_price": str(state.stop_price),
+                  "observed_price": str(price), "observed_at": observed_at.isoformat(),
+                  "quote_event_id": quote_event_id, "quote_evidence_sha256": quote_evidence_sha256,
+                  "policy_change_reason": policy_change_reason, "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        prior_key = next((row for row in records if row.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if prior_key == record:
+                return False
+            raise ExitLedgerError("idempotency key conflicts with previously journaled evidence")
+        duplicate_quote = next((row for row in records if row.get("type") == "TRAILING_STOP_UPDATE"
+                                and row.get("quote_event_id") == quote_event_id), None)
+        if duplicate_quote is not None:
+            if {key: value for key, value in duplicate_quote.items() if key != "decision_sha256"} == {
+                    key: value for key, value in record.items() if key != "decision_sha256"}:
+                return False
+            raise ExitLedgerError("quote event already has a conflicting trailing-stop update")
+        position_state = self.state
+        if position_state.open_quantity <= 0 or position_state.closed_event_id is not None:
+            raise ExitLedgerError("trailing-stop updates require an open filled position")
+        latest_entry_fill = max((datetime.fromisoformat(str(row["occurred_at"])) for row in records
+                                 if row.get("type") == "ENTRY_FILL" and row.get("occurred_at")),
+                                default=None)
+        if latest_entry_fill is not None and observed_at.astimezone(latest_entry_fill.tzinfo) < latest_entry_fill:
+            raise ExitLedgerError("trailing-stop observation cannot precede an entry fill")
+        prior = next((row for row in reversed(records) if row.get("type") == "TRAILING_STOP_UPDATE"), None)
+        if prior is not None:
+            prior_at = datetime.fromisoformat(str(prior["observed_at"]))
+            if observed_at.astimezone(prior_at.tzinfo) <= prior_at:
+                raise ExitLedgerError("trailing-stop observations must advance in time")
+            changed_policy = state.policy_version != prior["policy_version"]
+            if changed_policy:
+                if not isinstance(policy_change_reason, str) or not policy_change_reason.strip():
+                    raise ExitLedgerError("trailing-stop policy change requires an explicit reason")
+                if state.watermark != price:
+                    raise ExitLedgerError("new trailing-stop policy must start from the current observed quote")
+            else:
+                if policy_change_reason is not None:
+                    raise ExitLedgerError("policy-change reason is only valid when the version changes")
+                if policy_sha256 != prior["policy_sha256"] or state.distance != Decimal(prior["distance"]):
+                    raise ExitLedgerError("trailing-stop policy hash/distance changed without a version change")
+                old_watermark = Decimal(prior["watermark"])
+                expected_watermark = (max(old_watermark, price) if state.side == "BUY"
+                                      else min(old_watermark, price))
+                if state.watermark != expected_watermark:
+                    raise ExitLedgerError("trailing-stop watermark does not follow the observed quote")
+        else:
+            if policy_change_reason is not None:
+                raise ExitLedgerError("initial trailing-stop state cannot carry a policy-change reason")
+            if state.watermark != price:
+                raise ExitLedgerError("initial trailing-stop watermark must equal the observed quote")
+        expected_stop = (state.watermark - state.distance if state.side == "BUY"
+                         else state.watermark + state.distance)
+        if state.stop_price != expected_stop or expected_stop <= 0:
+            raise ExitLedgerError("trailing-stop price must match its observed watermark and distance")
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
     def emit(
