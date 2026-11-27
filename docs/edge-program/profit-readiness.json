@@ -1,11 +1,11 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T01:42:43+00:00",
+  "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "70b30fea8ad7043f7d47c281bca5704d2a83be5fd45094e36774ac8e0794f699",
-  "audit_export_sha256": "e9d3fe682bae1cd012f57c41a9fc1d9f639f435b6bfee831676de8314b346f05",
+  "status_ledger_sha256": "2beaf1bf78fc18e5944ef9a46500b266e212c98e9ccd8a8de9a12992237c0b81",
+  "audit_export_sha256": "25aef5ac730ba65722c7759138f7314b9cc04353736e329b7ad041a25a11b54c",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1312,17 +1312,24 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build immutable entry, fill, partial fill, amend, stop policy, stop trigger, target trigger, cancel, expire and exit events; link to strategy and decision hashes."
           },
-          "commit": "b2e4ae3d",
-          "blocker": "PARTIAL: the decision hash and existing immutable journal cover the kernel position/protection lifecycle, but the requirement also needs a unified strategy-linked amend, cancel, and expire event contract across OMS, legacy paper books, options, and the forward runner. These order paths remain separate.",
+          "commit": "9e293df7",
+          "blocker": "Partial: kernel entry amendment, cancel and expiry are now immutable and decision-linked, but exit-order amendments and cross-system state propagation are absent. ForwardSessionRunner, OMS, legacy books and options paths do not share this lifecycle journal or one transaction boundary.",
           "evidence": [
             "src/financial_brain/kernel/exit_protection_ledger.py computes decision_sha256 over canonical frozen entry identity, strategy/version, instrument, side, quote source/evidence hash, decision time, and entry snapshot hash.",
             "The append-only hash-chained position journal carries the same decision_sha256 through entry intent and fills, armed stop/target policy, stop/target trigger, unresolved exit, paper execution, partial/full exit fills, and position closure; conflicting replay remains rejected.",
-            "tests/test_exit_protection_ledger.py verifies every recorded position lifecycle event retains one decision hash, changing the frozen setup changes that hash, and restart/idempotency behavior remains valid."
+            "tests/test_exit_protection_ledger.py verifies every recorded position lifecycle event retains one decision hash, changing the frozen setup changes that hash, and restart/idempotency behavior remains valid.",
+            "src/financial_brain/kernel/exit_protection_ledger.py now appends decision-hash-linked ENTRY_INTENT_AMENDED events with monotone revisions, frozen snapshot hashes, source hashes, and a revised quantity cap; it refuses revisions below already filled quantity or after full fill/terminal state.",
+            "The same durable position journal now records ENTRY_INTENT_CANCELLED and ENTRY_INTENT_EXPIRED with remaining quantity, source hash, reason, event time and frozen entry decision hash. Expiry requires the frozen timezone-aware expires_at to have elapsed; terminal intents cannot receive later fills. Replays are idempotent.",
+            "Stop/target policy, trigger, exit fill, partial fill, cancellation and position-close events remain linked to the frozen strategy decision hash by the existing hash-chained journal. Cross-OMS order amendment/cancel/expiry propagation remains separate."
           ],
           "tests": [
             "python -m pytest tests/test_exit_protection_ledger.py -q: 15 passed.",
             "ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py: passed.",
-            "mypy src/financial_brain/kernel/exit_protection_ledger.py: Success, no issues found."
+            "mypy src/financial_brain/kernel/exit_protection_ledger.py: Success, no issues found.",
+            "python -m pytest tests/test_exit_protection_ledger.py -q --basetemp=.pytest-pa0403-entry-life-final2: 19 passed.",
+            "Focused tests prove amendment revision/replay/hash linkage, effective fill cap, refusal below filled quantity, cancel idempotency/terminal behavior, and expiry deadline enforcement.",
+            "ruff check src/financial_brain/kernel/exit_protection_ledger.py tests/test_exit_protection_ledger.py: passed.",
+            "mypy src/financial_brain/kernel/exit_protection_ledger.py: passed."
           ]
         },
         {
@@ -3224,5 +3231,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "afa9e8f8fed02270c3f047b284bb0f380c023c9068907232199d939d65e61efa"
+  "report_sha256": "303676ef2a8bef91b7dc68bee0af393a75cdc2079e66adf5976434e7bcd515cb"
 }
