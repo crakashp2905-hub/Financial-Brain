@@ -16,6 +16,7 @@ from financial_brain.portfolio.canonical_ledger import (
 )
 from financial_brain.portfolio.equity_reconciliation import (
     EquityReconciliationError,
+    EquityReconciliationRegistry,
     reconcile_account_equity,
     require_reconciled,
 )
@@ -59,8 +60,9 @@ def _ledger(path, *, mark_at_open=True):
 
 
 def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_fees(tmp_path):
+    ledger = _ledger(tmp_path / "equity.sqlite")
     result = reconcile_account_equity(
-        ledger=_ledger(tmp_path / "equity.sqlite"), account_id=ACCOUNT,
+        ledger=ledger, account_id=ACCOUNT,
         opening_as_of=START, closing_as_of=END, reported_net_pnl_inr=Decimal("90"),
     )
     assert result.opening_equity_inr == Decimal("100000.00")
@@ -73,7 +75,10 @@ def test_equity_change_reconciles_external_flows_trades_marks_distributions_and_
     assert result.event_count == 7
     assert result.event_sha256 and result.opening_snapshot_sha256 and result.closing_snapshot_sha256
     assert len(result.report_sha256) == 64
+    assert result.registry_status == "CURRENT"
     require_reconciled(result)
+    registry = EquityReconciliationRegistry(tmp_path / "equity.sqlite")
+    assert registry.status(report_sha256=result.report_sha256)["status"] == "CURRENT"
 
 
 def test_missing_opening_mark_fails_closed(tmp_path):
@@ -130,6 +135,43 @@ def test_independent_pnl_mismatch_beyond_paise_tolerance_is_not_reconciled(tmp_p
     assert not result.reconciled
 
 
+def test_late_backdated_event_invalidates_persisted_reconciliation_report(tmp_path):
+    ledger = _ledger(tmp_path / "equity.sqlite")
+    report = reconcile_account_equity(
+        ledger=ledger, account_id=ACCOUNT, opening_as_of=START, closing_as_of=END,
+        reported_net_pnl_inr=Decimal("90"),
+    )
+    registry = EquityReconciliationRegistry(tmp_path / "equity.sqlite")
+    assert registry.status(report_sha256=report.report_sha256)["status"] == "CURRENT"
+
+    ledger.append(_event("late-backdated-distribution", EventKind.CASH_FLOW,
+                         START + timedelta(hours=3), cash_delta="5",
+                         metadata={"flow_type": "DISTRIBUTION", "source": "late-arrival"}))
+
+    status = registry.status(report_sha256=report.report_sha256)
+    assert status == {
+        "status": "INVALIDATED",
+        "invalidation_reason": "CANONICAL_EVENTS_CHANGED_THROUGH_CLOSING_CUTOFF",
+    }
+    with pytest.raises(EquityReconciliationError, match="not current"):
+        require_reconciled(report)
+
+
+def test_post_cutoff_event_does_not_invalidate_historical_reconciliation(tmp_path):
+    ledger = _ledger(tmp_path / "equity.sqlite")
+    report = reconcile_account_equity(
+        ledger=ledger, account_id=ACCOUNT, opening_as_of=START, closing_as_of=END,
+        reported_net_pnl_inr=Decimal("90"),
+    )
+    registry = EquityReconciliationRegistry(tmp_path / "equity.sqlite")
+
+    ledger.append(_event("later-distribution", EventKind.CASH_FLOW,
+                         END + timedelta(minutes=1), cash_delta="5",
+                         metadata={"flow_type": "DISTRIBUTION", "source": "later-session"}))
+
+    assert registry.status(report_sha256=report.report_sha256)["status"] == "CURRENT"
+
+
 def test_concurrent_append_waits_until_open_close_snapshots_share_one_cutoff(tmp_path):
     ledger = _ledger(tmp_path / "equity.sqlite")
     original_events = ledger.events
@@ -163,4 +205,9 @@ def test_concurrent_append_waits_until_open_close_snapshots_share_one_cutoff(tmp
     assert not writer.is_alive()
     assert result.reconciled
     assert result.event_count == 7
+    invalidated = EquityReconciliationRegistry(tmp_path / "equity.sqlite").status(
+        report_sha256=result.report_sha256)
+    assert invalidated["status"] == "INVALIDATED"
+    with pytest.raises(EquityReconciliationError, match="not current"):
+        require_reconciled(result)
     assert ledger.snapshot(ACCOUNT, as_of=END.isoformat())["cash"]["INR"] == Decimal("99515")
