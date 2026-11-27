@@ -9732,12 +9732,18 @@
     {
       "id": "PA-09-03",
       "text": "Define future index return distributions at 15/30/60 minutes and close, but evaluate 15-minute trading claims separately from longer-horizon statistical relevance.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_market.py forward_targets creates separate same-session close-to-close 15m, 30m, 60m and 15:30 close labels, with outcome-end timestamps for purging; missing, incomplete and cross-session targets remain null.",
+        "summarize_forward_distributions reports sample counts, missing counts, mean, standard deviation, min/max and interpolated q05/q25/median/q75/q95 for each horizon, explicitly marked descriptive_only because adjacent outcomes overlap.",
+        "tests/test_forecasting_index_market.py and tests/test_forecasting_index_15m.py: 20 passed; Ruff and mypy passed for the updated modules.",
+        "No real historical index-minute dataset is present or wired to the target builder, so market-specific distributions, dependence-robust inference, and distinct empirical evaluation of 15-minute versus longer horizons remain unverified."
+      ],
+      "blocker": "Feed complete, authorized index-minute history through the strict bar builder, then generate immutable empirical target samples and evaluate short/long horizons separately with dependence-aware inference on chronological held-out sessions.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "a5737954",
+      "test_result": "20 focused forecasting-index tests passed; Ruff and mypy passed for both forecast modules."
     },
     {
       "id": "PA-09-04",
@@ -21180,6 +21186,7 @@
       "PA-08-15",
       "PA-09-01",
       "PA-09-02",
+      "PA-09-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21603,13 +21610,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 973,
+    "audited_count": 974,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 843,
-      "UNASSESSED": 405
+      "PARTIAL": 844,
+      "UNASSESSED": 404
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21758,7 +21765,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 843,
-    "UNASSESSED": 405
+    "PARTIAL": 844,
+    "UNASSESSED": 404
   }
 }
