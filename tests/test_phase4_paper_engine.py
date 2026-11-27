@@ -43,7 +43,8 @@ def _db(*, names=6, sessions=120, drift=0.0, minute_bars=True, price0=100.0):
                    high DOUBLE, low DOUBLE, close DOUBLE, volume BIGINT,
                    source VARCHAR)""")
     con.execute("""CREATE TABLE index_levels (business_date DATE, index_name VARCHAR,
-                   close_level DOUBLE)""")
+                   close_level DOUBLE, variant VARCHAR DEFAULT 'PRICE', source VARCHAR DEFAULT 'test',
+                   observed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)""")
 
     # Rows are generated **in SQL**, not in Python. This project already measured DuckDB's
     # `executemany` at roughly 800 rows/sec against 153,000/s for a staged bulk load, and a
@@ -76,7 +77,7 @@ def _db(*, names=6, sessions=120, drift=0.0, minute_bars=True, price0=100.0):
     # An index series, so the engine's benchmark control has something to read. Without it the
     # control must still return the universe figure, which is the one that matters.
     con.execute(f"""
-        INSERT INTO index_levels
+        INSERT INTO index_levels (business_date, index_name, close_level)
         SELECT (DATE '{START}' + INTERVAL (k) DAY)::DATE, 'Nifty 500', 1000.0 * (1 + 0.0001 * k)
         FROM generate_series(0, {sessions - 1}) b(k)
     """)
@@ -98,6 +99,32 @@ def _db(*, names=6, sessions=120, drift=0.0, minute_bars=True, price0=100.0):
 
 
 # ------------------------------------------------------------- the four separations
+def test_control_prefers_complete_total_return_index_and_reports_variant():
+    con = _db(names=4, drift=0.001)
+    con.execute("""INSERT INTO index_levels (business_date, index_name, close_level, variant)
+        SELECT business_date, index_name,
+               close_level * (1 + 0.01 * date_diff('day', DATE '2024-01-01', business_date)),
+               'TRI'
+        FROM index_levels WHERE index_name = 'Nifty 500' AND variant = 'PRICE'""")
+    result = engine.run(con, feature="dist_52w_high", start=START,
+                        end=START + timedelta(days=119), rebalance=20,
+                        max_positions=3, simulate_fills=False)
+    assert result.control["benchmark_variant"] == "TRI"
+    assert result.summary()["benchmark_variant"] == "TRI"
+
+
+def test_control_falls_back_to_price_index_when_tri_coverage_is_incomplete():
+    con = _db(names=4, drift=0.001)
+    con.execute("""INSERT INTO index_levels (business_date, index_name, close_level, variant)
+        SELECT business_date, index_name, close_level, 'TRI'
+        FROM index_levels WHERE index_name = 'Nifty 500' AND variant = 'PRICE'
+        AND business_date < DATE '2024-02-01'""")
+    result = engine.run(con, feature="dist_52w_high", start=START,
+                        end=START + timedelta(days=119), rebalance=20,
+                        max_positions=3, simulate_fills=False)
+    assert result.control["benchmark_variant"] == "PRICE"
+
+
 def test_the_signal_is_read_before_the_session_the_order_fills_in():
     """A backtest that fills at the close that generated the signal has bought a day of hindsight
     per trade."""

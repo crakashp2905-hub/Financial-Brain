@@ -9260,12 +9260,24 @@
     {
       "id": "PA-07-13",
       "text": "Score each candidate against Nifty 500 TRI or a predefined genuinely matched investable universe benchmark, with matching risk/exposure/turnover controls as appropriate.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "paper.engine._control computes a point-in-time eligible-universe equal-weight benchmark rebalanced on the same schedule as the candidate, with a no-cost control; paper.engine.Run reports excess over that control and an index benchmark.",
+        "The index benchmark lookup now prefers Nifty 500 TRI only when TRI values are present at both exact evaluation endpoint sessions, otherwise it explicitly falls back to PRICE; Run.summary and control metadata report the used variant.",
+        "Regression fixtures verify complete TRI preference and incomplete-TRI PRICE fallback. Legacy index fixtures without a variant column are labeled PRICE_UNVERIFIED_LEGACY_SCHEMA.",
+        "The matched-universe control is not yet risk/exposure/turnover matched, is intentionally cost-free, and the database may have only PRICE coverage. Candidate-specific matched risk control and TRI availability reports remain."
+      ],
+      "blocker": "Partial: an equal-weight same-universe control and explicit TRI-first market benchmark exist, but portfolio risk/exposure/turnover matching and broad TRI data coverage are not yet validated.",
+      "last_audited_at_utc": "2026-11-27T05:37:13Z",
+      "commit": null,
+      "test_evidence": [
+        "python -m pytest --basetemp .pytest-pa0713-final tests/test_phase4_paper_engine.py -q: 33 passed, including TRI selection and fallback tests.",
+        "Ruff on paper.engine and tests/test_phase4_paper_engine.py: passed.",
+        "mypy src/financial_brain/paper/engine.py: passed after adding the missing buckets type annotation.",
+        "git diff --check: passed."
+      ],
+      "test_result": "Paper engine reports matched eligible-universe excess and chooses a fully covered TRI index series over price return, explicitly falling back and labeling PRICE when TRI coverage is incomplete. Candidate-specific risk/exposure/turnover matching is still missing; PA-07-13 remains PARTIAL."
     },
     {
       "id": "PA-07-14",
@@ -21071,6 +21083,7 @@
       "PA-07-10",
       "PA-07-11",
       "PA-07-12",
+      "PA-07-13",
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
@@ -21509,11 +21522,11 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 965,
+    "audited_count": 966,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 835,
-      "UNASSESSED": 413,
+      "PARTIAL": 836,
+      "UNASSESSED": 412,
       "NOT_STARTED": 17,
       "EXTERNAL_BLOCKED": 6
     },
@@ -21662,8 +21675,8 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 835,
-    "UNASSESSED": 413,
+    "PARTIAL": 836,
+    "UNASSESSED": 412,
     "NOT_STARTED": 17,
     "EXTERNAL_BLOCKED": 6
   }

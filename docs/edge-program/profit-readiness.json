@@ -4,18 +4,18 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "8bbeb1684e8dfc2c6515ca3b836ae41e15c02d245136176bc3ef4f160fef8749",
-  "audit_export_sha256": "d3cf961d2a65d316839694ebe135d23a44cc9a76c249c5cb1c959d4aa062ceb0",
+  "status_ledger_sha256": "19ecef4ffe397c8a9020f8e6743e92dfad0af91546f62d5f89318134e39ba3f2",
+  "audit_export_sha256": "9be6be682681a6de17db665308db61c793d6a5355885de55eb4c735b3ec65490",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 835,
-    "UNASSESSED": 413
+    "PARTIAL": 836,
+    "UNASSESSED": 412
   },
-  "assessed_count": 965,
-  "unassessed_count": 413,
+  "assessed_count": 966,
+  "unassessed_count": 412,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 55,
-        "UNASSESSED": 6
+        "PARTIAL": 56,
+        "UNASSESSED": 5
       },
       "evidence": [
         {
@@ -3031,16 +3031,26 @@
         },
         {
           "item_id": "PA-07-13",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1073,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Score each candidate against Nifty 500 TRI or a predefined genuinely matched investable universe benchmark, with matching risk/exposure/turnover controls as appropriate."
           },
           "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "blocker": "Partial: an equal-weight same-universe control and explicit TRI-first market benchmark exist, but portfolio risk/exposure/turnover matching and broad TRI data coverage are not yet validated.",
+          "evidence": [
+            "paper.engine._control computes a point-in-time eligible-universe equal-weight benchmark rebalanced on the same schedule as the candidate, with a no-cost control; paper.engine.Run reports excess over that control and an index benchmark.",
+            "The index benchmark lookup now prefers Nifty 500 TRI only when TRI values are present at both exact evaluation endpoint sessions, otherwise it explicitly falls back to PRICE; Run.summary and control metadata report the used variant.",
+            "Regression fixtures verify complete TRI preference and incomplete-TRI PRICE fallback. Legacy index fixtures without a variant column are labeled PRICE_UNVERIFIED_LEGACY_SCHEMA.",
+            "The matched-universe control is not yet risk/exposure/turnover matched, is intentionally cost-free, and the database may have only PRICE coverage. Candidate-specific matched risk control and TRI availability reports remain."
+          ],
+          "tests": [
+            "python -m pytest --basetemp .pytest-pa0713-final tests/test_phase4_paper_engine.py -q: 33 passed, including TRI selection and fallback tests.",
+            "Ruff on paper.engine and tests/test_phase4_paper_engine.py: passed.",
+            "mypy src/financial_brain/paper/engine.py: passed after adding the missing buckets type annotation.",
+            "git diff --check: passed."
+          ]
         },
         {
           "item_id": "PA-07-14",
@@ -3478,5 +3488,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c9ce1b7809aa5bc1ad346ca8f17ff2f034854da83c5a7d80952804af53aa6e1a"
+  "report_sha256": "f24f1dc0f93612d8e5868688a421b3621a84a966d6145c63c0b4e15ff9de7b82"
 }

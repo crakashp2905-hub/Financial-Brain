@@ -171,6 +171,7 @@ class Run:
             "universe_return": self.control.get("universe_return"),
             "benchmark_return": self.control.get("benchmark_return"),
             "benchmark": self.control.get("benchmark"),
+            "benchmark_variant": self.control.get("benchmark_variant"),
             "excess_over_universe": (
                 (end["equity"] / start["equity"] - 1) - self.control["universe_return"]
                 if self.control.get("universe_return") is not None else None),
@@ -484,7 +485,7 @@ def run(con, *, feature: str, start: date, end: date, capital_inr: float = 10_00
 
     cash = capital_inr
     positions: dict[str, Position] = {}
-    buckets = {}
+    buckets: dict[str, str] = {}
 
     for i, session in enumerate(cal):
         # ---------------------------------------------------- rebalance, one session late
@@ -666,20 +667,38 @@ def _control(con, start: date, end: date, *, eligible: set | None, min_adv: floa
             periods += 1
             names = max(names, row[1])
 
-    def level(d):
-        r = con.execute("""SELECT close_level FROM index_levels
-                           WHERE index_name = ? AND business_date <= ? AND close_level > 0
-                           ORDER BY business_date DESC LIMIT 1""",
-                        [benchmark, d]).fetchone()
+    index_columns = {row[1] for row in con.execute("PRAGMA table_info('index_levels')").fetchall()}
+
+    def level(d, variant: str):
+        if "variant" in index_columns:
+            r = con.execute("""SELECT close_level FROM index_levels
+                               WHERE index_name = ? AND variant = ? AND business_date = ?
+                                 AND close_level > 0
+                               ORDER BY business_date DESC LIMIT 1""",
+                            [benchmark, variant, d]).fetchone()
+        else:
+            # Compatibility for older test archives predating the PRICE/TRI column.
+            r = con.execute("""SELECT close_level FROM index_levels
+                               WHERE index_name = ? AND business_date = ? AND close_level > 0
+                               ORDER BY business_date DESC LIMIT 1""",
+                            [benchmark, d]).fetchone()
         return r[0] if r else None
 
-    lo, hi = level(cal[0]), level(cal[-1])
+    # Use a total-return index when it covers both ends of the evaluation window. If it
+    # does not, fall back to the PRICE index and surface that limitation in every result.
+    has_variants = "variant" in index_columns
+    benchmark_variant = "TRI" if has_variants else "PRICE_UNVERIFIED_LEGACY_SCHEMA"
+    lo, hi = level(cal[0], benchmark_variant), level(cal[-1], benchmark_variant)
+    if has_variants and (lo is None or hi is None):
+        benchmark_variant = "PRICE"
+        lo, hi = level(cal[0], benchmark_variant), level(cal[-1], benchmark_variant)
     return {
         "universe_return": (growth - 1) if periods else None,
         "universe_names": names,
         "universe_periods": periods,
         "universe_rebalance": rebalance,
         "benchmark": benchmark,
+        "benchmark_variant": benchmark_variant if lo and hi else None,
         "benchmark_return": (hi / lo - 1) if lo and hi else None,
         "note": f"equal-weight return of the point-in-time eligible universe, rebalanced every "
                 f"{rebalance} sessions like the strategy itself, and the index. A return that "
