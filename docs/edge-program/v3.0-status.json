@@ -9980,7 +9980,7 @@
       ],
       "blocker": "Load authenticated effective-dated NFO contract records from the permitted read-only instrument master and require this resolver across all paper option entry/exit routes; verify against real expired, token-roll and delisting examples.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "aae249c0",
+      "commit": "e88731bf",
       "test_result": "30 focused instrument master tests passed; Ruff and mypy passed."
     },
     {
@@ -9995,7 +9995,7 @@
       ],
       "blocker": "Validate feed field semantics and last-trade age against an authorized live options-chain session, produce dated per-contract coverage and lag evidence, and connect the archive to the full approved listed-contract universe.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "e38c0886",
+      "commit": "c87ce140",
       "test_result": "6 focused option quote archive tests passed; Ruff and mypy passed."
     },
     {
@@ -10010,7 +10010,7 @@
       ],
       "blocker": "Validate on authorized live chain snapshots across expiries and regimes, substantiate spread thresholds, and add source-supported calendar-arbitrage checks without filling missing quotes synthetically.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "1a6939b6",
+      "commit": "62962500",
       "test_result": "6 focused option-surface tests passed; Ruff and mypy passed."
     },
     {
@@ -10025,7 +10025,7 @@
       ],
       "blocker": "Calibrate/validate the explanatory model for relevant Indian contracts and settlement conventions against an independent numerical reference; retain quote-based fills and verify those fills on authorized live quote/depth sessions.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "ce69c844",
+      "commit": "037192e7",
       "test_result": "33 combined option pricing, surface, option-plan and quote archive tests passed; Ruff and mypy passed."
     },
     {
@@ -10040,7 +10040,7 @@
       ],
       "blocker": "Calibrate scenario shocks to authorized historical/live Indian option quote histories, validate across expiry and volatility regimes, and compare simulated stressed marks to realized premium/depth behavior.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "cf1fc6bb",
+      "commit": "deea9ed4",
       "test_result": "8 focused option spread stress and paper-spread tests passed; Ruff and mypy passed."
     },
     {
@@ -10055,7 +10055,7 @@
       ],
       "blocker": "Estimate and freeze scenario probabilities from leakage-safe historical/forward option-premium outcomes, then validate calibrated distribution coverage, calibration and after-cost paper P&L prospectively.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "3cf87979",
+      "commit": "931a327a",
       "test_result": "10 focused premium-distribution, option-stress and paper-spread tests passed; Ruff and mypy passed."
     },
     {
@@ -10070,7 +10070,7 @@
       ],
       "blocker": "Build and operate a shared prospective candidate cohort runner for calls, puts and defined-risk spreads, applying identical timestamp, age, fee, lot-size, depth, no-fill and outcome-attribution rules, then report comparable after-cost outcomes.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "1a116778",
+      "commit": "71236fa6",
       "test_result": "19 focused paper option plan, spread and runner tests passed; Ruff and mypy passed."
     },
     {
@@ -10085,7 +10085,7 @@
       ],
       "blocker": "Connect the ranker to verified option surface and prospective outcome data, extend comparable ranking to approved defined-risk spreads, and validate exit assumptions/portfolio aggregate Greeks on a frozen out-of-sample cohort.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "c4818a29",
+      "commit": "5789fd16",
       "test_result": "15 focused ranker, option-plan and debit-spread tests passed; Ruff and mypy passed."
     },
     {
@@ -10100,7 +10100,7 @@
       ],
       "blocker": "Calibrate gap-tail loss and premium alpha using authorized Indian option quote paths, bind ranking to prospective validated risk distributions, and test near-expiry behavior across real spread/depth regimes.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "324ae3f6",
+      "commit": "28248a27",
       "test_result": "16 focused ranker, option-plan and spread tests passed; Ruff and mypy passed."
     },
     {
@@ -10115,7 +10115,7 @@
       ],
       "blocker": "Bind both signal references to verified pre-entry decision receipts and implement independent, prospective direction versus option-execution scorecards with lineage checks through all consumers.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "b26fd027",
+      "commit": "e8546b4d",
       "test_result": "10 focused option replay and forward-ledger tests passed; Ruff and mypy passed."
     },
     {
@@ -10130,7 +10130,7 @@
       ],
       "blocker": "Wire protective exits into durable paper position state and reconciliation, verify official contract-specific expiry schedules, and run prospective paper sessions with observed quote/depth and partial-fill evidence.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "b325d630",
+      "commit": "6a65ad55",
       "test_result": "20 focused option exit, plan and runner tests passed; Ruff and mypy passed."
     },
     {
@@ -10145,7 +10145,7 @@
       ],
       "blocker": "Connect fill/cancel event accounting to the durable option OMS and position ledger, reconcile capital reservations after restart, and verify against actual partial-fill/cancel event sequences.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "0c134fc0",
+      "commit": "8f6e0fee",
       "test_result": "11 focused option risk, ranker and spread tests passed; Ruff and mypy passed."
     },
     {
