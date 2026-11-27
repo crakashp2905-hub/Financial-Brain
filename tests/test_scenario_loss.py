@@ -1,7 +1,7 @@
 import pytest
 
 from financial_brain.risk.scenario_loss import (
-    AdverseScenario, ScenarioLossError, worst_position_loss,
+    AdverseScenario, ScenarioLossError, stress_margin_depletion, worst_position_loss,
 )
 
 
@@ -43,3 +43,32 @@ def test_empty_duplicate_and_negative_fee_scenarios_are_refused():
                                                    AdverseScenario("x", 80, 1)))
     with pytest.raises(ScenarioLossError, match="scenario ids"):
         worst_position_loss(**common, scenarios=(AdverseScenario("x", 90, -1),))
+
+
+def test_gap_through_stop_loss_can_breach_maintenance_and_deplete_equity():
+    loss = worst_position_loss(
+        side="LONG", quantity=100, multiplier=1, entry_price=100,
+        scenarios=(AdverseScenario("intended-stop", 95, 10),
+                   AdverseScenario("gap-through-stop", 80, 20)),
+    )
+    outcomes = stress_margin_depletion(
+        pre_stress_equity_inr=2_000,
+        maintenance_margin_inr=1_000,
+        stressed_losses=loss.scenario_losses_inr,
+    )
+    by_id = {item.scenario_id: item for item in outcomes}
+    assert by_id["intended-stop"].post_stress_equity_inr == 1_490
+    assert by_id["intended-stop"].maintenance_breach is False
+    assert by_id["gap-through-stop"].post_stress_equity_inr == -20
+    assert by_id["gap-through-stop"].maintenance_breach is True
+    assert by_id["gap-through-stop"].margin_shortfall_inr == 1_020
+    assert by_id["gap-through-stop"].depleted is True
+
+
+def test_margin_stress_rejects_invalid_inputs():
+    with pytest.raises(ScenarioLossError):
+        stress_margin_depletion(pre_stress_equity_inr=-1, maintenance_margin_inr=0,
+                                stressed_losses=(("gap", 1),))
+    with pytest.raises(ScenarioLossError):
+        stress_margin_depletion(pre_stress_equity_inr=100, maintenance_margin_inr=10,
+                                stressed_losses=(("gap", -1),))

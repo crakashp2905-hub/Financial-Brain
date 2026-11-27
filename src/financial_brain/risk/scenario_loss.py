@@ -30,6 +30,57 @@ class PositionLossEstimate:
     scenario_losses_inr: tuple[tuple[str, float], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class MarginStressEstimate:
+    """Equity and maintenance-margin outcome after an explicitly modeled exit shock."""
+
+    scenario_id: str
+    pre_stress_equity_inr: float
+    stressed_net_loss_inr: float
+    post_stress_equity_inr: float
+    maintenance_margin_inr: float
+    margin_shortfall_inr: float
+    depleted: bool
+    maintenance_breach: bool
+
+
+def stress_margin_depletion(
+    *,
+    pre_stress_equity_inr: float,
+    maintenance_margin_inr: float,
+    stressed_losses: tuple[tuple[str, float], ...],
+) -> tuple[MarginStressEstimate, ...]:
+    """Apply stop-gap/slippage loss scenarios to equity and test maintenance margin.
+
+    ``stressed_losses`` should come from executable-path evidence or an explicitly
+    labeled hypothetical stress. This helper does not model liquidation priority,
+    broker margin policy, or guarantee that a stop can fill at the stressed price.
+    """
+    if (not isfinite(pre_stress_equity_inr) or not isfinite(maintenance_margin_inr)
+            or pre_stress_equity_inr < 0 or maintenance_margin_inr < 0
+            or not stressed_losses):
+        raise ScenarioLossError("finite non-negative equity/margin and losses are required")
+    seen: set[str] = set()
+    results: list[MarginStressEstimate] = []
+    for scenario_id, loss in stressed_losses:
+        if (not scenario_id or scenario_id in seen or not isfinite(loss) or loss < 0):
+            raise ScenarioLossError("scenario ids must be unique and losses finite/non-negative")
+        seen.add(scenario_id)
+        post_equity = pre_stress_equity_inr - loss
+        shortfall = max(0.0, maintenance_margin_inr - post_equity)
+        results.append(MarginStressEstimate(
+            scenario_id=scenario_id,
+            pre_stress_equity_inr=pre_stress_equity_inr,
+            stressed_net_loss_inr=loss,
+            post_stress_equity_inr=post_equity,
+            maintenance_margin_inr=maintenance_margin_inr,
+            margin_shortfall_inr=shortfall,
+            depleted=post_equity <= 0,
+            maintenance_breach=shortfall > 0,
+        ))
+    return tuple(results)
+
+
 def worst_position_loss(
     *,
     side: Literal["LONG", "SHORT"],

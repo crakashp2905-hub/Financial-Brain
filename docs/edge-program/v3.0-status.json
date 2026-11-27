@@ -10843,11 +10843,16 @@
     {
       "id": "PA-13-09",
       "text": "Simulate slippage tail events where stop fills far beyond intended level and margin depletion may be larger than initial quoted stop risk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/execution/oms/stops.py evaluate_stop_path models observed quote/depth gap-through-stop fills, latency and partial/no fills.",
+        "src/financial_brain/risk/scenario_loss.py worst_position_loss models adverse stop slippage and fees; stress_margin_depletion applies those losses to pre-stress equity and maintenance margin, reporting depletion and shortfall.",
+        "src/financial_brain/kernel/accounting_extra.py margin_requirement/margin_call and futures_liquidation_price/stress_breach provide separate margin primitives.",
+        "Integration remains partial: the stop-path output is not automatically propagated through the OMS portfolio accounting to a live maintenance-margin breach/forced liquidation; broker-specific margin policy and portfolio-wide liquidation ordering are not modeled."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T09:40:00Z",
       "commit": null
     },
     {
@@ -21634,6 +21639,7 @@
       "PA-13-06",
       "PA-13-07",
       "PA-13-08",
+      "PA-13-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22057,13 +22063,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1046,
+    "audited_count": 1047,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 907,
-      "UNASSESSED": 332
+      "PARTIAL": 908,
+      "UNASSESSED": 331
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22212,7 +22218,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 907,
-    "UNASSESSED": 332
+    "PARTIAL": 908,
+    "UNASSESSED": 331
   }
 }
