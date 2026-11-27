@@ -5,6 +5,7 @@ import pytest
 from financial_brain.paper.options import OptionPaperError, Quote
 from financial_brain.paper.options_plan import OptionContract, build_long_option_plan
 from financial_brain.kernel.units import OptionLots
+from financial_brain.forecasting.index_sizing import SizingEligibility
 
 
 NOW = datetime(2026, 11, 22, 5, 0, tzinfo=timezone.utc)
@@ -36,6 +37,19 @@ def test_call_plan_accepts_nominal_option_lots():
                                   lots=OptionLots(2), stop_premium=80, target_premium=140,
                                   max_quote_age=timedelta(seconds=5))
     assert plan["lots"] == 2 and plan["quantity"] == 50
+
+
+def test_confidence_sizing_requires_independent_prospective_evidence_and_scales_risk_cap():
+    args = {"decision_at": NOW, "underlying_price": 25_100, "invalidation_price": 25_000,
+            "lots": 4, "stop_premium": 80, "target_premium": 140,
+            "max_quote_age": timedelta(seconds=5), "calibrated_confidence": .75}
+    with pytest.raises(OptionPaperError, match="requires both"):
+        build_long_option_plan(_contract(), **args)
+    evidence = SizingEligibility(True, "ELIGIBLE", (), "idx-opt", "a" * 64,
+                                 "b" * 64, "VERIFIED")
+    plan = build_long_option_plan(_contract(), sizing_eligibility=evidence, **args)
+    assert plan["lots"] == 3 and plan["quantity"] == 75
+    assert plan["confidence_sizing"]["evidence_sha256"] == "b" * 64
 
 
 def test_put_plan_uses_opposite_underlying_invalidation():

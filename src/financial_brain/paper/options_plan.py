@@ -12,6 +12,8 @@ from typing import Any
 
 from .options import OptionPaperError, Quote, cost_hurdle, option_lot_count
 from ..kernel.units import OptionLots
+from ..forecasting.index_sizing import (SizingEligibility,
+                                         confidence_adjusted_paper_lots)
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,8 @@ def build_long_option_plan(
     stop_premium: float,
     target_premium: float,
     max_quote_age: timedelta,
+    calibrated_confidence: float | None = None,
+    sizing_eligibility: SizingEligibility | None = None,
 ) -> dict[str, Any]:
     """Return a complete contract-qualified BUY plan or fail closed.
 
@@ -49,6 +53,19 @@ def build_long_option_plan(
     if not q.symbol.endswith(f"{strike_text}{contract.option_type}"):
         raise OptionPaperError("tradingsymbol does not match the declared strike and CE/PE type")
     lot_count = option_lot_count(lots)
+    confidence_evidence = None
+    if calibrated_confidence is not None or sizing_eligibility is not None:
+        if calibrated_confidence is None or sizing_eligibility is None:
+            raise OptionPaperError("confidence sizing requires both calibrated confidence and eligible evidence")
+        sized = confidence_adjusted_paper_lots(
+            base_risk_capped_lots=lot_count, calibrated_confidence=calibrated_confidence,
+            eligibility=sizing_eligibility)
+        if sized["status"] != "PAPER_SIZE":
+            raise OptionPaperError(f"confidence sizing refused: {sized['reason']}")
+        lot_count = int(sized["lots"])
+        confidence_evidence = {"confidence": calibrated_confidence,
+                               "evidence_sha256": sized["evidence_sha256"],
+                               "method": "calibrated_confidence_times_risk_capped_lots"}
     if decision_at.tzinfo is None or decision_at.utcoffset() is None:
         raise OptionPaperError("decision timestamp must be timezone-aware")
     if not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
@@ -81,6 +98,7 @@ def build_long_option_plan(
         "token": q.token,
         "lot_size": q.lot_size,
         "lots": lot_count,
+        "confidence_sizing": confidence_evidence or {"status": "NOT_USED"},
         "quantity": lot_count * q.lot_size,
         "entry_premium_band": {"bid": q.bid, "ask": q.ask},
         "entry_price_reference": "observed_ask",
