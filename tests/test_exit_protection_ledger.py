@@ -342,6 +342,84 @@ def test_entry_signal_intent_snapshots_precede_fill_and_replay_with_hashes(tmp_p
     assert recovered.state.entry_filled_quantity == Decimal("10")
 
 
+def _entry_intent_ledger(path, *, intent_snapshot=None):
+    ledger = ExitProtectionLedger(DurableJournal(path), position_id=POSITION_ID)
+    ledger.record_entry_signal(_entry(), snapshot={"setup": "breakout"}, idempotency_key="entry:signal")
+    ledger.record_entry_intent(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1",
+                               quantity=Decimal("10"),
+                               snapshot=intent_snapshot or {"quantity": "10", "limit": "100"},
+                               idempotency_key="entry:intent")
+    ledger.arm(_protection(), exit_policy=_exit_policy(), idempotency_key="protection:arm")
+    return ledger
+
+
+def test_entry_amendment_is_versioned_linked_and_sets_the_fill_cap(tmp_path):
+    ledger = _entry_intent_ledger(tmp_path / "entry-amendment.journal")
+    amended_snapshot = {"quantity": "8", "limit": "101", "reason": "price-band update"}
+    assert ledger.amend_entry_intent(intent_id="entry-intent-1", quantity=Decimal("8"),
+                                     snapshot=amended_snapshot, occurred_at=NOW + timedelta(seconds=1),
+                                     source_hash="d" * 64, idempotency_key="entry:amend:1") is True
+    assert ledger.amend_entry_intent(intent_id="entry-intent-1", quantity=Decimal("8"),
+                                     snapshot=amended_snapshot, occurred_at=NOW + timedelta(seconds=1),
+                                     source_hash="d" * 64, idempotency_key="entry:amend:1") is False
+    assert ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="fill-8",
+                                    quantity=Decimal("8"), side=EntrySide.BUY,
+                                    idempotency_key="entry:fill:8") is True
+    with pytest.raises(ExitLedgerError, match="fully filled entry intent"):
+        ledger.amend_entry_intent(intent_id="entry-intent-1", quantity=Decimal("9"),
+                                  snapshot={"quantity": "9"}, occurred_at=NOW + timedelta(seconds=2),
+                                  source_hash="e" * 64, idempotency_key="entry:amend:2")
+    records = [row for row in ledger.journal.records() if row.get("position_id") == POSITION_ID]
+    amendment, = [row for row in records if row["type"] == "ENTRY_INTENT_AMENDED"]
+    assert amendment["revision"] == 1
+    assert amendment["decision_sha256"] == records[0]["decision_sha256"]
+    assert amendment["snapshot_sha256"]
+    assert records[1]["quantity"] == "10"  # original is retained unchanged
+
+
+def test_entry_amendment_cannot_reduce_below_fills_or_rewrite_fill_capacity(tmp_path):
+    ledger = _entry_intent_ledger(tmp_path / "entry-amend-cap.journal")
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="fill-5",
+                             quantity=Decimal("5"), side=EntrySide.BUY, idempotency_key="entry:fill:5")
+    with pytest.raises(ExitLedgerError, match="below already filled"):
+        ledger.amend_entry_intent(intent_id="entry-intent-1", quantity=Decimal("4"),
+                                  snapshot={"quantity": "4"}, occurred_at=NOW + timedelta(seconds=1),
+                                  source_hash="f" * 64, idempotency_key="entry:amend:too-small")
+
+
+def test_entry_cancel_is_idempotent_terminal_and_decision_linked(tmp_path):
+    ledger = _entry_intent_ledger(tmp_path / "entry-cancel.journal")
+    ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="fill-3",
+                             quantity=Decimal("3"), side=EntrySide.BUY, idempotency_key="entry:fill:3")
+    cancel_args = {"intent_id": "entry-intent-1", "occurred_at": NOW + timedelta(seconds=2),
+                   "source_hash": "f" * 64, "reason": "operator confirmed cancel",
+                   "idempotency_key": "entry:cancel"}
+    assert ledger.cancel_entry_intent(**cancel_args) is True
+    assert ledger.cancel_entry_intent(**cancel_args) is False
+    with pytest.raises(ExitLedgerError, match="terminal entry intent"):
+        ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="late-fill",
+                                 quantity=Decimal("1"), side=EntrySide.BUY,
+                                 idempotency_key="entry:fill:late")
+    cancelled, = [row for row in ledger.journal.records() if row.get("type") == "ENTRY_INTENT_CANCELLED"]
+    assert cancelled["remaining_quantity"] == "7"
+    assert cancelled["decision_sha256"] == ledger.journal.records()[0]["decision_sha256"]
+
+
+def test_entry_expiry_requires_frozen_deadline_and_blocks_later_fills(tmp_path):
+    expires_at = NOW + timedelta(minutes=1)
+    ledger = _entry_intent_ledger(tmp_path / "entry-expire.journal",
+                                  intent_snapshot={"quantity": "10", "expires_at": expires_at.isoformat()})
+    args = {"intent_id": "entry-intent-1", "source_hash": "e" * 64,
+            "reason": "signal lifetime elapsed", "idempotency_key": "entry:expire"}
+    with pytest.raises(ExitLedgerError, match="before its frozen deadline"):
+        ledger.expire_entry_intent(occurred_at=NOW, **args)
+    assert ledger.expire_entry_intent(occurred_at=expires_at + timedelta(seconds=1), **args) is True
+    with pytest.raises(ExitLedgerError, match="terminal entry intent"):
+        ledger.record_entry_fill(entry_signal_id=ENTRY_ID, intent_id="entry-intent-1", fill_id="late-fill",
+                                 quantity=Decimal("1"), side=EntrySide.BUY,
+                                 idempotency_key="entry:fill:after-expiry")
+
+
 def test_armed_protection_must_match_strategy_version_and_policy_rule(tmp_path):
     ledger = ExitProtectionLedger(DurableJournal(tmp_path / "policy.journal"), position_id=POSITION_ID)
     _prepare_entry(ledger)

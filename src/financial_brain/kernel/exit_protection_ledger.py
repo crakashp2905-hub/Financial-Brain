@@ -194,6 +194,147 @@ class ExitProtectionLedger:
                   "snapshot": json.loads(snapshot_json),
                   "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
                   "idempotency_key": idempotency_key}
+        record["decision_sha256"] = self._decision_sha256(records)
+        existing_intent = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                                and r.get("intent_id") == intent_id), None)
+        if existing_intent is not None:
+            if existing_intent == record:
+                return False
+            raise ExitLedgerError("entry intent ID is already journaled with different content")
+        return self._append_idempotent(self.journal, records, record, idempotency_key)
+
+    def amend_entry_intent(self, *, intent_id: str, quantity: Decimal,
+                           snapshot: dict[str, object], occurred_at: datetime,
+                           source_hash: str, idempotency_key: str) -> bool:
+        """Append a versioned, decision-linked entry amendment without rewriting the original intent."""
+        qty = _decimal(quantity, "amended entry quantity")
+        if qty <= 0 or not intent_id.strip() or not idempotency_key.strip():
+            raise ExitLedgerError("entry amendment requires intent ID, positive quantity and idempotency key")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("entry amendment time must be timezone-aware")
+        if len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash):
+            raise ExitLedgerError("entry amendment source_hash must be lowercase SHA-256")
+        try:
+            snapshot_json = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ExitLedgerError("entry-amendment snapshot must be canonical JSON data") from exc
+        records = self._position_records()
+        original = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                         and r.get("intent_id") == intent_id), None)
+        if original is None:
+            raise ExitLedgerError("entry amendment requires a journaled ENTRY_INTENT")
+        signal = next((r for r in records if r.get("type") == "ENTRY_SIGNAL"
+                       and r.get("signal_id") == original["entry_signal_id"]), None)
+        if signal is None or occurred_at < datetime.fromisoformat(signal["occurred_at"]):
+            raise ExitLedgerError("entry amendment cannot precede its frozen entry decision")
+        prior_key = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            candidate = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+            if candidate is not None and candidate.get("type") == "ENTRY_INTENT_AMENDED" \
+                    and candidate.get("intent_id") == intent_id and candidate.get("quantity") == str(qty) \
+                    and candidate.get("snapshot") == json.loads(snapshot_json) \
+                    and candidate.get("occurred_at") == occurred_at.isoformat() \
+                    and candidate.get("source_hash") == source_hash:
+                return False
+            raise ExitLedgerError("entry amendment idempotency key conflicts with prior evidence")
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("terminal entry intent cannot be amended")
+        fills = sum((_decimal(r["quantity"], "entry fill") for r in records
+                     if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
+        current_quantity = _decimal(
+            max((r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                 and r.get("intent_id") == intent_id), key=lambda r: int(r["revision"]))["quantity"]
+            if any(r.get("type") == "ENTRY_INTENT_AMENDED" and r.get("intent_id") == intent_id
+                   for r in records) else original["quantity"], "current entry quantity")
+        if fills >= current_quantity:
+            raise ExitLedgerError("fully filled entry intent cannot be amended")
+        if qty < fills:
+            raise ExitLedgerError("amended entry quantity cannot be below already filled quantity")
+        revisions = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                     and r.get("intent_id") == intent_id]
+        if revisions and occurred_at < datetime.fromisoformat(max(
+                revisions, key=lambda r: int(r["revision"]))["occurred_at"]):
+            raise ExitLedgerError("entry amendment time cannot move backwards")
+        revision = max((int(r["revision"]) for r in revisions), default=0) + 1
+        record = {"type": "ENTRY_INTENT_AMENDED", "position_id": self.position_id,
+                  "entry_signal_id": original["entry_signal_id"], "intent_id": intent_id,
+                  "revision": revision, "quantity": str(qty), "snapshot": json.loads(snapshot_json),
+                  "snapshot_sha256": hashlib.sha256(snapshot_json.encode("utf-8")).hexdigest(),
+                  "occurred_at": occurred_at.isoformat(), "source_hash": source_hash,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
+        self.journal.append(record)
+        return True
+
+    def cancel_entry_intent(self, *, intent_id: str, occurred_at: datetime,
+                            source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Persist a confirmed cancellation for the unfilled remainder of an entry intent."""
+        return self._terminate_entry_intent(
+            event_type="ENTRY_INTENT_CANCELLED", intent_id=intent_id, occurred_at=occurred_at,
+            source_hash=source_hash, reason=reason, idempotency_key=idempotency_key)
+
+    def expire_entry_intent(self, *, intent_id: str, occurred_at: datetime,
+                            source_hash: str, reason: str, idempotency_key: str) -> bool:
+        """Persist expiry only when the frozen intent snapshot's deadline has elapsed."""
+        return self._terminate_entry_intent(
+            event_type="ENTRY_INTENT_EXPIRED", intent_id=intent_id, occurred_at=occurred_at,
+            source_hash=source_hash, reason=reason, idempotency_key=idempotency_key)
+
+    def _terminate_entry_intent(self, *, event_type: str, intent_id: str, occurred_at: datetime,
+                                source_hash: str, reason: str, idempotency_key: str) -> bool:
+        if event_type not in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}:
+            raise ExitLedgerError("unsupported entry terminal event")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ExitLedgerError("entry terminal-event time must be timezone-aware")
+        if (not intent_id.strip() or not reason.strip() or not idempotency_key.strip()
+                or len(source_hash) != 64 or any(char not in "0123456789abcdef" for char in source_hash)):
+            raise ExitLedgerError("entry terminal event requires intent, source hash, reason and idempotency key")
+        records = self._position_records()
+        original = next((r for r in records if r.get("type") == "ENTRY_INTENT"
+                         and r.get("intent_id") == intent_id), None)
+        if original is None:
+            raise ExitLedgerError("entry terminal event requires a journaled ENTRY_INTENT")
+        signal = next((r for r in records if r.get("type") == "ENTRY_SIGNAL"
+                       and r.get("signal_id") == original["entry_signal_id"]), None)
+        if signal is None or occurred_at < datetime.fromisoformat(signal["occurred_at"]):
+            raise ExitLedgerError("entry terminal event cannot precede its frozen entry decision")
+        prior_key = next((r for r in records if r.get("idempotency_key") == idempotency_key), None)
+        if prior_key is not None:
+            if (prior_key.get("type") == event_type and prior_key.get("intent_id") == intent_id
+                    and prior_key.get("occurred_at") == occurred_at.isoformat()
+                    and prior_key.get("source_hash") == source_hash and prior_key.get("reason") == reason):
+                return False
+            raise ExitLedgerError("entry terminal-event idempotency key conflicts with prior evidence")
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("entry intent is already terminal")
+        amendments = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                      and r.get("intent_id") == intent_id]
+        effective_quantity = _decimal(
+            max(amendments, key=lambda r: int(r["revision"]))["quantity"] if amendments
+            else original["quantity"], "effective entry quantity")
+        filled = sum((_decimal(r["quantity"], "entry fill") for r in records
+                      if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
+        remaining = effective_quantity - filled
+        if remaining <= 0:
+            raise ExitLedgerError("fully filled entry intent cannot be cancelled or expired")
+        if event_type == "ENTRY_INTENT_EXPIRED":
+            latest_amendment = max(amendments, key=lambda r: int(r["revision"])) if amendments else None
+            snapshot = latest_amendment["snapshot"] if latest_amendment else original["snapshot"]
+            deadline_raw = snapshot.get("expires_at") if isinstance(snapshot, dict) else None
+            try:
+                deadline = datetime.fromisoformat(str(deadline_raw).replace("Z", "+00:00"))
+            except (TypeError, ValueError) as exc:
+                raise ExitLedgerError("entry expiry requires a frozen timezone-aware expires_at") from exc
+            if deadline.tzinfo is None or deadline.utcoffset() is None or occurred_at < deadline:
+                raise ExitLedgerError("entry intent cannot expire before its frozen deadline")
+        record = {"type": event_type, "position_id": self.position_id,
+                  "entry_signal_id": original["entry_signal_id"], "intent_id": intent_id,
+                  "remaining_quantity": str(remaining), "occurred_at": occurred_at.isoformat(),
+                  "source_hash": source_hash, "reason": reason,
+                  "idempotency_key": idempotency_key,
+                  "decision_sha256": self._decision_sha256(records)}
         return self._append_idempotent(self.journal, records, record, idempotency_key)
 
     def record_entry_fill(self, *, entry_signal_id: str, intent_id: str, fill_id: str, quantity: Decimal,
@@ -224,16 +365,25 @@ class ExitProtectionLedger:
                             and r.get("intent_id") == intent_id and r.get("entry_signal_id") == entry_signal_id]
         if not matching_intents:
             raise ExitLedgerError("entry fill requires a matching journaled ENTRY_INTENT")
-        intent_qty = sum((_decimal(r["quantity"], "entry intent") for r in matching_intents), Decimal(0))
+        prior_fill = next((r for r in records if r.get("type") == "ENTRY_FILL" and r.get("fill_id") == fill_id), None)
+        if prior_fill is not None:
+            if prior_fill != record:
+                raise ExitLedgerError("entry fill id conflicts with prior evidence")
+            return False
+        if any(r.get("type") in {"ENTRY_INTENT_CANCELLED", "ENTRY_INTENT_EXPIRED"}
+               and r.get("intent_id") == intent_id for r in records):
+            raise ExitLedgerError("terminal entry intent cannot receive later fills")
+        if len(matching_intents) != 1:
+            raise ExitLedgerError("entry intent identity must have exactly one original record")
+        amendments = [r for r in records if r.get("type") == "ENTRY_INTENT_AMENDED"
+                      and r.get("intent_id") == intent_id]
+        latest_amendment = max(amendments, key=lambda r: int(r["revision"])) if amendments else None
+        intent_qty = _decimal(latest_amendment["quantity"] if latest_amendment else
+                              matching_intents[0]["quantity"], "effective entry intent")
         prior_intent_fills = sum((_decimal(r["quantity"], "entry fill") for r in records
                                   if r.get("type") == "ENTRY_FILL" and r.get("intent_id") == intent_id), Decimal(0))
-        prior_fill_id = next((r for r in records if r.get("type") == "ENTRY_FILL"
-                              and r.get("fill_id") == fill_id), None)
-        if prior_fill_id is None and prior_intent_fills + qty > intent_qty:
+        if prior_intent_fills + qty > intent_qty:
             raise ExitLedgerError("entry fill quantity exceeds matching entry intent")
-        prior_fill = next((r for r in records if r.get("type") == "ENTRY_FILL" and r.get("fill_id") == fill_id), None)
-        if prior_fill is not None and prior_fill != record:
-            raise ExitLedgerError("entry fill id conflicts with prior evidence")
         if prior_fill is None:
             planned_entry_quantity = sum(
                 (_decimal(r["quantity"], "entry fill") for r in prior_entries), Decimal(0)
