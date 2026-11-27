@@ -85,6 +85,7 @@ def build_option_surface(request: OptionSurfaceRequest) -> dict[str, object]:
         raise OptionSurfaceError("quote IDs must be unique in a snapshot")
 
     calls: dict[datetime, dict[float, dict[str, _QuotePoint]]] = {}
+    excluded_quotes: list[dict[str, str]] = []
     for quote in request.quotes:
         expiry = _aware_utc(quote.expiry_at, "expiry_at")
         observed = _aware_utc(quote.observed_at, "observed_at")
@@ -111,7 +112,8 @@ def build_option_surface(request: OptionSurfaceRequest) -> dict[str, object]:
         mid = (quote.bid + quote.ask) / 2
         spread_bps = (quote.ask - quote.bid) / mid * 10_000
         if spread_bps > request.max_spread_bps:
-            raise OptionSurfaceError("option quote spread exceeds the frozen quality threshold")
+            excluded_quotes.append({"quote_id": quote.quote_id, "reason": "SPREAD_EXCEEDS_POLICY"})
+            continue
         t = (expiry - as_of).total_seconds() / (365.0 * 24 * 60 * 60)
         try:
             iv = implied_vol(mid, request.spot, quote.strike, t, request.rate,
@@ -143,7 +145,9 @@ def build_option_surface(request: OptionSurfaceRequest) -> dict[str, object]:
     for expiry in sorted(calls):
         strikes = calls[expiry]
         if len(strikes) < 3:
-            raise OptionSurfaceError("each expiry needs at least three distinct strikes for convexity checks")
+            raise OptionSurfaceError(
+                "each expiry needs at least three clean distinct strikes after quote exclusions"
+            )
         rows: list[tuple[float, float, _QuotePoint]] = []
         for strike in sorted(strikes):
             side_rows = strikes[strike]
@@ -191,6 +195,8 @@ def build_option_surface(request: OptionSurfaceRequest) -> dict[str, object]:
         "schema": "fb.option-iv-surface.v1", "underlying_id": request.underlying_id,
         "spot": request.spot, "rate": request.rate, "dividend_yield": request.dividend_yield,
         "as_of": as_of.isoformat(), "quality_gate": "PASS",
+        "coverage_status": "DEGRADED" if excluded_quotes else "COMPLETE",
+        "excluded_quotes": sorted(excluded_quotes, key=lambda row: row["quote_id"]),
         "arbitrage_checks": diagnostics,
         "calendar_spread_arbitrage": "NOT_TESTED",
         "points": points,

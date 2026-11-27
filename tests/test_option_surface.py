@@ -55,8 +55,18 @@ def test_surface_rejects_stale_future_and_wide_quotes():
     with pytest.raises(OptionSurfaceError, match="unavailable"):
         build_option_surface(_request((future, _quote(100), _quote(110))))
     wide = _quote(90, spread=2)
-    with pytest.raises(OptionSurfaceError, match="spread"):
+    with pytest.raises(OptionSurfaceError, match="three clean distinct strikes"):
         build_option_surface(_request((wide, _quote(100), _quote(110))))
+
+
+def test_surface_excludes_wide_quote_when_clean_strikes_still_support_checks():
+    request = _request((_quote(80), _quote(90, spread=10), _quote(100),
+                        _quote(110), _quote(120)))
+    result = build_option_surface(replace(request, max_spread_bps=2000))
+    assert result["coverage_status"] == "DEGRADED"
+    assert result["excluded_quotes"] == [{"quote_id": "q-90-C", "reason": "SPREAD_EXCEEDS_POLICY"}]
+    assert len(result["points"]) == 4
+    assert result["arbitrage_checks"][0]["call_monotonicity"] == "PASS"
 
 
 def test_surface_rejects_duplicate_or_cross_underlying_quotes():
