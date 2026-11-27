@@ -152,5 +152,7 @@ jobs:
         run: python -m pip check
       - name: Verify Python, timezone, seed, lock, and fixture fingerprints
         run: python scripts/verify_reproducibility.py
+      - name: Audit locked installs and reject user-specific source paths
+        run: python scripts/audit_reproducible_install.py --check
       - name: Verify deterministic fixture behavior without market access
         run: python -m pytest -q tests/test_forward_edge_cli.py::test_fixture_pack_is_deterministic_and_costs_are_net_of_pnl

@@ -34,8 +34,11 @@
     ".github/workflows/ci.yml",
     "docs/edge-program/checklist-completion-evidence-policy.md",
     "docs/edge-program/completion-evidence-gaps.v1.json",
+    "docs/edge-program/reproducible-install-audit.md",
+    "scripts/audit_reproducible_install.py",
     "scripts/build_checklist_evidence_bundle.py",
     "scripts/checklist_completion_gate.py",
+    "tests/test_audit_reproducible_install.py",
     "tests/test_checklist_completion_gate.py",
     "tests/test_checklist_evidence_bundle.py"
   ]
