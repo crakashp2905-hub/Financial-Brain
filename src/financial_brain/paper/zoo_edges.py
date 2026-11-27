@@ -21,6 +21,7 @@ the month before - one session's shift); state between evenings is kept in ``zoo
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import date
 
 import numpy as np
@@ -63,6 +64,37 @@ def _equal_weight_pick(pick, name: str) -> dict[str, float]:
     if len(pick) == 0:
         raise ValueError(f"{name} has no eligible holdings at this rebalance")
     return {str(lineage): 1.0 / len(pick) for lineage in pick}
+
+
+def monthly_target_hashes(targets: dict[str, dict]) -> dict[str, str]:
+    """Stable per-book hashes for intended-versus-persisted monthly target audits."""
+    hashes = {}
+    for book in MONTHLY_BOOKS:
+        target = targets.get(book, {})
+        payload = json.dumps({str(key): float(value) for key, value in sorted(target.items())},
+                             sort_keys=True, separators=(",", ":"), allow_nan=False)
+        hashes[book] = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return hashes
+
+
+def monthly_rebalance_audit(day: date, scheduled_signal_date: date, state: dict,
+                            intended_targets: dict[str, dict]) -> dict | None:
+    """Describe a missed first-session rebalance without rewriting its signal or target history."""
+    if day <= scheduled_signal_date or state.get("set") == str(scheduled_signal_date):
+        return None
+    intended = monthly_target_hashes(intended_targets)
+    actual = monthly_target_hashes(state.get("targets", {}))
+    unresolved = sorted(intended_targets.get("_errors", {}).keys())
+    return {
+        "status": "MISSED_OR_STALE",
+        "signal_date": str(scheduled_signal_date),
+        "detected_on": str(day),
+        "last_actual_signal_date": state.get("set"),
+        "intended_hashes": intended,
+        "actual_hashes": actual,
+        "mismatched_books": [book for book in MONTHLY_BOOKS if intended[book] != actual[book]],
+        "unresolved_intended_books": unresolved,
+    }
 
 
 def monthly_targets(rcon, day: date) -> dict[str, dict]:

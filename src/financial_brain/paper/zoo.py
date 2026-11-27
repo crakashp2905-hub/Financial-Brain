@@ -346,10 +346,23 @@ def edge_strategies(rcon, z, day, prev, done, uni, by, rets, ubench, fno_symbols
              "edge_h003_riskadj_mom", "edge_h005_industry_mom")
     st = ZE.state(z, "edge_monthly")
     if ZE._first_of_month(z, day) or not st.get("targets"):
+        month_sessions = [session for session in sessions
+                          if session.year == day.year and session.month == day.month]
+        scheduled_signal_date = min(month_sessions) if month_sessions else day
+        rebalance_audit = None
+        if day > scheduled_signal_date and st.get("set") != str(scheduled_signal_date):
+            intended = ZE.monthly_targets(rcon, scheduled_signal_date)
+            rebalance_audit = ZE.monthly_rebalance_audit(day, scheduled_signal_date, st, intended)
+            if rebalance_audit:
+                log.error("ALERT monthly rebalance missed signal_date=%s detected_on=%s mismatched_books=%s",
+                          rebalance_audit["signal_date"], rebalance_audit["detected_on"],
+                          rebalance_audit["mismatched_books"])
         fresh = ZE.monthly_targets(rcon, day)
         errors = fresh.pop("_errors", {})
         kept = {n: st.get("targets", {}).get(n, {}) for n in errors}    # a failed book keeps its last targets
         st = {"targets": {**fresh, **kept}, "set": str(day), "errors": errors}
+        if rebalance_audit:
+            st["last_rebalance_audit"] = rebalance_audit
         if errors:
             log.warning("monthly targets: %s kept previous targets: %s", sorted(errors), errors)
         ZE.save(z, "edge_monthly", st)

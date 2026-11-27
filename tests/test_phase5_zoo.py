@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from financial_brain.paper import zoo as Z
+from financial_brain.paper import zoo_edges as ZE
 
 
 def test_settle_earns_yesterdays_weights_and_charges_the_change(tmp_path):
@@ -16,6 +17,22 @@ def test_settle_earns_yesterdays_weights_and_charges_the_change(tmp_path):
     assert r["gross"] == pytest.approx(0.5 * 0.02 - 0.5 * 0.01)
     assert r["cost"] == pytest.approx(1.0 * Z.COST_LONG)                      # +0.5 A, -0.5 B
     assert r["net"] == pytest.approx(r["gross"] - r["cost"]) and r["bench"] == 0.004
+
+
+def test_monthly_rebalance_audit_reports_exact_missed_signal_date_and_hash_mismatch():
+    scheduled = date(2026, 11, 2)
+    state = {"set": "2026-10-30", "targets": {"edge_p1_residual_mom": {"OLD": 1.0}}}
+    intended = {"edge_p1_residual_mom": {"NEW": 1.0}}
+
+    audit = ZE.monthly_rebalance_audit(date(2026, 11, 4), scheduled, state, intended)
+
+    assert audit["status"] == "MISSED_OR_STALE"
+    assert audit["signal_date"] == "2026-11-02"
+    assert audit["detected_on"] == "2026-11-04"
+    assert "edge_p1_residual_mom" in audit["mismatched_books"]
+    assert len(audit["intended_hashes"]["edge_p1_residual_mom"]) == 64
+    assert ZE.monthly_rebalance_audit(scheduled, scheduled, state, intended) is None
+    assert state["targets"]["edge_p1_residual_mom"] == {"OLD": 1.0}
 
 
 
