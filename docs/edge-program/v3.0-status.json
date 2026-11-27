@@ -9710,7 +9710,7 @@
       ],
       "blocker": "No local NSE index/F&O archive database or lake manifest is available. Populate dated NSE archive and index-close data, then rerun `fb options-audit` to verify actual coverage and inspect liquidity per session.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": null,
+      "commit": "e3db8f4e",
       "test_result": "tests/test_options_audit.py: 3 passed; Ruff and mypy pass for updated audit module."
     },
     {
