@@ -10746,12 +10746,21 @@
     {
       "id": "PA-13-04",
       "text": "Model option Greeks and tail gap loss at portfolio level; account for same-underlying multi-leg concentration and correlated settlement risk.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/options_portfolio_stress.py aggregates signed delta, gamma and vega across option strategies by underlying; reports gross concentration by settlement instant and applies common correlated underlying/IV shocks to all legs.",
+        "Expiry scenarios use each contract's timezone-aware exchange settlement instant and intrinsic payoff; stress results include scenario fees, worst net loss and source hashes for the supplied position quotes.",
+        "This is an independently callable model; the OMS/order gate does not yet build positions from reconciled paper books or enforce the resulting portfolio loss limit."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T08:30:44Z",
+      "commit": "a51df7d6",
+      "test_evidence": [
+        "tests/test_options_portfolio_stress.py: six focused cases cover cross-strategy aggregation, correlated underlying settlement shocks, intrinsic expiry payoff, costs, stale/missing quote evidence, duplicate shock rejection and nonnegative implied volatility; 6 passed.",
+        "Risk regression set tests/test_options_portfolio_stress.py, tests/test_scenario_loss.py, tests/test_nifty_delta.py and tests/test_signed_risk_policy.py: 18 passed.",
+        "Ruff checks on the new stress model and focused tests passed; git diff --check passed."
+      ]
     },
     {
       "id": "PA-13-05",
@@ -20961,7 +20970,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:00:00Z",
+    "as_of_utc": "2026-11-27T08:30:44Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21582,6 +21591,7 @@
       "PA-13-01",
       "PA-13-02",
       "PA-13-03",
+      "PA-13-04",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22005,13 +22015,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1041,
+    "audited_count": 1042,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 902,
-      "UNASSESSED": 337
+      "PARTIAL": 903,
+      "UNASSESSED": 336
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22160,7 +22170,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 902,
-    "UNASSESSED": 337
+    "PARTIAL": 903,
+    "UNASSESSED": 336
   }
 }
