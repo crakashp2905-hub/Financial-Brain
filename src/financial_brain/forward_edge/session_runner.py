@@ -232,6 +232,69 @@ def _canonical_sha256(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _validate_expected_value_forecast(value: object, *, decision_at: datetime) -> dict[str, Any]:
+    """Validate the immutable EV snapshot published before its decision/execution clock."""
+    fields = {"candidate_id", "version", "forecasted_at_utc", "predicted_return_fraction",
+              "predicted_cost_fraction", "expected_net_fraction", "forecast", "model_sha256",
+              "cost_model_sha256"}
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ForwardSessionRunnerError("candidate requires a complete expected-value forecast snapshot")
+    if not isinstance(value["candidate_id"], str) or not value["candidate_id"].strip():
+        raise ForwardSessionRunnerError("expected-value forecast candidate_id is required")
+    if type(value["version"]) is not int or value["version"] < 1:
+        raise ForwardSessionRunnerError("expected-value forecast version must be a positive integer")
+    for label in ("model_sha256", "cost_model_sha256"):
+        if re.fullmatch(r"[0-9a-f]{64}", str(value[label])) is None:
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be SHA-256")
+    try:
+        forecasted_at = datetime.fromisoformat(str(value["forecasted_at_utc"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ForwardSessionRunnerError("expected-value forecast timestamp must be ISO-8601") from exc
+    if forecasted_at.tzinfo is None or forecasted_at.utcoffset() is None:
+        raise ForwardSessionRunnerError("expected-value forecast timestamp must include a timezone")
+    forecasted_at = forecasted_at.astimezone(timezone.utc)
+    if forecasted_at > decision_at.astimezone(timezone.utc):
+        raise ForwardSessionRunnerError("expected-value forecast must be published before its decision clock")
+    decimal_fields = ("predicted_return_fraction", "predicted_cost_fraction", "expected_net_fraction")
+    numbers: dict[str, Decimal] = {}
+    for label in decimal_fields:
+        raw = value[label]
+        if not isinstance(raw, str):
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be a decimal string")
+        try:
+            number = Decimal(raw)
+        except InvalidOperation as exc:
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} is invalid") from exc
+        if not number.is_finite():
+            raise ForwardSessionRunnerError(f"expected-value forecast {label} must be finite")
+        numbers[label] = number
+    if numbers["predicted_cost_fraction"] < 0 or numbers["predicted_cost_fraction"] >= 1:
+        raise ForwardSessionRunnerError("expected-value forecast cost must be in [0, 1)")
+    if numbers["expected_net_fraction"] != (
+            numbers["predicted_return_fraction"] - numbers["predicted_cost_fraction"]):
+        raise ForwardSessionRunnerError("expected-value forecast net value must equal gross forecast less costs")
+    distribution = value["forecast"]
+    expected_distribution_fields = {"p10_fraction", "p50_fraction", "p90_fraction", "probability_exceeds_cost"}
+    if not isinstance(distribution, dict) or set(distribution) != expected_distribution_fields:
+        raise ForwardSessionRunnerError("expected-value forecast distribution is incomplete")
+    parsed: dict[str, Decimal] = {}
+    for label, raw in distribution.items():
+        if not isinstance(raw, str):
+            raise ForwardSessionRunnerError("expected-value forecast distribution values must be decimal strings")
+        try:
+            parsed[label] = Decimal(raw)
+        except InvalidOperation as exc:
+            raise ForwardSessionRunnerError("expected-value forecast distribution contains an invalid value") from exc
+        if not parsed[label].is_finite():
+            raise ForwardSessionRunnerError("expected-value forecast distribution must be finite")
+    if (parsed["p10_fraction"] > parsed["p50_fraction"] or
+            parsed["p50_fraction"] > parsed["p90_fraction"] or
+            not Decimal(0) <= parsed["probability_exceeds_cost"] <= Decimal(1)):
+        raise ForwardSessionRunnerError("expected-value forecast distribution is not ordered or calibrated")
+    return {**value, "forecasted_at_utc": forecasted_at.isoformat(),
+            "forecast": dict(sorted(distribution.items()))}
+
+
 def _validate_live_paper_freeze(config: ForwardRunConfig) -> None:
     """Require a complete, hash-bound strategy and policy snapshot before LIVE_PAPER opens."""
     constraints = config.constraints
@@ -1141,6 +1204,21 @@ class ForwardSessionRunner:
             raise ForwardSessionRunnerError("decision time must be timezone aware")
         if outcome != "TRADE" and not reason_codes:
             raise ForwardSessionRunnerError("non-trade decision requires a reason code")
+        config = self.state_store.config(session_id)
+        decision_payload = payload or {}
+        if not isinstance(decision_payload, dict):
+            raise ForwardSessionRunnerError("decision payload must be an object")
+        raw_forecast = decision_payload.get("expected_value_forecast")
+        is_candidate = outcome == "TRADE" or isinstance(decision_payload.get("candidate_intent"), dict)
+        forecast = None
+        if raw_forecast is not None:
+            forecast = _validate_expected_value_forecast(raw_forecast, decision_at=decided_at)
+        if config.mode == "LIVE_PAPER" and is_candidate and forecast is None:
+            raise ForwardSessionRunnerError("LIVE_PAPER candidates require a pre-entry expected-value forecast")
+        if forecast is not None and config.constraints.get("cost_schedule") is not None:
+            expected_cost_sha = self._resolved_cost_schedule(session_id).digest()
+            if forecast["cost_model_sha256"] != expected_cost_sha:
+                raise ForwardSessionRunnerError("expected-value forecast cost hash differs from frozen session costs")
         if not input_event_ids and outcome != "DATA_UNUSABLE":
             raise ForwardSessionRunnerError("decision must reference at least one source event")
         unique_ids = tuple(sorted(set(input_event_ids)))
@@ -1219,6 +1297,8 @@ class ForwardSessionRunner:
                     reason="stale decision quote: " + ",".join(sorted(stale)))
             raise ForwardSessionRunnerError(
                 f"decision quote exceeds configured maximum age of {max_quote_age}ms: {', '.join(sorted(stale))}")
+        if forecast is not None:
+            decision_payload = {**decision_payload, "expected_value_forecast": forecast}
         body = {"session_id": session_id, "strategy_id": strategy_id, "decision_id": decision_id,
                 "outcome": outcome, "decided_at": clock.isoformat(), "input_event_ids": list(unique_ids),
                 "as_of": max(input_available).isoformat() if input_available else None,
@@ -1227,7 +1307,7 @@ class ForwardSessionRunner:
                 "feature_started_at": feature_start_clock.isoformat() if feature_start_clock else None,
                 "model_inference_started_at": inference_start_clock.isoformat() if inference_start_clock else None,
                 "model_inference_completed_at": inference_end_clock.isoformat() if inference_end_clock else None,
-                "reason_codes": sorted(set(reason_codes)), "payload": payload or {}}
+                "reason_codes": sorted(set(reason_codes)), "payload": decision_payload}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         existing = self._con.execute("SELECT record_sha256, record_json FROM runner_decisions WHERE session_id=? AND decision_id=?",
@@ -1246,11 +1326,35 @@ class ForwardSessionRunner:
                                   [session_id]).fetchone()[0]
         if prior is not None and clock < datetime.fromisoformat(prior):
             raise ForwardSessionRunnerError("decision clock cannot move backwards within a session")
-        self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
-                          [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
-        self._append_audit("decision", session_id, decision_id, clock,
-                           {**body, "provenance": self.provenance})
-        self._con.commit()
+        if forecast is not None:
+            prior_forecasts = self._con.execute(
+                "SELECT record_json FROM runner_decisions WHERE session_id=? ORDER BY decided_at,decision_id",
+                [session_id]).fetchall()
+            previous_versions = []
+            for (encoded_prior,) in prior_forecasts:
+                prior_payload = json.loads(encoded_prior).get("payload", {})
+                prior_forecast = prior_payload.get("expected_value_forecast") if isinstance(prior_payload, dict) else None
+                if isinstance(prior_forecast, dict) and prior_forecast.get("candidate_id") == forecast["candidate_id"]:
+                    previous_versions.append(prior_forecast)
+            last_version = max((row["version"] for row in previous_versions), default=0)
+            if forecast["version"] != last_version + 1:
+                raise ForwardSessionRunnerError("expected-value forecast revisions must use the next immutable version")
+            if previous_versions and datetime.fromisoformat(forecast["forecasted_at_utc"]) <= datetime.fromisoformat(
+                    max(row["forecasted_at_utc"] for row in previous_versions)):
+                raise ForwardSessionRunnerError("forecast revisions must be newly published, not retroactive")
+        self._con.execute("BEGIN IMMEDIATE")
+        try:
+            if forecast is not None:
+                self._append_audit("expected_value_forecast", session_id, decision_id, clock,
+                                   {**forecast, "decision_id": decision_id, "strategy_id": strategy_id})
+            self._con.execute("INSERT INTO runner_decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                              [session_id, decision_id, strategy_id, outcome, clock.isoformat(), digest, canonical])
+            self._append_audit("decision", session_id, decision_id, clock,
+                               {**body, "provenance": self.provenance})
+            self._con.commit()
+        except Exception:
+            self._con.rollback()
+            raise
         self.record_component_heartbeat(
             session_id=session_id, component="strategy_process",
             heartbeat_id=f"decision:{decision_id}", occurred_at=clock,
@@ -1355,6 +1459,21 @@ class ForwardSessionRunner:
                 raise ForwardSessionRunnerError("decision risk hash differs from frozen session risk limits")
             if manifest["cost_model_sha256"] != expected_cost_sha:
                 raise ForwardSessionRunnerError("decision cost hash differs from the frozen session cost schedule")
+            decision_payload = decision.get("payload", {})
+            forecast = decision_payload.get("expected_value_forecast") if isinstance(decision_payload, dict) else None
+            if decision["outcome"] == "TRADE" or isinstance(decision_payload.get("candidate_intent"), dict):
+                if not isinstance(forecast, dict):
+                    raise ForwardSessionRunnerError("LIVE_PAPER decision manifest lacks its pre-entry forecast")
+                earliest_entry = datetime.fromisoformat(manifest["entry_earliest_at_utc"].replace("Z", "+00:00"))
+                if datetime.fromisoformat(forecast["forecasted_at_utc"]) >= earliest_entry.astimezone(timezone.utc):
+                    raise ForwardSessionRunnerError("expected-value forecast must precede the earliest execution clock")
+                if (forecast["predicted_return_fraction"] != manifest["predicted_return_fraction"] or
+                        forecast["predicted_cost_fraction"] != manifest["predicted_cost_fraction"] or
+                        forecast["forecast"] != manifest["forecast"] or
+                        forecast["model_sha256"] != manifest["model_sha256"] or
+                        forecast["cost_model_sha256"] != manifest["cost_model_sha256"]):
+                    raise ForwardSessionRunnerError(
+                        "decision manifest expected-value forecast differs from the frozen decision")
         if manifest_at.astimezone(timezone.utc) != decision_at.astimezone(timezone.utc):
             raise ForwardSessionRunnerError("decision manifest time differs from the durable decision")
         source_ids = {source["source_id"] for source in manifest["sources"]}
@@ -1428,6 +1547,8 @@ class ForwardSessionRunner:
             "SELECT record_json FROM runner_data_rejections WHERE session_id=? ORDER BY rejection_id",
             [session_id]).fetchall()]
         audit_log = self.durable.audit_records(session_id)
+        expected_value_forecasts = [row["record"] for row in audit_log
+                                    if row["kind"] == "expected_value_forecast"]
         order_events: list[dict[str, Any]] = []
         prefix = f"{session_id}::"
         for journal_order_id in self.order_journal.order_ids():
@@ -1445,6 +1566,7 @@ class ForwardSessionRunner:
                   "intents": intents, "execution_receipts": receipts, "session_reports": reports,
                   "order_events": order_events,
                   "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
+                  "expected_value_forecasts": expected_value_forecasts,
                   "data_rejections": data_rejections,
                   "audit_log": audit_log, "accounting": accounting}
         result["timing_telemetry"] = _timing_telemetry(result)
@@ -2118,7 +2240,16 @@ class ForwardSessionRunner:
         if decision_row is None or decision_row[0] != "TRADE":
             raise ForwardSessionRunnerError("paper intent requires a journaled TRADE decision")
         decision = json.loads(decision_row[1])
-        candidate_intent = decision.get("payload", {}).get("candidate_intent")
+        decision_payload = decision.get("payload", {})
+        candidate_intent = decision_payload.get("candidate_intent") if isinstance(decision_payload, dict) else None
+        config = self.state_store.config(session_id)
+        forecast = decision_payload.get("expected_value_forecast") if isinstance(decision_payload, dict) else None
+        if config.mode == "LIVE_PAPER":
+            if not isinstance(forecast, dict):
+                raise ForwardSessionRunnerError("LIVE_PAPER paper intent requires its frozen expected-value forecast")
+            forecasted_at = datetime.fromisoformat(forecast["forecasted_at_utc"])
+            if simulated_at.astimezone(timezone.utc) <= forecasted_at.astimezone(timezone.utc):
+                raise ForwardSessionRunnerError("expected-value forecast must precede the execution clock")
         if candidate_intent is not None:
             if not isinstance(candidate_intent, dict):
                 raise ForwardSessionRunnerError("canonical candidate intent must be an object")
@@ -2147,7 +2278,6 @@ class ForwardSessionRunner:
         if manifest_row is None:
             raise ForwardSessionRunnerError("paper intent requires a canonical persisted decision manifest")
         manifest = json.loads(manifest_row[1])
-        config = self.state_store.config(session_id)
         if config.constraints.get("cost_schedule") is not None:
             if config.constraints.get("liquidity_bucket") not in {"mega", "large", "mid", "small", "micro"}:
                 raise ForwardSessionRunnerError(

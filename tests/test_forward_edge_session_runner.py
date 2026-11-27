@@ -942,8 +942,19 @@ def trade_setup(tmp_path, *, risk_allowed=True, include_manifest=True, quote=Non
     signal_event = normalize_kite_quote("NSE:INFY", quote, received_at=NOW)
     runner.ingest("s", config, [signal_event])
     decided = NOW + timedelta(milliseconds=decision_offset_ms)
+    decision_payload = None
+    if config.mode == "LIVE_PAPER":
+        decision_payload = {"expected_value_forecast": {
+            "candidate_id": "trade-1", "version": 1, "forecasted_at_utc": decided.isoformat(),
+            "predicted_return_fraction": "0.01", "predicted_cost_fraction": "0.001",
+            "expected_net_fraction": "0.009",
+            "forecast": {"p10_fraction": "-0.01", "p50_fraction": "0.01",
+                         "p90_fraction": "0.02", "probability_exceeds_cost": "0.6"},
+            "model_sha256": "2" * 64,
+            "cost_model_sha256": runner._resolved_cost_schedule("s").digest(),
+        }}
     runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-1", outcome="TRADE",
-                  decided_at=decided, input_event_ids=(signal_event.event_id,))
+                  decided_at=decided, input_event_ids=(signal_event.event_id,), payload=decision_payload)
     if include_manifest:
         record_manifest(runner, session_id="s", decision_id="trade-1", event=signal_event,
                         decided_at=decided, quantity=11)
@@ -1795,6 +1806,16 @@ def test_live_paper_manifest_binds_frozen_strategy_benchmark_capital_universe_co
                                decided_at=decided, quantity=11, persist=False)
     digest = runner.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest)
     assert len(digest) == 64
+    audit_kinds = [row["kind"] for row in runner.durable.audit_records("s")]
+    assert audit_kinds.index("expected_value_forecast") < audit_kinds.index("decision")
+    decision_record = next(row for row in runner.records("s")["decisions"]
+                           if row["decision_id"] == "trade-1")
+    assert decision_record["payload"]["expected_value_forecast"]["expected_net_fraction"] == "0.009"
+    expected_rows = runner.records("s")["expected_value_forecasts"]
+    assert len(expected_rows) == 1 and expected_rows[0]["version"] == 1
+    before_rebuild = runner.records("s")
+    runner.rebuild_materialized_views("s")
+    assert runner.records("s") == before_rebuild
 
     runner2, _fill_event2, decided2 = trade_setup(tmp_path / "mismatch", config=config, include_manifest=False)
     decision2 = json.loads(runner2._con.execute(
@@ -1810,6 +1831,79 @@ def test_live_paper_manifest_binds_frozen_strategy_benchmark_capital_universe_co
         runner2.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest2)
     runner.close()
     runner2.close()
+
+
+def test_live_paper_candidate_requires_predecision_expected_value_forecast(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_live_paper_config(include_prospective_rights=True)
+    opened(runner, config=config)
+    event = make_event(event_id="missing-live-forecast")
+    runner.ingest("s", config, [event])
+    with pytest.raises(ForwardSessionRunnerError, match="pre-entry expected-value forecast"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="missing-forecast",
+                      outcome="TRADE", input_event_ids=(event.event_id,), decided_at=NOW + timedelta(seconds=1))
+    assert runner.records("s")["decisions"] == []
+    assert not any(row["kind"] == "expected_value_forecast" for row in runner.durable.audit_records("s"))
+    runner.close()
+
+
+def test_expected_value_revisions_are_sequential_new_and_immutable(tmp_path):
+    runner, event, first_decision_at = trade_setup(
+        tmp_path, config=make_live_paper_config(include_prospective_rights=True))
+    cost_sha = runner._resolved_cost_schedule("s").digest()
+
+    def forecast(version, forecast_at):
+        return {"candidate_id": "trade-1", "version": version,
+                "forecasted_at_utc": forecast_at.isoformat(),
+                "predicted_return_fraction": "0.012", "predicted_cost_fraction": "0.001",
+                "expected_net_fraction": "0.011",
+                "forecast": {"p10_fraction": "-0.02", "p50_fraction": "0.012",
+                             "p90_fraction": "0.03", "probability_exceeds_cost": "0.7"},
+                "model_sha256": "2" * 64, "cost_model_sha256": cost_sha}
+
+    revised_at = first_decision_at + timedelta(seconds=1)
+    assert runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-2",
+                         outcome="NO_TRADE", input_event_ids=(event.event_id,), decided_at=revised_at,
+                         reason_codes=("REVISED_FORECAST_NO_ENTRY",),
+                         payload={"expected_value_forecast": forecast(2, revised_at - timedelta(milliseconds=1))})
+    with pytest.raises(ForwardSessionRunnerError, match="next immutable version"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-4",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,),
+                      decided_at=revised_at + timedelta(milliseconds=10),
+                      reason_codes=("VERSION_GAP",),
+                      payload={"expected_value_forecast": forecast(4, revised_at)})
+    with pytest.raises(ForwardSessionRunnerError, match="published before its decision clock"):
+        runner.decide(session_id="s", strategy_id="momentum", decision_id="trade-future-forecast",
+                      outcome="NO_TRADE", input_event_ids=(event.event_id,),
+                      decided_at=revised_at + timedelta(milliseconds=20),
+                      reason_codes=("FUTURE_FORECAST",),
+                      payload={"expected_value_forecast": forecast(
+                          3, revised_at + timedelta(milliseconds=21))})
+    decisions = runner.records("s")["decisions"]
+    assert [row["payload"].get("expected_value_forecast", {}).get("version") for row in decisions] == [1, 2]
+    runner.close()
+
+
+def test_live_paper_manifest_cannot_revise_published_expected_value(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    runner, _fill_event, decided = trade_setup(tmp_path, config=config, include_manifest=False)
+    decision = runner.records("s")["decisions"][0]
+    event, _digest = runner.source_event("s", decision["input_event_ids"][0])
+    manifest = record_manifest(runner, session_id="s", decision_id="trade-1", event=event,
+                               decided_at=decided, quantity=11, persist=False)
+    manifest["predicted_return_fraction"] = "0.02"
+    with pytest.raises(ForwardSessionRunnerError, match="forecast differs from the frozen decision"):
+        runner.record_decision_manifest(session_id="s", decision_id="trade-1", manifest=manifest)
+    runner.close()
+
+
+def test_live_paper_execution_clock_must_follow_expected_value_publication(tmp_path):
+    runner, event, decided = trade_setup(
+        tmp_path, config=make_live_paper_config(include_prospective_rights=True))
+    with pytest.raises(ForwardSessionRunnerError, match="must precede the execution clock"):
+        execute(runner, event, decided, execution_offset_ms=0)
+    assert runner.records("s")["intents"] == []
+    runner.close()
 
 
 def test_live_paper_session_rejects_missing_frozen_parameters_before_creation(tmp_path):
