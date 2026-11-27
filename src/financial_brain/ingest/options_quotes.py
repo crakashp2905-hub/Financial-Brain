@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS option_quotes (
     implied_vol_risk_free_rate DOUBLE,
     minimum_tick DOUBLE,
     session_phase VARCHAR,
+    open_interest BIGINT,
+    traded_quantity BIGINT,
+    last_trade_at TIMESTAMPTZ,
+    last_trade_age_ms BIGINT,
     PRIMARY KEY (received_at, instrument_token)
 );
 """
@@ -57,6 +61,14 @@ def _timestamp(value) -> datetime | None:
     except ValueError:
         return None
     return d.replace(tzinfo=IST) if d.tzinfo is None else d.astimezone(IST)
+
+
+def _nonnegative_int(value) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return parsed if parsed >= 0 else None
 
 
 def records(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, dict],
@@ -92,6 +104,11 @@ def records(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, d
         tick = tick_candidate if tick_candidate is not None and math.isfinite(tick_candidate) \
             and tick_candidate > 0 else None
         session_phase = str(q.get("session_phase") or "UNKNOWN").strip().upper()
+        source_at = _timestamp(q.get("timestamp"))
+        last_trade_at = _timestamp(q.get("last_trade_time"))
+        last_trade_age_ms = (max(0, int((received_at.astimezone(IST) - last_trade_at).total_seconds() * 1000))
+                             if last_trade_at is not None and last_trade_at <= received_at.astimezone(IST)
+                             else None)
         iv_mid = None
         iv_basis = "UNAVAILABLE"
         if mid is not None and spot_value is not None and spot_value > 0:
@@ -106,14 +123,15 @@ def records(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, d
                     iv_basis = "OBSERVED_BID_ASK_MID_RESEARCH_ONLY" if iv_mid is not None else "UNSOLVABLE"
             except (TypeError, ValueError, OverflowError):
                 iv_basis = "INVALID_CONTRACT_OR_SPOT"
-        rows.append((received_at, _timestamp(q.get("timestamp")), int(contract["instrument_token"]),
+        rows.append((received_at, source_at, int(contract["instrument_token"]),
                      symbol, underlying, spot_value, str(contract["expiry"]),
                      float(contract["strike"]), contract["instrument_type"], int(contract["lot_size"]),
                      q.get("last_price"), bid or None, ask or None,
                      bid_qty or None, ask_qty or None,
                      json.dumps(buy), json.dumps(sell), received_at, spread_percent, iv_mid, iv_basis,
                      RATE,
-                     tick, session_phase, quality))
+                     tick, session_phase, quality, _nonnegative_int(q.get("oi")),
+                     _nonnegative_int(q.get("volume")), last_trade_at, last_trade_age_ms))
     return rows
 
 
@@ -137,14 +155,17 @@ def store(instruments: list[dict], quotes: dict[str, dict], spots: dict[str, dic
         for column, kind in (("available_at", "TIMESTAMPTZ"), ("spread_percent", "DOUBLE"),
                              ("implied_vol_mid", "DOUBLE"), ("implied_vol_price_basis", "VARCHAR"),
                              ("implied_vol_risk_free_rate", "DOUBLE"), ("minimum_tick", "DOUBLE"),
-                             ("session_phase", "VARCHAR")):
+                             ("session_phase", "VARCHAR"), ("open_interest", "BIGINT"),
+                             ("traded_quantity", "BIGINT"), ("last_trade_at", "TIMESTAMPTZ"),
+                             ("last_trade_age_ms", "BIGINT")):
             con.execute(f"ALTER TABLE option_quotes ADD COLUMN IF NOT EXISTS {column} {kind}")
         con.executemany("""INSERT OR IGNORE INTO option_quotes
             (received_at, source_at, instrument_token, tradingsymbol, underlying, underlying_ltp, expiry,
              strike, option_type, lot_size, ltp, bid, ask, bid_qty, ask_qty, buy_depth, sell_depth,
              available_at, spread_percent, implied_vol_mid, implied_vol_price_basis,
-             implied_vol_risk_free_rate, minimum_tick, session_phase, book_quality)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", rows)
+             implied_vol_risk_free_rate, minimum_tick, session_phase, book_quality,
+             open_interest, traded_quantity, last_trade_at, last_trade_age_ms)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", rows)
     finally:
         con.close()
     return len(rows)

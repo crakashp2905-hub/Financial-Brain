@@ -1,7 +1,7 @@
 """ATM quote archive records both executable and failed books."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import duckdb
 import pytest
@@ -19,6 +19,8 @@ def test_store_keeps_contract_identity_and_full_book(tmp_path, monkeypatch):
     monkeypatch.setenv("FB_OPTIONS_ARCHIVE_LICENSE_APPROVED", "1")
     now = datetime(2026, 10, 22, 10, 0, tzinfo=OQ.IST)
     q = {"NFO:ABC26NOV100CE": {"last_price": 9.5, "timestamp": now,
+                                "last_trade_time": now - timedelta(seconds=7),
+                                "oi": 1200, "volume": 450,
                                 "depth": {"buy": [{"price": 9, "quantity": 200}],
                                           "sell": [{"price": 10, "quantity": 100}]}}}
     path = tmp_path / "options.duckdb"
@@ -36,15 +38,29 @@ def test_store_keeps_contract_identity_and_full_book(tmp_path, monkeypatch):
     assert row[11] == "OBSERVED_BID_ASK_MID_RESEARCH_ONLY"
     assert row[12] == pytest.approx(0.065) and row[13] == pytest.approx(0.05)
     assert row[14] == "UNKNOWN"
+    with duckdb.connect(str(path), read_only=True) as con:
+        activity = con.execute("SELECT open_interest, traded_quantity, last_trade_age_ms "
+                                "FROM option_quotes").fetchone()
+    assert activity == (1200, 450, 7000)
 
 
 def test_incomplete_book_is_retained_not_counted_as_two_sided():
     now = datetime(2026, 10, 22, 10, 0, tzinfo=timezone.utc)
     q = {"NFO:ABC26NOV100CE": {"timestamp": now, "depth": {"buy": [{"price": 9}]}}}
     row = OQ.records([_contract()], q, {}, now)[0]
-    assert row[-1] == "INCOMPLETE_OR_CROSSED"
+    assert row[24] == "INCOMPLETE_OR_CROSSED"
     assert row[12] is None
     assert row[18] is None and row[19] is None and row[23] == "UNKNOWN"
+
+
+def test_invalid_or_future_last_trade_time_does_not_claim_freshness():
+    now = datetime(2026, 10, 22, 10, 0, tzinfo=OQ.IST)
+    q = {"NFO:ABC26NOV100CE": {"last_trade_time": now + timedelta(seconds=2),
+                                "oi": -1, "volume": "bad"}}
+    row = OQ.records([_contract()], q, {}, now)[0]
+    assert row[25] is None and row[26] is None
+    assert row[27] == now + timedelta(seconds=2)
+    assert row[28] is None
 
 
 def test_naive_receipt_time_is_rejected():
