@@ -8,6 +8,7 @@ from financial_brain.forward_edge.options_spread import (
     OptionMarketStress,
     OptionsSpreadError,
     evaluate_executable_spread,
+    option_premium_pnl_distribution,
     stress_option_market,
 )
 
@@ -116,3 +117,35 @@ def test_market_stress_rejects_missing_spot_or_iv_and_invalid_shocks() -> None:
         stress_option_market(legs=(missing,), lots=1, as_of=when, fees_inr=0, scenarios=(scenario,))
     with pytest.raises(OptionsSpreadError, match="stress dimensions"):
         OptionMarketStress("bad", 30, 0, 0, 0.5, 1)
+
+
+def test_premium_pnl_distribution_weights_repriced_scenarios_not_delta_points() -> None:
+    report = {"scenarios": [
+        {"scenario_id": "gap-down", "estimated_net_pnl_inr": -120.0},
+        {"scenario_id": "flat", "estimated_net_pnl_inr": -20.0},
+        {"scenario_id": "gap-up", "estimated_net_pnl_inr": 180.0},
+    ]}
+    result = option_premium_pnl_distribution(
+        stress_report=report,
+        scenario_probabilities={"gap-down": 0.2, "flat": 0.5, "gap-up": 0.3},
+    )
+    assert result["expected_net_pnl_inr"] == pytest.approx(20.0)
+    assert result["loss_probability"] == pytest.approx(0.7)
+    assert result["p05_net_pnl_inr"] == -120.0
+    assert result["p50_net_pnl_inr"] == -20.0
+    assert result["p95_net_pnl_inr"] == 180.0
+    assert result["worst_5pct_mean_net_pnl_inr"] == -120.0
+    assert result["calibrated"] is False
+
+
+def test_premium_pnl_distribution_rejects_missing_execution_or_bad_weights() -> None:
+    with pytest.raises(OptionsSpreadError, match="executable finite premium P&L"):
+        option_premium_pnl_distribution(
+            stress_report={"scenarios": [{"scenario_id": "no-fill", "estimated_net_pnl_inr": None}]},
+            scenario_probabilities={"no-fill": 1.0},
+        )
+    with pytest.raises(OptionsSpreadError, match="sum to one"):
+        option_premium_pnl_distribution(
+            stress_report={"scenarios": [{"scenario_id": "x", "estimated_net_pnl_inr": 1.0}]},
+            scenario_probabilities={"x": 0.9},
+        )

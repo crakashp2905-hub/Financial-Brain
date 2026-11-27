@@ -129,6 +129,72 @@ def stress_option_market(*, legs: tuple[OptionLegQuote, ...], lots: int, as_of: 
     return body
 
 
+def option_premium_pnl_distribution(*, stress_report: dict[str, object],
+                                    scenario_probabilities: dict[str, float]) -> dict[str, object]:
+    """Summarize probability-weighted option-premium P&L from explicit stress scenarios.
+
+    Weights are supplied by the caller and are never inferred from delta or index-point
+    returns. Because scenario marks are not fitted to a verified empirical distribution,
+    the result remains a research diagnostic until that calibration is independently done.
+    """
+    raw_scenarios = stress_report.get("scenarios")
+    if not isinstance(raw_scenarios, list) or not raw_scenarios or not scenario_probabilities:
+        raise OptionsSpreadError("stress scenarios and explicit probabilities are required")
+    if any(not isinstance(key, str) or not math.isfinite(value) or value < 0
+           for key, value in scenario_probabilities.items()):
+        raise OptionsSpreadError("scenario probabilities must be finite and non-negative")
+    if not math.isclose(sum(scenario_probabilities.values()), 1.0, rel_tol=0, abs_tol=1e-9):
+        raise OptionsSpreadError("scenario probabilities must sum to one")
+    rows: list[tuple[float, float, str]] = []
+    seen: set[str] = set()
+    for row in raw_scenarios:
+        if not isinstance(row, dict) or not isinstance(row.get("scenario_id"), str):
+            raise OptionsSpreadError("stress report contains a malformed scenario")
+        scenario_id = row["scenario_id"]
+        if scenario_id in seen:
+            raise OptionsSpreadError("stress report scenario IDs must be unique")
+        seen.add(scenario_id)
+        probability = scenario_probabilities.get(scenario_id)
+        value = row.get("estimated_net_pnl_inr")
+        if probability is None or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise OptionsSpreadError("each weighted scenario needs an executable finite premium P&L")
+        rows.append((float(value), probability, scenario_id))
+    if seen != set(scenario_probabilities):
+        raise OptionsSpreadError("probabilities must cover exactly the stress scenarios")
+    ordered = sorted(rows)
+    expected = sum(value * probability for value, probability, _ in rows)
+
+    def weighted_quantile(alpha: float) -> float:
+        cumulative = 0.0
+        for value, probability, _ in ordered:
+            cumulative += probability
+            if cumulative + 1e-12 >= alpha:
+                return value
+        return ordered[-1][0]
+
+    loss_probability = sum(probability for value, probability, _ in rows if value < 0)
+    tail_probability = 0.05
+    remaining = tail_probability
+    tail_loss = 0.0
+    for value, probability, _ in ordered:
+        take = min(probability, remaining)
+        tail_loss += value * take
+        remaining -= take
+        if remaining <= 1e-12:
+            break
+    return {"schema": "fb.option-premium-pnl-distribution.v1",
+            "unit": "INR_NET_PREMIUM_PNL", "expected_net_pnl_inr": expected,
+            "loss_probability": loss_probability,
+            "p05_net_pnl_inr": weighted_quantile(0.05),
+            "p50_net_pnl_inr": weighted_quantile(0.50),
+            "p95_net_pnl_inr": weighted_quantile(0.95),
+            "worst_5pct_mean_net_pnl_inr": tail_loss / tail_probability,
+            "scenario_probabilities": dict(sorted(scenario_probabilities.items())),
+            "scenario_net_pnl_inr": {scenario_id: value for value, _, scenario_id in rows},
+            "calibrated": False,
+            "expected_pnl_basis": "REPRICED_OPTION_PREMIUM_WITH_STRESSED_BID_ASK_FEES_AND_DEPTH"}
+
+
 def evaluate_executable_spread(*, entry_legs: tuple[OptionLegQuote, ...],
                                exit_legs: tuple[OptionLegQuote, ...], lots: int,
                                entry_as_of: datetime, exit_as_of: datetime,
