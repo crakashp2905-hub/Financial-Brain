@@ -33,6 +33,7 @@ class OptionMarketStress:
     iv_change: float
     spread_multiplier: float
     liquidity_multiplier: float
+    skew_shift_per_1pct_moneyness: float = 0.0
 
     def __post_init__(self) -> None:
         if (not self.scenario_id.strip() or not math.isfinite(self.minutes_to_expiry)
@@ -40,7 +41,8 @@ class OptionMarketStress:
                 or self.underlying_return <= -1 or not math.isfinite(self.iv_change)
                 or not math.isfinite(self.spread_multiplier) or self.spread_multiplier < 1
                 or not math.isfinite(self.liquidity_multiplier)
-                or not 0 < self.liquidity_multiplier <= 1):
+                or not 0 < self.liquidity_multiplier <= 1
+                or not math.isfinite(self.skew_shift_per_1pct_moneyness)):
             raise OptionsSpreadError("invalid option-market stress dimensions")
 
 
@@ -84,17 +86,24 @@ def stress_option_market(*, legs: tuple[OptionLegQuote, ...], lots: int, as_of: 
     for scenario in scenarios:
         exit_cash = 0.0
         unavailable: list[str] = []
+        leg_marks: list[dict[str, object]] = []
         for leg in legs:
             spot0, iv0 = leg.underlying_price, leg.implied_volatility
             if spot0 is None or iv0 is None:
                 raise OptionsSpreadError("stress requires observed spot and implied volatility per leg")
             spot = spot0 * (1 + scenario.underlying_return)
-            volatility = max(0.0, iv0 + scenario.iv_change)
+            moneyness_pct = (leg.strike / spot - 1) * 100
+            volatility = max(0.0, iv0 + scenario.iv_change
+                             + scenario.skew_shift_per_1pct_moneyness * moneyness_pct)
             years = scenario.minutes_to_expiry / (365 * 24 * 60)
             mark = _theoretical_option_value(spot, leg.strike, years, volatility, leg.option_type)
             half_spread = (leg.ask - leg.bid) / 2 * scenario.spread_multiplier
             bid, ask = max(0.0, mark - half_spread), mark + half_spread
             available = math.floor(min(leg.bid_qty, leg.ask_qty) * scenario.liquidity_multiplier)
+            leg_marks.append({"leg_id": leg.leg_id, "underlying_price": spot,
+                              "implied_volatility": volatility,
+                              "theoretical_premium": mark, "shocked_bid": bid,
+                              "shocked_ask": ask, "displayed_contracts": available})
             if available < lots or available < minimum_liquidity_contracts:
                 unavailable.append(leg.leg_id)
                 continue
@@ -107,7 +116,9 @@ def stress_option_market(*, legs: tuple[OptionLegQuote, ...], lots: int, as_of: 
                         "minutes_to_expiry": scenario.minutes_to_expiry,
                         "spread_multiplier": scenario.spread_multiplier,
                         "iv_change": scenario.iv_change,
+                        "skew_shift_per_1pct_moneyness": scenario.skew_shift_per_1pct_moneyness,
                         "liquidity_multiplier": scenario.liquidity_multiplier,
+                        "leg_marks": leg_marks,
                         "exit_available": can_exit, "unavailable_legs": unavailable,
                         "estimated_net_pnl_inr": entry_cash + exit_cash - fees_inr if can_exit else None,
                         "evidence_tier": "UNCALIBRATED_SCENARIO"})

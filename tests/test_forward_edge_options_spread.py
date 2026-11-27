@@ -89,6 +89,20 @@ def test_expiry_and_news_stress_combines_spread_iv_and_liquidity_shocks() -> Non
     assert expiry["estimated_net_pnl_inr"] is None
     assert news["exit_available"] is True
     assert news["evidence_tier"] == "UNCALIBRATED_SCENARIO"
+    assert len(news["leg_marks"]) == 1
+    assert news["leg_marks"][0]["shocked_ask"] >= news["leg_marks"][0]["shocked_bid"]
+
+
+def test_market_stress_applies_skew_shift_by_strike_moneyness_and_reports_marks() -> None:
+    when = datetime(2026, 11, 25, 5, tzinfo=timezone.utc)
+    leg = _leg("otm-call", "BUY", 110, 2.9, 3.1, when)
+    result = stress_option_market(
+        legs=(leg,), lots=1, as_of=when, fees_inr=0,
+        scenarios=(OptionMarketStress("skew-up", 60, 0, 0, 1, 1, 0.01),),
+    )
+    mark = result["scenarios"][0]["leg_marks"][0]
+    assert mark["implied_volatility"] == pytest.approx(0.40)
+    assert mark["underlying_price"] == pytest.approx(100)
 
 
 def test_market_stress_rejects_missing_spot_or_iv_and_invalid_shocks() -> None:
