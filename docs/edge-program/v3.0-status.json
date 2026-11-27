@@ -7620,16 +7620,20 @@
         "An independently reported net investment P&L is required; the report compares it with marked equity change after external flows and reports the actual discrepancy rather than using the residual itself as reported P&L.",
         "The auditor verifies every stored account event payload hash, binds opening/closing snapshots and the event set by SHA-256, requires complete INR-only marked positions, opening balance, complete projection and no unresolved positions, and fails closed for stale/future marks or ledger uncertainty.",
         "Trade cashflows, fees, distributions and mark changes are reflected through the canonical ledger dated fills/cash events/marks and ending valuation; distributions remain investment P&L unless explicitly classified as external contributions.",
-        "This verifies the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions; concurrent event insertion/atomic close cutoff and broker statement reconciliation are not yet integrated."
+        "This verifies the supplied canonical event ledger, not whether upstream OMS/accounting sources omitted trades, fees, distributions or corporate actions; concurrent event insertion/atomic close cutoff and broker statement reconciliation are not yet integrated.",
+        "Durable source-event comparison reports are stored in SQLite and bind canonical/source row-set hashes. A receipt is invalidated when late/backdated source events change the canonical set through the declared period end; events after the cutoff do not invalidate the historical report. The acceptance helper rechecks registry state.",
+        "`fb reconcile-source-events` accepts the normalized statement JSON schema, hashes exact input bytes, emits row differences as JSON, persists its cutoff receipt, and exits nonzero for invalid input or mismatches. Exact decimal strings are required; the output cannot overwrite the source file.",
+        "The source comparison covers caller-supplied normalized rows only. A raw digest does not authenticate the provider or prove full-period coverage; universal production OMS/paper close adoption remains open."
       ],
-      "blocker": "Upstream completeness, broker/source statement matching and atomic close cutoff remain unverified; this report cannot detect events omitted before canonical-ledger ingestion.",
-      "last_audited_at_utc": "2026-11-25T03:00:00Z",
-      "commit": "a7cd92ac",
+      "blocker": "Provider authenticity, complete source-period coverage, and universal production OMS/paper-close adoption remain unverified; reconciliation is over supplied data only.",
+      "last_audited_at_utc": "2026-11-27T16:22:27Z",
+      "commit": "f30a2895",
       "test_evidence": [
-        "`python -m pytest tests/test_portfolio_equity_reconciliation.py tests/test_canonical_portfolio_ledger.py -q --basetemp=.pytest-pa0415f`: 14 passed, including an independent reported-P&L mismatch beyond one paisa.",
-        "Ruff and targeted mypy passed for the new ledger reconciler."
+        "`python -m pytest tests/test_cli_source_event_reconciliation.py tests/test_portfolio_equity_reconciliation.py -q`: 18 passed, including exact match, statement-only/ledger-only rows, changed amounts, duplicate identities, invalid input, durable late-event invalidation, and post-cutoff stability.",
+        "`ruff check src/financial_brain/cli.py src/financial_brain/portfolio/equity_reconciliation.py tests/test_cli_source_event_reconciliation.py tests/test_portfolio_equity_reconciliation.py`: passed.",
+        "`python -m mypy src/financial_brain/portfolio/equity_reconciliation.py --follow-imports=silent`: passed."
       ],
-      "test_result": "Canonical account equity reconciliation regression: 14 passed; Ruff and targeted mypy passed."
+      "test_result": "Eighteen focused CLI/equity reconciliation tests pass. The CLI hashes exact statement bytes, persists a cutoff receipt, reports row differences and refuses unsafe output. Late/backdated events invalidate receipts; post-period events do not. Ruff and targeted mypy pass. PA-04-15 remains PARTIAL pending authenticated complete upstream data and production consumer adoption."
     },
     {
       "id": "PA-04-16",
