@@ -141,7 +141,7 @@ def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_pat
               instrument_id="NSE:INFY", side="BUY", quantity="5", price="100",
               occurred_at="2026-11-20T09:00:00+05:30"),
         event("desk-b-sell", EventKind.FILL, sleeve_id="intraday", asset_class=AssetClass.EQUITY,
-              instrument_id="NSE:INFY", side="SELL", quantity="3", price="105",
+              instrument_id="NSE:INFY", side="SELL", position_action="SELL_SHORT", quantity="3", price="105",
               occurred_at="2026-11-20T09:30:00+05:30"),
         event("shared-mark", EventKind.MARK, sleeve_id="market-data", asset_class=AssetClass.EQUITY,
               instrument_id="NSE:INFY", price="110", occurred_at="2026-11-20T15:30:00+05:30"),
@@ -158,6 +158,67 @@ def test_sleeves_keep_separate_basis_and_pnl_before_consolidated_netting(tmp_pat
     assert consolidated["gross_abs_quantity"] == Decimal("8")
     assert consolidated["average_cost"] is None  # long/short basis must not be collapsed
     assert consolidated["unrealized_pnl"] == Decimal("35")
+
+
+def test_explicit_short_open_and_buy_to_cover_preserve_direction_and_realized_pnl(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.import_events([
+        event("opening-cash", EventKind.CASH_FLOW, cash_delta="10000"),
+        event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="SELL", position_action="SELL_SHORT", quantity="10", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("cover-partial", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="BUY", position_action="BUY_TO_COVER", quantity="4", price="90",
+              occurred_at="2026-11-20T10:00:00+05:30"),
+        event("short-mark", EventKind.MARK, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              price="90", occurred_at="2026-11-20T15:30:00+05:30"),
+    ])
+
+    snapshot = ledger.snapshot("paper-main")
+    position, = snapshot["positions"]
+    assert position["quantity"] == Decimal("-6")
+    assert position["average_cost"] == Decimal("100")
+    assert position["realized_pnl"] == Decimal("40")
+    assert position["unrealized_pnl"] == Decimal("60")
+    assert snapshot["cash"]["INR"] == Decimal("10640")
+    actions = {row["source_event_id"]: row["position_action"] for row in ledger.events("paper-main")}
+    assert actions["short-entry"] == "SELL_SHORT"
+    assert actions["cover-partial"] == "BUY_TO_COVER"
+
+
+def test_explicit_long_close_cannot_open_or_cross_into_a_short(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    ledger.append(event("short-with-sell", EventKind.FILL, asset_class=AssetClass.EQUITY,
+                        instrument_id="NSE:INFY", side="SELL", position_action="SELL",
+                        quantity="1", price="100"))
+    with pytest.raises(CanonicalLedgerError, match="SELL must close no more than an existing long"):
+        ledger.snapshot("paper-main")
+
+
+def test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory(tmp_path):
+    crossed = CanonicalPortfolioLedger(tmp_path / "crossed.sqlite")
+    crossed.import_events([
+        event("long-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="BUY", position_action="BUY", quantity="5", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("crossing-short", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="SELL", position_action="SELL_SHORT", quantity="6", price="100",
+              occurred_at="2026-11-20T09:01:00+05:30"),
+    ])
+    with pytest.raises(CanonicalLedgerError, match="SELL_SHORT cannot increase or cross"):
+        crossed.snapshot("paper-main")
+
+    overcovered = CanonicalPortfolioLedger(tmp_path / "overcovered.sqlite")
+    overcovered.import_events([
+        event("short-entry", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="SELL", position_action="SELL_SHORT", quantity="5", price="100",
+              occurred_at="2026-11-20T09:00:00+05:30"),
+        event("excess-cover", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",
+              side="BUY", position_action="BUY_TO_COVER", quantity="6", price="90",
+              occurred_at="2026-11-20T09:01:00+05:30"),
+    ])
+    with pytest.raises(CanonicalLedgerError, match="BUY_TO_COVER must not exceed"):
+        overcovered.snapshot("paper-main")
 
 
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):

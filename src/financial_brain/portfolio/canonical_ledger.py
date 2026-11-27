@@ -80,6 +80,7 @@ class PortfolioEvent:
     cash_delta: Decimal | str | int | None = None
     evidence_class: str = "LOCAL_PAPER"
     metadata: dict[str, object] | None = None
+    position_action: str | None = None
 
     def normalized(self) -> dict[str, object]:
         if not all(isinstance(value, str) and value.strip() for value in
@@ -106,6 +107,7 @@ class PortfolioEvent:
             "asset_class": AssetClass(self.asset_class).value if self.asset_class is not None else None,
             "instrument_id": self.instrument_id.strip() if self.instrument_id else None,
             "side": self.side.upper() if self.side else None,
+            "position_action": self.position_action.upper() if self.position_action else None,
             "quantity": format(_decimal(self.quantity, "quantity"), "f") if self.quantity is not None else None,
             "price": format(_decimal(self.price, "price"), "f") if self.price is not None else None,
             "multiplier": format(_decimal(self.multiplier, "multiplier"), "f"),
@@ -120,6 +122,13 @@ class PortfolioEvent:
         if kind in {EventKind.FILL, EventKind.EXPIRY_SETTLEMENT}:
             if not row["asset_class"] or not row["instrument_id"] or row["side"] not in {"BUY", "SELL"}:
                 raise CanonicalLedgerError("a fill needs asset class, instrument id and BUY/SELL side")
+            action = row["position_action"]
+            if action is not None and action not in {"BUY", "SELL", "SELL_SHORT", "BUY_TO_COVER"}:
+                raise CanonicalLedgerError("position_action must be BUY, SELL, SELL_SHORT or BUY_TO_COVER")
+            if action in {"BUY", "BUY_TO_COVER"} and row["side"] != "BUY":
+                raise CanonicalLedgerError("buy position actions require BUY execution side")
+            if action in {"SELL", "SELL_SHORT"} and row["side"] != "SELL":
+                raise CanonicalLedgerError("sell position actions require SELL execution side")
             quantity = _required_decimal(self.quantity, "quantity")
             price = _required_decimal(self.price, "price")
             multiplier = _decimal(self.multiplier, "multiplier")
@@ -413,9 +422,22 @@ class CanonicalPortfolioLedger:
             pos.sleeves.add(sleeve)
             quantity = Decimal(str(event["quantity"]))
             price = Decimal(str(event["price"]))
-            signed = quantity if event["side"] == "BUY" else -quantity
             old_qty = pos.quantity
             old_cost = pos.average_cost
+            action = event.get("position_action")
+            explicit_action = action is not None
+            if action is None:
+                action = str(event["side"])  # v1 source-event compatibility
+            if explicit_action:
+                if action == "SELL_SHORT" and old_qty > 0:
+                    raise CanonicalLedgerError("SELL_SHORT cannot increase or cross an open long position")
+                if action == "BUY_TO_COVER" and (old_qty >= 0 or quantity > abs(old_qty)):
+                    raise CanonicalLedgerError("BUY_TO_COVER must not exceed an existing short position")
+                if action == "SELL" and (old_qty <= 0 or quantity > old_qty):
+                    raise CanonicalLedgerError("SELL must close no more than an existing long position")
+                if action == "BUY" and old_qty < 0:
+                    raise CanonicalLedgerError("BUY cannot cover an existing short; use BUY_TO_COVER")
+            signed = quantity if action in {"BUY", "BUY_TO_COVER"} else -quantity
             new_qty = old_qty + signed
             cash[currency] = cash.get(currency, Decimal(0)) - signed * price * multiplier_value
             if old_qty == 0 or old_qty * signed > 0:
