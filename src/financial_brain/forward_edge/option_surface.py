@@ -125,6 +125,8 @@ def build_option_surface(request: OptionSurfaceRequest) -> dict[str, object]:
                         - quote.strike * math.exp(-request.rate * t))
         except (OptionError, ValueError, OverflowError) as exc:
             raise OptionSurfaceError(f"quote failed no-arbitrage/IV validation: {quote.quote_id}") from exc
+        if not point_greeks or any(not math.isfinite(value) for value in point_greeks.values()):
+            raise OptionSurfaceError(f"Greek values must be finite: {quote.quote_id}")
         if call_mid < -1e-9:
             raise OptionSurfaceError("put-call parity implies a negative call price")
         strike_rows = calls.setdefault(expiry, {})

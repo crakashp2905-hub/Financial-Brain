@@ -23,6 +23,8 @@ class OptionContract:
     option_type: str
     strike: float
     quote: Quote
+    expected_lot_size: int | None = None
+    expected_token: int | None = None
 
 
 def build_long_option_plan(
@@ -49,6 +51,16 @@ def build_long_option_plan(
     q.validate()
     if not contract.underlying.strip() or contract.option_type not in {"CE", "PE"}:
         raise OptionPaperError("underlying and CE/PE option type are required")
+    if not q.symbol.upper().startswith(contract.underlying.strip().upper()):
+        raise OptionPaperError("tradingsymbol does not match the declared underlying")
+    if contract.expected_lot_size is not None and (
+            type(contract.expected_lot_size) is not int or contract.expected_lot_size <= 0
+            or q.lot_size != contract.expected_lot_size):
+        raise OptionPaperError("quote lot size does not match the frozen contract lot size")
+    if contract.expected_token is not None and (
+            type(contract.expected_token) is not int or contract.expected_token <= 0
+            or q.token != contract.expected_token):
+        raise OptionPaperError("quote instrument token does not match the frozen contract identity")
     if not math.isfinite(contract.strike) or contract.strike <= 0:
         raise OptionPaperError("strike must be finite and positive")
     strike_text = f"{contract.strike:g}"
@@ -70,6 +82,8 @@ def build_long_option_plan(
                                "method": "calibrated_confidence_times_risk_capped_lots"}
     if decision_at.tzinfo is None or decision_at.utcoffset() is None:
         raise OptionPaperError("decision timestamp must be timezone-aware")
+    if decision_at.date() >= q.expiry:
+        raise OptionPaperError("expired option contract cannot be planned")
     if not isinstance(max_quote_age, timedelta) or max_quote_age < timedelta(0):
         raise OptionPaperError("maximum quote age must be non-negative")
     values = (underlying_price, invalidation_price, stop_premium, target_premium)

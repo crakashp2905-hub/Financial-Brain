@@ -89,3 +89,22 @@ def test_surface_accepts_put_quotes_through_parity_conversion():
     result = build_option_surface(_request(puts))
     assert len(result["points"]) == 3
     assert result["arbitrage_checks"][0]["call_monotonicity"] == "PASS"
+
+
+@pytest.mark.parametrize("changes", [
+    {"bid": 0.0}, {"bid": -1.0}, {"bid": float("nan")}, {"ask": float("inf")},
+    {"ask": 0.0}, {"expiry_at": AS_OF}, {"option_type": "XX"},
+    {"bid_quantity": 0}, {"ask_quantity": -1},
+])
+def test_option_chain_mutations_fail_contract_quality_and_expiry_gates(changes):
+    invalid = replace(_quote(90), **changes)
+    with pytest.raises(OptionSurfaceError):
+        build_option_surface(_request((invalid, _quote(100), _quote(110))))
+
+
+def test_option_surface_refuses_nonfinite_greeks_from_any_pricer(monkeypatch):
+    import financial_brain.forward_edge.option_surface as surface
+
+    monkeypatch.setattr(surface, "greeks", lambda *_args: {"delta": float("nan"), "gamma": 0.0})
+    with pytest.raises(OptionSurfaceError, match="Greek values must be finite"):
+        build_option_surface(_request())
