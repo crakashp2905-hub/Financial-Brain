@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T00:00:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "d301894b94a30e0c30821f30747385ff253870c630f84c09f267ebb8bde7e188",
-  "audit_export_sha256": "de65c4e80a74985d704693af67e7fdf35901249637475ec5b779276e7ad7f9d4",
+  "status_ledger_sha256": "73e64d64db004134ba085445a9febaf3d3ba14a171f7d45f26ac915d44b85800",
+  "audit_export_sha256": "755dce946e6d96a02eba4b34741376c68681649b9ef3ffe6fe8930ef670e44fa",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3540,5 +3540,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "ca23da5b9bde21c61373489e441d2138edbf1ca51a8f98961a5ba859be948ab2"
+  "report_sha256": "9adccc827189d6573624d11888a64894c8b9f008a558f0f44cd41f0ce0bb9613"
 }

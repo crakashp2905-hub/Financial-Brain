@@ -10175,7 +10175,7 @@
       ],
       "blocker": "Add after-cost stock/futures delta-equivalent and defined-risk spread candidates to a common prospectively calibrated comparison; require validated expected premium distributions and select cash whenever their stress-adjusted net edge fails.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "eb6d93e7",
+      "commit": "2018c9c0",
       "test_result": "4 focused option ranker tests passed; Ruff and mypy passed."
     },
     {
@@ -10190,7 +10190,7 @@
       ],
       "blocker": "Bind the rights gate to verified permission evidence, connect every rejected candidate from the scanner to this ledger, and resolve a prospective market-wide cohort from authorized quote history with independent timestamp evidence.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": "2018c9c0",
+      "commit": "beaeeae2",
       "test_result": "14 focused option counterfactual, ranker and runner tests passed; Ruff and mypy passed."
     },
     {
