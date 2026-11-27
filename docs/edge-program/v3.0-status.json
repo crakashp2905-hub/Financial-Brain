@@ -10490,22 +10490,29 @@
     {
       "id": "PA-12-02",
       "text": "Prioritize independent slower-horizon research on filings/events, industry spillovers, volatility/quality, institutional behavior and changing market structure based on existing lawful feeds.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/research/catalogue_events.py and src/financial_brain/research/catalogue.py contain filing/event, quality, volatility and market-behavior hypotheses; src/financial_brain/research/cross_market.py provides dated cross-market mappings",
+        "No ranked, rights-reviewed slower-horizon research backlog was found covering all requested domains and tying priority to available lawful feeds and independent mechanisms"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "9db5c772"
     },
     {
       "id": "PA-12-03",
       "text": "Repair release/publication timestamps for company results, insider trades, ownership disclosures, revisions, conference calls and macro events.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/data_contracts.py defines dissemination timestamps for results and insider disclosures; src/financial_brain/ingest/shareholding.py preserves the later broadcast/submission time and revisions as new rows",
+        "Company calls use announcement publication time in src/financial_brain/ingest/calls.py, but source availability/call start times are not separately established for every record",
+        "src/financial_brain/ingest/macro.py and data contracts retain observation dates for some macro series rather than historical release timestamps; coverage and revisions remain incomplete across all requested source classes"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "5e3ed72c"
     },
     {
       "id": "PA-12-04",
@@ -21488,6 +21495,8 @@
       "PA-11-14",
       "PA-11-15",
       "PA-12-01",
+      "PA-12-02",
+      "PA-12-03",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21911,13 +21920,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1023,
+    "audited_count": 1025,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 886,
-      "UNASSESSED": 355
+      "PARTIAL": 888,
+      "UNASSESSED": 353
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22066,7 +22075,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 886,
-    "UNASSESSED": 355
+    "PARTIAL": 888,
+    "UNASSESSED": 353
   }
 }
