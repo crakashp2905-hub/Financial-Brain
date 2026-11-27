@@ -483,6 +483,138 @@ class ForwardSessionRunner:
         except (DurableJournalError, sqlite3.Error) as exc:
             raise ForwardSessionRunnerError(str(exc)) from exc
 
+    def record_unresolved_exposure(self, *, session_id: str, exposure_type: str,
+                                   exposure_key: str, reason: str, occurred_at: datetime,
+                                   instrument_id: str | None = None, order_id: str | None = None,
+                                   quantity: int | None = None) -> str:
+        """Append an unresolved exposure without converting unknown loss to zero P&L."""
+        allowed = {"STALE_MARK", "MISSING_EXIT", "NO_CONFIRMABLE_QUOTE", "FILL_AMBIGUITY",
+                   "OPEN_RISK_UNKNOWN", "LEDGER_MISMATCH"}
+        if exposure_type not in allowed or not exposure_key.strip() or not reason.strip():
+            raise ForwardSessionRunnerError("unresolved exposure type, key and reason are required")
+        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("unresolved exposure timestamp must be timezone aware")
+        if quantity is not None and (type(quantity) is not int or quantity == 0):
+            raise ForwardSessionRunnerError("unresolved exposure quantity must be a non-zero whole number")
+        try:
+            self.state_store.state(session_id)
+        except (OrderJournalError, ValueError) as exc:
+            raise ForwardSessionRunnerError("unresolved exposure requires a known session") from exc
+        identity_key = self._sha256({"session_id": session_id, "type": exposure_type,
+                                     "exposure_key": exposure_key})
+        audit_rows = self.durable.audit_records(session_id)
+        prior_exposures = [row["record"] for row in audit_rows
+                           if row.get("kind") == "unresolved_exposure" and
+                           row["record"].get("identity_key") == identity_key]
+        resolved_ids = {row["record"]["exposure_id"] for row in audit_rows
+                        if row.get("kind") == "unresolved_exposure_resolution"}
+        active = [row for row in prior_exposures if row["exposure_id"] not in resolved_ids]
+        if active:
+            return active[-1]["exposure_id"]
+        occurrence = len(prior_exposures)
+        stable_key = self._sha256({"identity_key": identity_key, "occurrence": occurrence})[:32]
+        body = {"schema": "fb.forward-unresolved-exposure.v1", "exposure_id": stable_key,
+                "identity_key": identity_key,
+                "session_id": session_id, "exposure_type": exposure_type,
+                "exposure_key": exposure_key, "instrument_id": instrument_id,
+                "order_id": order_id, "quantity": quantity, "reason": reason,
+                "occurred_at_utc": occurred_at.astimezone(timezone.utc).isoformat(),
+                "valuation_inr": None, "loss_inr": None,
+                "pnl_status": "UNRECOGNIZED_PENDING_EVIDENCE", "state": "OPEN"}
+        try:
+            self.durable.append_audit(session_id=session_id, kind="unresolved_exposure",
+                                      record_id=stable_key, occurred_at=occurred_at, record=body)
+            self._con.commit()
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        return stable_key
+
+    def resolve_unresolved_exposure(self, *, session_id: str, exposure_id: str,
+                                    evidence_event_id: str, resolution: str,
+                                    reason: str, resolved_at: datetime) -> str:
+        """Append an exposure resolution linked to evidence already persisted in this session."""
+        if not all(value.strip() for value in (exposure_id, evidence_event_id, resolution, reason)):
+            raise ForwardSessionRunnerError("exposure resolution requires identity, evidence, type and reason")
+        if resolved_at.tzinfo is None or resolved_at.utcoffset() is None:
+            raise ForwardSessionRunnerError("exposure resolution timestamp must be timezone aware")
+        records = self.records(session_id)
+        open_exposures = {row["exposure_id"]: row for row in records["unresolved_exposures"]}
+        if exposure_id not in open_exposures:
+            raise ForwardSessionRunnerError("cannot resolve an exposure that is not open")
+        allowed_resolutions = {
+            "STALE_MARK": {"FRESH_MARK", "POSITION_CLOSED"},
+            "MISSING_EXIT": {"EXIT_FILLED", "SETTLEMENT_CONFIRMED", "POSITION_CLOSED"},
+            "NO_CONFIRMABLE_QUOTE": {"FRESH_MARK", "EXIT_FILLED", "POSITION_CLOSED"},
+            "FILL_AMBIGUITY": {"CONFIRMED_FILL", "CONFIRMED_NO_FILL"},
+            "OPEN_RISK_UNKNOWN": {"RISK_POLICY_RESTORED", "POSITION_CLOSED"},
+            "LEDGER_MISMATCH": {"LEDGER_RECONCILED"},
+        }
+        exposure = open_exposures[exposure_id]
+        if resolution not in allowed_resolutions[exposure["exposure_type"]]:
+            raise ForwardSessionRunnerError("resolution type is incompatible with the exposure")
+        evidence_sha256: str | None = None
+        evidence_event: MarketEvent | None = None
+        for event in records["events"]:
+            if event.get("event_id") == evidence_event_id:
+                fields = {key: event[key] for key in (
+                    "event_id", "kind", "venue", "instrument_id", "event_time", "received_at",
+                    "available_at", "payload", "source", "sequence", "decision_time", "evidence_id",
+                    "source_at", "exchange_at", "published_at", "computed_at",
+                ) if key in event}
+                evidence_event = MarketEvent.from_dict(fields)
+                evidence_sha256 = evidence_event.sha256()
+                break
+        if evidence_sha256 is None:
+            for audit in records["audit_log"]:
+                record = audit.get("record", {})
+                if (audit.get("record_id") == evidence_event_id or
+                        record.get("event_id") == evidence_event_id or
+                        record.get("order_event_id") == evidence_event_id):
+                    evidence_sha256 = str(audit["record_sha256"])
+                    break
+        if evidence_sha256 is None:
+            for event in records["order_events"]:
+                if event.get("event_id") == evidence_event_id:
+                    evidence_sha256 = self._sha256(event)
+                    break
+        if evidence_sha256 is None:
+            raise ForwardSessionRunnerError("exposure resolution evidence is not persisted in this session")
+        if evidence_event_id in {event["event_id"] for event in records["events"]}:
+            persisted_evidence_event = next(event for event in records["events"]
+                                            if event["event_id"] == evidence_event_id)
+            if datetime.fromisoformat(persisted_evidence_event["available_at"]) > resolved_at.astimezone(
+                    timezone.utc):
+                raise ForwardSessionRunnerError("resolution cannot precede its evidence availability")
+        if resolution == "FRESH_MARK":
+            persisted_quote = next((row for row in records["events"]
+                                    if row.get("event_id") == evidence_event_id), None)
+            if evidence_event is None or executable_quote(evidence_event) is None or persisted_quote is None:
+                raise ForwardSessionRunnerError("fresh-mark resolution requires a persisted executable quote")
+            if datetime.fromisoformat(persisted_quote["available_at"]) <= datetime.fromisoformat(
+                    exposure["occurred_at_utc"]):
+                raise ForwardSessionRunnerError("fresh-mark evidence must postdate the unresolved exposure")
+        resolution_id = self._sha256({"exposure_id": exposure_id,
+                                      "evidence_event_id": evidence_event_id,
+                                      "resolution": resolution})[:32]
+        for audit in records["audit_log"]:
+            prior = audit.get("record", {})
+            if audit.get("kind") == "unresolved_exposure_resolution" and \
+                    prior.get("resolution_id") == resolution_id:
+                return resolution_id
+        body = {"schema": "fb.forward-unresolved-exposure-resolution.v1",
+                "resolution_id": resolution_id, "session_id": session_id,
+                "exposure_id": exposure_id, "evidence_event_id": evidence_event_id,
+                "evidence_sha256": evidence_sha256, "resolution": resolution,
+                "reason": reason, "resolved_at_utc": resolved_at.astimezone(timezone.utc).isoformat(),
+                "state": "RESOLVED"}
+        try:
+            self.durable.append_audit(session_id=session_id, kind="unresolved_exposure_resolution",
+                                      record_id=resolution_id, occurred_at=resolved_at, record=body)
+            self._con.commit()
+        except (DurableJournalError, sqlite3.Error) as exc:
+            raise ForwardSessionRunnerError(str(exc)) from exc
+        return resolution_id
+
     def set_operating_mode(self, *, session_id: str, mode: str | OperatingMode,
                            event_id: str, reason: str, occurred_at: datetime | None = None) -> bool:
         """Persist an explicit pause, degradation, recovery or halt decision."""
@@ -1549,6 +1681,12 @@ class ForwardSessionRunner:
         audit_log = self.durable.audit_records(session_id)
         expected_value_forecasts = [row["record"] for row in audit_log
                                     if row["kind"] == "expected_value_forecast"]
+        exposure_rows = {row["record"]["exposure_id"]: row["record"] for row in audit_log
+                         if row["kind"] == "unresolved_exposure"}
+        resolved_exposure_ids = {row["record"]["exposure_id"] for row in audit_log
+                                 if row["kind"] == "unresolved_exposure_resolution"}
+        unresolved_exposures = [exposure_rows[key] for key in sorted(exposure_rows)
+                                if key not in resolved_exposure_ids]
         order_events: list[dict[str, Any]] = []
         prefix = f"{session_id}::"
         for journal_order_id in self.order_journal.order_ids():
@@ -1568,6 +1706,7 @@ class ForwardSessionRunner:
                   "risk_verdicts": risk_verdicts, "decision_manifests": decision_manifests,
                   "expected_value_forecasts": expected_value_forecasts,
                   "data_rejections": data_rejections,
+                  "unresolved_exposures": unresolved_exposures,
                   "audit_log": audit_log, "accounting": accounting}
         result["timing_telemetry"] = _timing_telemetry(result)
         result["component_heartbeats"] = self.heartbeats.latest(session_id)
@@ -2987,6 +3126,15 @@ class ForwardSessionRunner:
                 disposition["valuation_status"] = "OBSERVED_EXECUTABLE_QUOTE"
                 disposition["mark_price_inr"] = mark["mark_price_inr"]
                 disposition["mark_quote_event_id"] = mark["quote_event_id"]
+        self._record_close_exposures(session_id=session_id, day_end=day_end,
+                                     position_dispositions=position_dispositions, occurred_at=now)
+        records = self.records(session_id)
+        if records["unresolved_exposures"]:
+            day_end["exceptions"] = sorted(set(day_end["exceptions"] + ["UNRESOLVED_EXPOSURES_OPEN"]))
+            day_end["reconciled"] = False
+            day_end.pop("reconciliation_sha256", None)
+            day_end["reconciliation_sha256"] = hashlib.sha256(json.dumps(
+                day_end, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
         if complete:
             self._require_resolved_paper_intents(session_id)
             accounting = records["accounting"]
@@ -3023,6 +3171,7 @@ class ForwardSessionRunner:
                 "execution_receipt_count": len(records["execution_receipts"]),
                 "position_dispositions": position_dispositions,
                 "day_end_reconciliation": day_end,
+                "unresolved_exposures": records["unresolved_exposures"],
                 "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -3033,6 +3182,58 @@ class ForwardSessionRunner:
         self._append_audit("session_report", session_id, session_id, now, report)
         self._con.commit()
         return report
+
+    def _record_close_exposures(self, *, session_id: str, day_end: dict[str, Any],
+                                position_dispositions: list[dict[str, Any]],
+                                occurred_at: datetime) -> None:
+        """Turn close exceptions into durable adverse exposure records before any seal attempt."""
+        exceptions = day_end["exceptions"]
+        if "OMS_UNRESOLVED" in exceptions or "OMS_NONTERMINAL" in exceptions:
+            order_ids = day_end["unresolved_order_ids"] or day_end["nonterminal_order_ids"] or ["unknown"]
+            for order_id in order_ids:
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="FILL_AMBIGUITY",
+                    exposure_key=f"order:{order_id}", order_id=order_id if order_id != "unknown" else None,
+                    reason="Paper order state or receipt is not terminal and reconciled.",
+                    occurred_at=occurred_at)
+        if "CASH_MISMATCH" in exceptions:
+            self.record_unresolved_exposure(
+                session_id=session_id, exposure_type="LEDGER_MISMATCH", exposure_key="cash-ledger",
+                reason="OMS cash and accounting ledger cash do not reconcile.", occurred_at=occurred_at)
+        for exception in exceptions:
+            if exception.startswith("POSITION_MARK_MISSING:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="NO_CONFIRMABLE_QUOTE",
+                    exposure_key=f"mark:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="No confirmable executable two-sided quote is available for the open inventory.",
+                    occurred_at=occurred_at)
+            elif exception.startswith("POSITION_MARK_STALE:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="STALE_MARK",
+                    exposure_key=f"stale-mark:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="Latest executable quote exceeds the frozen maximum age for a day-end mark.",
+                    occurred_at=occurred_at)
+            elif exception.startswith("OPEN_RISK_MISSING_OR_AMBIGUOUS:"):
+                instrument = exception.split(":", 1)[1]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="OPEN_RISK_UNKNOWN",
+                    exposure_key=f"open-risk:{instrument}", instrument_id=instrument,
+                    quantity=day_end["positions"].get(instrument),
+                    reason="Open inventory lacks one unambiguous persisted stop-risk record.",
+                    occurred_at=occurred_at)
+        for disposition in position_dispositions:
+            if disposition["disposition"] != "OVERNIGHT_CARRY_AUTHORIZED":
+                instrument = disposition["instrument_id"]
+                self.record_unresolved_exposure(
+                    session_id=session_id, exposure_type="MISSING_EXIT",
+                    exposure_key=f"exit:{instrument}:{disposition['disposition']}",
+                    instrument_id=instrument, quantity=disposition["quantity"],
+                    reason=f"Position requires {disposition['disposition']} before a complete close.",
+                    occurred_at=occurred_at)
 
     @staticmethod
     def _day_end_reconciliation(records: dict[str, Any], *, session_id: str,
@@ -3102,6 +3303,9 @@ class ForwardSessionRunner:
         open_risk = Decimal(0)
         marks_complete = True
         risk_complete = True
+        max_mark_age_ms = config.constraints.get("max_quote_age_ms", DEFAULT_MAX_QUOTE_AGE_MS)
+        if type(max_mark_age_ms) is not int or max_mark_age_ms < 0:
+            raise ForwardSessionRunnerError("max_quote_age_ms must be a non-negative integer for day-end marks")
         for instrument, quantity in sorted(positions.items()):
             quote_row = latest_quotes.get(instrument)
             if quote_row is None:
@@ -3110,6 +3314,14 @@ class ForwardSessionRunner:
                 exceptions.append(f"POSITION_MARK_MISSING:{instrument}")
                 continue
             _available_at, event, quote = quote_row
+            age_ms = (reconciled_at.astimezone(timezone.utc) - event.available_at).total_seconds() * 1000
+            if age_ms < 0:
+                raise ForwardSessionRunnerError("day-end clock precedes latest quote availability")
+            if age_ms > max_mark_age_ms:
+                marks_complete = False
+                risk_complete = False
+                exceptions.append(f"POSITION_MARK_STALE:{instrument}")
+                continue
             mark = quote["bid"] if quantity > 0 else quote["ask"]
             qty = Decimal(abs(quantity))
             signed_qty = Decimal(quantity)
@@ -3133,6 +3345,7 @@ class ForwardSessionRunner:
                 "market_value_inr": str(position_value), "unrealized_gross_pnl_inr": str(position_unrealized),
                 "quote_event_id": event.event_id, "quote_event_sha256": event.sha256(),
                 "quote_source": event.source, "quote_available_at_utc": event.available_at.isoformat(),
+                "quote_age_ms": int(age_ms),
                 "stop_risk_inr": str(stop_risk) if stop_risk is not None else None,
             })
         if positions and marks_complete and risk_complete:

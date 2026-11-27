@@ -1931,6 +1931,50 @@ def test_live_paper_close_cannot_seal_open_inventory_without_risk_policy(tmp_pat
     assert reconciliation["marked_equity_inr"] is not None
     assert reconciliation["open_risk_inr"] is None
     assert reconciliation["reconciled"] is False
+    exposures = report["unresolved_exposures"]
+    assert len(exposures) == 1
+    assert exposures[0]["exposure_type"] == "OPEN_RISK_UNKNOWN"
+    assert exposures[0]["loss_inr"] is None
+    assert exposures[0]["pnl_status"] == "UNRECOGNIZED_PENDING_EVIDENCE"
+    runner.close()
+
+
+def test_unresolved_exposure_requires_persisted_evidence_to_resolve(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    exposure_id = runner.record_unresolved_exposure(
+        session_id="s", exposure_type="NO_CONFIRMABLE_QUOTE", exposure_key="mark:NSE:INFY",
+        instrument_id="NSE:INFY", quantity=2,
+        reason="exit mark unavailable during close", occurred_at=decided)
+    assert runner.record_unresolved_exposure(
+        session_id="s", exposure_type="NO_CONFIRMABLE_QUOTE", exposure_key="mark:NSE:INFY",
+        instrument_id="NSE:INFY", quantity=2,
+        reason="exit mark unavailable during close", occurred_at=decided) == exposure_id
+    assert runner.records("s")["unresolved_exposures"][0]["loss_inr"] is None
+    with pytest.raises(ForwardSessionRunnerError, match="not persisted"):
+        runner.resolve_unresolved_exposure(
+            session_id="s", exposure_id=exposure_id, evidence_event_id="missing-event",
+            resolution="FRESH_MARK", reason="attempt without evidence", resolved_at=decided)
+    runner.resolve_unresolved_exposure(
+        session_id="s", exposure_id=exposure_id, evidence_event_id=event.event_id,
+        resolution="FRESH_MARK", reason="journaled quote reviewed", resolved_at=decided + timedelta(seconds=1))
+    assert runner.records("s")["unresolved_exposures"] == []
+    assert any(row["kind"] == "unresolved_exposure_resolution"
+               for row in runner.records("s")["audit_log"])
+    runner.close()
+
+
+def test_stale_position_mark_is_journaled_without_zero_loss_substitution(tmp_path):
+    runner, event, decided = trade_setup(tmp_path)
+    execute(runner, event, decided)
+    report = runner.close_session("s", complete=True, now=decided + timedelta(seconds=10))
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["marked_equity_inr"] is None
+    [exposure] = [row for row in report["unresolved_exposures"]
+                  if row["exposure_type"] == "STALE_MARK"]
+    assert exposure["valuation_inr"] is None
+    assert exposure["loss_inr"] is None
+    assert exposure["pnl_status"] == "UNRECOGNIZED_PENDING_EVIDENCE"
+    assert "POSITION_MARK_STALE:NSE:INFY" in reconciliation["exceptions"]
     runner.close()
 
 
@@ -2206,7 +2250,7 @@ def test_expiring_option_position_is_reported_separately_and_blocks_complete_clo
     position = report["position_dispositions"][0]
     assert position["quantity_unit"] == "OPTION_CONTRACTS"
     assert position["disposition"] == "EXPIRY_SETTLEMENT_REQUIRED"
-    assert position["valuation_status"] == "NOT_PROVIDED"
+    assert position["valuation_status"] == "OBSERVED_EXECUTABLE_QUOTE"
     assert position["execution_or_settlement_fill_created"] is False
     runner.close()
 
