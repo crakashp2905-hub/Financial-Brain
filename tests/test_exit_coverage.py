@@ -100,6 +100,16 @@ def test_canonical_snapshot_adapter_audits_every_open_sleeve_and_ignores_flat_ro
     assert report.open_position_count == report.covered_position_count == 2
 
 
+def test_canonical_snapshot_adapter_treats_futures_as_exchange_traded_positions():
+    snapshot = {"positions": [{"asset_class": "FUTURE", "instrument_id": "NFO:NIFTY-FUT",
+                               "sleeve_id": "hedge", "quantity": Decimal("25")}]}
+    report = audit_canonical_snapshot_exit_coverage(snapshot=snapshot, evidence=())
+
+    assert report.open_position_count == 1
+    assert report.gaps[0].position_id == "FUTURE:NFO:NIFTY-FUT:hedge"
+    assert report.gaps[0].reason_codes == ("MISSING_EXIT_COVERAGE",)
+
+
 def test_canonical_snapshot_adapter_fails_when_any_open_sleeve_lacks_monitor():
     snapshot = {"positions": [
         {"asset_class": "EQUITY", "instrument_id": "NSE:INFY", "sleeve_id": "swing",

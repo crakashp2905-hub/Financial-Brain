@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "6637e0b2532b9a15812919459cfefbf48747142a0a08ab743cd250f4bba92066",
-  "audit_export_sha256": "b95e6f3b22d7a221ba3978a7c7ce0a880bd0457d580f5108504ad76c6c4cb2a4",
+  "status_ledger_sha256": "97e7ce961865ab9d61f735de2e01a71d982933745a3bee081d620f7c03f8ce30",
+  "audit_export_sha256": "7416027e3a3e6288583f5119a6cd021769b1daef73e894ff88a73752abbe1739",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1410,10 +1410,11 @@
             "kernel.portfolio_exit_guard routes mutual-fund risk reduction to NAV_REDEMPTION_REVIEW and prohibits representing it as an intraday fill.",
             "portfolio.exit_coverage provides a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
             "New `audit_canonical_snapshot_exit_coverage` derives nonzero open positions directly from a `CanonicalPortfolioLedger.snapshot`, uses asset/instrument/sleeve identity so separate sleeves cannot share a receipt, maps mutual funds to NAV exceptions, and detects missing coverage for any open sleeve. A real SQLite canonical-ledger snapshot is exercised in regression tests.",
+            "Canonical snapshots now classify FUTURE positions as exchange-traded coverage requirements; uncovered future positions remain explicit gaps rather than unsupported-asset errors.",
             "This adapter covers one supplied canonical account snapshot only; it is not yet a canonical cross-book inventory, a universal pre-entry coverage gate, or proof of operational restart scheduling/drills."
           ],
           "tests": [
-            "`python -m pytest tests/test_exit_coverage.py -q`: 10 passed, including canonical snapshot mapping, multiple sleeves, NAV exception and real SQLite ledger snapshot.",
+            "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots.",
             "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",
             "Ruff and targeted mypy passed for the exit-coverage module and tests."
           ]
@@ -3258,5 +3259,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "2adf7be12da0a7ed6c75b548c2dbdae31b099394a744c84c27af3faafc6e1947"
+  "report_sha256": "639eeb1f40f721ec1a81f1a5ca6ecf3d2d41048702dbe4fcca7c3fdee4e0aa51"
 }

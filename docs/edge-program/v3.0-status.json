@@ -8081,17 +8081,18 @@
         "kernel.portfolio_exit_guard routes mutual-fund risk reduction to NAV_REDEMPTION_REVIEW and prohibits representing it as an intraday fill.",
         "portfolio.exit_coverage provides a fail-closed audit contract: each exchange position needs a policy hash and replay-verified monitor cursor; each NAV mutual fund needs a hash-pinned NAV_SETTLEMENT exception and replayable monitor. It detects missing, orphan, duplicate, invalid-chain and incomplete-cursor evidence.",
         "New `audit_canonical_snapshot_exit_coverage` derives nonzero open positions directly from a `CanonicalPortfolioLedger.snapshot`, uses asset/instrument/sleeve identity so separate sleeves cannot share a receipt, maps mutual funds to NAV exceptions, and detects missing coverage for any open sleeve. A real SQLite canonical-ledger snapshot is exercised in regression tests.",
+        "Canonical snapshots now classify FUTURE positions as exchange-traded coverage requirements; uncovered future positions remain explicit gaps rather than unsupported-asset errors.",
         "This adapter covers one supplied canonical account snapshot only; it is not yet a canonical cross-book inventory, a universal pre-entry coverage gate, or proof of operational restart scheduling/drills."
       ],
       "blocker": "Partial: the canonical snapshot can now be audited, but account/book aggregation, a universal pre-entry gate, durable monitor scheduling across every book, and operational restart drills remain unproven.",
-      "last_audited_at_utc": "2026-11-27T02:01:04Z",
+      "last_audited_at_utc": "2026-11-27T03:28:24Z",
       "commit": "pending",
       "test_evidence": [
-        "`python -m pytest tests/test_exit_coverage.py -q`: 10 passed, including canonical snapshot mapping, multiple sleeves, NAV exception and real SQLite ledger snapshot.",
+        "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots.",
         "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",
         "Ruff and targeted mypy passed for the exit-coverage module and tests."
       ],
-      "test_result": "Canonical snapshot exit-coverage integration: 10 focused tests passed; prior exit-coverage and durable monitor package: 18 passed; Ruff and targeted mypy passed. PA-04-06 remains PARTIAL pending all-book wiring and operational drills."
+      "test_result": "Canonical snapshot exit-coverage and canonical-ledger integration: 27 focused tests passed; prior exit-coverage and durable monitor package: 18 passed; Ruff and targeted mypy passed. PA-04-06 remains PARTIAL pending all-book wiring and operational drills."
     },
     {
       "id": "PA-04-07",

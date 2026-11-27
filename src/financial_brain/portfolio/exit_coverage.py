@@ -152,7 +152,7 @@ def audit_canonical_snapshot_exit_coverage(*, snapshot: dict[str, object],
             raise ExitCoverageError("canonical snapshot position quantity must be finite")
         if quantity == 0:
             continue
-        if asset_class not in {"EQUITY", "ETF", "OPTION", "MUTUAL_FUND"}:
+        if asset_class not in {"EQUITY", "ETF", "OPTION", "FUTURE", "MUTUAL_FUND"}:
             raise ExitCoverageError(f"unsupported canonical asset class: {asset_class}")
         product = (ExitProduct.NAV_MUTUAL_FUND if asset_class == "MUTUAL_FUND"
                    else ExitProduct.EXCHANGE_TRADED)
