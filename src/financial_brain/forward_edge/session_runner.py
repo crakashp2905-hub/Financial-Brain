@@ -1586,9 +1586,9 @@ class ForwardSessionRunner:
                 if not charges.is_finite() or charges < 0 or not isinstance(cost_items, list) or not cost_items:
                     raise ForwardSessionRunnerError(
                         "paper charges require a finite non-negative total and itemized cost evidence")
-                itemized_total = sum(
-                    (Decimal(str(item["total"])) for item in cost_items
-                     if isinstance(item, dict) and "total" in item), Decimal(0))
+                if any(not isinstance(item, dict) or "total" not in item for item in cost_items):
+                    raise ForwardSessionRunnerError("each paper cost item must include an itemized total")
+                itemized_total = sum((Decimal(str(item["total"])) for item in cost_items), Decimal(0))
                 if itemized_total != charges:
                     raise ForwardSessionRunnerError("paper charge total does not reconcile to cost items")
                 if charges:
