@@ -9780,12 +9780,18 @@
     {
       "id": "PA-09-06",
       "text": "Track overall three-class metrics, log loss/Brier/CRPS, directional skill, calibration per class and expected-move error; publish confidence intervals.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_metrics.py produces overall multiclass accuracy/confusion, majority-class accuracy, Brier, log loss, ordinal categorical CRPS, directional hit rate/skill/coverage, expected-move MAE, and per-class precision/recall/F1 and probability calibration/reliability bins.",
+        "Confidence intervals resample whole sessions for accuracy, Brier and expected-move MAE; the report states cross-session dependence remains and unresolved rows are not imputed as success.",
+        "tests/test_forecasting_index_metrics.py covers metrics, calibration, invalid inputs and insufficient-session CI; 25 focused forecasting-index tests passed; Ruff and mypy passed.",
+        "No real forecast-issued ledger or resolved index-minute dataset is connected, so no empirical scorecard or confidence intervals have been published from market observations."
+      ],
+      "blocker": "Connect forecast-issued records and complete resolved outcomes to this scorer; publish horizon-specific, chronological out-of-sample results with enough sessions to estimate dependence-robust uncertainty.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "f0b89b7f",
+      "test_result": "25 focused forecasting-index tests passed; Ruff and mypy passed for index market, forecast and scorecard modules."
     },
     {
       "id": "PA-09-07",
@@ -21201,6 +21207,7 @@
       "PA-09-03",
       "PA-09-04",
       "PA-09-05",
+      "PA-09-06",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21624,13 +21631,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 976,
+    "audited_count": 977,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 846,
-      "UNASSESSED": 402
+      "PARTIAL": 847,
+      "UNASSESSED": 401
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21779,7 +21786,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 846,
-    "UNASSESSED": 402
+    "PARTIAL": 847,
+    "UNASSESSED": 401
   }
 }
