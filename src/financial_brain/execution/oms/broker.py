@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Protocol
 
 from . import model as M
@@ -45,6 +46,14 @@ class BrokerOrder:
     updated: str | None = None     #: the broker's own timestamp for this version of the order
 
 
+@dataclass(frozen=True)
+class QuoteSnapshot:
+    price: float
+    exchange_at: datetime | None
+    received_at: datetime | None
+    source: str
+
+
 class Broker(Protocol):
     name: str
 
@@ -53,6 +62,7 @@ class Broker(Protocol):
     def orders(self) -> list[BrokerOrder]: ...
     def positions(self) -> dict[tuple[str, str], int]: ...
     def ltp(self, symbols: list[tuple[str, str]]) -> dict[tuple[str, str], float]: ...
+    def quote_snapshot(self, symbols: list[tuple[str, str]]) -> dict[tuple[str, str], QuoteSnapshot]: ...
 
 
 @dataclass
@@ -64,6 +74,9 @@ class PaperBroker:
     _ids: itertools.count = field(default_factory=lambda: itertools.count(1))
     _orders: dict[str, dict] = field(default_factory=dict)
     _px: dict[tuple[str, str], float] = field(default_factory=dict)
+    _quote_time: dict[tuple[str, str], datetime | None] = field(default_factory=dict)
+    _quote_received_at: dict[tuple[str, str], datetime] = field(default_factory=dict)
+    _quote_source: dict[tuple[str, str], str] = field(default_factory=dict)
     _pos: dict[tuple[str, str], int] = field(default_factory=dict)
     _clock: itertools.count = field(default_factory=lambda: itertools.count(1))
 
@@ -86,8 +99,21 @@ class PaperBroker:
         if r["state"] in (M.OPEN, M.PARTIAL):
             r["state"], r["upd"] = M.CANCELLED, next(self._clock)
 
-    def tick(self, prices: dict[tuple[str, str], float]) -> None:
+    def tick(self, prices: dict[tuple[str, str], float], *, observed_at: datetime | None = None,
+             exchange_timestamps: dict[tuple[str, str], datetime | None] | None = None,
+             source: str = "PAPER_SIMULATION") -> None:
+        observed_at = observed_at or datetime.now(timezone.utc)
+        if observed_at.tzinfo is None or observed_at.utcoffset() is None or not source.strip():
+            raise ValueError("paper quote receipt timestamp and source must be valid")
         self._px.update(prices)
+        exchange_timestamps = exchange_timestamps or {}
+        for key in prices:
+            exchange_at = exchange_timestamps.get(key, observed_at)
+            if exchange_at is not None and (exchange_at.tzinfo is None or exchange_at.utcoffset() is None):
+                raise ValueError("paper quote exchange timestamp must be timezone aware")
+            self._quote_time[key] = exchange_at
+            self._quote_received_at[key] = observed_at
+            self._quote_source[key] = source
         for bid in list(self._orders):
             self._match(bid)
 
@@ -119,3 +145,9 @@ class PaperBroker:
 
     def ltp(self, symbols):
         return {k: self._px[k] for k in symbols if k in self._px}
+
+    def quote_snapshot(self, symbols):
+        return {key: QuoteSnapshot(self._px[key], self._quote_time.get(key),
+                                   self._quote_received_at.get(key),
+                                   self._quote_source.get(key, "PAPER_SIMULATION"))
+                for key in symbols if key in self._px}

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Callable
+from zoneinfo import ZoneInfo
 
 import duckdb
 
@@ -103,12 +105,13 @@ def status() -> dict:
                "awaiting_approval": [o.client_id for o in today if o.state == "AWAITING_APPROVAL"]}
     finally:
         j.close()
-    out["verdicts"] = {s.strategy: verdict(s.strategy) for s in OM.REGISTERED}
-    out["locks_closed"] = {s: KB.locks(v) for s, v in out["verdicts"].items()}
+    verdicts = {s.strategy: verdict(s.strategy) for s in OM.REGISTERED}
+    out["verdicts"] = verdicts
+    out["locks_closed"] = {strategy: KB.locks(value) for strategy, value in verdicts.items()}
     return out
 
 
-def rehearse(strategy: str) -> dict:
+def rehearse(strategy: str, *, account_daily_pnl_provider: Callable[[str], float] | None = None) -> dict:
     """The zoo's current targets for ``strategy``, sized to Rs 50,000, worked through the OMS against PaperBroker
     priced by live Kite quotes. Counts toward stage TICKET only inside the session, with quotes."""
     from ..execution.oms import broker as B
@@ -120,7 +123,10 @@ def rehearse(strategy: str) -> dict:
     now = datetime.now(timezone.utc)
     z = duckdb.connect(str(ZOO), read_only=True)
     try:
-        last = z.execute("SELECT MAX(day) FROM zoo_targets WHERE strategy = ?", [strategy]).fetchone()[0]
+        last_row = z.execute("SELECT MAX(day) FROM zoo_targets WHERE strategy = ?", [strategy]).fetchone()
+        if last_row is None or last_row[0] is None:
+            return {"ok": False, "why": f"no zoo targets for {strategy}"}
+        last = last_row[0]
         tg = dict(z.execute("SELECT key, weight FROM zoo_targets WHERE strategy = ? AND day = ?", [strategy, last]).fetchall())
     finally:
         z.close()
@@ -134,18 +140,37 @@ def rehearse(strategy: str) -> dict:
     finally:
         r.close()
     syms = [names[k] for k in tg if k in names and tg[k] > 0]
-    quotes = kd.quote([f"NSE:{s}" for s in syms], kind="ltp")
-    px = {("NSE", k.split(":", 1)[1]): float(v["last_price"]) for k, v in quotes.items()}
+    quotes = kd.quote([f"NSE:{s}" for s in syms], kind="full")
+    quote_received_at = datetime.now(timezone.utc)
+    px, exchange_timestamps = {}, {}
+    for key, quote in quotes.items():
+        try:
+            instrument = tuple(key.split(":", 1))
+            price = float(quote["last_price"])
+            raw_stamp = quote.get("timestamp")
+            exchange_at = raw_stamp if isinstance(raw_stamp, datetime) else (
+                datetime.fromisoformat(raw_stamp) if isinstance(raw_stamp, str) and raw_stamp else None)
+        except (KeyError, TypeError, ValueError):
+            continue
+        if len(instrument) != 2:
+            continue
+        if exchange_at is not None and (exchange_at.tzinfo is None or exchange_at.utcoffset() is None):
+            exchange_at = exchange_at.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+        k = (instrument[0], instrument[1])
+        px[k] = price
+        exchange_timestamps[k] = exchange_at
     try:
         banned = RG.fetch_ban_list()
     except Exception:                                   # noqa: BLE001 - an unreadable list refuses every order
         banned = None
     b = B.PaperBroker()
-    b.tick(px)
+    b.tick(px, observed_at=quote_received_at, exchange_timestamps=exchange_timestamps,
+           source="KITE_CONNECT_READ_ONLY")
     j = J.Journal(PAPER_JOURNAL)
     try:
         oms = EN.OMS(j, b, verdicts={strategy: verdict(strategy)}, banned=banned,
-                     stage_path=Path("data/live/paper_stage.json"), ks_path=Path("data/live/paper_ks.json"))
+                     stage_path=Path("data/live/paper_stage.json"), ks_path=Path("data/live/paper_ks.json"),
+                     account_daily_pnl_provider=account_daily_pnl_provider)
         day = str(date.today())
         placed = []
         for lin, w in tg.items():
@@ -251,14 +276,16 @@ def promote(to: int, actor: str, strategy: str, runbook_read: bool) -> dict:
         j.close()
 
 
-def ticket(action: str, client_id: str, actor: str, strategy: str) -> dict:
+def ticket(action: str, client_id: str, actor: str, strategy: str, *,
+           account_daily_pnl_provider: Callable[[str], float] | None = None) -> dict:
     from ..execution.oms import engine as EN
     from ..execution.oms import journal as J
     from ..execution.oms.kite_broker import KiteBroker
     j = J.Journal(LIVE_JOURNAL)
     try:
         v = verdict(strategy)
-        oms = EN.OMS(j, KiteBroker(v), verdicts={strategy: v})
+        oms = EN.OMS(j, KiteBroker(v), verdicts={strategy: v},
+                     account_daily_pnl_provider=account_daily_pnl_provider)
         o = oms.approve(client_id, actor) if action == "approve" else oms.decline(client_id, actor)
         return o.as_dict()
     finally:

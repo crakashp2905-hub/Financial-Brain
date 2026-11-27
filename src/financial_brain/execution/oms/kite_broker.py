@@ -25,9 +25,11 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from . import model as M
-from .broker import BrokerError, BrokerOrder, BrokerTimeout
+from .broker import BrokerError, BrokerOrder, BrokerTimeout, QuoteSnapshot
 from ..order_policy import deny_physical_order
 
 API = "https://api.kite.trade"
@@ -144,3 +146,33 @@ class KiteBroker:
         from ...providers import kite_data as kd
         data = kd.quote([f"{ex}:{s}" for ex, s in symbols], kind="ltp")
         return {tuple(k.split(":", 1)): float(v["last_price"]) for k, v in data.items()}
+
+    def quote_snapshot(self, symbols):
+        """Read full quote snapshots so order checks can verify exchange and receipt freshness."""
+        from ...providers import kite_data as kd
+
+        data = kd.quote([f"{ex}:{symbol}" for ex, symbol in symbols], kind="full")
+        received_at = datetime.now(timezone.utc)
+        snapshots = {}
+        for key, row in data.items():
+            raw_stamp = row.get("timestamp")
+            exchange_at = None
+            if isinstance(raw_stamp, datetime):
+                exchange_at = raw_stamp
+            elif isinstance(raw_stamp, str) and raw_stamp.strip():
+                try:
+                    exchange_at = datetime.fromisoformat(raw_stamp.strip())
+                except ValueError:
+                    exchange_at = None
+            if exchange_at is not None and (exchange_at.tzinfo is None or exchange_at.utcoffset() is None):
+                exchange_at = exchange_at.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+            if exchange_at is not None:
+                exchange_at = exchange_at.astimezone(timezone.utc)
+            try:
+                price = float(row["last_price"])
+                exchange, symbol = key.split(":", 1)
+            except (KeyError, TypeError, ValueError):
+                continue
+            snapshots[(exchange, symbol)] = QuoteSnapshot(
+                price, exchange_at, received_at, "KITE_CONNECT_READ_ONLY")
+        return snapshots

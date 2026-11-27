@@ -29,9 +29,10 @@ K = ("NSE", "ABC")
 def env(tmp_path):
     j = J.Journal(tmp_path / "oms.duckdb")
     b = B.PaperBroker()
-    b.tick({K: 100.0})
+    b.tick({K: 100.0}, observed_at=IN_SESSION)
     oms = EN.OMS(j, b, verdicts={"s": "CANDIDATE"}, stage_path=tmp_path / "stage.json", ks_path=tmp_path / "ks.json",
-                 banned=frozenset(), clock=lambda: IN_SESSION)
+                 banned=frozenset(), clock=lambda: IN_SESSION,
+                 account_daily_pnl_provider=lambda day: 0.0)
     yield oms, j, b, tmp_path
     j.close()
 
@@ -90,7 +91,7 @@ def test_partial_fills_then_cancel_keeps_what_filled(env):
     o = _submit(oms)
     oms.poll()
     assert j.get(o.client_id).state == M.PARTIAL and j.get(o.client_id).filled_qty == 3
-    b.tick({K: 100.0})
+    b.tick({K: 100.0}, observed_at=IN_SESSION)
     oms.poll()
     assert j.get(o.client_id).filled_qty == 6
     b.cancel(j.get(o.client_id).broker_id)
@@ -133,7 +134,8 @@ def test_risk_gate_refusals(env):
     oms, j, b, tmp = env
     lim = RO.SMALL
     o = M.Order("c", "s", "d", "ABC", "NSE", M.BUY, 10, 100.0)
-    ok = RG.Context(now=IN_SESSION, ltp=100.0)
+    ok = RG.Context(now=IN_SESSION, ltp=100.0, quote_exchange_at=IN_SESSION,
+                    quote_received_at=IN_SESSION, quote_source="PAPER_SIMULATION", account_daily_pnl_inr=0.0)
     assert RG.check(o, lim, ok) == []
     assert RG.check(o, lim, RG.Context(now=IN_SESSION.replace(hour=16), ltp=100.0))
     assert RG.check(o, lim, RG.Context(now=IN_SESSION, ltp=95.0))                 # 5% from the last price
@@ -147,6 +149,47 @@ def test_risk_gate_refusals(env):
     assert j.get(r.client_id).state == M.REJECTED_RISK and "from the last price" in r.reason
 
 
+def test_stale_quote_unknown_pnl_account_loss_and_failed_execution_brakes(env):
+    oms, _, _, _ = env
+    lim = RO.SMALL
+    order = M.Order("c", "s", "d", "ABC", "NSE", M.BUY, 10, 100.0)
+    base = RG.Context(now=IN_SESSION, ltp=100.0, quote_exchange_at=IN_SESSION,
+                      quote_received_at=IN_SESSION, quote_source="PAPER_SIMULATION", account_daily_pnl_inr=0.0)
+    stale = RG.check(order, lim, RG.Context(**{**base.__dict__,
+        "quote_exchange_at": IN_SESSION - timedelta(seconds=6)}))
+    assert any("exchange is stale" in reason for reason in stale)
+    missing_pnl = RG.check(order, lim, RG.Context(**{**base.__dict__, "account_daily_pnl_inr": None}))
+    assert any("account daily P&L is missing" in reason for reason in missing_pnl)
+    loss = RG.check(order, lim, RG.Context(**{**base.__dict__,
+        "account_daily_pnl_inr": -lim.max_daily_account_loss_inr}))
+    assert any("account daily loss" in reason for reason in loss)
+    failures = RG.check(order, lim, RG.Context(**{**base.__dict__,
+        "failed_executions_today": lim.max_failed_executions_per_day}))
+    assert any("failed executions today" in reason for reason in failures)
+
+    oms.paper_limits = RG.Limits(**{**lim.__dict__, "max_failed_executions_per_day": 1})
+    _, _, broker, _ = env
+    broker.reject_symbols.add("BAD")
+    broker.tick({("NSE", "BAD"): 100.0}, observed_at=IN_SESSION)
+    failed = _submit(oms, symbol="BAD")
+    oms.poll()
+    assert oms.j.get(failed.client_id).state == M.REJECTED
+    broker.tick({("NSE", "NEXT"): 100.0}, observed_at=IN_SESSION)
+    stopped = _submit(oms, symbol="NEXT")
+    assert stopped.state == M.REJECTED_RISK and "failed executions today" in stopped.reason
+
+
+def test_missing_accounting_provider_and_invalid_quote_values_fail_closed(env):
+    oms, _, broker, _ = env
+    oms.account_daily_pnl_provider = None
+    missing = _submit(oms, symbol="NO-PNL")
+    assert missing.state == M.REJECTED_RISK and "account daily P&L is missing" in missing.reason
+
+    broker.tick({("NSE", "NAN"): float("nan")}, observed_at=IN_SESSION)
+    invalid = _submit(oms, symbol="NAN")
+    assert invalid.state == M.REJECTED_RISK and "no last price" in invalid.reason
+
+
 def test_unreadable_ban_list_refuses_everything(env):
     oms, j, b, _ = env
     oms.banned = None
@@ -156,6 +199,18 @@ def test_unreadable_ban_list_refuses_everything(env):
 def test_ban_list_parser():
     text = "Securities in Ban For Trade Date 13-OCT-2026:\n1,ABC\n2,M&M\nfooter,x y\n"
     assert RG.parse_ban_list(text) == frozenset({"ABC", "M&M"})
+
+
+def test_kite_quote_snapshot_preserves_exchange_timestamp(monkeypatch):
+    from financial_brain.providers import kite_data
+
+    monkeypatch.setattr(kite_data, "quote", lambda symbols, kind: {
+        "NSE:ABC": {"last_price": 100.0, "timestamp": "2026-10-13 10:00:00"}
+    })
+    broker = KB.KiteBroker("CANDIDATE")
+    quote = broker.quote_snapshot([K])[K]
+    assert quote.exchange_at == IN_SESSION.astimezone(timezone.utc)
+    assert quote.received_at is not None and quote.source == "KITE_CONNECT_READ_ONLY"
 
 
 # ------------------------------------------------------------------ stages, approvals, kill switch
@@ -172,9 +227,26 @@ def test_ticket_stage_needs_a_human(env, tmp_path):
     assert j.get(o.client_id).state == M.FILLED
 
 
+def test_ticket_approval_rechecks_market_freshness_and_account_loss(env, tmp_path):
+    oms, j, broker, _ = env
+    RO._write({"stage": RO.TICKET, "since": "2026-10-13", "history": []}, tmp_path / "stage.json")
+    oms.stage_path = tmp_path / "stage.json"
+    o = _submit(oms)
+    broker.tick({K: 100.0}, observed_at=IN_SESSION - timedelta(seconds=6))
+    blocked = oms.approve(o.client_id, "Akash")
+    assert blocked.state == M.CANCELLED and "exchange is stale" in blocked.reason
+
+    broker.tick({K: 100.0}, observed_at=IN_SESSION)
+    broker.tick({("NSE", "DEF"): 100.0}, observed_at=IN_SESSION)
+    o2 = _submit(oms, symbol="DEF")
+    oms.account_daily_pnl_provider = lambda day: -2_500
+    blocked_loss = oms.approve(o2.client_id, "Akash")
+    assert blocked_loss.state == M.CANCELLED and "account daily loss" in blocked_loss.reason
+
+
 def test_kill_switch_cancels_at_the_broker_and_blocks(env):
     oms, j, b, tmp = env
-    b.tick({K: 101.0})                                             # a buy at 100 now rests
+    b.tick({K: 101.0}, observed_at=IN_SESSION)                     # a buy at 100 now rests
     o = _submit(oms, px=101.0 - 0.95)
     assert j.get(o.client_id).state == M.SUBMITTED
     KS.trip("test", b, path=tmp / "ks.json", journal=j)

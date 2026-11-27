@@ -17,13 +17,14 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime, timezone
+from typing import Callable
 
 from . import killswitch as KS
 from . import model as M
 from . import reconcile as RC
 from . import risk_gate as RG
 from . import rollout as RO
-from .broker import BrokerError, BrokerTimeout
+from .broker import BrokerError, BrokerTimeout, QuoteSnapshot
 
 UNKNOWN_GRACE = 3
 PAPER_LIMITS = RO.SMALL
@@ -32,7 +33,8 @@ PAPER_LIMITS = RO.SMALL
 class OMS:
     def __init__(self, journal, broker, *, verdicts: dict[str, str], stage_path=None, ks_path=None,
                  banned: frozenset | None = None, baseline: dict | None = None, clock=None,
-                 paper_limits: RG.Limits = PAPER_LIMITS):
+                 paper_limits: RG.Limits = PAPER_LIMITS,
+                 account_daily_pnl_provider: Callable[[str], float] | None = None):
         self.j, self.b = journal, broker
         self.verdicts = verdicts
         self.stage_path, self.ks_path = stage_path, ks_path
@@ -40,6 +42,7 @@ class OMS:
         self.baseline = baseline or {}
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.paper_limits = paper_limits
+        self.account_daily_pnl_provider = account_daily_pnl_provider
 
     # ------------------------------------------------------------------ helpers
 
@@ -57,21 +60,36 @@ class OMS:
             return RO.limits(st, verdict) or self.paper_limits
         return RO.limits(st, verdict)
 
-    def _context(self, o: M.Order, ltp: float | None) -> RG.Context:
-        today = [x for x in self.j.orders(day=o.day) if x.state not in (M.REJECTED_RISK, M.NEW)]
+    def _context(self, o: M.Order, quote: QuoteSnapshot | None,
+                 *, exclude_client_id: str | None = None) -> RG.Context:
+        today = [x for x in self.j.orders(day=o.day)
+                 if x.state not in (M.REJECTED_RISK, M.NEW) and x.client_id != exclude_client_id]
         pos = self.j.positions()
         k = (o.exchange, o.symbol)
         held = {kk: q for kk, q in pos.items()}
         for kk, q in self.baseline.items():
             held[kk] = held.get(kk, 0) + q
+        ltp = quote.price if quote is not None else None
         prices = {kk: ltp for kk in [k]} if ltp else {}
         gross = sum(abs(q) * (prices.get(kk) or self._last_price(kk)) for kk, q in held.items())
         sent = [datetime.fromisoformat(e["at"]) for e in self.j.events() if e["state"] in (M.SUBMITTED, M.UNKNOWN)]
+        failed = sum(x.state in (M.REJECTED, M.NOT_FOUND, M.UNKNOWN) for x in today)
+        try:
+            account_daily_pnl = (self.account_daily_pnl_provider(o.day)
+                                 if self.account_daily_pnl_provider is not None else None)
+        except Exception:  # noqa: BLE001 - unavailable accounting snapshot blocks order authorization
+            account_daily_pnl = None
         return RG.Context(now=self.clock(), ltp=ltp, position_qty=held.get(k, 0), gross_inr=gross,
                           orders_today=len(today), notional_today=sum(x.notional for x in today),
                           live_same_side=any(x.symbol == o.symbol and x.side == o.side and x.state in M.LIVE | {M.AWAITING_APPROVAL, M.APPROVED}
                                              for x in today),
-                          recent_order_times=sent, banned=self.banned if self.banned is not None else frozenset({o.symbol}))
+                          recent_order_times=sent,
+                          quote_exchange_at=quote.exchange_at if quote else None,
+                          quote_received_at=quote.received_at if quote else None,
+                          quote_source=quote.source if quote else None,
+                          account_daily_pnl_inr=account_daily_pnl,
+                          failed_executions_today=failed,
+                          banned=self.banned if self.banned is not None else frozenset({o.symbol}))
 
     def _last_price(self, k) -> float:
         fills = [o for o in self.j.orders() if (o.exchange, o.symbol) == k and o.avg_price]
@@ -107,8 +125,12 @@ class OMS:
         if self.banned is None:
             why.append("today's F&O ban list could not be read")
         if lim is not None:
-            ltp = self.b.ltp([(exchange, symbol)]).get((exchange, symbol))
-            why += RG.check(o, lim, self._context(o, ltp))
+            try:
+                quote = self.b.quote_snapshot([(exchange, symbol)]).get((exchange, symbol))
+            except Exception as exc:  # noqa: BLE001 - any failed quote read must fail closed
+                quote = None
+                why.append(f"market quote unavailable: {exc}")
+            why += RG.check(o, lim, self._context(o, quote))
         if why:
             return self._save(M.advance(o, M.REJECTED_RISK, reason="; ".join(why)), "RISK_REJECTED")
         if st["stage"] == RO.TICKET:
@@ -121,6 +143,28 @@ class OMS:
         o = self.j.get(client_id)
         if o is None or o.state != M.AWAITING_APPROVAL:
             raise M.OrderError(f"{client_id} is not awaiting approval")
+        now = self.clock()
+        if now.astimezone(RG.IST).date().isoformat() != o.day:
+            return self._save(M.advance(o, M.CANCELLED, reason="approval rejected: original session has ended"),
+                              "APPROVAL_EXPIRED")
+        lim = self._limits(o.strategy)
+        why = []
+        if lim is None:
+            why.append("risk limits are unavailable at approval time")
+        if KS.load(self.ks_path).get("tripped"):
+            why.append("kill switch tripped before approval")
+        if self.banned is None:
+            why.append("today's F&O ban list could not be read")
+        if lim is not None:
+            try:
+                quote = self.b.quote_snapshot([(o.exchange, o.symbol)]).get((o.exchange, o.symbol))
+            except Exception as exc:  # noqa: BLE001 - any failed quote read must fail closed
+                quote = None
+                why.append(f"market quote unavailable at approval: {exc}")
+            why += RG.check(o, lim, self._context(o, quote, exclude_client_id=o.client_id))
+        if why:
+            return self._save(M.advance(o, M.CANCELLED, reason="approval risk recheck: " + "; ".join(why)),
+                              "APPROVAL_BLOCKED")
         o = self._save(M.advance(o, M.APPROVED, meta={**o.meta, "approved_by": actor}), "HUMAN_APPROVED")
         return self._send(o)
 
