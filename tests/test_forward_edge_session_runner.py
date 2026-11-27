@@ -1064,6 +1064,51 @@ def test_durable_outbox_persists_only_causally_eligible_paper_fill_once(tmp_path
     runner.close()
 
 
+def test_frozen_account_reservation_gates_paper_intent_and_retains_filled_exposure(tmp_path):
+    from financial_brain.portfolio.durable_reservations import DurableReservationLedger
+
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100000", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({"reservation_policy": policy})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    receipt = execute(runner, event, decided)
+    assert receipt["status"] == "FILLED"
+    ledger = DurableReservationLedger(tmp_path / "journal.sqlite")
+    assert ledger.active_amounts("ledger-1") == {
+        "CASH": Decimal("200.60"), "INSTRUMENT_QUANTITY:NSE:INFY": Decimal("2")}
+    assert ledger.verify("ledger-1")["mismatched"] == 0
+    runner.close()
+
+
+def test_frozen_account_reservation_rejects_over_budget_without_paper_order(tmp_path):
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({"reservation_policy": policy})
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="reservation denied.*budget exceeded"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    assert runner.records("s")["order_events"] == []
+    runner.close()
+
+
+def test_optional_reservation_inputs_cannot_override_computed_cash_exposure(tmp_path):
+    policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
+              "source_sha256": "b" * 64,
+              "limits": {"CASH": "100000", "INSTRUMENT_QUANTITY:NSE:INFY": "10"}}
+    config = make_config_with_constraints({
+        "reservation_policy": policy,
+        "reservation_resource_amounts": {"NSE:INFY": {"CASH": "0.01"}},
+    })
+    runner, event, decided = trade_setup(tmp_path, config=config)
+    with pytest.raises(ForwardSessionRunnerError, match="cannot override computed CASH"):
+        execute(runner, event, decided)
+    assert runner.records("s")["intents"] == []
+    runner.close()
+
+
 def test_index_level_profile_cannot_be_used_as_paper_execution_data(tmp_path):
     config = make_config_with_constraints({"data_profiles": [
         {"instrument_id": "NSE:INFY", "profile": "INDEX_LEVEL_ONLY"}

@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "2beaf1bf78fc18e5944ef9a46500b266e212c98e9ccd8a8de9a12992237c0b81",
-  "audit_export_sha256": "25aef5ac730ba65722c7759138f7314b9cc04353736e329b7ad041a25a11b54c",
+  "status_ledger_sha256": "461b4bb5c71f1d83b7e665ce86aaffbffb7830e7038b425ede8c24b14a79b2b1",
+  "audit_export_sha256": "965853abd73e7591de185e4941e7f2624170de429bd65e29d37ca7c789228501",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1340,17 +1340,20 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Add atomic reservations for cash, margin, risk capital, options buying power, instrument quantity, pending settlement and sellable inventory."
           },
-          "commit": "a895745a",
-          "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions, and source current margin/settlement/inventory limits before the acceptance criteria can be complete.",
+          "commit": "pending",
+          "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions with atomic reservation-to-position transfer, and source current margin/settlement/options buying-power/inventory limits before the acceptance criteria can be complete.",
           "evidence": [
             "`portfolio.durable_reservations.DurableReservationLedger` persists one frozen per-account policy and append-only reserve/release receipts in SQLite; `BEGIN IMMEDIATE` makes multi-resource checks and insertion atomic across concurrent connections.",
             "A single reservation can cover cash, margin, risk capital, options buying power, settlement cash, instrument quantity and sellable inventory. Any overage rejects the whole request; stable request IDs are idempotent and conflicting replays fail.",
             "Release requires a source-hashed terminal order event (FILLED/CANCELLED/REJECTED/EXPIRED); released capacity is auditable and event payload integrity is checked.",
-            "The module is not yet wired into all desk order paths or OMS fills; filled exposure is not transferred atomically from reservations into canonical positions, and sourced margin/settlement/sellable limits remain caller provided."
+            "`ForwardSessionRunner` now reads an explicitly frozen `reservation_policy` from run constraints and stores reservation tables in its durable journal. Before writing a paper intent/order event, it atomically reserves computed limit-price cash and instrument quantity (or sellable inventory for a sell), plus optional configured per-unit resource amounts for that instrument. Policy/resource failures fail closed before order-journal mutation.",
+            "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because the position ledger does not yet atomically take over that exposure.",
+            "The module and runner are not wired into every desk/OMS path; filled exposure is not transferred atomically into canonical positions, and sourced margin/settlement/options buying-power limits remain caller provided."
           ],
           "tests": [
-            "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 5 passed, including concurrent two-desk account-cap race, all-or-none multi-resource denial, idempotent replay, conflicting terminal receipts, policy freeze and release.",
-            "Ruff and targeted mypy passed for the reservation module and tests."
+            "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 88 passed before the final optional-resource override guard; follow-up `-k \"frozen_account_reservation or optional_reservation_inputs\"`: 3 passed after that guard.",
+            "Runner reservation tests cover filled exposure persistence, over-budget rejection before intent/order mutation, and refusal to override computed cash exposure.",
+            "Ruff passed for the runner and runner tests; targeted mypy passed for the runner."
           ]
         },
         {
@@ -3231,5 +3234,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "303676ef2a8bef91b7dc68bee0af393a75cdc2079e66adf5976434e7bcd515cb"
+  "report_sha256": "c62b2a77c74b156cfabc281aa636935bcbac8c7bd79528f7e7e76b86eb8b2235"
 }

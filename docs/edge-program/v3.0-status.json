@@ -8019,16 +8019,19 @@
         "`portfolio.durable_reservations.DurableReservationLedger` persists one frozen per-account policy and append-only reserve/release receipts in SQLite; `BEGIN IMMEDIATE` makes multi-resource checks and insertion atomic across concurrent connections.",
         "A single reservation can cover cash, margin, risk capital, options buying power, settlement cash, instrument quantity and sellable inventory. Any overage rejects the whole request; stable request IDs are idempotent and conflicting replays fail.",
         "Release requires a source-hashed terminal order event (FILLED/CANCELLED/REJECTED/EXPIRED); released capacity is auditable and event payload integrity is checked.",
-        "The module is not yet wired into all desk order paths or OMS fills; filled exposure is not transferred atomically from reservations into canonical positions, and sourced margin/settlement/sellable limits remain caller provided."
+        "`ForwardSessionRunner` now reads an explicitly frozen `reservation_policy` from run constraints and stores reservation tables in its durable journal. Before writing a paper intent/order event, it atomically reserves computed limit-price cash and instrument quantity (or sellable inventory for a sell), plus optional configured per-unit resource amounts for that instrument. Policy/resource failures fail closed before order-journal mutation.",
+        "Runner release reconciles source-hashed MISSED/REJECTED receipts idempotently. FILLED and PARTIAL reservations remain active conservatively because the position ledger does not yet atomically take over that exposure.",
+        "The module and runner are not wired into every desk/OMS path; filled exposure is not transferred atomically into canonical positions, and sourced margin/settlement/options buying-power limits remain caller provided."
       ],
-      "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions, and source current margin/settlement/inventory limits before the acceptance criteria can be complete.",
-      "last_audited_at_utc": "2026-11-25T03:25:00Z",
-      "commit": "a895745a",
+      "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions with atomic reservation-to-position transfer, and source current margin/settlement/options buying-power/inventory limits before the acceptance criteria can be complete.",
+      "last_audited_at_utc": "2026-11-27T02:01:04Z",
+      "commit": "pending",
       "test_evidence": [
-        "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 5 passed, including concurrent two-desk account-cap race, all-or-none multi-resource denial, idempotent replay, conflicting terminal receipts, policy freeze and release.",
-        "Ruff and targeted mypy passed for the reservation module and tests."
+        "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 88 passed before the final optional-resource override guard; follow-up `-k \"frozen_account_reservation or optional_reservation_inputs\"`: 3 passed after that guard.",
+        "Runner reservation tests cover filled exposure persistence, over-budget rejection before intent/order mutation, and refusal to override computed cash exposure.",
+        "Ruff passed for the runner and runner tests; targeted mypy passed for the runner."
       ],
-      "test_result": "Durable atomic multi-resource reservations: 5 focused tests passed; Ruff and targeted mypy passed."
+      "test_result": "Forward paper runner: 88 passed; final reservation-focused regressions: 3 passed; Ruff and targeted mypy passed. PA-04-04 remains PARTIAL pending cross-OMS atomic exposure transfer and sourced limits."
     },
     {
       "id": "PA-04-05",

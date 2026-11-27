@@ -51,6 +51,12 @@ from financial_brain.forward_edge.session_state import (
     SessionState,
 )
 from financial_brain.kernel.units import BasisPoints, Price, UnitError, WholeUnits
+from financial_brain.portfolio.durable_reservations import (
+    DurableReservationLedger,
+    ReservationError,
+    ReservationPolicy,
+    ReservationRequest,
+)
 from financial_brain.forward_edge.session_ops import REQUIRED_PREFLIGHT
 from financial_brain.forward_edge.venue_calendar import VenueCalendar
 
@@ -2030,6 +2036,11 @@ class ForwardSessionRunner:
         if existing and existing[0] != request_sha:
             raise ForwardSessionRunnerError("order ID reused with different paper intent")
         if not existing:
+            self._reserve_paper_intent(
+                config=config, session_id=session_id, order_id=order_id, desk_id=config.cohort,
+                instrument=event.instrument_id, side=side, quantity=quantity, limit_price=limit,
+                created_at=simulated_at, source_sha256=request_sha,
+            )
             self._con.execute("INSERT INTO paper_intents VALUES (?, ?, ?, ?, ?, ?)",
                               [session_id, order_id, decision_id, event_id, request_sha, request_json])
             self._append_audit("paper_intent", session_id, order_id, simulated_at,
@@ -2125,7 +2136,99 @@ class ForwardSessionRunner:
         self._append_paper_receipt_outcome(
             session_id=session_id, order_id=order_id, receipt=receipt, receipt_sha256=receipt_row[1],
             occurred_at=datetime.fromisoformat(receipt["simulated_at"]))
+        self._release_nonfilled_paper_reservation(
+            config=config, session_id=session_id, order_id=order_id,
+            receipt=receipt, receipt_sha256=str(receipt_row[1]),
+        )
         return receipt
+
+    def _reservation_setup(self, config: ForwardRunConfig) -> tuple[DurableReservationLedger,
+                                                                     ReservationPolicy] | None:
+        """Load the explicitly frozen account policy; absent policy preserves legacy behavior."""
+        raw = config.constraints.get("reservation_policy")
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            raise ForwardSessionRunnerError("reservation_policy must be a frozen configuration object")
+        try:
+            frozen_at = datetime.fromisoformat(str(raw["frozen_at"]))
+            policy = ReservationPolicy(
+                account_id=config.ledger_id,
+                version=str(raw["version"]),
+                frozen_at=frozen_at,
+                limits={str(key): Decimal(str(value)) for key, value in raw["limits"].items()},
+                source_sha256=str(raw["source_sha256"]),
+            )
+            # Reuse the runner journal's SQLite file so its existing durability and
+            # backup boundary also covers reservation receipts.
+            ledger = DurableReservationLedger(self.journal_path)
+        except (KeyError, TypeError, ValueError, InvalidOperation, ReservationError) as exc:
+            raise ForwardSessionRunnerError(f"invalid frozen paper reservation policy: {exc}") from exc
+        return ledger, policy
+
+    def _reserve_paper_intent(self, *, config: ForwardRunConfig, session_id: str, order_id: str,
+                              desk_id: str, instrument: str, side: str, quantity: int,
+                              limit_price: Decimal, created_at: datetime,
+                              source_sha256: str) -> None:
+        setup = self._reservation_setup(config)
+        if setup is None:
+            return
+        ledger, policy = setup
+        resource_amounts: dict[str, Decimal] = {}
+        resource_amounts[f"INSTRUMENT_QUANTITY:{instrument}"] = Decimal(quantity)
+        if side == "BUY":
+            resource_amounts["CASH"] = limit_price * quantity
+        elif side == "SELL":
+            resource_amounts[f"SELLABLE_INVENTORY:{instrument}"] = Decimal(quantity)
+        # Optional, frozen per-unit inputs allow callers to reserve margin, risk capital,
+        # options buying power, or settlement cash without inventing those values here.
+        configured = config.constraints.get("reservation_resource_amounts", {})
+        if configured:
+            if not isinstance(configured, dict) or not isinstance(configured.get(instrument, {}), dict):
+                raise ForwardSessionRunnerError("reservation_resource_amounts must map instruments to resources")
+            try:
+                for resource, per_unit in configured.get(instrument, {}).items():
+                    if str(resource) in resource_amounts:
+                        raise ValueError(f"configured resource cannot override computed {resource}")
+                    amount = Decimal(str(per_unit)) * quantity
+                    if not amount.is_finite() or amount <= 0:
+                        raise ValueError("resource amounts must be finite and positive")
+                    resource_amounts[str(resource)] = amount
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ForwardSessionRunnerError(f"invalid per-unit reservation amount: {exc}") from exc
+        if not resource_amounts:
+            raise ForwardSessionRunnerError("paper intent has no reservable account resources")
+        request = ReservationRequest(
+            reservation_id=f"{session_id}::{order_id}", account_id=config.ledger_id,
+            desk_id=desk_id, created_at=created_at, amounts=resource_amounts,
+            source_sha256=source_sha256,
+        )
+        try:
+            ledger.reserve(policy, request)
+        except ReservationError as exc:
+            raise ForwardSessionRunnerError(f"paper intent reservation denied: {exc}") from exc
+
+    def _release_nonfilled_paper_reservation(self, *, config: ForwardRunConfig, session_id: str,
+                                             order_id: str, receipt: dict[str, Any],
+                                             receipt_sha256: str) -> None:
+        """Free rejected/expired paper intents; retain filled exposure pending book transfer."""
+        if receipt.get("status") not in {"MISSED", "REJECTED"}:
+            return
+        setup = self._reservation_setup(config)
+        if setup is None:
+            return
+        ledger, _policy = setup
+        terminal_kind = "REJECTED" if receipt["status"] == "REJECTED" else "EXPIRED"
+        try:
+            ledger.release(
+                account_id=config.ledger_id, reservation_id=f"{session_id}::{order_id}",
+                terminal_event_id=f"{session_id}:{order_id}:{receipt_sha256}",
+                terminal_kind=terminal_kind,
+                occurred_at=datetime.fromisoformat(str(receipt["simulated_at"])),
+                source_sha256=receipt_sha256,
+            )
+        except ReservationError as exc:
+            raise ForwardSessionRunnerError(f"paper reservation terminal reconciliation failed: {exc}") from exc
 
     def _attach_cost_evidence(self, session_id: str, request: dict[str, Any], receipt: dict[str, Any], *,
                               price: Decimal | None, filled_quantity: int) -> None:
