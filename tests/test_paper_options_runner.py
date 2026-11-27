@@ -5,7 +5,14 @@ import duckdb
 
 from financial_brain.ingest.options_quotes import SCHEMA
 from financial_brain.paper.options import Quote
-from financial_brain.paper.options_runner import Intent, archive_quotes, replay_cohort, run_intent
+from financial_brain.paper.options_runner import (
+    DirectionalOutcome,
+    Intent,
+    archive_quotes,
+    replay_cohort,
+    run_intent,
+    score_direction_separately,
+)
 from financial_brain.kernel.units import OptionLots
 
 
@@ -136,3 +143,42 @@ def test_closed_replay_attributes_net_pnl_by_setup_expiry_delta_and_spread():
             group["spread_bucket"]) == ("CE", "2-7D", "0.25-0.50", "25-100_BPS")
     assert group["closed"] == 1 and group["intents"] == 1
     assert group["net_pnl_inr"] == report["net_pnl_inr"]
+
+
+def test_direction_accuracy_is_scored_separately_from_option_premium_profit():
+    con = duckdb.connect()
+    con.execute(SCHEMA)
+    i = replace(intent(), directional_prediction="DOWN", underlying_price_at_decision=25000,
+                flat_tolerance_bps=5)
+    entry_at, exit_at = D + timedelta(seconds=10), i.planned_exit_at
+    for received, source, bid, ask in (
+            (entry_at, entry_at - timedelta(milliseconds=100), 100.0, 101.0),
+            (exit_at, exit_at - timedelta(milliseconds=100), 95.0, 96.0)):
+        con.execute("""INSERT INTO option_quotes
+            (received_at, source_at, instrument_token, tradingsymbol, underlying, expiry,
+             strike, option_type, lot_size, bid, ask, bid_qty, ask_qty, book_quality)
+            VALUES (?, ?, 123, 'NIFTY26NOV25000CE', 'NIFTY', ?, 25000, 'CE', 65,
+                    ?, ?, 1000, 1000, 'TWO_SIDED')""",
+                    [received, source, EXPIRY, bid, ask])
+    outcome = DirectionalOutcome(
+        directional_signal_id=i.directional_signal_id, observed_at=exit_at,
+        outcome_underlying_price=24900, source_sha256="c" * 64)
+    report = replay_cohort(con, [i], directional_outcomes={i.directional_signal_id: outcome})
+    score = report["results"][0]["directional_score"]
+    assert score["directional_correct"] is True
+    assert score["option_premium_profitable"] is False
+    assert score["directional_outcome_source_status"] == "CALLER_SUPPLIED_UNVERIFIED"
+    assert report["direction_metrics"]["directional_accuracy"] == 1.0
+    assert report["direction_metrics"]["closed_option_premium_profitable_rate"] == 0.0
+    assert report["direction_metrics"]["independently_attested"] is False
+
+
+def test_direction_outcome_requires_future_observation_and_valid_evidence_reference():
+    bad = DirectionalOutcome("direction-1", D, 101, "c" * 64)
+    import pytest
+    from financial_brain.paper.options import OptionPaperError
+
+    with pytest.raises(OptionPaperError, match="later outcome"):
+        score_direction_separately(bad, predicted_direction="UP", decision_at=D,
+                                   decision_underlying_price=100, flat_tolerance_bps=0,
+                                   option_net_pnl_inr=1.0)
