@@ -136,6 +136,8 @@ def build_session_pnl(*, strategy_id: str, account_id: str, session: date,
     unrealized_change = current_unrealized - prior_unrealized
     gross_pnl = realized_delta + unrealized_change
     net_pnl = gross_pnl - cost_delta
+    if not math.isfinite(gross_pnl) or not math.isfinite(net_pnl):
+        raise ProspectivePnlError("session P&L must be finite")
     current_equity = float(current_accounting["cash_inr"]) + sum(
         qty * marks[symbol] for symbol, qty in actual_positions.items())
     previous_equity = float(previous_accounting["cash_inr"]) + sum(
