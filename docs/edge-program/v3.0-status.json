@@ -7711,12 +7711,22 @@
     {
       "id": "PA-03-06",
       "text": "Ensure each instrument has an explicit required data profile (index level-only versus option bid/ask/depth versus MF NAV); reject missing execution data.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/data_profiles.py defines INDEX_LEVEL_ONLY, EQUITY_EXECUTION, OPTION_EXECUTION and MUTUAL_FUND_NAV profiles. A configured profile list must uniquely and exactly cover the frozen instrument universe.",
+        "ForwardSessionRunner.begin validates a configured profile map; the deterministic run_event_loop refuses to start without explicit profiles for every instrument. ingest validates event types against profiles, and execute_paper_intent rejects index-only/MF-NAV profiles and requires a complete two-sided executable depth quote for equity/options.",
+        "market_events.py adds a validated timestamped NAV observation event with positive nav_per_unit and ISO nav_date. tests/test_forward_edge_data_profiles.py, test_forward_edge_market_events.py and focused session-runner integration tests cover profile completeness, product-specific inputs, NAV, missing execution data and index-only trade rejection."
+      ],
+      "blocker": "PARTIAL: the canonical event loop requires profiles, but legacy direct begin/ingest paths still permit an absent profile map for backward compatibility; profile configuration has not been propagated to every paper strategy and the separate MF books, and no per-profile freshness/coverage policy is yet embedded.",
+      "last_audited_at_utc": "2026-11-27T00:26:41Z",
+      "commit": "8b667fe3",
+      "test_evidence": [
+        "python -m pytest tests/test_forward_edge_data_profiles.py tests/test_forward_edge_market_events.py -q: 22 passed.",
+        "python -m pytest tests/test_forward_edge_session_runner.py -k \"event_loop or completed_bar or profile\" -q: 7 passed, 73 deselected.",
+        "Ruff check for changed profile/event/runner modules and tests passed; mypy for the three changed production modules passed."
+      ],
+      "test_result": "Typed index, equity, option and MF-NAV profiles are implemented. The event loop requires one profile per frozen instrument, event ingestion checks profile-compatible inputs, and paper execution rejects non-executable profiles or missing quote depth. PA-03-06 remains PARTIAL pending enforcement across legacy paths and all paper desks."
     },
     {
       "id": "PA-03-07",
@@ -20135,7 +20145,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:17:54Z",
+    "as_of_utc": "2026-11-27T00:26:41Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20591,6 +20601,7 @@
       "PA-03-03",
       "PA-03-04",
       "PA-03-05",
+      "PA-03-06",
       "PA-03-09",
       "PA-03-10",
       "PA-03-15",
@@ -21068,13 +21079,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 930,
+    "audited_count": 931,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 800,
-      "UNASSESSED": 448
+      "PARTIAL": 801,
+      "UNASSESSED": 447
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21217,13 +21228,13 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring. PA-03-04 now also has normalized 1-minute/15-minute interval validation against source-hashed exchange-session bounds; raw-provider finality and universal producer adoption remain partial. PA-03-05 now has a rate-limited bounded Kite quote snapshot API with exact subscription coverage, jitter and fail-fast batch admission; streaming subscription lifecycle and runner integration remain partial."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring. PA-03-04 now also has normalized 1-minute/15-minute interval validation against source-hashed exchange-session bounds; raw-provider finality and universal producer adoption remain partial. PA-03-05 now has a rate-limited bounded Kite quote snapshot API with exact subscription coverage, jitter and fail-fast batch admission; streaming subscription lifecycle and runner integration remain partial. PA-03-06 now has frozen product-specific index/equity/option/MF-NAV profiles and executable-data checks; legacy paths and all-desk propagation remain partial."
   },
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 800,
-    "UNASSESSED": 448
+    "PARTIAL": 801,
+    "UNASSESSED": 447
   }
 }

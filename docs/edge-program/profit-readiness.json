@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T00:17:54Z",
+  "as_of_utc": "2026-11-27T00:26:41Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "1f7842094d0382467a59285193aaebbcbd2b22c58cbc6be436f4ca376ae9ae43",
-  "audit_export_sha256": "3029a275214a26593bf8c5d41e7b4a9c74dfdef8a4feb7c0f3b296f5a2ce8d92",
+  "status_ledger_sha256": "5939993254af4f146d467097b9e9ab65a59f2a56912cf0ebbc04eda38a70378b",
+  "audit_export_sha256": "280bafdbd616a805ff9c25dec7104fd758b4e4150f48ebfb73756af4dd4e1132",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 800,
-    "UNASSESSED": 448
+    "PARTIAL": 801,
+    "UNASSESSED": 447
   },
-  "assessed_count": 930,
-  "unassessed_count": 448,
+  "assessed_count": 931,
+  "unassessed_count": 447,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -575,8 +575,8 @@
         "COMPLETE": 3,
         "EXTERNAL_BLOCKED": 1,
         "NOT_STARTED": 0,
-        "PARTIAL": 20,
-        "UNASSESSED": 8
+        "PARTIAL": 21,
+        "UNASSESSED": 7
       },
       "evidence": [
         {
@@ -1003,16 +1003,24 @@
         },
         {
           "item_id": "PA-03-06",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 963,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Ensure each instrument has an explicit required data profile (index level-only versus option bid/ask/depth versus MF NAV); reject missing execution data."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "8b667fe3",
+          "blocker": "PARTIAL: the canonical event loop requires profiles, but legacy direct begin/ingest paths still permit an absent profile map for backward compatibility; profile configuration has not been propagated to every paper strategy and the separate MF books, and no per-profile freshness/coverage policy is yet embedded.",
+          "evidence": [
+            "src/financial_brain/forward_edge/data_profiles.py defines INDEX_LEVEL_ONLY, EQUITY_EXECUTION, OPTION_EXECUTION and MUTUAL_FUND_NAV profiles. A configured profile list must uniquely and exactly cover the frozen instrument universe.",
+            "ForwardSessionRunner.begin validates a configured profile map; the deterministic run_event_loop refuses to start without explicit profiles for every instrument. ingest validates event types against profiles, and execute_paper_intent rejects index-only/MF-NAV profiles and requires a complete two-sided executable depth quote for equity/options.",
+            "market_events.py adds a validated timestamped NAV observation event with positive nav_per_unit and ISO nav_date. tests/test_forward_edge_data_profiles.py, test_forward_edge_market_events.py and focused session-runner integration tests cover profile completeness, product-specific inputs, NAV, missing execution data and index-only trade rejection."
+          ],
+          "tests": [
+            "python -m pytest tests/test_forward_edge_data_profiles.py tests/test_forward_edge_market_events.py -q: 22 passed.",
+            "python -m pytest tests/test_forward_edge_session_runner.py -k \"event_loop or completed_bar or profile\" -q: 7 passed, 73 deselected.",
+            "Ruff check for changed profile/event/runner modules and tests passed; mypy for the three changed production modules passed."
+          ]
         },
         {
           "item_id": "PA-03-07",
@@ -3145,5 +3153,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "900bea3e79577cbe5885d15290f5969d633eec555098fffe93181cc720723553"
+  "report_sha256": "1128bba29f15d82c92e4e6b161efb91359086de3fbe4b74f4303159ee594b0ad"
 }
