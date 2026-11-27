@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T13:10:00Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "f59d489ae9681605038984492a07ef609eeea14da847f9f52bfa26c4c0415af1",
-  "status_ledger_sha256": "e538dbc62b2c5578014ff24ee649a28ea0e9347bdfda259ca17cf8015983c15f",
-  "audit_export_sha256": "f650d5a81e13e9b0b63fc8a3c019513cae5361754378fb1c2610aad86041be8d",
+  "status_ledger_sha256": "d5cb6e21e7e4d8f4b970fc06345033f2f1db1b5a7cc9915922fb0a90530658ab",
+  "audit_export_sha256": "924ffdbcab3fb8fa75acdb03f673fc3eecf34d988bd49b0ba60414a0d8628240",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 135,
@@ -590,12 +590,19 @@
           "commit": null,
           "blocker": null,
           "evidence": [
-            "scripts/market_data_use_matrix.py generates docs/edge-program/market-data-use-matrix.v1.json across all 17 provider/product identities, plus a separate generated-synthetic-fixture row.",
-            "The matrix distinguishes private research, retained history, real-time algorithmic/non-display use, derivatives depth, synthetic/replay, paper simulation, redistribution and retention period. It cross-references the permission register and exact source-registry/rights-review hashes.",
-            "All source-specific uses remain UNKNOWN_RIGHTS and operationally blocked unless the permission register contains exact current evidence. Only local deterministic synthetic fixtures are labeled SYNTHETIC_ONLY_ALLOWED; this does not grant market-data permission.",
-            "The provider-product matrix is a CI invariant; `python scripts/market_data_use_matrix.py --check`, source-rights validation, CI matrix validation, Ruff and mypy passed."
+            "scripts/market_data_use_matrix.py generates the provider/product matrix across all 17 provider/product identities plus a separate generated-synthetic-fixture row.",
+            "The matrix distinguishes research, retained history, real-time algorithmic/non-display use, derivatives depth, synthetic/replay, paper simulation, redistribution and retention; it links current source/permission/review hashes.",
+            "All provider uses remain fail-closed when rights are unknown; fixture allowances are limited to generated deterministic tests and do not grant live-data rights.",
+            "Source fingerprinting now normalizes CRLF to LF, so Windows and Linux produce identical matrix hashes from the same inputs.",
+            "The generated matrix is a CI invariant and is the hashed acceptance artifact for this requirement."
           ],
-          "tests": []
+          "tests": [
+            "python -m pytest tests/test_market_data_use_matrix.py tests/test_checklist_completion_gate.py tests/test_market_data_source_validator.py -q --basetemp .pytest-pa02-01-canonical-hashes: 10 passed.",
+            "python -m ruff check scripts/market_data_use_matrix.py tests/test_market_data_use_matrix.py scripts/checklist_completion_gate.py tests/test_checklist_completion_gate.py: passed.",
+            "python -m mypy scripts/market_data_use_matrix.py scripts/checklist_completion_gate.py --follow-imports=silent: passed.",
+            "python scripts/market_data_use_matrix.py --check: matrix current; unknown provider rights remain blocked.",
+            "python scripts/validate_market_data_sources.py: passed; credential values absent."
+          ]
         },
         {
           "item_id": "PA-02-02",
@@ -3570,5 +3577,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "c242c5583077780d2ea6ca5c22a4a01a0c4fcc201d667cd3258dbe8605d3c988"
+  "report_sha256": "1b19d6643bcda6bf7c2fc55d708740af41bdafa981553641237ec8e87dc2c314"
 }

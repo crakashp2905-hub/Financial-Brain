@@ -8,7 +8,8 @@ following evidence:
 2. Test evidence recording an executed acceptance test, plus a test file that
    exists in the current checkout.
 3. At least one acceptance artifact with a repository-relative path and a
-   SHA-256 digest matching the bytes in the current checkout.
+   SHA-256 digest matching its canonical bytes (CRLF normalized to LF) in the
+   current checkout.
 
 `scripts/checklist_completion_gate.py` audits existing completion rows and
 produces `completion-evidence-gaps.v1.json`. The report intentionally exposes

@@ -19,7 +19,9 @@ DIMENSIONS = (
 
 
 def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Hash canonical text bytes so Git's CRLF conversion cannot make the same
+    # source registry produce a different matrix on Windows and Linux.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def build() -> dict[str, Any]:

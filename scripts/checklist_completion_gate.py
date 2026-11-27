@@ -23,9 +23,15 @@ def _item_gaps(item: dict[str, Any], root: Path) -> list[str]:
     evidence = item.get("evidence", [])
     test_evidence = item.get("test_evidence", [])
     test_result = item.get("test_result")
+    artifacts = item.get("acceptance_artifacts")
+    artifact_paths = [
+        artifact.get("path")
+        for artifact in artifacts or []
+        if isinstance(artifact, dict) and isinstance(artifact.get("path"), str)
+    ]
     searchable = "\n".join(
         str(value)
-        for value in [*evidence, *test_evidence, test_result]
+        for value in [*evidence, *test_evidence, test_result, *artifact_paths]
         if value is not None
     )
     gaps: list[str] = []
@@ -40,7 +46,6 @@ def _item_gaps(item: dict[str, Any], root: Path) -> list[str]:
     if not tests:
         gaps.append("missing_existing_executable_test_artifact")
 
-    artifacts = item.get("acceptance_artifacts")
     if not isinstance(artifacts, list) or not artifacts:
         gaps.append("missing_hashed_acceptance_artifact")
     else:
@@ -57,7 +62,8 @@ def _item_gaps(item: dict[str, Any], root: Path) -> list[str]:
                 candidate.relative_to(root.resolve())
             except ValueError:
                 continue
-            if candidate.is_file() and hashlib.sha256(candidate.read_bytes()).hexdigest() == digest:
+            canonical_bytes = candidate.read_bytes().replace(b"\r\n", b"\n") if candidate.is_file() else b""
+            if candidate.is_file() and hashlib.sha256(canonical_bytes).hexdigest() == digest:
                 valid_artifact = True
                 break
         if not valid_artifact:

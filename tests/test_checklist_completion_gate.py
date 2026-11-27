@@ -15,7 +15,7 @@ def test_complete_item_requires_docs_tests_and_hashed_acceptance_artifact(tmp_pa
     doc.write_text("Documentation", encoding="utf-8")
     test.write_text("def test_proof(): pass\n", encoding="utf-8")
     artifact.write_text('{"accepted": true}\n', encoding="utf-8")
-    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    digest = hashlib.sha256(artifact.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     status = {
         "items": [
             {
@@ -54,7 +54,7 @@ def test_artifact_hash_mismatch_is_reported(tmp_path: Path) -> None:
     (tmp_path / "docs/proof.md").write_text("doc", encoding="utf-8")
     (tmp_path / "tests/test_proof.py").write_text("test", encoding="utf-8")
     artifact = tmp_path / "acceptance.json"
-    artifact.write_text("actual", encoding="utf-8")
+    artifact.write_bytes(b"actual\r\n")
     status = {
         "items": [
             {

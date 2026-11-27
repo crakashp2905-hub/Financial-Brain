@@ -22,3 +22,10 @@ install-contract audit, lock/fixture hash integrity verification, CI matrix
 validation and `git diff --check`. A fresh hosted Ubuntu/Windows run of the
 revised workflow is still required before this checklist item can be marked
 COMPLETE; prior hosted green runs predate this added audit step.
+
+The current-head Ubuntu CI run exposed that the market-data use matrix hashed
+raw source bytes and therefore differed when CRLF on Windows was checked out as
+LF on Linux. `scripts/market_data_use_matrix.py` now canonicalizes line endings
+before hashing its inputs; `tests/test_market_data_use_matrix.py` verifies that
+both line-ending forms produce identical fingerprints. This change also aligns
+the checklist acceptance-artifact hash verification with canonical LF bytes.

@@ -9,8 +9,8 @@
     "rule": "A module existing in the repository is not acceptance evidence by itself."
   },
   "complete_items": 135,
-  "items_with_evidence_gaps": 135,
-  "gap_count": 263,
+  "items_with_evidence_gaps": 134,
+  "gap_count": 260,
   "gaps": [
     {
       "id": "FB-0001",
@@ -498,14 +498,6 @@
       "id": "PA-01-16",
       "gaps": [
         "missing_existing_documentation_reference",
-        "missing_hashed_acceptance_artifact"
-      ]
-    },
-    {
-      "id": "PA-02-01",
-      "gaps": [
-        "missing_recorded_test_evidence",
-        "missing_existing_executable_test_artifact",
         "missing_hashed_acceptance_artifact"
       ]
     },

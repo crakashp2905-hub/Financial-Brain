@@ -1,9 +1,9 @@
 {
   "schema": "fb.market_data_use_matrix.v1",
   "as_of": "2026-11-26",
-  "source_registry_sha256": "f62b835b482b1d4a30ba88d4d6d42d75e657aed1ea7e25d63804843a9779f323",
-  "permission_register_sha256": "d843ab8a50fb4c8af0e3cd6e0ea24d1878ec70bc011b73f65555d9a0cb28175a",
-  "rights_review_sha256": "852e1c2f4d0eec84b66fee0b4ae429b52c39da952851aa5de605b25bddb218c5",
+  "source_registry_sha256": "9405e33fc1a4620e0fce931f5d7b072f0a30887e379d223a10ad1955e93a14b1",
+  "permission_register_sha256": "5c896615d53afbc433cc2d6171767e1b5e3007ef0e09e5ff26b29040c977436e",
+  "rights_review_sha256": "4509e8af78877e60f231d376bbed35bf04b5826f9a876975c38e352a7a6ef41c",
   "dimension_definitions": {
     "private_research": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
     "retained_history": "UNKNOWN_RIGHTS blocks use unless a current, exact source/product/use approval is evidenced.",
