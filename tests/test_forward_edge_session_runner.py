@@ -939,7 +939,7 @@ def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_pat
     result = subprocess.run(
         [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
          "--journal-db", str(tmp_path / "journal.sqlite"), "--date", "2026-11-13",
-         "--proof-dir", str(proof_dir)],
+         "--proof-dir", str(proof_dir), "--reference-journal-db", str(tmp_path / "journal.sqlite")],
         cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr + result.stdout
     report = json.loads(result.stdout)
@@ -952,6 +952,9 @@ def test_independent_daily_audit_verifies_raw_decision_and_quote_lineage(tmp_pat
     assert session["decision_quote_lineage_valid"] is True
     assert session["raw_market_event_count"] == 2
     assert session["filled_receipt_count"] == 1
+    result_report_comparison = report["replay_comparisons"][0]
+    assert result_report_comparison["matches"] is True
+    assert result_report_comparison["material_mismatch_count"] == 0
     proof = session["one_page_proof"]
     assert proof["generated_signal_count"] == 1
     assert proof["matched_fill_count"] == 1
@@ -1007,7 +1010,8 @@ def test_independent_daily_audit_fails_closed_on_raw_log_tampering(tmp_path, tam
     script = Path.cwd() / "scripts" / "forward_session_daily_audit.py"
     result = subprocess.run(
         [sys.executable, str(script), "--state-db", str(tmp_path / "state.sqlite"),
-         "--journal-db", str(audit_copy), "--date", "2026-11-13"],
+         "--journal-db", str(audit_copy), "--date", "2026-11-13",
+         "--reference-journal-db", str(tmp_path / "journal.sqlite")],
         cwd=Path.cwd(), check=False, capture_output=True, text=True, timeout=30)
     assert result.returncode == 2, result.stderr + result.stdout
     report = json.loads(result.stdout)
@@ -1015,6 +1019,7 @@ def test_independent_daily_audit_fails_closed_on_raw_log_tampering(tmp_path, tam
     [session] = report["sessions"]
     assert session[expected_flag] is False
     assert session["issues"]
+    assert report["replay_comparisons"][0]["matches"] is False
 
 
 def test_supervisor_fails_closed_for_open_sessions_without_calendar_plan(tmp_path):

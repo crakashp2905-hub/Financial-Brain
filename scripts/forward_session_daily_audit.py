@@ -83,6 +83,35 @@ def _raw_rows(journal: sqlite3.Connection, session_id: str) -> list[sqlite3.Row]
         "WHERE session_id=? ORDER BY sequence", [session_id]).fetchall()
 
 
+def _trace_comparison(reference_rows: list[sqlite3.Row], replay_rows: list[sqlite3.Row],
+                      session_id: str) -> dict[str, Any]:
+    """Compare every ordered raw-record identity and canonical body hash, including abstentions."""
+    def signature(rows: list[sqlite3.Row]) -> list[tuple[int, str, str, str, str, str]]:
+        result = []
+        for row in rows:
+            try:
+                record = json.loads(row["record_json"])
+                record_sha = hashlib.sha256(canonical(record).encode("utf-8")).hexdigest()
+            except (TypeError, ValueError, json.JSONDecodeError):
+                record_sha = "INVALID_RECORD"
+            result.append((int(row["sequence"]), str(row["kind"]), str(row["record_id"]), record_sha,
+                           str(row["previous_event_sha256"]), str(row["event_sha256"])))
+        return result
+    reference, replay = signature(reference_rows), signature(replay_rows)
+    mismatches = []
+    for index in range(max(len(reference), len(replay))):
+        left = reference[index] if index < len(reference) else None
+        right = replay[index] if index < len(replay) else None
+        if left != right:
+            mismatches.append({"index": index, "reference": left, "replay": right})
+    reference_hash = digest(reference)
+    replay_hash = digest(replay)
+    return {"session_id": session_id, "reference_record_count": len(reference),
+            "replay_record_count": len(replay), "reference_trace_sha256": reference_hash,
+            "replay_trace_sha256": replay_hash, "material_mismatch_count": len(mismatches),
+            "first_mismatches": mismatches[:20], "matches": not mismatches}
+
+
 def _verify_session(session_id: str, config: dict[str, Any], rows: list[sqlite3.Row]) -> dict[str, Any]:
     issues: list[str] = []
     chain_valid = True
@@ -491,20 +520,33 @@ def render_one_page_proof(report: dict[str, Any], session: dict[str, Any]) -> st
     return "\n".join(lines) + "\n"
 
 
-def run_daily_audit(*, state_db: Path, journal_db: Path, exchange_date: date) -> dict[str, Any]:
+def run_daily_audit(*, state_db: Path, journal_db: Path, exchange_date: date,
+                    reference_journal_db: Path | None = None) -> dict[str, Any]:
     sessions, config_issues = _session_configs(state_db, exchange_date)
     journal = _readonly(journal_db)
+    reference_journal = _readonly(reference_journal_db) if reference_journal_db is not None else None
     try:
         reports = []
+        replay_comparisons = []
         for session_id, config in sessions.items():
-            reports.append(_verify_session(session_id, config, _raw_rows(journal, session_id)))
+            replay_rows = _raw_rows(journal, session_id)
+            reports.append(_verify_session(session_id, config, replay_rows))
+            if reference_journal is not None:
+                replay_comparisons.append(_trace_comparison(
+                    _raw_rows(reference_journal, session_id), replay_rows, session_id))
     finally:
         journal.close()
+        if reference_journal is not None:
+            reference_journal.close()
     issues = list(config_issues)
     if not sessions:
         issues.append("no forward sessions found for the requested exchange date")
     all_session_issues = [f"{row['session_id']}: {issue}" for row in reports for issue in row["issues"]]
     issues.extend(all_session_issues)
+    for comparison in replay_comparisons:
+        if not comparison["matches"]:
+            issues.append(f"{comparison['session_id']}: replay trace differs from reference at "
+                          f"{comparison['material_mismatch_count']} record position(s)")
     body = {
         "schema": "fb.forward-session-independent-daily-audit.v1",
         "exchange_date": exchange_date.isoformat(),
@@ -516,6 +558,7 @@ def run_daily_audit(*, state_db: Path, journal_db: Path, exchange_date: date) ->
         "open_unresolved_exposure_count": sum(row["open_unresolved_exposure_count"] for row in reports),
         "status": "PASS" if reports and not issues else "FAIL",
         "sessions": reports,
+        "replay_comparisons": replay_comparisons,
         "issues": issues,
         "method": "stdlib-only raw audit SQLite verification; no research/backtest imports",
     }
@@ -533,9 +576,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, help="write JSON report here; stdout if omitted")
     parser.add_argument("--proof-dir", type=Path,
                         help="write one Markdown proof page per session into this directory")
+    parser.add_argument("--reference-journal-db", type=Path,
+                        help="optionally compare every dated replay trace to this original raw journal")
     args = parser.parse_args(argv)
     report = run_daily_audit(state_db=args.state_db, journal_db=args.journal_db,
-                             exchange_date=args.date)
+                             exchange_date=args.date, reference_journal_db=args.reference_journal_db)
     encoded = json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
