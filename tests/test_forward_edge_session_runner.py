@@ -438,7 +438,11 @@ def test_end_checkpoint_hashes_event_consumer_offsets(tmp_path):
     [record] = runner.read_events_after("s", "strategy:momentum")
     runner.acknowledge_event_offset("s", "strategy:momentum", expected_offset=0,
                                     through_offset=record["offset"], event_ids=(event.event_id,))
-    runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    report = runner.close_session("s", complete=True, now=NOW + timedelta(seconds=1))
+    assert report["day_end_reconciliation"]["reconciled"] is True
+    assert report["day_end_reconciliation"]["cash_reconciled"] is True
+    assert report["day_end_reconciliation"]["marked_equity_inr"] == "100000"
+    assert report["day_end_reconciliation"]["open_risk_inr"] == "0"
 
     checkpoint = runner.checkpoint("s", phase="END", now=NOW + timedelta(seconds=2))
     assert "event_cursors" in checkpoint["record_hashes"]
@@ -1910,6 +1914,42 @@ def test_live_paper_execution_clock_must_follow_expected_value_publication(tmp_p
     runner.close()
 
 
+def test_live_paper_close_cannot_seal_open_inventory_without_risk_policy(tmp_path):
+    config = make_live_paper_config(include_prospective_rights=True)
+    config = replace(config, constraints={**config.constraints, "liquidity_bucket": "large"})
+    runner, event, decided = trade_setup(
+        tmp_path, config=config)
+    execute(runner, event, decided)
+    with pytest.raises(ForwardSessionRunnerError, match="OPEN_RISK_MISSING_OR_AMBIGUOUS"):
+        runner.close_session("s", complete=True, now=decided + timedelta(seconds=2))
+
+    report = runner.close_session("s", complete=False, now=decided + timedelta(seconds=2),
+                                  reason="position risk policy is missing")
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["fees_reconciled"] is True
+    assert reconciliation["inventory_reconciled"] is True
+    assert reconciliation["marked_equity_inr"] is not None
+    assert reconciliation["open_risk_inr"] is None
+    assert reconciliation["reconciled"] is False
+    runner.close()
+
+
+def test_live_paper_flat_close_reconciles_cash_costs_equity_and_zero_open_risk(tmp_path):
+    runner = make_runner(tmp_path)
+    config = make_live_paper_config(include_prospective_rights=True)
+    opened(runner, config=config)
+    report = runner.close_session("s", complete=True, now=NOW + timedelta(seconds=2))
+    reconciliation = report["day_end_reconciliation"]
+    assert reconciliation["reconciled"] is True
+    assert reconciliation["oms_reconciled"] is True
+    assert reconciliation["cash_reconciled"] is True
+    assert reconciliation["fees_reconciled"] is True
+    assert reconciliation["inventory_reconciled"] is True
+    assert reconciliation["marked_equity_inr"] == "100000"
+    assert reconciliation["open_risk_inr"] == "0"
+    runner.close()
+
+
 def test_live_paper_session_rejects_missing_frozen_parameters_before_creation(tmp_path):
     from dataclasses import replace
 
@@ -2067,9 +2107,15 @@ def test_shared_paper_ledger_carries_inventory_across_sessions_without_expiry(tm
     close_report = runner.close_session("s", complete=True, now=first_close_at)
     assert close_report["position_dispositions"] == [{
         "instrument_id": "NSE:INFY", "quantity": 2, "quantity_unit": "SHARES", "expiry": None,
-        "disposition": "OVERNIGHT_CARRY_AUTHORIZED", "valuation_status": "NOT_PROVIDED",
+        "disposition": "OVERNIGHT_CARRY_AUTHORIZED", "valuation_status": "OBSERVED_EXECUTABLE_QUOTE",
+        "mark_price_inr": "99.95", "mark_quote_event_id": buy_quote.event_id,
         "execution_or_settlement_fill_created": False,
     }]
+    assert close_report["day_end_reconciliation"]["inventory_reconciled"] is True
+    assert close_report["day_end_reconciliation"]["marked_equity_inr"] is not None
+    assert close_report["day_end_reconciliation"]["open_risk_inr"] is None
+    assert "OPEN_RISK_MISSING_OR_AMBIGUOUS:NSE:INFY" in close_report[
+        "day_end_reconciliation"]["exceptions"]
     first_day_accounting = runner.records("s")["accounting"]
     assert first_day_accounting["positions"] == {"NSE:INFY": 2}
     assert buy_receipt["filled_quantity"] == 2

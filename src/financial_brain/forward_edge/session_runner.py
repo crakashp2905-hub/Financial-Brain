@@ -2975,8 +2975,18 @@ class ForwardSessionRunner:
         if state not in {SessionState.OPEN, SessionState.DRAINING}:
             raise ForwardSessionRunnerError("only an OPEN or DRAINING session can close")
         records = self.records(session_id)
+        config = self.state_store.config(session_id)
+        day_end = self._day_end_reconciliation(
+            records, session_id=session_id, config=config, reconciled_at=now)
         position_dispositions = self._position_dispositions(
-            self.state_store.config(session_id), records["accounting"]["positions"])
+            config, records["accounting"]["positions"])
+        mark_by_instrument = {row["instrument_id"]: row for row in day_end["position_marks"]}
+        for disposition in position_dispositions:
+            mark = mark_by_instrument.get(disposition["instrument_id"])
+            if mark is not None:
+                disposition["valuation_status"] = "OBSERVED_EXECUTABLE_QUOTE"
+                disposition["mark_price_inr"] = mark["mark_price_inr"]
+                disposition["mark_quote_event_id"] = mark["quote_event_id"]
         if complete:
             self._require_resolved_paper_intents(session_id)
             accounting = records["accounting"]
@@ -2992,6 +3002,12 @@ class ForwardSessionRunner:
             if accounting["status"] not in {"RECONCILED_GROSS", "RECONCILED_NET"} or \
                     not accounting["cash_reconciled"] or configured_costs_missing:
                 raise ForwardSessionRunnerError("cannot close complete with OMS/accounting reconciliation errors")
+            fixture_only = (config.mode != "LIVE_PAPER" and
+                            config.constraints.get("allow_synthetic_fixture_events") is True)
+            if not day_end["reconciled"] and not fixture_only:
+                raise ForwardSessionRunnerError(
+                    "cannot seal session with unresolved day-end reconciliation exceptions: " +
+                    ", ".join(day_end["exceptions"]))
         if state is SessionState.OPEN:
             self.state_store.transition(session_id, SessionState.DRAINING, now=now)
         if complete:
@@ -3006,6 +3022,7 @@ class ForwardSessionRunner:
                 "intent_count": len(records["intents"]),
                 "execution_receipt_count": len(records["execution_receipts"]),
                 "position_dispositions": position_dispositions,
+                "day_end_reconciliation": day_end,
                 "reason": reason, "records_sha256": hashlib.sha256(json.dumps(
                     records, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
         canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -3016,6 +3033,153 @@ class ForwardSessionRunner:
         self._append_audit("session_report", session_id, session_id, now, report)
         self._con.commit()
         return report
+
+    @staticmethod
+    def _day_end_reconciliation(records: dict[str, Any], *, session_id: str,
+                                config: ForwardRunConfig, reconciled_at: datetime) -> dict[str, Any]:
+        """Reconcile OMS, cash, costs, inventory marks and stop-risk before session sealing.
+
+        Carried positions require a same-session executable quote and a position-monitor
+        stop record. The report deliberately leaves valuation or risk unknown when either
+        evidence source is absent; it never substitutes a close or last-trade price.
+        """
+        accounting = records["accounting"]
+        exceptions: list[str] = []
+        unresolved_orders = sorted(set(accounting["unresolved_order_ids"]))
+        if unresolved_orders or accounting["errors"]:
+            exceptions.append("OMS_UNRESOLVED")
+        terminal = {"FILLED", "CANCELED", "REJECTED", "MISSED", "EXPIRED"}
+        open_order_states = sorted(order_id for order_id, state in accounting["oms_order_states"].items()
+                                   if state not in terminal)
+        if open_order_states and "OMS_UNRESOLVED" not in exceptions:
+            exceptions.append("OMS_NONTERMINAL")
+        if not accounting["cash_reconciled"]:
+            exceptions.append("CASH_MISMATCH")
+        fills = accounting["filled_order_count"]
+        fees_reconciled = fills == 0 or accounting["charges_assessed"]
+        if not fees_reconciled:
+            exceptions.append("FEES_UNASSESSED")
+
+        positions: dict[str, int] = accounting["positions"]
+        average_costs = accounting["average_cost_inr"]
+        latest_quotes: dict[str, tuple[datetime, MarketEvent, dict[str, Any]]] = {}
+        for raw_event in records["events"]:
+            try:
+                event_fields = {key: raw_event[key] for key in (
+                    "event_id", "kind", "venue", "instrument_id", "event_time", "received_at",
+                    "available_at", "payload", "source", "sequence", "decision_time", "evidence_id",
+                    "source_at", "exchange_at", "published_at", "computed_at",
+                ) if key in raw_event}
+                event = MarketEvent.from_dict(event_fields)
+            except (KeyError, TypeError, ValueError):
+                continue
+            if event.available_at > reconciled_at.astimezone(timezone.utc):
+                continue
+            quote = executable_quote(event)
+            if quote is None:
+                continue
+            prior = latest_quotes.get(event.instrument_id)
+            if prior is None or (event.available_at, event.event_id) > (prior[0], prior[1].event_id):
+                latest_quotes[event.instrument_id] = (event.available_at, event, quote)
+
+        stop_by_instrument: dict[str, set[Decimal]] = {}
+        for audit in records["audit_log"]:
+            if audit.get("kind") != "position_monitor":
+                continue
+            monitor = audit.get("record", {})
+            try:
+                instrument = str(monitor["instrument_id"])
+                stop = Decimal(str(monitor["stop_price"]))
+                available_at = datetime.fromisoformat(str(monitor["available_at"]))
+            except (KeyError, TypeError, ValueError, InvalidOperation):
+                continue
+            if available_at <= reconciled_at.astimezone(timezone.utc) and stop.is_finite() and stop > 0:
+                stop_by_instrument.setdefault(instrument, set()).add(stop)
+
+        position_marks: list[dict[str, Any]] = []
+        market_value = Decimal(0)
+        unrealized = Decimal(0)
+        open_risk = Decimal(0)
+        marks_complete = True
+        risk_complete = True
+        for instrument, quantity in sorted(positions.items()):
+            quote_row = latest_quotes.get(instrument)
+            if quote_row is None:
+                marks_complete = False
+                risk_complete = False
+                exceptions.append(f"POSITION_MARK_MISSING:{instrument}")
+                continue
+            _available_at, event, quote = quote_row
+            mark = quote["bid"] if quantity > 0 else quote["ask"]
+            qty = Decimal(abs(quantity))
+            signed_qty = Decimal(quantity)
+            basis = Decimal(str(average_costs[instrument]))
+            position_value = mark * signed_qty
+            position_unrealized = (mark - basis) * signed_qty
+            market_value += position_value
+            unrealized += position_unrealized
+            stops = stop_by_instrument.get(instrument, set())
+            if len(stops) != 1:
+                risk_complete = False
+                exceptions.append(f"OPEN_RISK_MISSING_OR_AMBIGUOUS:{instrument}")
+                stop_risk: Decimal | None = None
+            else:
+                stop = next(iter(stops))
+                stop_risk = abs(mark - stop) * qty
+                open_risk += stop_risk
+            position_marks.append({
+                "instrument_id": instrument, "quantity": quantity,
+                "mark_price_inr": str(mark), "mark_side": "BID" if quantity > 0 else "ASK",
+                "market_value_inr": str(position_value), "unrealized_gross_pnl_inr": str(position_unrealized),
+                "quote_event_id": event.event_id, "quote_event_sha256": event.sha256(),
+                "quote_source": event.source, "quote_available_at_utc": event.available_at.isoformat(),
+                "stop_risk_inr": str(stop_risk) if stop_risk is not None else None,
+            })
+        if positions and marks_complete and risk_complete:
+            open_risk_value: str | None = str(open_risk)
+        elif positions:
+            open_risk_value = None
+        else:
+            open_risk_value = "0"
+        cash = Decimal(str(accounting["cash_inr"]))
+        marked_equity = cash + market_value if marks_complete else None
+        if not marks_complete:
+            # Missing marks may already have a per-instrument exception; keep this aggregate explicit.
+            if not any(value.startswith("POSITION_MARK_MISSING:") for value in exceptions):
+                exceptions.append("MARKED_EQUITY_UNAVAILABLE")
+        gross_only_fixture = (config.mode != "LIVE_PAPER" and
+                              config.constraints.get("allow_synthetic_fixture_events") is True)
+        body = {
+            "schema": "fb.forward-day-end-reconciliation.v1",
+            "session_id": session_id,
+            "exchange_date": config.exchange_date.isoformat(),
+            "reconciled_at_utc": reconciled_at.astimezone(timezone.utc).isoformat(),
+            "oms_reconciled": not unresolved_orders and not accounting["errors"] and not open_order_states,
+            "unresolved_order_ids": unresolved_orders,
+            "nonterminal_order_ids": open_order_states,
+            "cash_reconciled": bool(accounting["cash_reconciled"]),
+            "cash_inr": accounting["cash_inr"],
+            "inventory_reconciled": marks_complete,
+            "positions": accounting["positions"],
+            "position_marks": position_marks,
+            "market_value_inr": str(market_value) if marks_complete else None,
+            "realized_gross_pnl_inr": accounting["realized_gross_pnl_inr"],
+            "unrealized_gross_pnl_inr": str(unrealized) if marks_complete else None,
+            "marked_equity_inr": str(marked_equity) if marked_equity is not None else None,
+            "fees_reconciled": fees_reconciled,
+            "charges_inr": accounting["charges_inr"],
+            "charges_assessed": accounting["charges_assessed"],
+            "open_risk_inr": open_risk_value,
+            "open_risk_basis": "DISTANCE_TO_FROZEN_POSITION_MONITOR_STOP" if risk_complete and positions else
+                               "FLAT_BOOK" if not positions else None,
+            "profitability_eligible": (not exceptions and accounting["net_pnl_eligible"]),
+            "fixture_gross_only": gross_only_fixture,
+            "exceptions": sorted(set(exceptions)),
+            "reconciled": not exceptions,
+        }
+        digest = hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+        return body | {"reconciliation_sha256": digest}
 
     @staticmethod
     def _position_dispositions(config: ForwardRunConfig,
