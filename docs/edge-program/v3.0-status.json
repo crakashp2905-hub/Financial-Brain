@@ -10531,22 +10531,28 @@
     {
       "id": "PA-12-05",
       "text": "Build 'market reaction already priced?' controls: opening gap, post-publication delay, overnight release, turnover shock and day-of-week benchmarks.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/evaluation/event_response.py measures market-adjusted reaction already made at the first close at/after publication and preserves later 1/3/5/20-session returns",
+        "Existing event response controls do not separately report opening gap, after-hours release classification, intraday publication delay, turnover shock and day-of-week matched benchmarks"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "a791a227"
     },
     {
       "id": "PA-12-06",
       "text": "Compare event-driven selection against momentum overlap and matched sector/size exposures, not raw market-return drift.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/evaluation/events.py defines momentum and recent-return matching controls; src/financial_brain/evaluation/event_response.py subtracts the same-window universe median from event returns",
+        "A complete event-selection comparison against matched sector and size exposures, combined with momentum-overlap attribution, was not found"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "a791a227"
     },
     {
       "id": "PA-12-07",
@@ -21502,6 +21508,8 @@
       "PA-12-02",
       "PA-12-03",
       "PA-12-04",
+      "PA-12-05",
+      "PA-12-06",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21925,13 +21933,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1026,
+    "audited_count": 1028,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 889,
-      "UNASSESSED": 352
+      "PARTIAL": 891,
+      "UNASSESSED": 350
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22080,7 +22088,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 889,
-    "UNASSESSED": 352
+    "PARTIAL": 891,
+    "UNASSESSED": 350
   }
 }
