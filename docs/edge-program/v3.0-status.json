@@ -7618,12 +7618,12 @@
         "tests/test_forward_edge_session_runner.py::test_deterministic_event_loop_orders_events_and_checks_exits_after_each and ::test_event_loop_replays_unacknowledged_event_after_restart."
       ],
       "blocker": "PARTIAL: deterministic lifecycle orchestration is available, but existing strategy adapters, corporate-action and margin handlers, and session-close business logic have not all been wired through this event loop as the repository-wide canonical path.",
-      "last_audited_at_utc": "2026-11-27T00:01:12Z",
-      "commit": "e5248c7d",
+      "last_audited_at_utc": "2026-11-27T00:12:29Z",
+      "commit": "e52b7c05",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
-        "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
-        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
+        "python -m pytest tests/test_forward_edge_session_runner.py -q: 77 passed in 149.82s; after the final timezone-bound check, the event-loop/completed-bar subset passed 4 tests.",
+        "python -m pytest tests/test_forward_edge_market_events.py -q: 18 passed.",
+        "ruff check on the changed runner, event model and tests passed; mypy on the changed production modules passed."
       ],
       "test_result": "The session runner provides deterministic, durable event-loop orchestration with per-event protective-exit checks and restart replay. PA-03-01 remains PARTIAL until this is the wired path for all strategy, corporate-action, margin and closeout handlers."
     },
@@ -7637,12 +7637,12 @@
         "tests/test_forward_edge_session_runner.py::test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_checks proves inter-bar quote exit evaluation and that partial bars do not invoke the forecast callback."
       ],
       "blocker": "PARTIAL: callback cadence is separated in the runner, but producers do not yet attest bar completion from exchange-aligned interval boundaries and existing forecasting strategies are not universally wired through on_completed_bar.",
-      "last_audited_at_utc": "2026-11-27T00:01:12Z",
-      "commit": "e5248c7d",
+      "last_audited_at_utc": "2026-11-27T00:12:29Z",
+      "commit": "e52b7c05",
       "test_evidence": [
-        "python -m pytest tests/test_forward_edge_session_runner.py -q at the event-loop/cadence commit: 76 passed in 189.98s.",
-        "After aligning the completion marker to the existing intent contract, python -m pytest tests/test_forward_edge_session_runner.py -k event_loop -q: 3 passed, 73 deselected.",
-        "ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py: passed; mypy src/financial_brain/forward_edge/session_runner.py: passed."
+        "python -m pytest tests/test_forward_edge_session_runner.py -q: 77 passed in 149.82s; after the final timezone-bound check, the event-loop/completed-bar subset passed 4 tests.",
+        "python -m pytest tests/test_forward_edge_market_events.py -q: 18 passed.",
+        "ruff check on the changed runner, event model and tests passed; mypy on the changed production modules passed."
       ],
       "test_result": "Completed-bar forecasting and continuous protective-exit checks are distinct and tested. PA-03-02 remains PARTIAL pending trusted exchange-aligned bar-completion production and universal strategy-adapter wiring."
     },
@@ -7675,16 +7675,18 @@
         "src/financial_brain/features/etf_bars.py::aggregate_session_bars now emits only interval buckets whose end is no later than both as_of and the sourced exchange close; bars are anchored to calendar session open. Shortened final session intervals are omitted.",
         "src/financial_brain/forecasting/index_market.py::build_15m_bars requires all 15 exact exchange-aligned minutes and availability by cutoff. src/financial_brain/features/bars.py requires the exact minute count for 5/15/30-minute resampling, aligned to 09:15-compatible epoch boundaries.",
         "tests/test_etf_bars.py and tests/test_forecasting_index_market.py: 12 passed, including a forming candle and shortened final hourly bucket; Ruff and targeted mypy pass for ETF bar aggregation.",
-        "Partial: raw Kite minute ingestion does not independently attest that the latest 1-minute candle is final or publish a unified completeness flag; gaps may be absent without a common incident record."
+        "Partial: raw Kite minute ingestion does not independently attest that the latest 1-minute candle is final or publish a unified completeness flag; gaps may be absent without a common incident record.",
+        "src/financial_brain/forward_edge/market_events.py rejects non-boolean complete markers. ForwardSessionRunner.ingest and run_event_loop require explicit 60- or 900-second bar start/end clocks, exact event-time agreement, receipt/availability no earlier than interval end, and alignment to a source-hashed VenueCalendar session open/close before a BAR can be treated as complete. tests/test_forward_edge_session_runner.py rejects a 15-minute candle starting at 10:16 IST when the official 09:15 IST open makes that bucket misaligned; valid 1-minute event-loop bar and invalid marker cases are also covered."
       ],
-      "blocker": "Partial: provider-sourced raw minute completeness and unified missing-minute/session-gap reporting remain open.",
-      "last_audited_at_utc": "2026-11-27T00:00:00Z",
-      "commit": null,
+      "blocker": "PARTIAL: derived ETF/index bar builders already enforce their own completeness; the normalized runner now validates complete-bar clocks against official session bounds. Raw Kite minute ingestion still does not independently attest provider finality or report every missing minute/session gap, and not all bar producers emit the normalized interval evidence.",
+      "last_audited_at_utc": "2026-11-27T00:12:29Z",
+      "commit": "e52b7c05",
       "test_evidence": [
-        "python -m pytest tests/test_etf_bars.py tests/test_forecasting_index_market.py -q: 12 passed.",
-        "Ruff and targeted mypy pass for ETF bar aggregation."
+        "python -m pytest tests/test_forward_edge_session_runner.py -q: 77 passed; final completed-bar subset: 4 passed.",
+        "python -m pytest tests/test_forward_edge_market_events.py -q: 18 passed.",
+        "Ruff and targeted mypy pass for changed production modules."
       ],
-      "test_result": "Derived ETF and index bars no longer expose an in-progress candle as complete; raw 1-minute provider ingestion completeness still needs a source-aware gate."
+      "test_result": "The normalized runner rejects malformed completion markers and complete 1-minute/15-minute bars that lack valid interval clocks, arrive before interval end, or fail alignment to official session bounds. PA-03-04 remains PARTIAL pending raw-feed finality attestation, unified gap reporting, and adoption by all producers."
     },
     {
       "id": "PA-03-05",
@@ -20123,7 +20125,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T00:01:12Z",
+    "as_of_utc": "2026-11-27T00:12:29Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21204,7 +21206,7 @@
       "tests/test_research_outcome_freeze.py",
       "tests/test_research_search_space_reconciliation.py"
     ],
-    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring."
+    "evidence_update": "PA-04-03 decision-hash linkage is implemented and verified in the kernel position lifecycle; this requirement remains PARTIAL because cross-domain amend/cancel/expire event integration is still absent. PA-04-03 now propagates frozen entry-decision hashes through the kernel position lifecycle (still partial pending cross-domain amend/cancel/expire). PA-02-15 now has byte-canonical future-mutation checks for feature and intended-order prefixes (still partial pending universal runner adoption). PA-02-13 deterministic fixture/replay and delayed-feed provenance now passes the complete source-label, hash, and replay evidence checks. PA-02-14 now enforces sourced halt/resumption states before simulated fills; the requirement remains partial until official expiry/settlement and cutoff schedules are wired. PA-02-16 now records and enforces DATA_UNUSABLE abstentions in the forward runner; cross-desk adoption remains open. PA-02-12 now has source-hashed instrument/day feed-quality metrics; it remains partial until the runner supplies denominators/option evidence and schedules universal reports. PA-02-10 uncovered and fixed an ex-dividend adjustment using ex-date instead of prior close; strategy-wide return-semantics and historical-action validation remains partial. PA-02-11 is externally blocked because original H056/H068 data and label histories are absent; prior verdicts remain untouched. PA-03-01 now has deterministic durable event-loop orchestration with protective-exit checks on every event and restart replay; it remains PARTIAL pending wiring all strategy, corporate-action, margin and closeout handlers. PA-03-01 now has deterministic durable lifecycle orchestration with per-event exit checks and restart replay, still partial pending universal subsystem wiring. PA-03-02 now separates completed-bar forecast callbacks from continuous exit evaluation, still partial pending trusted exchange-aligned bar completion and universal strategy wiring. PA-03-04 now also has normalized 1-minute/15-minute interval validation against source-hashed exchange-session bounds; raw-provider finality and universal producer adoption remain partial."
   },
   "counts_by_status": {
     "COMPLETE": 107,
