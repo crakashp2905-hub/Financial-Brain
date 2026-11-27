@@ -10824,12 +10824,21 @@
     {
       "id": "PA-13-08",
       "text": "Automatically abstain on known unusable exchange states, unlicensed data, missing underlying, invalid option contract, stale quotes and uncertain open exposure.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forward_edge/session_runner.py rejects Kite events without exactly one effective purpose-scoped PAPER_SIMULATION permission, enforces frozen instrument universe and venue/session date, checks source availability and uses reconciled accounting/unresolved-order state before risk-increasing paper intents.",
+        "Before paper fills, the runner checks event quote age at decision and simulated execution time, requires a two-sided executable quote with positive depth, applies effective-dated status/expiry/tick/lot/freeze/session instrument rules, and rejects unknown or incomplete accounting exposure.",
+        "src/financial_brain/forward_edge/market_data.py rejects non-trading exchange status/circuit/phase quotes; data_gate.py checks entitlement and quote eligibility; options_risk.py validates nonempty underlying, option identity/type, expiry, lot, quote age and visible size.",
+        "The standalone option-leg validator is not connected to the canonical runner option-intent path, and InstrumentRuleBook lacks an authoritative required underlying/type/strike mapping; missing option underlying cannot yet be proven to abstain across every option adapter."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T09:02:02Z",
+      "commit": "89a9dbfb",
+      "test_evidence": [
+        "Focused tests/test_forward_edge_session_runner.py permission, stale-feed, exposure-reservation and quote-age cases: 6 passed, 87 deselected.",
+        "tests/test_forward_edge_options_risk.py, tests/test_forward_edge_instrument_rules.py and tests/test_forward_edge_data_gate.py: 29 passed."
+      ]
     },
     {
       "id": "PA-13-09",
@@ -20999,7 +21008,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T08:59:19Z",
+    "as_of_utc": "2026-11-27T09:02:02Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21624,6 +21633,7 @@
       "PA-13-05",
       "PA-13-06",
       "PA-13-07",
+      "PA-13-08",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22047,13 +22057,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1045,
+    "audited_count": 1046,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 906,
-      "UNASSESSED": 333
+      "PARTIAL": 907,
+      "UNASSESSED": 332
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22202,7 +22212,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 906,
-    "UNASSESSED": 333
+    "PARTIAL": 907,
+    "UNASSESSED": 332
   }
 }
