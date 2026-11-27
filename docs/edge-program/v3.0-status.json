@@ -10561,12 +10561,15 @@
     {
       "id": "PA-12-07",
       "text": "Investigate high-cost avoid-filters separately from equity alpha and from operational risk filters; report if excluding names changes turnover and fees more than returns.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "brain/07-Research and docs/trials/ledger.jsonl preserve preregistered avoid-filter studies and their failure outcomes; src/financial_brain/evaluation/anomalies.py contains a separate avoid-filter analysis path",
+        "The existing results do not reconcile excluded-name counts, turnover, fees and returns against separate equity-alpha and operational-risk filters as requested"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "73f7c532"
     },
     {
       "id": "PA-12-08",
@@ -10581,12 +10584,16 @@
     {
       "id": "PA-12-09",
       "text": "Explicitly handle disclosure coverage gaps and missing older history; do not backfill derived news sentiment with modern sources and claim point-in-time availability.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/data_contracts.py documents differing source histories, including 2019+ results, 2026-07 insider history, 2021-09 shareholding history and observation-date-only FRED revisions",
+        "src/financial_brain/evaluation/news_model.py filters announcements using published_at and after-close availability",
+        "Disclosure coverage is not yet unified into a completeness mask for every event/fundamental/news source, and no global guard prevents derived modern sentiment backfill from being mislabeled as historical point-in-time evidence"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "5e3ed72c"
     },
     {
       "id": "PA-12-10",
@@ -21514,6 +21521,8 @@
       "PA-12-04",
       "PA-12-05",
       "PA-12-06",
+      "PA-12-07",
+      "PA-12-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21937,13 +21946,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1028,
+    "audited_count": 1030,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 891,
-      "UNASSESSED": 350
+      "PARTIAL": 893,
+      "UNASSESSED": 348
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22092,7 +22101,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 891,
-    "UNASSESSED": 350
+    "PARTIAL": 893,
+    "UNASSESSED": 348
   }
 }
