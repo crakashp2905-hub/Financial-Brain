@@ -10943,11 +10943,14 @@
     {
       "id": "PA-13-16",
       "text": "Maintain multiple distinct risk declarations: forecast uncertainty, execution uncertainty, liquidity risk, market gap risk and operational position-state uncertainty.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Separate partial risk components exist: src/financial_brain/risk/evidence_aware_sizing.py covers forecast/calibration uncertainty; src/financial_brain/risk/scenario_loss.py and forward_edge/options_portfolio_stress.py cover market-gap/option scenario loss; OMS quote-depth and cost modules model execution/liquidity constraints; session runner risk records and persistent kill switch represent operational/reconciliation uncertainty.",
+        "No canonical typed risk-declaration record was found that keeps forecast, execution, liquidity, gap and operational position-state uncertainty distinct for every decision, with source/evidence and downstream report linkage. Components are not required by the paper-intent gate."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
+      "last_audited_at_utc": "2026-11-27T12:30:00Z",
       "commit": null
     },
     {
@@ -21671,6 +21674,7 @@
       "PA-13-13",
       "PA-13-14",
       "PA-13-15",
+      "PA-13-16",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22094,13 +22098,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1053,
+    "audited_count": 1054,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 914,
-      "UNASSESSED": 325
+      "PARTIAL": 915,
+      "UNASSESSED": 324
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22249,7 +22253,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 914,
-    "UNASSESSED": 325
+    "PARTIAL": 915,
+    "UNASSESSED": 324
   }
 }
