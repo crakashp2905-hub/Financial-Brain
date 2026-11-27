@@ -360,7 +360,7 @@ class ForwardSessionRunner:
         """Accept an explicit component heartbeat; missing producers remain degraded in records()."""
         try:
             self.state_store.state(session_id)
-        except Exception as exc:
+        except (OrderJournalError, ValueError) as exc:
             raise ForwardSessionRunnerError("heartbeat requires a known forward session") from exc
         now = occurred_at or capture_local_time(self.clock, label="component heartbeat time")
         try:
@@ -934,7 +934,7 @@ class ForwardSessionRunner:
                                     "provenance": self.provenance})
                 counts["persisted"] += 1
                 persisted_events.append((event, ingested_at))
-        except Exception as exc:
+        except (OrderJournalError, ValueError) as exc:
             self._con.execute("ROLLBACK TO ingest_batch")
             self._con.execute("RELEASE ingest_batch")
             self._con.rollback()
@@ -1326,6 +1326,11 @@ class ForwardSessionRunner:
                 order_events.extend(
                     event | {"session_id": session_id, "paper_order_id": paper_order_id}
                     for event in self.order_journal.replay(journal_order_id))
+            elif journal_order_id.startswith(f"oco:{prefix}"):
+                group_id = journal_order_id[len("oco:"):]
+                order_events.extend(
+                    event | {"session_id": session_id, "paper_order_id": f"oco:{group_id[len(prefix):]}"}
+                    for event in self.order_journal.replay(journal_order_id))
         result = {"events": events, "decisions": decisions, "lifecycle": lifecycle,
                   "intents": intents, "execution_receipts": receipts, "session_reports": reports,
                   "order_events": order_events,
@@ -1501,6 +1506,60 @@ class ForwardSessionRunner:
             accounting={"source": "PAPER_EXECUTION_RECEIPT", "receipt_sha256": receipt_sha256,
                         "resolution_actor": reconciled_by, "physical_order_submitted": False})
         self._con.commit()
+
+    def arm_paper_oco(self, *, session_id: str, group_id: str, stop_order_id: str,
+                      target_order_id: str, occurred_at: datetime, evidence_id: str) -> Any:
+        """Arm a durable OCO pair for this session's existing stop and target orders."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("OCO can be armed only in an OPEN paper session")
+        from financial_brain.execution.oms.oco import arm_oco
+
+        scoped_group = f"{session_id}::{group_id}"
+        try:
+            result = arm_oco(
+                self.order_journal, group_id=scoped_group,
+                stop_order_id=f"{session_id}::{stop_order_id}",
+                target_order_id=f"{session_id}::{target_order_id}",
+                occurred_at=occurred_at, evidence_id=evidence_id,
+            )
+        except Exception as exc:
+            raise ForwardSessionRunnerError(f"paper OCO arm failed: {exc}") from exc
+        if result.event != "REPLAY":
+            self._append_audit("paper_oco", session_id, result.event_id, occurred_at,
+                               {"event": result.event, "group_id": scoped_group,
+                                "stop_order_id": stop_order_id, "target_order_id": target_order_id,
+                                "evidence_id": evidence_id})
+            self._con.commit()
+        return result
+
+    def resolve_paper_oco_fill(self, *, session_id: str, group_id: str,
+                               triggered_order_id: str, fill_event_id: str,
+                               occurred_at: datetime, reconciliation_evidence_id: str) -> Any:
+        """Request sibling cancellation or confirm the late-fill race from journal state."""
+        if self.state_store.state(session_id) is not SessionState.OPEN:
+            raise ForwardSessionRunnerError("OCO fill resolution requires an OPEN paper session")
+        from financial_brain.execution.oms.oco import resolve_oco_fill
+
+        scoped_group = f"{session_id}::{group_id}"
+        try:
+            result = resolve_oco_fill(
+                self.order_journal, group_id=scoped_group,
+                triggered_order_id=f"{session_id}::{triggered_order_id}",
+                fill_event_id=fill_event_id, occurred_at=occurred_at,
+                reconciliation_evidence_id=reconciliation_evidence_id,
+            )
+        except Exception as exc:
+            raise ForwardSessionRunnerError(f"paper OCO fill resolution failed: {exc}") from exc
+        if result.event != "REPLAY":
+            self._append_audit("paper_oco", session_id, result.event_id, occurred_at,
+                               {"event": result.event, "group_id": scoped_group,
+                                "triggered_order_id": triggered_order_id,
+                                "fill_event_id": fill_event_id,
+                                "sibling_state": result.sibling_state,
+                                "warning": result.warning,
+                                "reconciliation_evidence_id": reconciliation_evidence_id})
+            self._con.commit()
+        return result
 
     def source_event(self, session_id: str, event_id: str) -> tuple[MarketEvent, str]:
         """Return one normalized journal event and its immutable row digest."""
@@ -2583,18 +2642,17 @@ class ForwardSessionRunner:
     def _require_resolved_paper_intents(self, session_id: str) -> None:
         intents = self._con.execute("SELECT order_id FROM paper_intents WHERE session_id=?",
                                     [session_id]).fetchall()
-        if not intents:
-            return
-        receipts = self._con.execute("SELECT order_id FROM paper_execution_receipts WHERE session_id=?",
-                                     [session_id]).fetchall()
-        if {row[0] for row in intents} != {row[0] for row in receipts}:
-            raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
-        rows = self._con.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
-                                 [f"paper:{session_id}:%"]).fetchall()
-        expected = {f"paper:{session_id}:{row[0]}" for row in intents}
-        actual = {key for key, state in rows if state == "DISPATCHED"}
-        if expected != actual:
-            raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
+        if intents:
+            receipts = self._con.execute("SELECT order_id FROM paper_execution_receipts WHERE session_id=?",
+                                         [session_id]).fetchall()
+            if {row[0] for row in intents} != {row[0] for row in receipts}:
+                raise ForwardSessionRunnerError("cannot close complete with missing paper execution receipts")
+            rows = self._con.execute("SELECT key, state FROM outbox WHERE key LIKE ?",
+                                     [f"paper:{session_id}:%"]).fetchall()
+            expected = {f"paper:{session_id}:{row[0]}" for row in intents}
+            actual = {key for key, state in rows if state == "DISPATCHED"}
+            if expected != actual:
+                raise ForwardSessionRunnerError("cannot close complete with pending or UNKNOWN paper outbox state")
         prefix = f"{session_id}::"
         unresolved = [history[-1]["state"] for order_ref in self.order_journal.order_ids()
                       if order_ref.startswith(prefix)
@@ -2605,6 +2663,14 @@ class ForwardSessionRunner:
         if unresolved:
             raise ForwardSessionRunnerError(
                 f"cannot close complete with unresolved paper order states: {sorted(set(unresolved))}")
+        oco_prefix = f"oco:{session_id}::"
+        unresolved_oco = [history[-1]["state"] for order_ref in self.order_journal.order_ids()
+                          if order_ref.startswith(oco_prefix)
+                          for history in (self.order_journal.replay(order_ref),)
+                          if history and history[-1]["state"] in {"CANCEL_PENDING", "UNKNOWN"}]
+        if unresolved_oco:
+            raise ForwardSessionRunnerError(
+                f"cannot close complete with unresolved paper OCO groups: {sorted(set(unresolved_oco))}")
 
     def _append_record(self, kind: str, session_id: str, record: dict[str, Any]) -> None:
         event_id = f"{session_id}:{kind}"

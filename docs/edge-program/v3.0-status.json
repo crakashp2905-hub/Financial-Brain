@@ -8148,18 +8148,20 @@
       "status": "PARTIAL",
       "evidence": [
         "`src/financial_brain/execution/oms/oco.py` binds two existing durable child orders under one SHA-256-evidenced group; arming and transitions are hash-chained and deterministic.",
-        "After an exact durable child fill event, the OCO state records a cancel request and explicitly keeps the sibling live until its durable cancel confirmation.",
-        "A late sibling fill is surfaced as `SIBLING_FILL_RACE`/`UNKNOWN` and requires exposure reconciliation; a retry with the same triggering event is idempotent.",
-        "`tests/test_oms_oco.py` exercises cancel-pending semantics, late sibling fill, replay idempotency, conflicting group definitions and missing exact fill evidence. Existing forward order journal tests remain green."
+        "After an exact durable child fill event, the OCO state records a cancel request and keeps the sibling live until its durable cancel confirmation. A late sibling fill is surfaced as `SIBLING_FILL_RACE`/`UNKNOWN` and requires exposure reconciliation; identical retries are idempotent.",
+        "`ForwardSessionRunner.arm_paper_oco` and `resolve_paper_oco_fill` now scope OCO group and child IDs to the session, persist transitions in the shared order journal, and write append-only audit receipts. Session records include OCO lifecycle events; complete close refuses cancel-pending or unknown OCO groups.",
+        "`tests/test_oms_oco.py tests/test_forward_edge_session_runner.py -k oco`: 6 passed, covering cancel request/confirmation, late sibling fill, idempotent replay, and close refusal while unresolved. Ruff and targeted mypy passed for the runner."
       ],
-      "blocker": "OCO is not yet attached to all legacy/forward runner position books or connected to an actual broker cancellation dispatcher; position quantity splitting and post-race flatten policy require account-specific risk integration.",
-      "last_audited_at_utc": "2026-11-25T04:53:26Z",
-      "commit": "PENDING",
+      "blocker": "Partial: the runner now persists OCO events and blocks close on unresolved groups, but entry-to-exit OCO pairing is still caller-driven rather than universal; actual broker cancel dispatch is out of scope for paper mode, and post-race position reconciliation/flatten policy still needs account-risk integration.",
+      "last_audited_at_utc": "2026-11-27T02:25:18Z",
+      "commit": "pending",
       "test_evidence": [
-        "`python -m pytest tests/test_oms_oco.py tests/test_forward_edge_order_journal.py -q`: 11 passed.",
-        "Ruff and mypy passed for the OCO module and tests."
+        "`python -m pytest tests/test_oms_oco.py tests/test_forward_edge_session_runner.py -q -k oco`: 6 passed.",
+        "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 91 passed after runner OCO integration and close guard.",
+        "`ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py`: passed.",
+        "`mypy src/financial_brain/forward_edge/session_runner.py`: passed."
       ],
-      "test_result": "Replay-safe OCO state machine added over the durable order journal; a sibling is not presumed canceled, and a late second fill is explicitly escalated. PA-04-10 remains PARTIAL pending runner/accounting/broker-dispatch integration."
+      "test_result": "OCO engine and runner integration: 6 OCO-focused tests passed and full forward runner suite passed (91 tests); Ruff and targeted mypy passed. PA-04-10 remains PARTIAL pending universal position pairing and post-race accounting reconciliation."
     },
     {
       "id": "PA-04-11",

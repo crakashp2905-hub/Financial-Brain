@@ -1081,6 +1081,77 @@ def test_frozen_account_reservation_gates_paper_intent_and_retains_filled_exposu
     runner.close()
 
 
+def test_runner_persists_oco_lifecycle_and_blocks_close_until_sibling_cancel(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner, "oco-session")
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-session", order_id=order_id, state="CREATED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(
+            session_id="oco-session", order_id=order_id, state="SUBMITTED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+    armed = runner.arm_paper_oco(
+        session_id="oco-session", group_id="position-1", stop_order_id="stop",
+        target_order_id="target", occurred_at=NOW, evidence_id="a" * 64)
+    assert armed.event == "ARMED"
+    assert runner.arm_paper_oco(
+        session_id="oco-session", group_id="position-1", stop_order_id="stop",
+        target_order_id="target", occurred_at=NOW, evidence_id="a" * 64).event == "REPLAY"
+
+    runner._append_paper_order_event(
+        session_id="oco-session", order_id="stop", state="FILLED", occurred_at=NOW + timedelta(seconds=1),
+        quantity=2, filled_quantity=2, price="99.00", fill_evidence_id="b" * 64)
+    requested = runner.resolve_paper_oco_fill(
+        session_id="oco-session", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-session::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=2), reconciliation_evidence_id="c" * 64)
+    assert requested.event == "CANCEL_REQUESTED"
+    with pytest.raises(ForwardSessionRunnerError, match="unresolved paper order states"):
+        runner.close_session("oco-session", complete=True, now=NOW + timedelta(seconds=3))
+
+    runner._append_paper_order_event(
+        session_id="oco-session", order_id="target", state="CANCELED", occurred_at=NOW + timedelta(seconds=3),
+        quantity=2, filled_quantity=0)
+    confirmed = runner.resolve_paper_oco_fill(
+        session_id="oco-session", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-session::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=4), reconciliation_evidence_id="c" * 64)
+    assert confirmed.event == "CANCEL_CONFIRMED"
+    assert len([row for row in runner.records("oco-session")["order_events"]
+                if row["paper_order_id"] == "oco:position-1"]) == 5
+    report = runner.close_session("oco-session", complete=True, now=NOW + timedelta(seconds=5))
+    assert report["status"] == "CLOSED"
+    runner.close()
+
+
+def test_runner_paper_oco_late_sibling_fill_race_blocks_session_close(tmp_path):
+    runner = make_runner(tmp_path)
+    opened(runner, "oco-race")
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="CREATED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="SUBMITTED", occurred_at=NOW,
+            quantity=2, filled_quantity=0)
+    runner.arm_paper_oco(session_id="oco-race", group_id="position-1", stop_order_id="stop",
+                         target_order_id="target", occurred_at=NOW, evidence_id="a" * 64)
+    for order_id in ("stop", "target"):
+        runner._append_paper_order_event(
+            session_id="oco-race", order_id=order_id, state="FILLED",
+            occurred_at=NOW + timedelta(seconds=1), quantity=2, filled_quantity=2,
+            price="99.00", fill_evidence_id=("b" if order_id == "stop" else "d") * 64)
+    result = runner.resolve_paper_oco_fill(
+        session_id="oco-race", group_id="position-1", triggered_order_id="stop",
+        fill_event_id=runner.order_journal.replay("oco-race::stop")[-1]["event_id"],
+        occurred_at=NOW + timedelta(seconds=2), reconciliation_evidence_id="c" * 64)
+    assert result.event == "SIBLING_FILL_RACE"
+    with pytest.raises(ForwardSessionRunnerError, match="unresolved paper OCO groups"):
+        runner.close_session("oco-race", complete=True, now=NOW + timedelta(seconds=3))
+    runner.close()
+
+
 def test_frozen_account_reservation_rejects_over_budget_without_paper_order(tmp_path):
     policy = {"version": "paper-risk-v1", "frozen_at": (NOW - timedelta(seconds=1)).isoformat(),
               "source_sha256": "b" * 64,

@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "6f9a3d10bdf3b82cbd8a3ed298a30a438270a904f6b4e6c9c5800d3d145e7eb7",
-  "audit_export_sha256": "f0e7c4c379871f1b8cf2d6402b5145354ccfbf425fbbff862e4e9a37393e7bfd",
+  "status_ledger_sha256": "2d723de4aaac7261ce4f7cc0acd05a27024fb18790b6fb1b7b9e4035252bf822",
+  "audit_export_sha256": "7512f720e6e186d7312f864aca4b747a33e9cdb35cde3425608d88250898544c",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1477,17 +1477,19 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement mutually exclusive stop/target cancellation and replay-safe OCO simulation; handle race conditions when a fill arrives after cancellation."
           },
-          "commit": "PENDING",
-          "blocker": "OCO is not yet attached to all legacy/forward runner position books or connected to an actual broker cancellation dispatcher; position quantity splitting and post-race flatten policy require account-specific risk integration.",
+          "commit": "pending",
+          "blocker": "Partial: the runner now persists OCO events and blocks close on unresolved groups, but entry-to-exit OCO pairing is still caller-driven rather than universal; actual broker cancel dispatch is out of scope for paper mode, and post-race position reconciliation/flatten policy still needs account-risk integration.",
           "evidence": [
             "`src/financial_brain/execution/oms/oco.py` binds two existing durable child orders under one SHA-256-evidenced group; arming and transitions are hash-chained and deterministic.",
-            "After an exact durable child fill event, the OCO state records a cancel request and explicitly keeps the sibling live until its durable cancel confirmation.",
-            "A late sibling fill is surfaced as `SIBLING_FILL_RACE`/`UNKNOWN` and requires exposure reconciliation; a retry with the same triggering event is idempotent.",
-            "`tests/test_oms_oco.py` exercises cancel-pending semantics, late sibling fill, replay idempotency, conflicting group definitions and missing exact fill evidence. Existing forward order journal tests remain green."
+            "After an exact durable child fill event, the OCO state records a cancel request and keeps the sibling live until its durable cancel confirmation. A late sibling fill is surfaced as `SIBLING_FILL_RACE`/`UNKNOWN` and requires exposure reconciliation; identical retries are idempotent.",
+            "`ForwardSessionRunner.arm_paper_oco` and `resolve_paper_oco_fill` now scope OCO group and child IDs to the session, persist transitions in the shared order journal, and write append-only audit receipts. Session records include OCO lifecycle events; complete close refuses cancel-pending or unknown OCO groups.",
+            "`tests/test_oms_oco.py tests/test_forward_edge_session_runner.py -k oco`: 6 passed, covering cancel request/confirmation, late sibling fill, idempotent replay, and close refusal while unresolved. Ruff and targeted mypy passed for the runner."
           ],
           "tests": [
-            "`python -m pytest tests/test_oms_oco.py tests/test_forward_edge_order_journal.py -q`: 11 passed.",
-            "Ruff and mypy passed for the OCO module and tests."
+            "`python -m pytest tests/test_oms_oco.py tests/test_forward_edge_session_runner.py -q -k oco`: 6 passed.",
+            "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 91 passed after runner OCO integration and close guard.",
+            "`ruff check src/financial_brain/forward_edge/session_runner.py tests/test_forward_edge_session_runner.py`: passed.",
+            "`mypy src/financial_brain/forward_edge/session_runner.py`: passed."
           ]
         },
         {
@@ -3236,5 +3238,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "47b1b1023e73ba4140cf08b0a2f1b52712f0e9f00dda3584bf538ad63f50761b"
+  "report_sha256": "6717577d5aff1e9588619536bf6d933e0db671ea43f86018836e2c48d2e6d992"
 }
