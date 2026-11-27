@@ -230,6 +230,68 @@ def test_partial_fills_cannot_cumulatively_exceed_order_reservation(
     assert reservations.verify("paper-account")["mismatched"] == 0
 
 
+def test_partial_option_fills_cannot_cumulatively_exceed_buying_power(tmp_path):
+    path = tmp_path / "partial-option-reservation.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(CASH=Decimal("10000"), OPTION_BUYING_POWER=Decimal("8000"),
+                **{"INSTRUMENT_QUANTITY:NSE:ABC": Decimal("2")}),
+        _request("option-order", CASH="10000", OPTION_BUYING_POWER="8000",
+                 **{"INSTRUMENT_QUANTITY:NSE:ABC": "2"}),
+    )
+
+    def option_fill(event_id):
+        return PortfolioEvent(
+            account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+            source_event_id=event_id, source_sha256="c" * 64, event_kind=EventKind.FILL,
+            occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.OPTION,
+            instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="1",
+            price="100", multiplier="50",
+        )
+
+    reservations.record_paper_fill(reservation_id="option-order", fill=option_fill("option-1"))
+    with pytest.raises(ReservationError, match="options-buying-power"):
+        reservations.record_paper_fill(reservation_id="option-order", fill=option_fill("option-2"))
+
+    snapshot = CanonicalPortfolioLedger(path).snapshot("paper-account")
+    assert snapshot["positions"][0]["quantity"] == Decimal("1")
+    assert reservations.verify("paper-account")["mismatched"] == 0
+
+
+def test_partial_sell_fills_cannot_cumulatively_exceed_sellable_inventory(tmp_path):
+    path = tmp_path / "partial-sell-reservation.sqlite"
+    reservations = DurableReservationLedger(path)
+    canonical = CanonicalPortfolioLedger(path)
+    canonical.append(PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="OPENING_BOOK",
+        source_event_id="opening-buy", source_sha256="d" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:00:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="5", price="90",
+    ))
+    reservations.reserve(
+        _policy(**{"INSTRUMENT_QUANTITY:NSE:ABC": Decimal("10"),
+                   "SELLABLE_INVENTORY:NSE:ABC": Decimal("5")}),
+        _request("sell-order", **{"INSTRUMENT_QUANTITY:NSE:ABC": "10",
+                                  "SELLABLE_INVENTORY:NSE:ABC": "5"}),
+    )
+
+    def sell_fill(event_id):
+        return PortfolioEvent(
+            account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+            source_event_id=event_id, source_sha256="e" * 64, event_kind=EventKind.FILL,
+            occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+            instrument_id="NSE:ABC", side="SELL", position_action="SELL", quantity="3", price="100",
+        )
+
+    reservations.record_paper_fill(reservation_id="sell-order", fill=sell_fill("sell-1"))
+    with pytest.raises(ReservationError, match="sellable-inventory"):
+        reservations.record_paper_fill(reservation_id="sell-order", fill=sell_fill("sell-2"))
+
+    snapshot = canonical.snapshot("paper-account")
+    assert snapshot["positions"][0]["quantity"] == Decimal("2")
+    assert reservations.verify("paper-account")["mismatched"] == 0
+
+
 def test_paper_fill_and_source_bound_fee_commit_atomically_and_replay_once(tmp_path):
     path = tmp_path / "shared-fee-book.sqlite"
     reservations = DurableReservationLedger(path)
