@@ -10,8 +10,9 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from math import isfinite
+from zoneinfo import ZoneInfo
 
 from financial_brain.forecasting.index_market import (
     BAR,
@@ -263,6 +264,54 @@ def same_time_of_day_baseline(
     return predict
 
 
+def session_regimes(decision_at: datetime, *, macro_event: bool | None,
+                    expiry_day: bool | None, option_spread_fraction: float | None,
+                    normal_spread_limit: float | None) -> tuple[str, ...]:
+    """Tag session, event, expiry and option-spread regimes from point-in-time inputs.
+
+    Spread limits must be calibrated from prior/training observations. ``None`` inputs
+    remain explicit unknowns rather than silently being treated as normal conditions.
+    """
+    if decision_at.tzinfo is None or decision_at.utcoffset() is None:
+        raise SeriesError("regime decision timestamp must be timezone-aware")
+    local = decision_at.astimezone(ZoneInfo("Asia/Kolkata"))
+    current = local.time()
+    if current < time(9, 15) or current >= time(15, 30):
+        raise SeriesError("regime decision timestamp must be inside the regular NSE session")
+    if macro_event not in (True, False, None) or expiry_day not in (True, False, None):
+        raise SeriesError("event and expiry inputs must be true, false or unknown")
+    if (option_spread_fraction is None) != (normal_spread_limit is None):
+        raise SeriesError("option spread and its prior-data limit must be supplied together")
+    if option_spread_fraction is not None:
+        if (not isfinite(option_spread_fraction) or option_spread_fraction < 0
+                or normal_spread_limit is None or not isfinite(normal_spread_limit)
+                or normal_spread_limit <= 0):
+            raise SeriesError("spread fraction must be nonnegative and its limit positive")
+
+    regimes = []
+    if current < time(9, 30):
+        regimes.append("FIRST_15_MINUTES")
+    elif time(11, 30) <= current < time(13, 30):
+        regimes.append("MIDDAY")
+    elif current >= time(15, 0):
+        regimes.append("PRE_CLOSE")
+    else:
+        regimes.append("REGULAR_SESSION")
+    regimes.append("MACRO_EVENT" if macro_event else
+                    "MACRO_EVENT_UNKNOWN" if macro_event is None else "NO_KNOWN_MACRO_EVENT")
+    regimes.append("EXPIRY_DAY" if expiry_day else
+                    "EXPIRY_STATUS_UNKNOWN" if expiry_day is None else "NON_EXPIRY_DAY")
+    if option_spread_fraction is None:
+        regimes.append("OPTION_SPREAD_UNKNOWN")
+    elif normal_spread_limit is None:  # guarded by the paired-input validation above
+        raise SeriesError("option spread limit is missing")
+    elif option_spread_fraction > normal_spread_limit:
+        regimes.append("UNUSUAL_OPTION_SPREAD")
+    else:
+        regimes.append("NORMAL_OPTION_SPREAD")
+    return tuple(regimes)
+
+
 def check_probabilities(probabilities: dict[str, float], tolerance: float = 1e-9) -> None:
     if (set(probabilities) != {"UP", "DOWN", "FLAT"}
             or any(not isfinite(value) or value < 0 or value > 1 for value in probabilities.values())
@@ -284,5 +333,6 @@ __all__ = [
     "summarize_forward_distributions",
     "cost_aware_flat_band", "noise_threshold", "previous_bar_baseline", "random_walk_baseline",
     "same_time_of_day_baseline", "volatility_aware_no_direction_baseline",
+    "session_regimes",
     "purged_splits", "purged_time_splits",
 ]

@@ -21,6 +21,7 @@ from financial_brain.forecasting.index_15m import (
     purged_time_splits,
     random_walk_baseline,
     same_time_of_day_baseline,
+    session_regimes,
     volatility_aware_no_direction_baseline,
 )
 from financial_brain.forecasting.index_market import IndexMinute, build_15m_bars, forward_return
@@ -150,3 +151,21 @@ def test_index_forecast_hard_baselines_are_explicit_and_training_only():
     assert climatology("midday") == {"UP": 0.25, "DOWN": 0.25, "FLAT": 0.5}
     with pytest.raises(SeriesError, match="training labels"):
         same_time_of_day_baseline({}, [])
+
+
+def test_session_regimes_cover_time_events_expiry_and_spread_unknowns():
+    first_open = OPEN
+    assert "FIRST_15_MINUTES" in session_regimes(
+        first_open, macro_event=True, expiry_day=True,
+        option_spread_fraction=.05, normal_spread_limit=.02)
+    assert "MIDDAY" in session_regimes(
+        OPEN.replace(hour=12), macro_event=False, expiry_day=False,
+        option_spread_fraction=.01, normal_spread_limit=.02)
+    close = OPEN.replace(hour=15, minute=10)
+    regimes = session_regimes(close, macro_event=None, expiry_day=None,
+                              option_spread_fraction=None, normal_spread_limit=None)
+    assert {"PRE_CLOSE", "MACRO_EVENT_UNKNOWN", "EXPIRY_STATUS_UNKNOWN",
+            "OPTION_SPREAD_UNKNOWN"}.issubset(regimes)
+    with pytest.raises(SeriesError, match="session"):
+        session_regimes(OPEN.replace(hour=8), macro_event=False, expiry_day=False,
+                        option_spread_fraction=None, normal_spread_limit=None)
