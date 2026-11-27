@@ -101,6 +101,26 @@ def test_registry_hash_chain_survives_reopen_and_detects_tampering(tmp_path):
     registry.close()
 
 
+def test_no_replicable_alpha_verdict_is_terminal_and_requires_new_basis(tmp_path):
+    registry = FamilyResearchRegistry(tmp_path / "families.sqlite")
+    attempt_at = T0 + timedelta(days=1)
+    access_at = attempt_at + timedelta(hours=1)
+    registry.register_attempt(family_id="events", attempt_id="search-1",
+                              preregistration_sha256="a" * 64,
+                              registered_at=attempt_at, first_outcome_access_at=access_at)
+    registry.record_result(family_id="events", attempt_id="search-1",
+                           verdict="NO_REPLICABLE_ALPHA_FOUND", result_sha256="b" * 64,
+                           recorded_at=access_at + timedelta(days=1))
+    assert registry.state("events") == "CLOSED_FAILED"
+    with pytest.raises(FamilyRegistryError, match="closed family requires"):
+        registry.register_attempt(family_id="events", attempt_id="search-2",
+                                  preregistration_sha256="c" * 64,
+                                  registered_at=T0 + timedelta(days=5),
+                                  first_outcome_access_at=T0 + timedelta(days=6))
+    assert registry.audit()["integrity"] == "VALID"
+    registry.close()
+
+
 def test_concurrent_registration_cannot_create_two_active_attempts(tmp_path):
     path = tmp_path / "concurrent.sqlite"
     setup = FamilyResearchRegistry(path)

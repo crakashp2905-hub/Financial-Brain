@@ -98,7 +98,9 @@ class FamilyResearchRegistry:
         if event_type == "ATTEMPT_REGISTERED":
             return "ATTEMPT_ACTIVE"
         body = json.loads(rows[-1][2])
-        return "CLOSED_FAILED" if body.get("verdict") in {"FAIL", "NO_EDGE"} else "CLOSED_REVIEWED"
+        return "CLOSED_FAILED" if body.get("verdict") in {
+            "FAIL", "NO_EDGE", "NO_REPLICABLE_ALPHA_FOUND"
+        } else "CLOSED_REVIEWED"
 
     def _append(self, event_id: str, family_id: str, event_type: str, body: dict) -> str:
         previous_row = self._con.execute("SELECT event_hash FROM family_events ORDER BY sequence DESC LIMIT 1").fetchone()
@@ -168,7 +170,8 @@ class FamilyResearchRegistry:
 
     def record_result(self, *, family_id: str, attempt_id: str, verdict: str,
                       result_sha256: str, recorded_at: datetime) -> str:
-        if verdict not in {"FAIL", "NO_EDGE", "INCONCLUSIVE", "POSITIVE_REVIEW_REQUIRED"}:
+        if verdict not in {"FAIL", "NO_EDGE", "NO_REPLICABLE_ALPHA_FOUND",
+                           "INCONCLUSIVE", "POSITIVE_REVIEW_REQUIRED"}:
             raise FamilyRegistryError("unsupported terminal research verdict")
         _sha(result_sha256, "result")
         at = _utc(recorded_at, "result timestamp")
