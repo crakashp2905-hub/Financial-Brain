@@ -9876,12 +9876,18 @@
     {
       "id": "PA-09-12",
       "text": "Score all forecasts including abstentions, missed intervals and days with feed outages; a missing outcome does not automatically become success.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_coverage.py reconciles the complete expected interval inventory with ISSUED, ABSTAINED, MISSED and absent issue records plus realized outcomes.",
+        "Issued and abstained probabilistic forecasts with resolved outcomes are scored; issued-only actionability is reported separately. Misses and no-issue intervals remain in denominators, with known missed/no-issue outcomes and unresolved outcomes explicitly counted.",
+        "tests/test_forecasting_index_coverage.py covers issue/abstention/miss/no-issue, resolved and unresolved outcomes, coverage denominators and malformed inventory; 39 focused forecasting-index tests passed, with Ruff and mypy passing.",
+        "No session runner or resolved-outcome pipeline currently feeds the scorer automatically; daily real-session coverage and forecast scoring remain unverified."
+      ],
+      "blocker": "Wire the expected session schedule, journal, and outcome resolver together in the forward runner; publish daily reports showing full coverage, abstentions, misses, unresolved outcomes and score metrics.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e28b41c2",
+      "test_result": "39 focused forecasting-index tests passed; Ruff and mypy passed for coverage score module."
     },
     {
       "id": "PA-09-13",
@@ -21243,6 +21249,7 @@
       "PA-09-09",
       "PA-09-10",
       "PA-09-11",
+      "PA-09-12",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21666,13 +21673,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 982,
+    "audited_count": 983,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 852,
-      "UNASSESSED": 396
+      "PARTIAL": 853,
+      "UNASSESSED": 395
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21821,7 +21828,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 852,
-    "UNASSESSED": 396
+    "PARTIAL": 853,
+    "UNASSESSED": 395
   }
 }
