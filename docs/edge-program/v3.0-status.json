@@ -10574,12 +10574,17 @@
     {
       "id": "PA-12-08",
       "text": "Build event-to-trade simulator accounting for detection delay, source publication, broker arrival, exchange opening and unavailable after-hours execution.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/evaluation/event_to_trade.py carries publication, detection and broker-arrival clocks into exchange-session quote matching; it waits through closed-market arrivals and rejects stale/late quotes",
+        "BUY/SELL consumes ask/bid depth once, reports partial/no-fill, estimated costs and both latency intervals",
+        "tests/test_event_to_trade.py: intraday chronology, next-session after-hours arrival, depth limits, stale quote and no-after-close-fill behavior; 4 passed",
+        "Simulator is not integrated with event-response cohorts or the production paper-book ledger and has no prospective feed run"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "bb06d3e6"
     },
     {
       "id": "PA-12-09",
@@ -21522,6 +21527,7 @@
       "PA-12-05",
       "PA-12-06",
       "PA-12-07",
+      "PA-12-08",
       "PA-12-09",
       "SL-00-01",
       "SL-00-02",
@@ -21946,13 +21952,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1030,
+    "audited_count": 1031,
     "status_counts": {
       "COMPLETE": 114,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 893,
-      "UNASSESSED": 348
+      "PARTIAL": 894,
+      "UNASSESSED": 347
     },
     "verified_complete_count": 114,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22101,7 +22107,7 @@
     "COMPLETE": 114,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 893,
-    "UNASSESSED": 348
+    "PARTIAL": 894,
+    "UNASSESSED": 347
   }
 }
