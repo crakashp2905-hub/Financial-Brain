@@ -8031,7 +8031,7 @@
       ],
       "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions with atomic reservation-to-position transfer, and source current margin/settlement/options buying-power/inventory limits before the acceptance criteria can be complete.",
       "last_audited_at_utc": "2026-11-27T03:23:57Z",
-      "commit": "pending",
+      "commit": "151fde9e",
       "test_evidence": [
         "`python -m pytest tests/test_forward_edge_session_runner.py -q`: 92 passed.",
         "`python -m pytest tests/test_portfolio_durable_reservations.py -q`: 7 passed; includes atomic fill replay and rollback on invalid position transition.",
