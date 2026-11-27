@@ -9908,12 +9908,18 @@
     {
       "id": "PA-09-14",
       "text": "Integrate an explicit market-regime/uncertainty abstention policy with diagnostics to prevent a classifier from recommending every 15 minutes.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_abstention.py calibrates the broadest confidence cutoff meeting a Wilson upper error-rate bound on a manifest-identified calibration set, then applies it chronologically.",
+        "The sequential policy abstains for critical event/expiry/spread regimes, low calibrated confidence, flat predictions and a per-session action cap; it emits confidence, margin, normalized entropy, reason, action count and policy SHA diagnostics.",
+        "tests/test_forecasting_index_abstention.py covers calibration, uncertain forecasts, blocked regimes, action-rate cap, diagnostics and fail-closed behavior; 44 focused forecasting-index tests passed, Ruff and mypy passed.",
+        "No real, disjoint calibration split or index session runner is wired to the policy, so calibration quality and actual recommendation rate have not been validated."
+      ],
+      "blocker": "Use a frozen, real calibration cohort and connect the policy to the forecast/journal pipeline; measure abstention coverage and error by regime on later untouched sessions.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "05cd812e",
+      "test_result": "44 focused forecasting-index tests passed; Ruff and mypy passed for abstention module."
     },
     {
       "id": "PA-09-15",
@@ -21257,6 +21263,7 @@
       "PA-09-11",
       "PA-09-12",
       "PA-09-13",
+      "PA-09-14",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21680,13 +21687,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 984,
+    "audited_count": 985,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 854,
-      "UNASSESSED": 394
+      "PARTIAL": 855,
+      "UNASSESSED": 393
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21835,7 +21842,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 854,
-    "UNASSESSED": 394
+    "PARTIAL": 855,
+    "UNASSESSED": 393
   }
 }
