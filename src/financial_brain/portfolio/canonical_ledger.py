@@ -325,10 +325,22 @@ class CanonicalPortfolioLedger:
             "ORDER BY json_extract(event_json, '$.occurred_at'), sequence", (account_id,)
         ).fetchall()
         positions: dict[tuple[str, str, str], tuple[Decimal, str, Decimal]] = {}
+        broker_trade_ids: set[str] = set()
         for stored in rows:
             row = json.loads(stored[0])
             if row.get("event_kind") not in {EventKind.FILL.value, EventKind.EXPIRY_SETTLEMENT.value}:
                 continue
+            metadata = row.get("metadata")
+            if row.get("evidence_class") == "BROKER_EXECUTION_RECEIPT":
+                trade_id = metadata.get("broker_trade_id") if isinstance(metadata, dict) else None
+                order_id = metadata.get("broker_order_id") if isinstance(metadata, dict) else None
+                if (row.get("event_kind") != EventKind.FILL.value or not isinstance(trade_id, str)
+                        or not trade_id.strip() or trade_id != row.get("source_event_id")
+                        or not isinstance(order_id, str) or not order_id.strip()):
+                    raise CanonicalLedgerError("broker execution fill needs matching trade and order receipt IDs")
+                if trade_id in broker_trade_ids:
+                    raise CanonicalLedgerError("broker trade receipt ID is duplicated within the account")
+                broker_trade_ids.add(trade_id)
             key = (str(row["asset_class"]), str(row["instrument_id"]), str(row["sleeve_id"]))
             quantity = Decimal(str(row["quantity"]))
             multiplier = Decimal(str(row["multiplier"]))

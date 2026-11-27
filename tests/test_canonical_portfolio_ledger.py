@@ -236,6 +236,31 @@ def test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inven
     assert overcovered.event_count() == 0
 
 
+def test_same_broker_trade_receipt_cannot_be_booked_under_two_source_systems(tmp_path):
+    ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
+    receipt = PortfolioEvent(
+        account_id="paper-main", sleeve_id="intraday", source_system="BROKER_EXECUTION_RECEIPT",
+        source_event_id="broker-trade-777", source_sha256=HASH, event_kind=EventKind.FILL,
+        occurred_at="2026-11-20T10:00:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+        evidence_class="BROKER_EXECUTION_RECEIPT",
+        metadata={"broker_order_id": "order-777", "broker_trade_id": "broker-trade-777"},
+    )
+    assert ledger.append(receipt)
+    duplicated_ingest = PortfolioEvent(
+        account_id="paper-main", sleeve_id="intraday", source_system="SECOND_BROKER_IMPORT",
+        source_event_id="broker-trade-777", source_sha256=HASH, event_kind=EventKind.FILL,
+        occurred_at="2026-11-20T10:00:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:INFY", side="BUY", quantity="1", price="100",
+        evidence_class="BROKER_EXECUTION_RECEIPT",
+        metadata={"broker_order_id": "order-777", "broker_trade_id": "broker-trade-777"},
+    )
+
+    with pytest.raises(CanonicalLedgerError, match="broker trade receipt ID is duplicated"):
+        ledger.append(duplicated_ingest)
+    assert ledger.event_count() == 1
+
+
 def test_as_of_cutoff_is_timezone_normalized_and_does_not_rewrite_marks(tmp_path):
     ledger = CanonicalPortfolioLedger(tmp_path / "portfolio.sqlite")
     ledger.append(event("buy", EventKind.FILL, asset_class=AssetClass.EQUITY, instrument_id="NSE:INFY",

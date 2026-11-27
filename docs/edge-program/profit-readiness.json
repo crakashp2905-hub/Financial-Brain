@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T01:48:29+00:00",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "a4d1fe6ab5011d94b63431efcd452debcec71d137e1593a05adaa27b92137b09",
-  "audit_export_sha256": "c0bbe5fffc9b32eb8e3b5944649b3d5dffdb76d1f0dba91ee3cb2bb0f7e9a1db",
+  "status_ledger_sha256": "c7cbfaef9cbb34a1d9652fd27358ffac9dcfa676dfe74e551dabed4d63cc2cb9",
+  "audit_export_sha256": "41cad31110a8ebc49d44331f4d5cfdbd8207fe3efd82ef91097f75d08e48db99",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -1374,13 +1374,15 @@
             "forward_edge.options_risk now rejects unsupported non-vertical structures and inverted two-leg debit verticals: calls require long lower strike, puts require long higher strike. Correctly oriented call and put debit verticals are covered by focused tests.",
             "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation.",
             "`CanonicalPortfolioLedger.append` and `import_events` now run state-dependent explicit position-action validation against the candidate account history inside the write transaction; invalid SELL/SELL_SHORT/BUY_TO_COVER transitions and currency/multiplier changes roll back before persistence. Legacy rows without `position_action` retain documented v1 compatibility semantics.",
-            "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`."
+            "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`.",
+            "Broker receipt fills are also validated before commit: `BROKER_EXECUTION_RECEIPT` requires matching non-empty `broker_trade_id`/source event ID and non-empty `broker_order_id`; account-scoped duplicate broker trade IDs are rejected even if re-ingested under a different source-system label. `tests/test_canonical_portfolio_ledger.py::test_same_broker_trade_receipt_cannot_be_booked_under_two_source_systems` covers rollback."
           ],
           "tests": [
             "Focused options, daily-budget, canonical-portfolio-ledger, and exit-protection suites: 33 passed.",
             "OMS state-machine suite: 21 passed.",
             "Ruff and targeted mypy passed for the options risk module and tests.",
-            "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed."
+            "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed.",
+            "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-broker-id`: 26 passed; targeted Ruff and mypy passed."
           ]
         },
         {
@@ -3248,5 +3250,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "6bed6fbb2670f317fd59a990ec3e096c122f3fe095e906e11f85b8eb0c0c375f"
+  "report_sha256": "343cf6ea0ac950f8a9051d1fb0ac9520387aab49d24158030ce34eab86257ff3"
 }

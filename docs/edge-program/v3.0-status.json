@@ -8046,7 +8046,8 @@
         "forward_edge.options_risk now rejects unsupported non-vertical structures and inverted two-leg debit verticals: calls require long lower strike, puts require long higher strike. Correctly oriented call and put debit verticals are covered by focused tests.",
         "The safety controls remain spread across subsystems; no shared transaction validates all order, lot, reservation, option and inventory transitions before every mutation.",
         "`CanonicalPortfolioLedger.append` and `import_events` now run state-dependent explicit position-action validation against the candidate account history inside the write transaction; invalid SELL/SELL_SHORT/BUY_TO_COVER transitions and currency/multiplier changes roll back before persistence. Legacy rows without `position_action` retain documented v1 compatibility semantics.",
-        "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`."
+        "Regression tests prove invalid single-event append persists no row and invalid multi-event batches persist none: `tests/test_canonical_portfolio_ledger.py::test_explicit_long_close_cannot_open_or_cross_into_a_short` and `::test_short_actions_cannot_cross_existing_long_or_cover_more_than_short_inventory`.",
+        "Broker receipt fills are also validated before commit: `BROKER_EXECUTION_RECEIPT` requires matching non-empty `broker_trade_id`/source event ID and non-empty `broker_order_id`; account-scoped duplicate broker trade IDs are rejected even if re-ingested under a different source-system label. `tests/test_canonical_portfolio_ledger.py::test_same_broker_trade_receipt_cannot_be_booked_under_two_source_systems` covers rollback."
       ],
       "blocker": "Partial: option debit vertical orientation and several local transition invariants now fail closed, but no common mutation boundary covers every desk/OMS/book path. Cross-path oversell/ghost-lot checks and atomic reservation-to-position reconciliation remain incomplete.",
       "last_audited_at_utc": "2026-11-27T00:00:00Z",
@@ -8055,9 +8056,10 @@
         "Focused options, daily-budget, canonical-portfolio-ledger, and exit-protection suites: 33 passed.",
         "OMS state-machine suite: 21 passed.",
         "Ruff and targeted mypy passed for the options risk module and tests.",
-        "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed."
+        "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-transition-final`: 25 passed; targeted Ruff and mypy passed.",
+        "`python -m pytest tests/test_canonical_portfolio_ledger.py tests/test_portfolio_aggregate_risk_budget.py tests/test_legacy_exit_adjudication.py -q --basetemp=.pytest-pa0405-broker-id`: 26 passed; targeted Ruff and mypy passed."
       ],
-      "test_result": "Explicit canonical position transitions are validated before the append/import transaction commits; invalid single events and multi-event batches roll back atomically. Twenty-five affected ledger/risk/adjudication tests, Ruff and targeted mypy pass. PA-04-05 remains partial because legacy compatibility and cross-system reservations, option legs and OMS/book routes still need one mutation boundary."
+      "test_result": "Explicit canonical position transitions validate before commit; duplicate broker trade IDs across source-system labels, invalid single-event transitions and invalid multi-event batches roll back atomically. Twenty-six affected tests, Ruff and targeted mypy pass. Cross-system reservation, option-leg, and universal OMS/book mutation integration remain open."
     },
     {
       "id": "PA-04-06",
