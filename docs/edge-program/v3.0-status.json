@@ -10341,12 +10341,17 @@
     {
       "id": "PA-11-08",
       "text": "Implement E1/E2 scaling as two distinct conditional intents linked to one maximum account risk, protecting against correlated doubling of loss.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/risk_scaled_intents.py: E1/E2 have distinct identity and conditions; E2 requires filled E1; unit risk includes caller-provided stop and costs",
+        "Combined reserved worst-case risk is capped by max_account_risk; zero-quantity E1 disables E2",
+        "tests/test_risk_scaled_intents.py: shared cap, E2 dependency and invalid-input behavior",
+        "Not yet integrated into all portfolio paper books or tested against actual fill/partial-fill OMS lifecycle"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "2da2883d"
     },
     {
       "id": "PA-11-09",
@@ -21417,6 +21422,7 @@
       "PA-11-04",
       "PA-11-05",
       "PA-11-06",
+      "PA-11-08",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21840,13 +21846,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1011,
+    "audited_count": 1012,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 880,
-      "UNASSESSED": 367
+      "PARTIAL": 881,
+      "UNASSESSED": 366
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21995,7 +22001,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 880,
-    "UNASSESSED": 367
+    "PARTIAL": 881,
+    "UNASSESSED": 366
   }
 }
