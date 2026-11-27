@@ -9892,12 +9892,18 @@
     {
       "id": "PA-09-13",
       "text": "Enforce a predictive-skill gate independent of option P&L; a direction-only model cannot be promoted on apparent option profits from optimistic fills.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_skill.py pairs candidate and baseline predictions by exact interval and actual label, then compares Brier skill using a session-cluster bootstrap confidence interval.",
+        "The fail-closed gate requires minimum sample/session counts and positive skill over every supplied hard baseline; incomparable cohorts fail. Its interface accepts prediction rows only and explicitly records options_pnl_considered=false and predictive-research-only scope.",
+        "tests/test_forecasting_index_skill.py verifies a skill pass, identical and incomplete comparator failures, and invalid-probability rejection; 42 focused forecasting-index tests passed across this tranche; Ruff and mypy pass for the gate module.",
+        "No real candidate/baseline forecast cohorts are connected, so the gate has not established skill and cannot yet be used for empirical promotion decisions."
+      ],
+      "blocker": "Connect immutable forecast-issued and baseline cohorts from real chronological evaluation; run the gate over sufficient held-out sessions and retain rejection unless every required baseline comparison passes.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "c78f61ce",
+      "test_result": "42 focused forecasting-index tests passed; Ruff and mypy passed for skill gate module."
     },
     {
       "id": "PA-09-14",
@@ -21250,6 +21256,7 @@
       "PA-09-10",
       "PA-09-11",
       "PA-09-12",
+      "PA-09-13",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21673,13 +21680,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 983,
+    "audited_count": 984,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 853,
-      "UNASSESSED": 395
+      "PARTIAL": 854,
+      "UNASSESSED": 394
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21828,7 +21835,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 853,
-    "UNASSESSED": 395
+    "PARTIAL": 854,
+    "UNASSESSED": 394
   }
 }
