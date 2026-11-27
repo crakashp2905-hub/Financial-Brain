@@ -1,21 +1,21 @@
 {
   "schema": "fb.profit_readiness.v1",
   "generated_by": "scripts/profit_readiness.py",
-  "as_of_utc": "2026-11-27T04:45:58Z",
+  "as_of_utc": "2026-11-27T04:49:22Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "1344369434edce9f9bc078c55ef2c52a06dcad80c6c740d9e57e4aa9a5d0e7b1",
-  "audit_export_sha256": "a5f3ccd5e2d7cf3de7b7c72990233101d1114032b3061df939f09464ce050685",
+  "status_ledger_sha256": "3e2d148a81d75c6d1f5a40bdd759bc06ea7143d4883f32f853f4de818448d204",
+  "audit_export_sha256": "b5e4d299fdd9d3a35931267764979c23ba247dafbda04ae32b959ff3aaef5461",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 811,
-    "UNASSESSED": 437
+    "PARTIAL": 815,
+    "UNASSESSED": 433
   },
-  "assessed_count": 941,
-  "unassessed_count": 437,
+  "assessed_count": 945,
+  "unassessed_count": 433,
   "verified_complete_count": 107,
   "gate_policy": {
     "green": "all source checklist items in the gate are COMPLETE",
@@ -2041,8 +2041,8 @@
         "COMPLETE": 6,
         "EXTERNAL_BLOCKED": 0,
         "NOT_STARTED": 0,
-        "PARTIAL": 31,
-        "UNASSESSED": 30
+        "PARTIAL": 35,
+        "UNASSESSED": 26
       },
       "evidence": [
         {
@@ -3091,55 +3091,84 @@
         },
         {
           "item_id": "PA-08-04",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1091,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Separate diversification by independent risk driver from diversification by ticker, desk name or nominal signal count."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "3f0893be",
+          "blocker": "Partial: eigenvalue effective-bet and factor concentration measures distinguish independent drivers from ticker count, but factor lineage/classification is caller-supplied and these diagnostics are not enforced across all account sleeves.",
+          "evidence": [
+            "`risk.decompose.effective_bets` uses the covariance eigenvalue spectrum to estimate independent risk directions; the module separately reports effective positions and explicitly warns that ticker-level risk-share concentration is not the same as independent bets.",
+            "`portfolio.cross_desk_risk.analyze_cross_desk_risk` reports position concentration and separately aggregates caller-supplied factor exposures/concentration under current and stressed covariance/scenario views. Regression fixtures distinguish correlated positions and separate factor exposures.",
+            "Factor definitions/loadings and position-to-driver mappings are caller-supplied, not independently generated from point-in-time Indian-market classifications; this is analysis support, not a universal diversification gate."
+          ],
+          "tests": [
+            "`python -m pytest --basetemp .pytest-pa0804-05-06 tests/test_cross_desk_risk.py tests/test_forward_edge_strategy_attribution.py tests/test_phase4_risk.py tests/test_phase4_services.py tests/test_phase4_commands.py tests/test_phase5_marginal_health.py tests/test_portfolio_next_capital.py -q`: 68 passed.",
+            "Tests cover covariance-spectrum effective bets, identical-vs-independent positions, current/shocked risk, factor exposure, and required aligned factor inputs; factor source provenance is not established.",
+            "Ruff and targeted mypy passed for covariance decomposition and cross-desk risk modules."
+          ]
         },
         {
           "item_id": "PA-08-05",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1092,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Estimate each strategy's marginal contribution to portfolio expected return, variance, CVaR and expected drawdown under stress."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "aa5c7a57",
+          "blocker": "Partial: volatility contributions, scenario portfolio tail losses and per-strategy P&L/risk attribution exist separately, but a per-strategy incremental expected-return, CVaR and expected-drawdown-under-stress decomposition is missing.",
+          "evidence": [
+            "`portfolio.cross_desk_risk` computes current/shocked portfolio volatility, Euler marginal variance contributions, historical scenario VaR/expected shortfall, and factor exposure from caller-supplied covariance, scenarios and loadings.",
+            "`forward_edge.strategy_attribution.attribute_strategy_pnl` reconciles strategy net P&L components to ledger values and emits covariance-based Euler risk contributions by strategy.",
+            "The current components do not estimate each strategy’s marginal expected return, CVaR contribution or expected drawdown under stress as one aligned report; scenario inputs and source lineage remain caller-owned."
+          ],
+          "tests": [
+            "The same 68-test focused run covers cross-desk current/stressed risk and strategy attribution; `tests/test_forward_edge_strategy_attribution.py` verifies ledger net-P&L reconciliation, risk contribution identity and invalid-input refusal.",
+            "Ruff and targeted mypy passed for the attribution and cross-desk risk modules."
+          ]
         },
         {
           "item_id": "PA-08-06",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1093,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Build cash-versus-trade optimization: if no candidate survives conservative uncertainty and cost, 100% cash is a valid outcome."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "6670e408",
+          "blocker": "Partial: cash is a valid optimizer outcome and is now directly regression-tested, but conservative uncertainty/cost eligibility and production portfolio/OMS integration are not enforced by this allocator.",
+          "evidence": [
+            "`portfolio.next_capital.allocate` compares expected net return against an explicit horizon-matched cash return and penalizes added portfolio variance; steps with non-positive marginal value remain in cash.",
+            "Commit 6670e408 adds a dedicated regression verifying a candidate below the cash hurdle yields zero investment, the full INR 100,000 budget retained in cash, zero expected excess versus cash, and a human-readable keep-cash explanation.",
+            "The allocator consumes point expected-net estimates without a calibrated uncertainty lower bound or direct cost-evidence contract and has no production OMS/order integration; the test is deterministic software evidence, not a profitability result."
+          ],
+          "tests": [
+            "`python -m pytest --basetemp .pytest-pa0806 tests/test_portfolio_next_capital.py -q`: 1 passed.",
+            "Ruff and targeted mypy passed for `portfolio.next_capital`; the broader related portfolio-risk group passed 68 tests."
+          ]
         },
         {
           "item_id": "PA-08-07",
-          "status": "UNASSESSED",
+          "status": "PARTIAL",
           "source": {
             "line": 1094,
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Implement turnover and rebalancing budgets to prevent monthly momentum excess from being consumed by execution costs."
           },
-          "commit": null,
-          "blocker": null,
-          "evidence": [],
-          "tests": []
+          "commit": "04282783",
+          "blocker": "Partial: cost-aware bands and scheduled cadence exist, but a binding turnover budget, monthly momentum integration, and prospective evidence that turnover costs stay below incremental alpha are absent.",
+          "evidence": [
+            "`portfolio.rebalance.plan_rebalance` applies explicit no-trade bands, fixed and proportional charges, horizon-matched expected improvement, and rejects a rebalance when estimated costs consume its benefit; it reports proposed turnover and total cost.",
+            "`portfolio.cadence` provides frozen, ordered rebalance schedules and avoids fabricating trades or exit events.",
+            "No hard turnover/rebalance budget caps total proposed notional, and monthly momentum paper-book scheduling/turnover attribution is not wired to this planner."
+          ],
+          "tests": [
+            "`python -m pytest --basetemp .pytest-pa0807 tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 7 passed.",
+            "Ruff and targeted mypy passed for rebalance and cadence modules."
+          ]
         },
         {
           "item_id": "PA-08-08",
@@ -3295,5 +3324,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "a915c2b43afe881c954ebf9484ca4fd0630e8c1f9458e17093a27d4ed1283f67"
+  "report_sha256": "ae1aaedc0ce5a0bfb8d9c4c4ec802723a56b32255fa0a542b1752ec80d48827e"
 }

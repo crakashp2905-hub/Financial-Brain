@@ -9275,42 +9275,79 @@
     {
       "id": "PA-08-04",
       "text": "Separate diversification by independent risk driver from diversification by ticker, desk name or nominal signal count.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`risk.decompose.effective_bets` uses the covariance eigenvalue spectrum to estimate independent risk directions; the module separately reports effective positions and explicitly warns that ticker-level risk-share concentration is not the same as independent bets.",
+        "`portfolio.cross_desk_risk.analyze_cross_desk_risk` reports position concentration and separately aggregates caller-supplied factor exposures/concentration under current and stressed covariance/scenario views. Regression fixtures distinguish correlated positions and separate factor exposures.",
+        "Factor definitions/loadings and position-to-driver mappings are caller-supplied, not independently generated from point-in-time Indian-market classifications; this is analysis support, not a universal diversification gate."
+      ],
+      "blocker": "Partial: eigenvalue effective-bet and factor concentration measures distinguish independent drivers from ticker count, but factor lineage/classification is caller-supplied and these diagnostics are not enforced across all account sleeves.",
+      "last_audited_at_utc": "2026-11-27T04:49:22Z",
+      "commit": "3f0893be",
+      "test_evidence": [
+        "`python -m pytest --basetemp .pytest-pa0804-05-06 tests/test_cross_desk_risk.py tests/test_forward_edge_strategy_attribution.py tests/test_phase4_risk.py tests/test_phase4_services.py tests/test_phase4_commands.py tests/test_phase5_marginal_health.py tests/test_portfolio_next_capital.py -q`: 68 passed.",
+        "Tests cover covariance-spectrum effective bets, identical-vs-independent positions, current/shocked risk, factor exposure, and required aligned factor inputs; factor source provenance is not established.",
+        "Ruff and targeted mypy passed for covariance decomposition and cross-desk risk modules."
+      ],
+      "test_result": "Risk decomposition and cross-desk factor/concentration tests passed within a 68-test focused run; Ruff and targeted mypy passed. PA-08-04 remains PARTIAL pending point-in-time sourced factor mappings and account-wide enforcement."
     },
     {
       "id": "PA-08-05",
       "text": "Estimate each strategy's marginal contribution to portfolio expected return, variance, CVaR and expected drawdown under stress.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.cross_desk_risk` computes current/shocked portfolio volatility, Euler marginal variance contributions, historical scenario VaR/expected shortfall, and factor exposure from caller-supplied covariance, scenarios and loadings.",
+        "`forward_edge.strategy_attribution.attribute_strategy_pnl` reconciles strategy net P&L components to ledger values and emits covariance-based Euler risk contributions by strategy.",
+        "The current components do not estimate each strategy’s marginal expected return, CVaR contribution or expected drawdown under stress as one aligned report; scenario inputs and source lineage remain caller-owned."
+      ],
+      "blocker": "Partial: volatility contributions, scenario portfolio tail losses and per-strategy P&L/risk attribution exist separately, but a per-strategy incremental expected-return, CVaR and expected-drawdown-under-stress decomposition is missing.",
+      "last_audited_at_utc": "2026-11-27T04:49:22Z",
+      "commit": "aa5c7a57",
+      "test_evidence": [
+        "The same 68-test focused run covers cross-desk current/stressed risk and strategy attribution; `tests/test_forward_edge_strategy_attribution.py` verifies ledger net-P&L reconciliation, risk contribution identity and invalid-input refusal.",
+        "Ruff and targeted mypy passed for the attribution and cross-desk risk modules."
+      ],
+      "test_result": "Existing current/stress portfolio risk and strategy P&L attribution passed in a 68-test focused run. PA-08-05 remains PARTIAL because expected-return, CVaR and expected-drawdown marginal decompositions are not jointly produced per strategy."
     },
     {
       "id": "PA-08-06",
       "text": "Build cash-versus-trade optimization: if no candidate survives conservative uncertainty and cost, 100% cash is a valid outcome.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.next_capital.allocate` compares expected net return against an explicit horizon-matched cash return and penalizes added portfolio variance; steps with non-positive marginal value remain in cash.",
+        "Commit 6670e408 adds a dedicated regression verifying a candidate below the cash hurdle yields zero investment, the full INR 100,000 budget retained in cash, zero expected excess versus cash, and a human-readable keep-cash explanation.",
+        "The allocator consumes point expected-net estimates without a calibrated uncertainty lower bound or direct cost-evidence contract and has no production OMS/order integration; the test is deterministic software evidence, not a profitability result."
+      ],
+      "blocker": "Partial: cash is a valid optimizer outcome and is now directly regression-tested, but conservative uncertainty/cost eligibility and production portfolio/OMS integration are not enforced by this allocator.",
+      "last_audited_at_utc": "2026-11-27T04:49:22Z",
+      "commit": "6670e408",
+      "test_evidence": [
+        "`python -m pytest --basetemp .pytest-pa0806 tests/test_portfolio_next_capital.py -q`: 1 passed.",
+        "Ruff and targeted mypy passed for `portfolio.next_capital`; the broader related portfolio-risk group passed 68 tests."
+      ],
+      "test_result": "The no-candidate-clears-cash-hurdle path retains 100% of the budget as cash; its focused regression passes. PA-08-06 remains PARTIAL pending uncertainty-aware inputs and production integration."
     },
     {
       "id": "PA-08-07",
       "text": "Implement turnover and rebalancing budgets to prevent monthly momentum excess from being consumed by execution costs.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "`portfolio.rebalance.plan_rebalance` applies explicit no-trade bands, fixed and proportional charges, horizon-matched expected improvement, and rejects a rebalance when estimated costs consume its benefit; it reports proposed turnover and total cost.",
+        "`portfolio.cadence` provides frozen, ordered rebalance schedules and avoids fabricating trades or exit events.",
+        "No hard turnover/rebalance budget caps total proposed notional, and monthly momentum paper-book scheduling/turnover attribution is not wired to this planner."
+      ],
+      "blocker": "Partial: cost-aware bands and scheduled cadence exist, but a binding turnover budget, monthly momentum integration, and prospective evidence that turnover costs stay below incremental alpha are absent.",
+      "last_audited_at_utc": "2026-11-27T04:49:22Z",
+      "commit": "04282783",
+      "test_evidence": [
+        "`python -m pytest --basetemp .pytest-pa0807 tests/test_portfolio_rebalance.py tests/test_portfolio_cadence.py -q`: 7 passed.",
+        "Ruff and targeted mypy passed for rebalance and cadence modules."
+      ],
+      "test_result": "Cost-aware rebalance planning and frozen cadence tests: 7 passed; Ruff and targeted mypy passed. PA-08-07 remains PARTIAL pending binding turnover caps and strategy-book integration."
     },
     {
       "id": "PA-08-08",
@@ -20310,7 +20347,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T04:45:58Z",
+    "as_of_utc": "2026-11-27T04:49:22Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -20831,6 +20868,10 @@
       "PA-08-01",
       "PA-08-02",
       "PA-08-03",
+      "PA-08-04",
+      "PA-08-05",
+      "PA-08-06",
+      "PA-08-07",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21254,13 +21295,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 941,
+    "audited_count": 945,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 811,
-      "UNASSESSED": 437
+      "PARTIAL": 815,
+      "UNASSESSED": 433
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21409,7 +21450,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 811,
-    "UNASSESSED": 437
+    "PARTIAL": 815,
+    "UNASSESSED": 433
   }
 }
