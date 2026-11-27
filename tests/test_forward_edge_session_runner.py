@@ -148,12 +148,12 @@ def test_event_loop_separates_completed_bar_forecasts_from_continuous_exit_check
         "completed-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=2),
         NOW + timedelta(seconds=2), NOW + timedelta(seconds=2),
         {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
-         "is_complete": True}, "FIXTURE")
+         "complete": True}, "FIXTURE")
     partial = MarketEvent(
         "partial-bar", EventKind.BAR, "NSE", "NSE:INFY", NOW + timedelta(seconds=1),
         NOW + timedelta(seconds=1), NOW + timedelta(seconds=1),
         {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 10,
-         "is_complete": False}, "FIXTURE")
+         "complete": False}, "FIXTURE")
     quote = make_event(event_id="interbar-quote", available_at=NOW, event_time=NOW)
     market_events = []
     forecast_bars = []

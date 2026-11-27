@@ -355,7 +355,7 @@ class ForwardSessionRunner:
 
         Events are made available one at a time in canonical time/sequence/ID order. The
         market handler runs after durable ingestion; the optional completed-bar handler
-        runs only for BAR events explicitly tagged ``is_complete=True``; the protective-
+        runs only for BAR events explicitly tagged ``complete=True``; the protective-
         exit evaluator then runs for every event (including quotes between strategy bars).
         A durable consumer
         cursor advances only after both handlers return. Handlers must therefore use
@@ -386,9 +386,9 @@ class ForwardSessionRunner:
         event_batch = list(events)
         if any(not isinstance(event, MarketEvent) for event in event_batch):
             raise ForwardSessionRunnerError("event loop accepts normalized MarketEvent values only")
-        if any(event.kind is EventKind.BAR and "is_complete" in event.payload and
-               type(event.payload["is_complete"]) is not bool for event in event_batch):
-            raise ForwardSessionRunnerError("bar is_complete marker must be boolean")
+        if any(event.kind is EventKind.BAR and "complete" in event.payload and
+               type(event.payload["complete"]) is not bool for event in event_batch):
+            raise ForwardSessionRunnerError("bar complete marker must be boolean")
         ordered = sorted(event_batch, key=lambda event: (
             event.available_at, event.event_time,
             -1 if event.sequence is None else event.sequence, event.event_id))
@@ -410,7 +410,7 @@ class ForwardSessionRunner:
                 on_market_event(event, self)
                 # Forecast cadence is bar-driven and separate from the position monitor.
                 # Missing or false completion evidence fails closed for forecasting.
-                if (event.kind is EventKind.BAR and event.payload.get("is_complete") is True and
+                if (event.kind is EventKind.BAR and event.payload.get("complete") is True and
                         on_completed_bar is not None):
                     on_completed_bar(event, self)
                 # This is deliberately independent of forecast cadence: every source
