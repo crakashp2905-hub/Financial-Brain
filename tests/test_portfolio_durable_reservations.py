@@ -158,6 +158,59 @@ def test_paper_fill_and_reservation_receipt_commit_atomically_and_replay_once(tm
     }
 
 
+def test_paper_fill_and_source_bound_fee_commit_atomically_and_replay_once(tmp_path):
+    path = tmp_path / "shared-fee-book.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(), _request("s::o", CASH="600", **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fill", source_sha256="c" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="5", price="100",
+    )
+    fee = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fees", source_sha256="c" * 64, event_kind=EventKind.FEE,
+        occurred_at="2026-11-25T09:02:00+05:30", cash_delta="-2.50",
+        metadata={"fill_event_id": "s:o:fill"},
+    )
+
+    first = reservations.record_paper_fill(reservation_id="s::o", fill=fill, fee=fee)
+    replay = reservations.record_paper_fill(reservation_id="s::o", fill=fill, fee=fee)
+
+    canonical = CanonicalPortfolioLedger(path)
+    assert replay == first
+    assert canonical.event_count() == 2
+    assert canonical.snapshot("paper-account")["cash"]["INR"] == Decimal("-502.50")
+    assert reservations.verify("paper-account")["mismatched"] == 0
+
+
+def test_paper_fee_must_match_fill_source_and_rolls_back_on_conflict(tmp_path):
+    path = tmp_path / "mismatched-fee-book.sqlite"
+    reservations = DurableReservationLedger(path)
+    reservations.reserve(
+        _policy(), _request("s::o", CASH="600", **{"INSTRUMENT_QUANTITY:NSE:ABC": "10"}))
+    fill = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fill", source_sha256="c" * 64, event_kind=EventKind.FILL,
+        occurred_at="2026-11-25T09:02:00+05:30", asset_class=AssetClass.EQUITY,
+        instrument_id="NSE:ABC", side="BUY", position_action="BUY", quantity="5", price="100",
+    )
+    bad_fee = PortfolioEvent(
+        account_id="paper-account", sleeve_id="intraday", source_system="FORWARD_PAPER",
+        source_event_id="s:o:fees", source_sha256="c" * 64, event_kind=EventKind.FEE,
+        occurred_at="2026-11-25T09:02:00+05:30", cash_delta="-2.50",
+        metadata={"fill_event_id": "different-fill"},
+    )
+
+    with pytest.raises(ReservationError, match="source-bound"):
+        reservations.record_paper_fill(reservation_id="s::o", fill=fill, fee=bad_fee)
+
+    assert CanonicalPortfolioLedger(path).event_count() == 0
+    assert reservations.verify("paper-account")["events"] == 1
+
+
 def test_failed_position_transition_rolls_back_fill_and_binding_receipt(tmp_path):
     path = tmp_path / "atomic-rejection.sqlite"
     reservations = DurableReservationLedger(path)

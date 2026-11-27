@@ -1597,6 +1597,11 @@ def test_forward_cost_schedule_reduces_realized_pnl_and_preserves_negative_net(t
     assert accounting["cash_inr"] == accounting["ledger_cash_inr"]
     assert Decimal(accounting["cash_inr"]) < Decimal("100000") - Decimal("0.70")
     assert all(item["cost_items"][0]["schedule_sha256"] for item in accounting["cost_line_items"])
+    from financial_brain.portfolio.canonical_ledger import CanonicalPortfolioLedger
+    canonical = CanonicalPortfolioLedger(tmp_path / "journal.sqlite").snapshot("ledger-1")
+    assert canonical["cash"]["INR"] == Decimal(accounting["cash_inr"]) - Decimal("100000")
+    assert sum(1 for row in CanonicalPortfolioLedger(tmp_path / "journal.sqlite").events("ledger-1")
+               if row["event_kind"] == "FEE") == 2
     runner.close()
 
 

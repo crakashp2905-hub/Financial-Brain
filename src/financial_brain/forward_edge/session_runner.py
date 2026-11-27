@@ -1579,9 +1579,34 @@ class ForwardSessionRunner:
                           "execution_receipt_sha256": receipt_sha256,
                           "simulation_fidelity": receipt.get("simulation_fidelity")},
             )
+            fee = None
+            if "charges_inr" in receipt:
+                charges = Decimal(str(receipt["charges_inr"]))
+                cost_items = receipt.get("cost_items")
+                if not charges.is_finite() or charges < 0 or not isinstance(cost_items, list) or not cost_items:
+                    raise ForwardSessionRunnerError(
+                        "paper charges require a finite non-negative total and itemized cost evidence")
+                itemized_total = sum(
+                    (Decimal(str(item["total"])) for item in cost_items
+                     if isinstance(item, dict) and "total" in item), Decimal(0))
+                if itemized_total != charges:
+                    raise ForwardSessionRunnerError("paper charge total does not reconcile to cost items")
+                if charges:
+                    fee = PortfolioEvent(
+                        account_id=config.ledger_id, sleeve_id=config.cohort,
+                        source_system="FORWARD_PAPER", source_event_id=f"{session_id}:{order_id}:fees",
+                        source_sha256=receipt_sha256, event_kind=PortfolioEventKind.FEE,
+                        occurred_at=str(receipt["simulated_at"]), currency=currency,
+                        cash_delta=-charges, evidence_class="LOCAL_PAPER",
+                        metadata={"session_id": session_id, "order_id": order_id,
+                                  "fill_event_id": f"{session_id}:{order_id}:fill",
+                                  "execution_receipt_sha256": receipt_sha256,
+                                  "charges_inr": format(charges, "f"), "cost_items": cost_items,
+                                  "cost_fidelity": receipt.get("cost_fidelity")},
+                    )
             reservation_ledger = DurableReservationLedger(self.journal_path)
             reservation_ledger.record_paper_fill(
-                reservation_id=f"{session_id}::{order_id}", fill=fill)
+                reservation_id=f"{session_id}::{order_id}", fill=fill, fee=fee)
         except (KeyError, TypeError, ValueError, InvalidOperation, ReservationError) as exc:
             raise ForwardSessionRunnerError(f"canonical paper fill transfer failed: {exc}") from exc
 

@@ -299,8 +299,9 @@ class DurableReservationLedger:
                                (account_id, reservation_id))
             return ReservationDisposition.RELEASED
 
-    def record_paper_fill(self, *, reservation_id: str, fill: PortfolioEvent) -> str:
-        """Atomically append a canonical paper fill and bind it to its active reservation.
+    def record_paper_fill(self, *, reservation_id: str, fill: PortfolioEvent,
+                          fee: PortfolioEvent | None = None) -> str:
+        """Atomically append a canonical paper fill, its optional fee, and reservation binding.
 
         The reservation remains active after a fill: this records the position transfer
         evidence but does not yet replace order exposure with portfolio-level risk usage.
@@ -310,6 +311,19 @@ class DurableReservationLedger:
         row = fill.normalized()
         if row["event_kind"] != EventKind.FILL.value:
             raise ReservationError("paper position transfer requires a fill event")
+        fee_row = fee.normalized() if fee is not None else None
+        if fee_row is not None:
+            metadata = fee_row.get("metadata")
+            if (fee_row["event_kind"] != EventKind.FEE.value
+                    or fee_row["account_id"] != row["account_id"]
+                    or fee_row["sleeve_id"] != row["sleeve_id"]
+                    or fee_row["source_system"] != row["source_system"]
+                    or fee_row["source_sha256"] != row["source_sha256"]
+                    or fee_row["currency"] != row["currency"]
+                    or fee_row["occurred_at"] != row["occurred_at"]
+                    or not isinstance(metadata, dict)
+                    or metadata.get("fill_event_id") != row["source_event_id"]):
+                raise ReservationError("paper fee must be source-bound to its matching fill")
         account_id = str(row["account_id"])
         if not reservation_id.strip():
             raise ReservationError("reservation ID is required for paper fill transfer")
@@ -326,6 +340,10 @@ class DurableReservationLedger:
             "position_event_id": row["source_event_id"], "position_payload_sha256": payload_sha,
             "occurred_at": row["occurred_at"], "source_sha256": row["source_sha256"],
         }
+        fee_body = json.dumps(fee_row, sort_keys=True, separators=(",", ":"), allow_nan=False) \
+            if fee_row is not None else None
+        fee_payload_sha = hashlib.sha256(fee_body.encode("utf-8")).hexdigest() if fee_body else None
+        position_receipt["fee_payload_sha256"] = fee_payload_sha
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             reservation = connection.execute(
@@ -385,6 +403,22 @@ class DurableReservationLedger:
                     CanonicalPortfolioLedger._validate_position_transitions(connection, account_id)
                 except CanonicalLedgerError as exc:
                     raise ReservationError(f"canonical position transition denied: {exc}") from exc
+            if fee_row is not None and fee_body is not None and fee_payload_sha is not None:
+                existing_fee = connection.execute(
+                    "SELECT payload_sha256 FROM portfolio_events WHERE account_id=? AND source_system=? "
+                    "AND source_event_id=?",
+                    (fee_row["account_id"], fee_row["source_system"], fee_row["source_event_id"]),
+                ).fetchone()
+                if existing_fee is not None and existing_fee["payload_sha256"] != fee_payload_sha:
+                    raise ReservationError("paper fee event ID conflicts with existing canonical fee")
+                if existing_fee is None:
+                    connection.execute(
+                        "INSERT INTO portfolio_events "
+                        "(account_id,sleeve_id,source_system,source_event_id,source_sha256,payload_sha256,event_json) "
+                        "VALUES (?,?,?,?,?,?,?)",
+                        (fee_row["account_id"], fee_row["sleeve_id"], fee_row["source_system"],
+                         fee_row["source_event_id"], fee_row["source_sha256"], fee_payload_sha, fee_body),
+                    )
             if prior_transfer is None:
                 self._append_event(connection, position_receipt)
             return payload_sha
