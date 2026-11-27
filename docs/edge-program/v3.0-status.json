@@ -9700,12 +9700,18 @@
     {
       "id": "PA-09-01",
       "text": "Enumerate available NSE index quote history and actually optionable underlying families by effective date; do not assume every Nifty sub-index has liquid options.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/ingest/options_audit.py reports dated index PRICE coverage by family and dated OPTIDX contract families from the loaded datasets.",
+        "Option family output includes calls, puts, expiry count, traded contracts and open interest; it explicitly labels contract existence separately from liquidity evidence.",
+        "src/financial_brain/ingest/depth_archive.py confirms the live quote archive currently selects NIFTY and BANKNIFTY options only; live selection is not historical effective-date eligibility evidence.",
+        "Local data/lake contains no files and data/fo_history.duckdb is absent, so effective-date coverage and liquidity cannot be verified from this checkout."
+      ],
+      "blocker": "No local NSE index/F&O archive database or lake manifest is available. Populate dated NSE archive and index-close data, then rerun `fb options-audit` to verify actual coverage and inspect liquidity per session.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": null,
+      "test_result": "tests/test_options_audit.py: 3 passed; Ruff and mypy pass for updated audit module."
     },
     {
       "id": "PA-09-02",
@@ -21166,6 +21172,7 @@
       "PA-08-13",
       "PA-08-14",
       "PA-08-15",
+      "PA-09-01",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21589,13 +21596,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 971,
+    "audited_count": 972,
     "status_counts": {
       "COMPLETE": 107,
-      "PARTIAL": 841,
-      "UNASSESSED": 407,
+      "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "EXTERNAL_BLOCKED": 6
+      "PARTIAL": 842,
+      "UNASSESSED": 406
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21742,9 +21749,9 @@
   },
   "counts_by_status": {
     "COMPLETE": 107,
-    "PARTIAL": 841,
-    "UNASSESSED": 407,
+    "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "EXTERNAL_BLOCKED": 6
+    "PARTIAL": 842,
+    "UNASSESSED": 406
   }
 }

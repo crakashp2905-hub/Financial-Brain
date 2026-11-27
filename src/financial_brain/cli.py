@@ -85,7 +85,8 @@ def cmd_options_audit(args) -> int:
     from .ingest.options_audit import report
 
     root = load().data_root
-    print(json.dumps(report(root / "fo_history.duckdb", root / "options_quotes.duckdb"),
+    print(json.dumps(report(root / "fo_history.duckdb", root / "options_quotes.duckdb",
+                            root / "financial_brain.duckdb"),
                      indent=2))
     return 0
 
