@@ -8298,16 +8298,18 @@
         "`forward_edge.order_journal.OrderJournal.audit_state` produces an as-of lifecycle snapshot, verifies per-event hashes, sequence continuity, legal transitions, fill monotonicity and timestamp ordering, and identifies `UNKNOWN`/`TIMED_OUT` orders.",
         "`portfolio.aggregate_risk_budget.evaluate_aggregate_risk_budget` now requires that durable order journal and blocks permission for ambiguous orders or audit errors; the point-in-time audit hash and ambiguous IDs are retained in the signed decision body.",
         "`tests/test_portfolio_aggregate_risk_budget.py::test_ambiguous_order_in_durable_journal_blocks_account_risk` and `::test_corrupt_order_event_hash_fails_closed` verify fail-closed outcomes; `tests/test_forward_edge_order_journal.py::test_order_state_audit_is_point_in_time_and_reports_ambiguous_orders` verifies as-of state and evidence-bound resolution.",
-        "Earlier canonical ledger implementation evidence is in commit `25b88bc7` (SL-22-16 package; currently present in the open PR stack, not yet merged to main)."
+        "Earlier canonical ledger implementation evidence is in commit `25b88bc7` (SL-22-16 package; currently present in the open PR stack, not yet merged to main).",
+        "`AggregateRiskDecision.unresolved_position_ids` now exposes sorted canonical unresolved source-event IDs; the tuple is bound into the hashed decision body so operators can identify the exact zero-tolerance blocker. Regression coverage is in `tests/test_portfolio_aggregate_risk_budget.py::test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed`."
       ],
       "blocker": "The audit only covers the supplied internal paper order journal; it is not reconciled to broker order books, not atomically wired into every OMS/strategy order path, and not yet merged to main.",
-      "last_audited_at_utc": "2026-11-26T15:15:12Z",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
       "commit": "25b88bc7",
       "test_evidence": [
         "`python -m pytest --basetemp .pytest-pa0417 tests/test_portfolio_aggregate_risk_budget.py tests/test_forward_edge_order_journal.py tests/test_canonical_portfolio_ledger.py -q`: 24 passed, including as-of ambiguity, corrupt event hash and canonical ledger cases.",
-        "`ruff check src/financial_brain/forward_edge/order_journal.py src/financial_brain/portfolio/aggregate_risk_budget.py tests/test_portfolio_aggregate_risk_budget.py` and `mypy src/financial_brain/forward_edge/order_journal.py src/financial_brain/portfolio/aggregate_risk_budget.py`: passed."
+        "`ruff check src/financial_brain/forward_edge/order_journal.py src/financial_brain/portfolio/aggregate_risk_budget.py tests/test_portfolio_aggregate_risk_budget.py` and `mypy src/financial_brain/forward_edge/order_journal.py src/financial_brain/portfolio/aggregate_risk_budget.py`: passed.",
+        "`python -m pytest --basetemp=.pytest-pa0417-audit tests/test_portfolio_aggregate_risk_budget.py tests/test_canonical_portfolio_ledger.py -q`: 21 passed; Ruff and targeted mypy passed."
       ],
-      "test_result": "Canonical unresolved positions and durable ambiguous order states both block aggregate risk permission; point-in-time state and order audit corruption regressions pass. Universal OMS/broker reconciliation remains open."
+      "test_result": "Canonical unresolved positions and durable ambiguous order states block aggregate risk permission; sorted unresolved source-event IDs now appear in and are hashed into the decision receipt. Point-in-time state, audit corruption, and canonical ledger regressions pass. Universal OMS/broker reconciliation remains open."
     },
     {
       "id": "PA-05-01",

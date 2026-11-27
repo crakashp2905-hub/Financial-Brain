@@ -114,9 +114,15 @@ def test_cap_excess_denies_across_desks_and_risk_evidence_gaps_block(tmp_path):
 
 
 def test_unresolved_missing_balance_stale_marks_and_payload_tamper_fail_closed(tmp_path):
-    unresolved = _evaluate(ledger=_ledger(tmp_path / "unresolved.sqlite", unresolved=True),
+    unresolved_ledger = _ledger(tmp_path / "unresolved.sqlite", unresolved=True)
+    unresolved = _evaluate(ledger=unresolved_ledger,
                            policy=_policy())
     assert unresolved.disposition is AggregateRiskDisposition.BLOCKED_LEDGER_UNCERTAIN
+    assert unresolved.unresolved_position_ids == ("legacy",)
+    assert "UNRESOLVED_POSITIONS" in unresolved.reason
+    assert not unresolved.order_permitted
+    assert unresolved.decision_sha256 == _evaluate(
+        ledger=unresolved_ledger, policy=_policy()).decision_sha256
 
     no_opening = _evaluate(ledger=_ledger(tmp_path / "no-opening.sqlite", opening=False),
                            policy=_policy())
