@@ -10804,12 +10804,20 @@
     {
       "id": "PA-13-07",
       "text": "Add order count, order value, turnover, failed execution, stale-data and account-loss brakes independent of strategy signal generation.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/execution/oms/risk_gate.py enforces maximum order value, per-symbol position value, daily order count/notional turnover, gross exposure, duplicate live orders and one-minute rate independent of strategy signal output.",
+        "src/financial_brain/risk/killswitch.py has optional drawdown/daily-loss/stale-data/slippage checks, but OMS submissions do not require a current account-PnL or quote-receipt-age snapshot, and failed execution counts are not an OMS brake.",
+        "The order authorization path therefore does not yet enforce all named brakes against a durable, reconciled account snapshot."
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T08:44:05Z",
+      "commit": "9bce047a",
+      "test_evidence": [
+        "tests/test_oms.py: order-value, price, daily/position/rate and order-state controls regressions; 21 passed.",
+        "Source review confirmed kill-switch loss/stale-data checks are optional inputs and are not required by OMS.submit."
+      ]
     },
     {
       "id": "PA-13-08",
@@ -20989,7 +20997,7 @@
     }
   ],
   "assessment_summary": {
-    "as_of_utc": "2026-11-27T08:41:26Z",
+    "as_of_utc": "2026-11-27T08:44:05Z",
     "audited_ids": [
       "FB-0001",
       "FB-0002",
@@ -21613,6 +21621,7 @@
       "PA-13-04",
       "PA-13-05",
       "PA-13-06",
+      "PA-13-07",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -22036,13 +22045,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1044,
+    "audited_count": 1045,
     "status_counts": {
       "COMPLETE": 116,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 905,
-      "UNASSESSED": 334
+      "PARTIAL": 906,
+      "UNASSESSED": 333
     },
     "verified_complete_count": 116,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22191,7 +22200,7 @@
     "COMPLETE": 116,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 905,
-    "UNASSESSED": 334
+    "PARTIAL": 906,
+    "UNASSESSED": 333
   }
 }
