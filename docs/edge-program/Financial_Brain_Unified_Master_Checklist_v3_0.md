@@ -1241,7 +1241,7 @@ Implement the **monthly momentum book first** (H005/H003/P3), because those are 
 - [ ] **PA-14-02** Check legal scope of real-time data paper trading before prospective live paper capture; if not permitted, stay in delayed/replay evidence and say forward executable testing is blocked.
 - [ ] **PA-14-03** Lock exact strategy code, parameters, universe, signal interval, costs, risk and benchmark before each prospective session starts.
 - [x] **PA-14-04** Write append-only local intent/decision/quote/outcome records with source clocks and SHA-linked previous event; treat local hashes as tamper-evident only, not independent proof.
-- [ ] **PA-14-05** Use independent third-party custody/timestamp receipts only when legally available, else label evidence `LOCAL_ONLY`, never fabricated `ATTESTED`.
+- [x] **PA-14-05** Use independent third-party custody/timestamp receipts only when legally available, else label evidence `LOCAL_ONLY`, never fabricated `ATTESTED`.
 - [ ] **PA-14-06** Preserve every interval's recommendation including NO_TRADE, rejected contract, skipped rebalance and missing data; zero trades is not a profitable trading day.
 - [ ] **PA-14-07** Keep true session return series including zero-return cash days and partial positions; never filter the P&L sample down to profitable sessions.
 - [ ] **PA-14-08** Require every candidate to publish its expected-value forecast **before** the execution clock and record changes as new versions, not retroactive annotation.

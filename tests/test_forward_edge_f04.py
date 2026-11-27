@@ -8,7 +8,13 @@ from pathlib import Path
 import pytest
 
 from financial_brain.forward_edge import decision_custody as D
-from financial_brain.forward_edge.custody import CustodyStatus, Receipt
+from financial_brain.forward_edge.custody import (
+    CustodyStatus,
+    ProviderNotConfigured,
+    Receipt,
+    UnconfiguredProvider,
+    formal_claim_eligible,
+)
 
 H = "d" * 64
 CHARTER = "c" * 64
@@ -86,6 +92,18 @@ def test_status_is_local_only_without_a_receipt_and_verified_only_with_a_pinned_
     m = _manifest()
     j.record(m, recorded_at_utc=DECIDE + timedelta(seconds=5))
     assert j.status("2027-01-04", {}) is CustodyStatus.LOCAL_ONLY
+    assert j.verified_session_ids({}) == set()
+
+
+def test_unconfigured_external_custody_never_fabricates_receipts_or_formal_eligibility() -> None:
+    provider = UnconfiguredProvider()
+    with pytest.raises(ProviderNotConfigured, match="NOT_CONFIGURED"):
+        provider.anchor(H)
+
+    j = D.ManifestJournal()
+    j.record(_manifest(), recorded_at_utc=DECIDE + timedelta(seconds=5))
+    assert j.status("2027-01-04", {}) is CustodyStatus.LOCAL_ONLY
+    assert not formal_claim_eligible(CustodyStatus.LOCAL_ONLY)
     assert j.verified_session_ids({}) == set()
 
 
