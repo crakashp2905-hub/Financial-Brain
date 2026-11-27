@@ -265,3 +265,74 @@ def test_momentum_equity_universe_excludes_etfs_and_mutual_fund_units():
 
     assert list(panel["C"].columns) == ["STOCK"]
     assert panel["U"].loc[day, "STOCK"]
+
+
+def test_monthly_paper_snapshot_persists_actual_fill_cash_and_weight_drift():
+    z = duckdb.connect(":memory:")
+    day = pd.Timestamp("2026-11-30").date()
+    result = ZE.record_monthly_paper_snapshot(
+        z, strategy="edge_h003_riskadj_mom", session=day,
+        target_weights={"L1": 0.5, "L2": 0.5},
+        fills=[{"order_id": "o1", "lineage": "L1", "side": "BUY",
+                "requested_shares": 50, "filled_shares": 40,
+                "fill_price": 100.0, "cost_inr": 10.0}],
+        marks={"L1": 110.0}, opening_cash_inr=10_000.0,
+    )
+    assert result["closing_cash_inr"] == pytest.approx(5_990.0)
+    assert result["holdings_value_inr"] == pytest.approx(4_400.0)
+    assert result["equity_inr"] == pytest.approx(10_390.0)
+    l1 = next(row for row in result["positions"] if row["lineage"] == "L1")
+    l2 = next(row for row in result["positions"] if row["lineage"] == "L2")
+    assert (l1["actual_shares"], l1["entry_shares"], l1["reason"]) == (40, 40, "ENTRY_FILLED")
+    assert l1["drift"] == pytest.approx(4_400 / 10_390 - 0.5)
+    assert (l2["actual_shares"], l2["reason"]) == (0, "NO_FILL_OR_REJECTED")
+    assert z.execute("SELECT COUNT(*) FROM zoo_monthly_book_orders").fetchone()[0] == 1
+    replay = ZE.record_monthly_paper_snapshot(
+        z, strategy="edge_h003_riskadj_mom", session=day,
+        target_weights={"L1": 0.5, "L2": 0.5},
+        fills=[{"order_id": "o1", "lineage": "L1", "side": "BUY",
+                "requested_shares": 50, "filled_shares": 40,
+                "fill_price": 100.0, "cost_inr": 10.0}],
+        marks={"L1": 110.0}, opening_cash_inr=10_000.0,
+    )
+    assert replay["idempotent_replay"] is True
+
+
+def test_monthly_paper_snapshot_rolls_positions_forward_and_rejects_conflicts():
+    z = duckdb.connect(":memory:")
+    day1, day2 = pd.Timestamp("2026-11-30").date(), pd.Timestamp("2026-12-31").date()
+    common = {"strategy": "edge_p1_residual_mom", "target_weights": {"L1": 0.5}}
+    ZE.record_monthly_paper_snapshot(
+        z, session=day1, **common,
+        fills=[{"lineage": "L1", "side": "BUY", "requested_shares": 20,
+                "filled_shares": 20, "fill_price": 100.0, "cost_inr": 5.0}],
+        marks={"L1": 100.0}, opening_cash_inr=5_000.0,
+    )
+    result = ZE.record_monthly_paper_snapshot(
+        z, session=day2, **common,
+        fills=[{"lineage": "L1", "side": "SELL", "requested_shares": 5,
+                "filled_shares": 5, "fill_price": 110.0, "cost_inr": 5.0}],
+        marks={"L1": 110.0}, opening_cash_inr=2_995.0,
+    )
+    l1 = next(row for row in result["positions"] if row["lineage"] == "L1")
+    assert (l1["actual_shares"], l1["exit_shares"], l1["reason"]) == (15, 5, "POSITION_ADJUSTED")
+    assert result["closing_cash_inr"] == pytest.approx(3_540.0)
+    with pytest.raises(ValueError, match="conflicting monthly paper snapshot"):
+        ZE.record_monthly_paper_snapshot(
+            z, session=day2, **common, fills=[], marks={"L1": 111.0}, opening_cash_inr=2_995.0)
+    with pytest.raises(ValueError, match="sell fill exceeds paper holdings"):
+        ZE.record_monthly_paper_snapshot(
+            z, session=pd.Timestamp("2027-01-29").date(), **common,
+            fills=[{"lineage": "L1", "side": "SELL", "requested_shares": 16,
+                    "filled_shares": 16, "fill_price": 110.0, "cost_inr": 5.0}],
+            marks={}, opening_cash_inr=result["closing_cash_inr"])
+
+
+def test_monthly_paper_snapshot_rejects_oversell_and_unreasoned_no_fill():
+    z = duckdb.connect(":memory:")
+    with pytest.raises(ValueError, match="zero fills require"):
+        ZE.record_monthly_paper_snapshot(
+            z, strategy="edge_p2_volmanaged_mom", session=pd.Timestamp("2026-11-30").date(),
+            target_weights={}, fills=[{"lineage": "L1", "side": "BUY", "requested_shares": 2,
+                                       "filled_shares": 0, "cost_inr": 0}],
+            marks={}, opening_cash_inr=1000.0)

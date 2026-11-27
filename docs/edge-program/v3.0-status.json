@@ -9241,18 +9241,21 @@
       "source_checked": true,
       "status": "PARTIAL",
       "evidence": [
-        "The monthly candidate sizing receipt now records a target hash, desired-share positions, lineages, prices, deployed notional, entry fees, expected round-trip charges, residual cash and skipped reasons.",
-        "Commit ff9814c0 adds per-strategy/day P&L quality with explicit missing-return keys; summary output preserves an unavailable latest net value rather than showing an older result as current.",
-        "There is no durable monthly candidate position lifecycle containing fills, cost basis, drift, exits and actionable/no-trade explanations; the sizing receipt and P&L quality table are not yet joined."
+        "Monthly sizing receipts and P&L quality are present, but were not a durable actual-position ledger.",
+        "Commit pending: paper.zoo_edges.record_monthly_paper_snapshot persists immutable-by-session target hash, actual fills/orders, cash, marked holdings/equity, target vs actual share counts and weights, drift, entry/exit quantities, and explicit no-fill/no-trade reasons.",
+        "The snapshot API applies fills to prior persisted holdings, reconciles cash from actual fill notional and costs, requires marks for held securities, rejects oversells/negative cash/conflicting replays, and supports same-payload idempotent recovery.",
+        "The normal monthly candidate generation and forward paper runner do not yet invoke this snapshot API; strategy lifecycle integration, attribution and dashboard consumption remain incomplete."
       ],
-      "blocker": "Partial: sizing and missing-data outcome evidence exist separately, but the actual simulated holdings/fill lifecycle, target-versus-actual drift, and joined decision reasons are not stored as a canonical book.",
-      "last_audited_at_utc": "2026-11-27T05:14:49Z",
-      "commit": "ff9814c0",
+      "blocker": "Partial: a persistent, cash-reconciled monthly actual-versus-target ledger is implemented and tested, but monthly target/fill execution runners do not yet call it and its outputs are not yet surfaced in paper reporting.",
+      "last_audited_at_utc": "2026-11-27T05:32:48Z",
+      "commit": null,
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-pa0710-missing-return tests/test_phase5_zoo.py tests/test_zoo_h_targets.py -q: 19 passed, including a missing-held-return case where the unaffected strategy still records its return.",
-        "Ruff on paper.zoo/paper.zoo_edges and focused tests, mypy on both source modules, and git diff --check passed."
+        "python -m pytest --basetemp .pytest-pa0712-ledger-final tests/test_zoo_h_targets.py -q: 18 passed, including filled position state, weights/drift, cash/equity, idempotent retry, conflicting replay and oversell rejection.",
+        "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+        "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+        "git diff --check: passed."
       ],
-      "test_result": "Tests verify cost-aware share quantities, cash and skip reasons, plus explicit incomplete P&L on missing prices. Durable monthly actual-versus-target holdings and entry/exit lifecycle are not implemented. PA-07-12 remains PARTIAL."
+      "test_result": "Monthly close snapshots durably reconcile actual fills, holdings, cash/equity, target and realized weights/drift, entries/exits and no-fill reasons. Atomic same-payload retries are idempotent and conflicting retries/oversells are rejected. Runner wiring and paper report integration remain; PA-07-12 remains PARTIAL."
     },
     {
       "id": "PA-07-13",

@@ -305,6 +305,185 @@ def _equal_weight_pick(pick, name: str) -> dict[str, float]:
     return {str(lineage): 1.0 / len(pick) for lineage in pick}
 
 
+def record_monthly_paper_snapshot(z, *, strategy: str, session: date,
+                                  target_weights: dict[str, float],
+                                  fills: list[dict], marks: dict[str, float],
+                                  opening_cash_inr: float) -> dict:
+    """Persist one reconciled monthly-book close from actual paper fills.
+
+    ``fills`` are simulated fill/order receipts, not planned quantities. A zero-fill row
+    must carry a reason so rejected or missed opportunities remain visible. Replaying the
+    same canonical input is idempotent; a different payload for the same book/date fails.
+    """
+    import math
+
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    if not isinstance(session, date):
+        raise ValueError("session must be a date")
+    if isinstance(opening_cash_inr, bool) or not isinstance(opening_cash_inr, (int, float)) \
+            or not np.isfinite(opening_cash_inr) or opening_cash_inr < 0:
+        raise ValueError("opening_cash_inr must be finite and non-negative")
+    normalized_targets: dict[str, float] = {}
+    for lineage, weight in target_weights.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) \
+                or not np.isfinite(weight) or not 0 <= weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized_targets[lineage] = float(weight)
+    if sum(normalized_targets.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    from typing import Any
+
+    normalized_fills: list[dict[str, Any]] = []
+    for index, raw in enumerate(fills):
+        fill_lineage, fill_side = raw.get("lineage"), raw.get("side")
+        if not isinstance(fill_lineage, str) or not fill_lineage.strip() \
+                or fill_side not in ("BUY", "SELL"):
+            raise ValueError(f"fill {index}: valid lineage and BUY/SELL side required")
+        requested, filled = raw.get("requested_shares"), raw.get("filled_shares")
+        if (isinstance(requested, bool) or not isinstance(requested, int) or requested < 0
+                or isinstance(filled, bool) or not isinstance(filled, int) or filled < 0):
+            raise ValueError(f"fill {index}: requested and filled shares must be non-negative integers")
+        if filled > requested:
+            raise ValueError(f"fill {index}: filled shares cannot exceed requested shares")
+        price, fee = raw.get("fill_price"), raw.get("cost_inr")
+        normalized_price: float | None = None
+        if filled:
+            if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                    or not np.isfinite(price) or price <= 0:
+                raise ValueError(f"fill {index}: positive finite fill_price required")
+            normalized_price = float(price)
+        elif not raw.get("reason"):
+            raise ValueError(f"fill {index}: zero fills require a rejection/no-fill reason")
+        if isinstance(fee, bool) or not isinstance(fee, (int, float)) \
+                or not np.isfinite(fee) or fee < 0:
+            raise ValueError(f"fill {index}: cost_inr must be finite and non-negative")
+        normalized_fills.append({
+            "lineage": fill_lineage, "side": fill_side, "requested_shares": requested,
+            "filled_shares": filled, "fill_price": normalized_price,
+            "cost_inr": float(fee), "reason": str(raw.get("reason", "")),
+            "order_id": str(raw.get("order_id", f"{index}")),
+        })
+
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_snapshots (
+        strategy VARCHAR, session DATE, target_hash VARCHAR, opening_cash DOUBLE,
+        closing_cash DOUBLE, holdings_value DOUBLE, equity DOUBLE, payload_hash VARCHAR,
+        PRIMARY KEY (strategy, session))""")
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_positions (
+        strategy VARCHAR, session DATE, lineage VARCHAR, target_weight DOUBLE,
+        target_shares BIGINT, actual_shares BIGINT, mark_price DOUBLE, market_value DOUBLE,
+        actual_weight DOUBLE, drift DOUBLE, entry_shares BIGINT, exit_shares BIGINT,
+        reason VARCHAR, PRIMARY KEY (strategy, session, lineage))""")
+    z.execute("""CREATE TABLE IF NOT EXISTS zoo_monthly_book_orders (
+        strategy VARCHAR, session DATE, order_id VARCHAR, lineage VARCHAR, side VARCHAR,
+        requested_shares BIGINT, filled_shares BIGINT, fill_price DOUBLE, cost_inr DOUBLE,
+        reason VARCHAR, PRIMARY KEY (strategy, session, order_id))""")
+
+    prior = z.execute("""SELECT session, closing_cash FROM zoo_monthly_book_snapshots
+                         WHERE strategy = ? AND session < ? ORDER BY session DESC LIMIT 1""",
+                      [strategy, session]).fetchone()
+    if prior and not math.isclose(float(prior[1]), float(opening_cash_inr), rel_tol=0, abs_tol=0.01):
+        raise ValueError("opening cash does not reconcile to previous monthly snapshot")
+    previous_rows = (z.execute("""SELECT lineage, actual_shares FROM zoo_monthly_book_positions
+                                  WHERE strategy = ? AND session = ?""", [strategy, prior[0]]).fetchall()
+                     if prior else [])
+    shares = {lineage: int(quantity) for lineage, quantity in previous_rows}
+    opening_shares = dict(shares)
+    cash = float(opening_cash_inr)
+    for row in normalized_fills:
+        qty = row["filled_shares"]
+        notional = qty * (row["fill_price"] or 0.0)
+        if row["side"] == "BUY":
+            cash -= notional + row["cost_inr"]
+            shares[row["lineage"]] = shares.get(row["lineage"], 0) + qty
+        else:
+            if qty > shares.get(row["lineage"], 0):
+                raise ValueError(f"{row['lineage']}: sell fill exceeds paper holdings")
+            cash += notional - row["cost_inr"]
+            shares[row["lineage"]] = shares.get(row["lineage"], 0) - qty
+    if cash < -0.01:
+        raise ValueError("fills would create negative paper cash")
+    shares = {lineage: quantity for lineage, quantity in shares.items() if quantity}
+    for lineage, price in marks.items():
+        if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                or not np.isfinite(price) or price <= 0:
+            raise ValueError(f"{lineage}: marks must be finite and positive")
+    missing_marks = sorted(set(shares) - set(marks))
+    if missing_marks:
+        raise ValueError(f"missing marks for held lineages: {missing_marks}")
+
+    target_hash = monthly_target_hashes({strategy: normalized_targets})[strategy]
+    holdings_value = sum(quantity * float(marks[lineage]) for lineage, quantity in shares.items())
+    equity = cash + holdings_value
+    union = sorted(set(shares) | set(opening_shares) | set(normalized_targets))
+    positions = []
+    for lineage in union:
+        quantity = shares.get(lineage, 0)
+        mark = float(marks[lineage]) if lineage in marks else 0.0
+        value = quantity * mark
+        actual_weight = value / equity if equity else 0.0
+        target_weight = normalized_targets.get(lineage, 0.0)
+        target_shares = int(target_weight * equity / mark) if mark else 0
+        bought = sum(x["filled_shares"] for x in normalized_fills
+                     if x["lineage"] == lineage and x["side"] == "BUY")
+        sold = sum(x["filled_shares"] for x in normalized_fills
+                   if x["lineage"] == lineage and x["side"] == "SELL")
+        if quantity and not opening_shares.get(lineage):
+            reason = "ENTRY_FILLED"
+        elif opening_shares.get(lineage) and not quantity:
+            reason = "EXIT_FILLED"
+        elif bought or sold:
+            reason = "POSITION_ADJUSTED"
+        elif target_weight and not quantity:
+            reason = "NO_FILL_OR_REJECTED"
+        elif quantity and abs(actual_weight - target_weight) > 1e-9:
+            reason = "WEIGHT_DRIFT"
+        else:
+            reason = "NO_TRADE"
+        positions.append({"lineage": lineage, "target_weight": target_weight,
+                          "target_shares": target_shares, "actual_shares": quantity,
+                          "mark_price": mark, "market_value": value,
+                          "actual_weight": actual_weight,
+                          "drift": actual_weight - target_weight,
+                          "entry_shares": bought, "exit_shares": sold, "reason": reason})
+
+    payload = {"strategy": strategy, "session": session.isoformat(), "target_hash": target_hash,
+               "opening_cash_inr": float(opening_cash_inr), "closing_cash_inr": cash,
+               "holdings_value_inr": holdings_value, "equity_inr": equity,
+               "positions": positions, "fills": normalized_fills}
+    payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"),
+                                                allow_nan=False).encode()).hexdigest()
+    existing = z.execute("SELECT payload_hash FROM zoo_monthly_book_snapshots WHERE strategy=? AND session=?",
+                         [strategy, session]).fetchone()
+    if existing:
+        if existing[0] == payload_hash:
+            return {**payload, "payload_hash": payload_hash, "idempotent_replay": True}
+        raise ValueError("conflicting monthly paper snapshot already exists")
+    z.execute("BEGIN TRANSACTION")
+    try:
+        z.execute("INSERT INTO zoo_monthly_book_snapshots VALUES (?,?,?,?,?,?,?,?)",
+                  [strategy, session, target_hash, float(opening_cash_inr), cash,
+                   holdings_value, equity, payload_hash])
+        z.executemany("INSERT INTO zoo_monthly_book_positions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      [(strategy, session, row["lineage"], row["target_weight"],
+                        row["target_shares"], row["actual_shares"], row["mark_price"],
+                        row["market_value"], row["actual_weight"], row["drift"],
+                        row["entry_shares"], row["exit_shares"], row["reason"])
+                       for row in positions])
+        z.executemany("INSERT INTO zoo_monthly_book_orders VALUES (?,?,?,?,?,?,?,?,?,?)",
+                      [(strategy, session, row["order_id"], row["lineage"], row["side"],
+                        row["requested_shares"], row["filled_shares"], row["fill_price"],
+                        row["cost_inr"], row["reason"]) for row in normalized_fills])
+        z.execute("COMMIT")
+    except Exception:
+        z.execute("ROLLBACK")
+        raise
+    return {**payload, "payload_hash": payload_hash, "idempotent_replay": False}
+
+
 def monthly_target_hashes(targets: dict[str, dict]) -> dict[str, str]:
     """Stable per-book hashes for intended-versus-persisted monthly target audits."""
     hashes = {}

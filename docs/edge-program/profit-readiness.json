@@ -4,8 +4,8 @@
   "as_of_utc": "2026-11-27T04:54:02Z",
   "checklist": "Financial_Brain_Unified_Master_Checklist_v3_0.md",
   "checklist_source_sha256": "c91a66bb9b46ff585d3c6521eeb30130803aa46768fe3be459a01ec03fd43f2c",
-  "status_ledger_sha256": "f35e86adf52a7b62602418febeecd2afb5406b3d435eafdd701fdb2e20785690",
-  "audit_export_sha256": "3229050565be696a81220db7fcbe42c2afd4f356ea659800786e63f00cfb5402",
+  "status_ledger_sha256": "d37431ffc0174412b06266d00292d44101ce53f6c416b47fb48d49c6348e7f0a",
+  "audit_export_sha256": "9ac480a96bd269a492b2e94dfeb128d3186031ff469637729fa032544330cb2f",
   "total_items": 1378,
   "counts_by_status": {
     "COMPLETE": 107,
@@ -3014,16 +3014,19 @@
             "path": "docs/edge-program/Financial_Brain_Unified_Master_Checklist_v3_0.md",
             "text": "Track target weights, actual simulated holdings, residual cash, drift, entry/exits and actionable vs no-trade reasons."
           },
-          "commit": "ff9814c0",
-          "blocker": "Partial: sizing and missing-data outcome evidence exist separately, but the actual simulated holdings/fill lifecycle, target-versus-actual drift, and joined decision reasons are not stored as a canonical book.",
+          "commit": null,
+          "blocker": "Partial: a persistent, cash-reconciled monthly actual-versus-target ledger is implemented and tested, but monthly target/fill execution runners do not yet call it and its outputs are not yet surfaced in paper reporting.",
           "evidence": [
-            "The monthly candidate sizing receipt now records a target hash, desired-share positions, lineages, prices, deployed notional, entry fees, expected round-trip charges, residual cash and skipped reasons.",
-            "Commit ff9814c0 adds per-strategy/day P&L quality with explicit missing-return keys; summary output preserves an unavailable latest net value rather than showing an older result as current.",
-            "There is no durable monthly candidate position lifecycle containing fills, cost basis, drift, exits and actionable/no-trade explanations; the sizing receipt and P&L quality table are not yet joined."
+            "Monthly sizing receipts and P&L quality are present, but were not a durable actual-position ledger.",
+            "Commit pending: paper.zoo_edges.record_monthly_paper_snapshot persists immutable-by-session target hash, actual fills/orders, cash, marked holdings/equity, target vs actual share counts and weights, drift, entry/exit quantities, and explicit no-fill/no-trade reasons.",
+            "The snapshot API applies fills to prior persisted holdings, reconciles cash from actual fill notional and costs, requires marks for held securities, rejects oversells/negative cash/conflicting replays, and supports same-payload idempotent recovery.",
+            "The normal monthly candidate generation and forward paper runner do not yet invoke this snapshot API; strategy lifecycle integration, attribution and dashboard consumption remain incomplete."
           ],
           "tests": [
-            "python -m pytest --basetemp .pytest-pa0710-missing-return tests/test_phase5_zoo.py tests/test_zoo_h_targets.py -q: 19 passed, including a missing-held-return case where the unaffected strategy still records its return.",
-            "Ruff on paper.zoo/paper.zoo_edges and focused tests, mypy on both source modules, and git diff --check passed."
+            "python -m pytest --basetemp .pytest-pa0712-ledger-final tests/test_zoo_h_targets.py -q: 18 passed, including filled position state, weights/drift, cash/equity, idempotent retry, conflicting replay and oversell rejection.",
+            "Ruff on paper.zoo_edges and tests/test_zoo_h_targets.py: passed.",
+            "mypy src/financial_brain/paper/zoo_edges.py --follow-imports=silent: passed.",
+            "git diff --check: passed."
           ]
         },
         {
@@ -3475,5 +3478,5 @@
     "live_trading_authorized": false,
     "reason": "A readiness report does not grant broker, compliance, or live-capital authorization."
   },
-  "report_sha256": "a595f006e64c0832a7cdd89fba12c221e0c661277fa643391e8a0a9190ba17db"
+  "report_sha256": "77f773331721a2660719d9c1eb95973b22154df6a17010543586b02d11d0c457"
 }
