@@ -200,8 +200,8 @@ def _validate_completed_bar(event: MarketEvent, session_open_at: datetime,
                 session_close_at.tzinfo is None or session_close_at.utcoffset() is None):
             raise ValueError("sourced session bounds must be timezone-aware")
         interval = payload.get("interval_seconds")
-        if type(interval) is not int or interval not in {60, 900}:
-            raise ValueError("bar interval must be 60 or 900 seconds")
+        if type(interval) is not int or interval not in {60, 300, 900}:
+            raise ValueError("bar interval must be 60, 300 or 900 seconds")
         raw_start, raw_end = payload.get("bar_start_at"), payload.get("bar_end_at")
         if not isinstance(raw_start, str) or not isinstance(raw_end, str):
             raise ValueError("bar start and end timestamps are required")

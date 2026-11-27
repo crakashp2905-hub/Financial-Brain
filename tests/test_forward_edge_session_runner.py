@@ -345,6 +345,28 @@ def test_completed_bar_rejects_interval_not_aligned_to_sourced_session_open(tmp_
     runner.close()
 
 
+def test_completed_five_minute_bar_is_clock_checked_and_dispatched(tmp_path):
+    runner = make_runner(tmp_path)
+    start = datetime.fromisoformat("2026-11-13T10:15:00+05:30")
+    end = start + timedelta(minutes=5)
+    event = MarketEvent(
+        "completed-5m", EventKind.BAR, "NSE", "NSE:INFY", end,
+        end + timedelta(seconds=1), end + timedelta(seconds=1),
+        {"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 20,
+         "complete": True, "interval_seconds": 300,
+         "bar_start_at": start.isoformat(), "bar_end_at": end.isoformat()}, "FIXTURE")
+    completed = []
+    runner.run_event_loop(
+        session_id="five-minute", config=make_profiled_config(), events=[event],
+        session_open_at=NOW - timedelta(seconds=1), preflight=READY_PREFLIGHT,
+        consumer_id="strategy:five-minute", on_market_event=lambda *_: None,
+        on_completed_bar=lambda seen, _: completed.append(seen.event_id),
+        evaluate_protective_exits=lambda *_: None,
+        venue_calendar=_calendar(date(2026, 11, 13)), venue="NSE")
+    assert completed == ["completed-5m"]
+    runner.close()
+
+
 def make_runner(tmp_path):
     return ForwardSessionRunner(ForwardSessionStore(tmp_path / "state.sqlite"), tmp_path / "journal.sqlite")
 

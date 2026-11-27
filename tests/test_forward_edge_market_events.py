@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
 
 import pytest
 
@@ -80,6 +81,42 @@ def test_computation_clock_roundtrips_and_is_available_before_decision() -> None
 def test_publication_cannot_follow_strategy_availability() -> None:
     with pytest.raises(MarketEventError, match="before publication"):
         _event(EventKind.TICK, {"price": 10}, published_at=T0 + timedelta(seconds=4))
+
+
+def _cross_asset_clock_event(family: str) -> MarketEvent:
+    start = datetime(2026, 11, 13, 4, 0, tzinfo=timezone.utc)
+    intervals = {"BAR_1M": 60, "BAR_5M": 300, "BAR_15M": 900}
+    if family in intervals:
+        interval = intervals[family]
+        observed = start + timedelta(seconds=interval)
+        kind, instrument, venue = EventKind.BAR, "NSE:INFY", "NSE"
+        payload = {"open": 100, "high": 101, "low": 99, "close": 100.5, "volume": 100,
+                   "complete": True, "interval_seconds": interval,
+                   "bar_start_at": start.isoformat(), "bar_end_at": observed.isoformat()}
+    elif family in {"FUTURES", "OPTIONS"}:
+        observed = start + timedelta(seconds=1)
+        kind, venue = EventKind.QUOTE, "NFO"
+        instrument = "NFO:NIFTY26DEC25000FUT" if family == "FUTURES" else "NFO:NIFTY26DEC25000CE"
+        payload = {"bid": 100.0, "ask": 100.1, "bid_quantity": 10, "ask_quantity": 12}
+    else:
+        observed = start + timedelta(days=1)
+        kind, instrument, venue = EventKind.NAV, "MF:TEST-REGULAR-GROWTH", "AMFI"
+        payload = {"nav_per_unit": 100.0, "nav_date": "2026-11-14"}
+    published = observed + timedelta(milliseconds=100)
+    available = published + timedelta(milliseconds=200)
+    decision = available + timedelta(milliseconds=300)
+    return MarketEvent(family.lower(), kind, venue, instrument, observed, available, available,
+                       payload, "CLOCK_FIXTURE", decision_time=decision, published_at=published)
+
+
+@pytest.mark.parametrize("family", ["BAR_1M", "BAR_5M", "BAR_15M", "FUTURES", "OPTIONS", "MUTUAL_FUND"])
+def test_cross_asset_publication_and_availability_clock_mutations_fail_closed(family: str) -> None:
+    event = _cross_asset_clock_event(family)
+    assert event.published_at <= event.available_at <= event.decision_time
+    with pytest.raises(MarketEventError, match="before publication"):
+        replace(event, published_at=event.available_at + timedelta(microseconds=1))
+    with pytest.raises(MarketEventError, match="not available"):
+        replace(event, available_at=event.decision_time + timedelta(microseconds=1))
 
 
 @pytest.mark.parametrize("kind,payload", [
