@@ -99,6 +99,64 @@ def test_monthly_candidate_sizing_rejects_duplicate_symbol_aliases_and_overspend
             lineage_to_ticker={"L1": "AAA", "L2": "AAA"}, prices={"AAA": 100.0},
             capital_inr=100_000.0,
         )
+
+
+def test_monthly_rebalance_plans_next_session_whole_share_intents():
+    result = ZE.plan_monthly_rebalance(
+        strategy="edge_h003_riskadj_mom", targets={"L1": 0.25, "L2": 0.25},
+        current_shares={"L1": 100}, lineage_to_ticker={"L1": "AAA", "L2": "BBB"},
+        prices={"AAA": 100.0, "BBB": 100.0},
+        liquidity_bucket_by_ticker={"AAA": "large", "BBB": "large"},
+        capital_inr=100_000.0, free_cash_inr=90_000.0,
+        decision_date=pd.Timestamp("2026-11-27").date(),
+        next_session_date=pd.Timestamp("2026-11-30").date(), turnover_budget_inr=100_000.0,
+        cash_reserve_fraction=0.05, min_order_inr=1_000.0,
+    )
+
+    assert result["status"] == "READY_FOR_PAPER_REVIEW"
+    assert result["next_session_date"] == "2026-11-30"
+    assert {row["side"] for row in result["orders"]} == {"BUY"}
+    assert all(row["status"] == "PAPER_REVIEW_REQUIRED" for row in result["orders"])
+    assert result["cash_after_buy_intents_inr"] >= result["cash_reserve_inr"]
+    assert result["planned_turnover_inr"] <= result["turnover_budget_inr"]
+    assert result["physical_orders_submitted"] is False
+
+
+def test_monthly_rebalance_rejects_over_budget_turnover_as_a_whole():
+    result = ZE.plan_monthly_rebalance(
+        strategy="edge_h003_riskadj_mom", targets={"L1": 0.25, "L2": 0.25},
+        current_shares={"L1": 100}, lineage_to_ticker={"L1": "AAA", "L2": "BBB"},
+        prices={"AAA": 100.0, "BBB": 100.0},
+        liquidity_bucket_by_ticker={"AAA": "large", "BBB": "large"},
+        capital_inr=100_000.0, free_cash_inr=90_000.0,
+        decision_date=pd.Timestamp("2026-11-27").date(),
+        next_session_date=pd.Timestamp("2026-11-30").date(), turnover_budget_inr=1_000.0,
+        min_order_inr=1_000.0,
+    )
+
+    assert result["status"] == "REJECTED_TURNOVER_BUDGET"
+    assert result["orders"] == []
+    assert len(result["rejected"]) == 2
+
+
+def test_monthly_rebalance_does_not_use_unsettled_sale_proceeds_for_buys():
+    result = ZE.plan_monthly_rebalance(
+        strategy="edge_h005_industry_mom", targets={"L1": 0.1, "L2": 0.4},
+        current_shares={"L1": 200}, lineage_to_ticker={"L1": "AAA", "L2": "BBB"},
+        prices={"AAA": 100.0, "BBB": 100.0},
+        liquidity_bucket_by_ticker={"AAA": "large", "BBB": "large"},
+        capital_inr=25_000.0, free_cash_inr=5_000.0,
+        decision_date=pd.Timestamp("2026-11-27").date(),
+        next_session_date=pd.Timestamp("2026-11-30").date(), turnover_budget_inr=30_000.0,
+        cash_reserve_fraction=0.05, min_order_inr=1_000.0,
+    )
+
+    assert result["status"] == "READY_FOR_PAPER_REVIEW"
+    assert result["orders"][0]["side"] == "SELL"
+    buy = next(row for row in result["orders"] if row["side"] == "BUY")
+    assert buy["shares"] < buy["requested_shares"]
+    assert result["unsettled_sell_proceeds_inr"] > 0
+    assert result["cash_after_buy_intents_inr"] >= result["cash_reserve_inr"]
     with pytest.raises(ValueError, match="cannot exceed"):
         ZE.size_monthly_candidate(
             strategy="edge_p3_frog_in_pan", targets={"L1": 0.75, "L2": 0.75},

@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
-from ..costs.india import CostModel
+from ..costs.india import CostModel, Segment, Side
 
 VERDICT = {"edge_p1_residual_mom": "failed (t -0.3 / +1.8)", "edge_p2_volmanaged_mom": "failed (t +2.3 / +1.2; halves drawdown)",
            "edge_p3_frog_in_pan": "failed (t +3.3 / +1.7)", "edge_s1_no_news_reversal": "failed (t -4.3 / -0.6)",
@@ -112,6 +112,181 @@ def size_monthly_candidate(*, strategy: str, targets: dict[str, float],
         "cash_inr": sized["cash"],
         "entry_fees_inr": sized["entry_fees_total"],
         "expected_round_trip_fees_inr": sized["fees_total"],
+        "physical_orders_submitted": False,
+    }
+
+
+def plan_monthly_rebalance(*, strategy: str, targets: dict[str, float],
+                           current_shares: dict[str, int], lineage_to_ticker: dict[str, str],
+                           prices: dict[str, float], liquidity_bucket_by_ticker: dict[str, str],
+                           capital_inr: float, free_cash_inr: float,
+                           decision_date: date, next_session_date: date,
+                           turnover_budget_inr: float, cash_reserve_fraction: float = 0.05,
+                           min_order_inr: float = 5_000.0,
+                           costs: CostModel | None = None) -> dict:
+    """Plan next-session monthly paper rebalance with explicit cash and turnover gates.
+
+    Sale proceeds are treated as unsettled and cannot fund buys in this plan. Outputs
+    are reviewable paper intents only; no fill or broker action is simulated here.
+    """
+    if next_session_date <= decision_date:
+        raise ValueError("next executable session must follow the signal date")
+    if not np.isfinite(capital_inr) or capital_inr <= 0:
+        raise ValueError("capital_inr must be finite and positive")
+    if not np.isfinite(free_cash_inr) or not 0 <= free_cash_inr <= capital_inr:
+        raise ValueError("free_cash_inr must be finite and within account capital")
+    if not np.isfinite(turnover_budget_inr) or turnover_budget_inr < 0:
+        raise ValueError("turnover_budget_inr must be finite and non-negative")
+    if not np.isfinite(cash_reserve_fraction) or not 0 <= cash_reserve_fraction < 1:
+        raise ValueError("cash_reserve_fraction must be finite and in [0, 1)")
+    if strategy not in MONTHLY_BOOKS:
+        raise ValueError(f"strategy must be one of {MONTHLY_BOOKS}")
+    for lineage, shares in current_shares.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("current position lineages must be non-empty strings")
+        if isinstance(shares, bool) or not isinstance(shares, int) or shares < 0:
+            raise ValueError(f"{lineage}: current shares must be a non-negative whole number")
+
+    normalized_targets: dict[str, float] = {}
+    for lineage, weight in targets.items():
+        if not isinstance(lineage, str) or not lineage.strip():
+            raise ValueError("target lineages must be non-empty strings")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) \
+                or not np.isfinite(weight) or not 0 <= weight <= 1:
+            raise ValueError(f"{lineage}: target weight must be finite and in [0, 1]")
+        normalized_targets[lineage] = float(weight)
+    if sum(normalized_targets.values()) > 1.0 + 1e-9:
+        raise ValueError("monthly target weights cannot exceed fully invested capital")
+
+    if not normalized_targets:
+        return {"strategy": strategy, "status": "NO_CANDIDATE_TARGETS",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(), "orders": [],
+                "rejected": [{"why": "no candidate targets; existing positions are retained"}],
+                "physical_orders_submitted": False}
+    lineages = set(normalized_targets) | {key for key, shares in current_shares.items() if shares}
+    lineage_tickers: dict[str, str] = {}
+    ticker_lineages: dict[str, str] = {}
+    missing: list[dict[str, str]] = []
+    model = costs or CostModel()
+    for lineage in sorted(lineages):
+        ticker = lineage_to_ticker.get(lineage)
+        if not isinstance(ticker, str) or not ticker.strip():
+            missing.append({"lineage": lineage, "why": "no point-in-time ticker mapping"})
+            continue
+        if ticker in ticker_lineages and ticker_lineages[ticker] != lineage:
+            raise ValueError(f"multiple position lineages map to ticker {ticker}")
+        ticker_lineages[ticker] = lineage
+        lineage_tickers[lineage] = ticker
+        price = prices.get(ticker)
+        if isinstance(price, bool) or not isinstance(price, (int, float)) \
+                or not np.isfinite(price) or price <= 0:
+            missing.append({"lineage": lineage, "why": "no finite positive next-session reference price"})
+        bucket = liquidity_bucket_by_ticker.get(ticker)
+        if not isinstance(bucket, str) or bucket not in model.impact:
+            missing.append({"lineage": lineage, "why": "missing or unknown liquidity cost bucket"})
+    if missing:
+        return {"strategy": strategy, "status": "INCOMPLETE_INPUTS",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(), "orders": [],
+                "rejected": missing, "physical_orders_submitted": False}
+
+    current_market_value = sum(current_shares.get(lineage, 0) * float(prices[lineage_tickers[lineage]])
+                               for lineage in lineages)
+    if not np.isclose(free_cash_inr + current_market_value, capital_inr, rtol=0.0, atol=0.01):
+        raise ValueError("free cash plus current marked positions must reconcile to capital_inr")
+
+    reserve = capital_inr * cash_reserve_fraction
+    desired = size_monthly_candidate(
+        strategy=strategy, targets=normalized_targets, lineage_to_ticker=lineage_tickers,
+        prices={ticker: float(prices[ticker]) for ticker in ticker_lineages},
+        capital_inr=capital_inr - reserve, min_order_inr=min_order_inr, costs=model,
+    )
+    desired_shares = {row["lineage"]: row["shares"] for row in desired["positions"]}
+    candidate_order_rows: list[dict] = []
+    for lineage in sorted(lineages):
+        delta = desired_shares.get(lineage, 0) - current_shares.get(lineage, 0)
+        if delta:
+            candidate_order_rows.append({"lineage": lineage, "ticker": lineage_tickers[lineage],
+                                         "side": "BUY" if delta > 0 else "SELL",
+                                         "requested_shares": abs(delta),
+                                         "reference_price": float(prices[lineage_tickers[lineage]]),
+                                         "target_weight": normalized_targets.get(lineage, 0.0)})
+    requested_turnover = sum(row["requested_shares"] * row["reference_price"]
+                             for row in candidate_order_rows)
+    if requested_turnover > turnover_budget_inr + 1e-9:
+        return {"strategy": strategy, "status": "REJECTED_TURNOVER_BUDGET",
+                "decision_date": decision_date.isoformat(),
+                "next_session_date": next_session_date.isoformat(),
+                "requested_turnover_inr": requested_turnover,
+                "turnover_budget_inr": turnover_budget_inr, "orders": [],
+                "rejected": [{**row, "why": "aggregate turnover exceeds frozen budget"}
+                             for row in candidate_order_rows],
+                "physical_orders_submitted": False}
+
+    reserve_available_cash = max(0.0, free_cash_inr - reserve)
+    cash_for_buys = reserve_available_cash
+    orders: list[dict] = []
+    rejected = list(desired["skipped"])
+    estimated_costs = 0.0
+    executed_turnover = 0.0
+    for row in sorted(candidate_order_rows,
+                      key=lambda item: (item["side"] != "SELL", -item["target_weight"], item["lineage"])):
+        side = Side.BUY if row["side"] == "BUY" else Side.SELL
+        price = row["reference_price"]
+        bucket = liquidity_bucket_by_ticker[row["ticker"]]
+        quantity = row["requested_shares"]
+        if side is Side.BUY:
+            low, high = 0, quantity
+            while low < high:
+                candidate = (low + high + 1) // 2
+                notional = candidate * price
+                fee = model.one_way(turnover=notional, side=side, segment=Segment.DELIVERY,
+                                    bucket=bucket, include_impact=True)["total"]
+                if notional + fee <= cash_for_buys + 1e-9:
+                    low = candidate
+                else:
+                    high = candidate - 1
+            quantity = low
+            if quantity == 0:
+                rejected.append({**row, "why": "cash reserve leaves insufficient funds for one share and costs"})
+                continue
+            if quantity < row["requested_shares"]:
+                rejected.append({**row, "why": "cash reserve reduced requested quantity to whole shares",
+                                 "accepted_shares": quantity})
+        notional = quantity * price
+        fee = model.one_way(turnover=notional, side=side, segment=Segment.DELIVERY,
+                            bucket=bucket, include_impact=True)
+        orders.append({**row, "shares": quantity, "notional_inr": notional,
+                       "estimated_cost_inr": fee["total"], "cost_components": fee,
+                       "status": "PAPER_REVIEW_REQUIRED"})
+        estimated_costs += fee["total"]
+        executed_turnover += notional
+        if side is Side.BUY:
+            cash_for_buys -= notional + fee["total"]
+
+    return {
+        "strategy": strategy,
+        "status": "READY_FOR_PAPER_REVIEW" if orders else "NO_ACTION",
+        "decision_date": decision_date.isoformat(),
+        "next_session_date": next_session_date.isoformat(),
+        "target_hash": desired["target_hash"],
+        "capital_inr": capital_inr,
+        "cash_reserve_inr": reserve,
+        "free_cash_inr": free_cash_inr,
+        "cash_available_for_buys_inr": reserve_available_cash,
+        "cash_after_buy_intents_inr": free_cash_inr - sum(
+            row["notional_inr"] + row["estimated_cost_inr"]
+            for row in orders if row["side"] == "BUY"),
+        "unsettled_sell_proceeds_inr": sum(
+            row["notional_inr"] - row["estimated_cost_inr"]
+            for row in orders if row["side"] == "SELL"),
+        "requested_turnover_inr": requested_turnover,
+        "planned_turnover_inr": executed_turnover,
+        "turnover_budget_inr": turnover_budget_inr,
+        "estimated_costs_inr": estimated_costs,
+        "orders": orders,
+        "rejected": rejected,
         "physical_orders_submitted": False,
     }
 
