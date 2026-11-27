@@ -10396,52 +10396,68 @@
     {
       "id": "PA-11-11",
       "text": "Compare each proposal against simple breakout, reversal and same-time random controls before introducing machine learning or multiple confirmation indicators.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/evaluation/baseline_controls.py requires frozen matched index, equal-weight, equal-turnover random, exposure-matched and cost-matched controls",
+        "No per-proposal evidence was found showing simple breakout, reversal and same-time random controls were all run before feature/ML expansion"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e43a6a1b"
     },
     {
       "id": "PA-11-12",
       "text": "Evaluate on tradable Indian equity/ETF/futures instruments first; map a surviving underlying rule into options only with a separate premium P&L study.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/strategies/four_node/results/README.md reports a 207-stock NSE v1 study with no surviving positive after-cost variant; the test period is contaminated and raw NPZ inputs are absent",
+        "src/financial_brain/strategies/four_node/eligibility.py separates research references from tradable instruments",
+        "No surviving underlying rule or separate prospective premium P&L study exists to support an options mapping"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e43a6a1b"
     },
     {
       "id": "PA-11-13",
       "text": "Count family parameter sweeps, timeframe changes, stop variants and selected screenshot examples as research looks; keep the protected trial budget.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/strategies/four_node/results/README.md enumerates all 128 interpretation variants and Holm adjustment; docs/strategies/four_node/README.md says the protected 2026Q4 budget is spent",
+        "The trial ledger and family grouping exist in research infrastructure, but this Four-Node report does not reconcile screenshot selections, timeframe changes and stop variants as one complete look count"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e43a6a1b"
     },
     {
       "id": "PA-11-14",
       "text": "Require walk-forward, cash/benchmark, after-cost, random-entry/null, data quality and sensitivity gates before eligibility beyond SHADOW.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "Research infrastructure contains purged walk-forward splits, frozen benchmark controls, cost models, null controls, quality gates and sensitivity evaluators",
+        "No unified PA-11 proposal promotion report was found proving all requested gates together; Four-Node v1 remains research-only and its holdout is contaminated"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e43a6a1b"
     },
     {
       "id": "PA-11-15",
       "text": "Explicitly retire strategies that fail; a strategy catalogue may retain a useful visual detector without being allowed to advise a trade.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/strategies/four_node/README.md and docs/strategies/four_node/results/README.md explicitly preserve the negative after-cost result and keep Four-Node research-only",
+        "No automated catalogue retirement state was found that makes failed strategy entries non-advisory while retaining detector-only use"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "e43a6a1b"
     },
     {
       "id": "PA-12-01",
@@ -21448,6 +21464,11 @@
       "PA-11-08",
       "PA-11-09",
       "PA-11-10",
+      "PA-11-11",
+      "PA-11-12",
+      "PA-11-13",
+      "PA-11-14",
+      "PA-11-15",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21871,13 +21892,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1017,
+    "audited_count": 1022,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 886,
-      "UNASSESSED": 361
+      "PARTIAL": 891,
+      "UNASSESSED": 356
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22026,7 +22047,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 886,
-    "UNASSESSED": 361
+    "PARTIAL": 891,
+    "UNASSESSED": 356
   }
 }
