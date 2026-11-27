@@ -10331,12 +10331,16 @@
     {
       "id": "PA-11-07",
       "text": "Implement continuation pullback and 20C moving-average filters with exact Wilder SMMA recurrence, lookback initialization and no-lookahead pivots.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/four_node/indicators.py: Wilder SMMA seeds from an n-value SMA, applies exact recurrence, emits warmup None and has explicit session reset policy; 20C bands use aligned SMMA streams",
+        "src/financial_brain/strategies/four_node/nodes.py and tests/test_four_node_replay.py: pivots are observable only after right-side confirmation; prefix-only replay tests confirmation latency",
+        "No separately specified continuation-pullback signal adapter or independent edge evaluation is present; existing Four-Node ambiguity gates remain unresolved"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "964710ee"
     },
     {
       "id": "PA-11-08",
@@ -10356,12 +10360,17 @@
     {
       "id": "PA-11-09",
       "text": "Implement N1–N4 pivot confirmation timestamps and trade-time snapshots; chart annotations that appear later must never create earlier entries.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/strategies/four_node/nodes.py: pivot confirmation and observable_at timestamps are explicit",
+        "src/financial_brain/strategies/four_node/stream.py: filters nodes unavailable at signal bar; breakout candidate records observed_at/available_at and next actionable bar",
+        "src/financial_brain/strategies/four_node/rules.py: rejects pivots not observable before decision bar and records N4 in hashed trade trace",
+        "N4 definition remains an unresolved strategy ambiguity; screenshot/golden fixture coverage is incomplete"
+      ],
       "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "64e72c2d"
     },
     {
       "id": "PA-11-10",
@@ -21422,7 +21431,9 @@
       "PA-11-04",
       "PA-11-05",
       "PA-11-06",
+      "PA-11-07",
       "PA-11-08",
+      "PA-11-09",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21846,13 +21857,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 1012,
+    "audited_count": 1014,
     "status_counts": {
       "COMPLETE": 108,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 881,
-      "UNASSESSED": 366
+      "PARTIAL": 883,
+      "UNASSESSED": 364
     },
     "verified_complete_count": 108,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -22001,7 +22012,7 @@
     "COMPLETE": 108,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 881,
-    "UNASSESSED": 366
+    "PARTIAL": 883,
+    "UNASSESSED": 364
   }
 }
