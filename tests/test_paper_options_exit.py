@@ -100,3 +100,33 @@ def test_preregistered_reversal_and_time_rules_trigger_at_observed_quotes():
             directives=(OptionExitDirective("vol-1", "VOLATILITY_SHIFT", available,
                                             "b" * 64),), quotes=(),
         )
+
+
+def test_exit_quote_observed_before_trigger_cannot_be_used_after_late_receipt():
+    entry = _quote(ENTRY_AT, 9.9, 100, ask=10, ask_qty=100)
+    trigger_at = ENTRY_AT + timedelta(seconds=5)
+    old_quote_at = trigger_at - timedelta(seconds=1)
+    old_quote = OptionExitQuote(_quote(old_quote_at, 9, 10), trigger_at + timedelta(milliseconds=1))
+    directive = OptionExitDirective("reversal", "SIGNAL_REVERSAL", trigger_at, "c" * 64)
+    blocked = manage_long_option_exit(entry=entry, lots=1, policy=_policy(), directives=(directive,),
+                                      quotes=(old_quote,), max_quote_age_seconds=10)
+    assert blocked["trigger"] == "SIGNAL_REVERSAL"
+    assert blocked["status"] == "OPEN" and blocked["filled_contracts"] == 0
+
+    fresh_at = trigger_at + timedelta(seconds=1)
+    fresh = OptionExitQuote(_quote(fresh_at, 9, 10), fresh_at + timedelta(milliseconds=5))
+    closed = manage_long_option_exit(entry=entry, lots=1, policy=_policy(), directives=(directive,),
+                                     quotes=(old_quote, fresh), max_quote_age_seconds=10)
+    assert closed["status"] == "CLOSED" and closed["filled_contracts"] == 10
+    assert closed["fills"][0]["observed_at"] == fresh_at.isoformat()
+
+
+def test_stop_trigger_without_exchange_bid_depth_never_invents_exit_liquidity():
+    entry = _quote(ENTRY_AT, 9.9, 100, ask=10, ask_qty=100)
+    stop_at = ENTRY_AT + timedelta(seconds=1)
+    no_depth = OptionExitQuote(_quote(stop_at, 7, 0), stop_at)
+    result = manage_long_option_exit(entry=entry, lots=1, policy=_policy(),
+                                     quotes=(no_depth,), max_quote_age_seconds=2)
+    assert result["trigger"] == "PREMIUM_STOP"
+    assert result["status"] == "OPEN" and result["filled_contracts"] == 0
+    assert result["remaining_contracts"] == 10

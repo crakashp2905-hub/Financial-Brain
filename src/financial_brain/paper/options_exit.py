@@ -95,6 +95,7 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
     requested = lot_count * entry.lot_size
     remaining = requested
     trigger: str | None = None
+    triggered_at: datetime | None = None
     fills: list[dict[str, object]] = []
     entry_notional = entry.ask * requested
     entry_fees = float(model.one_way(turnover=entry_notional, side=Side.BUY,
@@ -123,16 +124,24 @@ def manage_long_option_exit(*, entry: Quote, lots: int, policy: PremiumExitPolic
         if trigger is None:
             while next_directive is not None and next_directive.available_at <= item.available_at:
                 trigger = next_directive.trigger
+                triggered_at = next_directive.available_at
                 next_directive = next(ordered_directives, None)
                 break
         if trigger is None:
             if quote.bid <= policy.stop_premium:
                 trigger = "PREMIUM_STOP"
+                triggered_at = quote.observed_at
             elif quote.bid >= policy.target_premium:
                 trigger = "PREMIUM_TARGET"
+                triggered_at = quote.observed_at
             elif item.available_at >= expiry_exit:
                 trigger = "EXPIRY_CUTOFF"
+                triggered_at = expiry_exit
         if trigger is None:
+            continue
+        # Receipt time is not execution-time evidence: a quote observed before a stop,
+        # target, event trigger or expiry cutoff cannot be used to claim a post-trigger exit.
+        if triggered_at is None or quote.observed_at < triggered_at:
             continue
         fill_quantity = min(remaining, quote.bid_qty)
         if fill_quantity <= 0:
