@@ -9812,12 +9812,18 @@
     {
       "id": "PA-09-08",
       "text": "Use only causal cross-index breadth, sector-relative changes and observed derivatives microstructure where data rights and timestamps allow.",
-      "source_checked": false,
-      "status": "UNASSESSED",
-      "evidence": [],
-      "blocker": null,
-      "last_audited_at_utc": null,
-      "commit": null
+      "source_checked": true,
+      "status": "PARTIAL",
+      "evidence": [
+        "src/financial_brain/forecasting/index_features.py constructs exact-end aligned 15-minute index returns and sector-relative returns only from bars available by the decision clock; it does not forward-fill missing peers.",
+        "Derivatives microstructure fields are accepted only with observation and availability timestamps plus a source identifier and SHA-256 rights-evidence reference; late observations are withheld.",
+        "tests/test_forecasting_index_features.py covers alignment, availability cutoffs, rights-evidence validation and missing targets; 29 focused forecasting-index tests passed, Ruff and mypy passed.",
+        "No source rights are independently validated by the pure helper, and no actual cross-index, sector or authorized derivatives observation feeds are wired into the forecast path."
+      ],
+      "blocker": "Connect legally authorized, point-in-time index/sector bars and derivatives quotes with auditable rights records, then evaluate causal feature coverage and forecast contribution on held-out sessions.",
+      "last_audited_at_utc": "2026-11-27T00:00:00Z",
+      "commit": "64337554",
+      "test_result": "29 focused forecasting-index tests passed; Ruff and mypy passed for index features."
     },
     {
       "id": "PA-09-09",
@@ -21215,6 +21221,7 @@
       "PA-09-05",
       "PA-09-06",
       "PA-09-07",
+      "PA-09-08",
       "SL-00-01",
       "SL-00-02",
       "SL-00-03",
@@ -21638,13 +21645,13 @@
       "SL-26-19",
       "SL-26-20"
     ],
-    "audited_count": 978,
+    "audited_count": 979,
     "status_counts": {
       "COMPLETE": 107,
       "EXTERNAL_BLOCKED": 6,
       "NOT_STARTED": 17,
-      "PARTIAL": 848,
-      "UNASSESSED": 400
+      "PARTIAL": 849,
+      "UNASSESSED": 399
     },
     "verified_complete_count": 107,
     "method": "Repository/source/test/configuration evidence review; status never inferred from task text alone.",
@@ -21793,7 +21800,7 @@
     "COMPLETE": 107,
     "EXTERNAL_BLOCKED": 6,
     "NOT_STARTED": 17,
-    "PARTIAL": 848,
-    "UNASSESSED": 400
+    "PARTIAL": 849,
+    "UNASSESSED": 399
   }
 }
