@@ -8031,7 +8031,7 @@
       ],
       "blocker": "All desk guards/OMS must share this durable transaction boundary, reconcile fills/cancels to canonical positions with atomic reservation-to-position transfer, and source current margin/settlement/options buying-power/inventory limits before the acceptance criteria can be complete.",
       "last_audited_at_utc": "2026-11-27T03:44:25Z",
-      "commit": "151fde9e",
+      "commit": "a464ea4e",
       "test_evidence": [
         "`python -m pytest tests/test_forward_edge_session_runner.py tests/test_portfolio_durable_reservations.py tests/test_canonical_portfolio_ledger.py tests/test_exit_coverage.py -q`: 131 passed.",
         "`python -m pytest tests/test_portfolio_exit_guard.py -q`: 11 passed, including futures risk-reduction review.",
@@ -8086,7 +8086,7 @@
       ],
       "blocker": "Partial: the canonical snapshot can now be audited, but account/book aggregation, a universal pre-entry gate, durable monitor scheduling across every book, and operational restart drills remain unproven.",
       "last_audited_at_utc": "2026-11-27T03:44:25Z",
-      "commit": "749b3446",
+      "commit": "a464ea4e",
       "test_evidence": [
         "`python -m pytest tests/test_exit_coverage.py tests/test_canonical_portfolio_ledger.py -q`: 27 passed, including future position mapping, multiple sleeves, NAV exception and real SQLite ledger snapshots. `python -m pytest tests/test_portfolio_exit_guard.py -q`: 11 passed, including futures risk reduction.",
         "`python -m pytest tests/test_exit_coverage.py tests/test_exit_protection_ledger.py -q`: prior durable exit package had 18 passing tests.",
