@@ -3,6 +3,7 @@ from __future__ import annotations
 import duckdb
 import numpy as np
 import pandas as pd
+import pytest
 
 from financial_brain.evaluation import edges as E
 from financial_brain.paper import zoo_edges as ZE
@@ -45,6 +46,18 @@ def test_h003_and_h005_pick_twenty_equal_weighted_names():
     # H005 holds only names from the three best industries (the drift rises with the column index)
     assert h5 and set(h5) <= set(cols[10:])
     assert abs(sum(h5.values()) - 1) < 1e-9
+
+
+@pytest.mark.parametrize("n_days", [180, 300])
+def test_h003_abstains_on_short_history_or_zero_volatility(n_days):
+    P, cols = _panel(n_days=n_days)
+    if n_days == 300:
+        P["C"] = pd.DataFrame(100.0, index=P["C"].index, columns=P["C"].columns)
+
+    out = ZE.h_targets(_rcon(cols), P)
+
+    assert "edge_h003_riskadj_mom" not in out
+    assert "no eligible holdings" in out["_errors"]["edge_h003_riskadj_mom"]
 
 
 def test_h005_data_failure_does_not_suppress_h003_target():
