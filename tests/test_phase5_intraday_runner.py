@@ -429,3 +429,32 @@ def test_feed_failure_that_recovers_keeps_the_rules_running(setup):
     assert out["status"] == "complete"
     rows = R.ledger(setup / "l.duckdb").execute("SELECT exit_reason FROM trades").fetchall()
     assert ("target",) in rows
+
+
+def test_feed_outage_recovery_does_not_synthesize_exit_for_open_position(setup):
+    c = Clock(datetime(2026, 10, 6, 9, 10, tzinfo=R.IST))
+    good = fake_quotes(c)
+
+    def quote(symbols, kind):
+        minute = c.t.hour * 60 + c.t.minute
+        if 592 <= minute < 600 or minute >= 915:  # outage after entry, recovery, outage at flatten
+            raise OSError("simulated quote-feed outage")
+        if minute < 592:
+            return good(symbols, kind)
+        return {symbol: {"last_price": 100.2, "last_trade_time": "2026-10-06 10:01:00",
+                         "depth": {"buy": [{"price": 100.15, "quantity": 10_000}],
+                                   "sell": [{"price": 100.25, "quantity": 10_000}]},
+                         "ohlc": {"open": 100.0, "high": 100.2, "low": 100.2, "close": 100.2}}
+                for symbol in symbols}
+
+    out = R.run_live(poll=300, quote_fn=quote, now_fn=c.now, sleep_fn=c.sleep,
+                     path=setup / "outage-recovery-open.duckdb", max_failures=5)
+    assert out["status"] == "aborted"
+    assert out["unresolved_positions"] > 0
+    assert out["valuation_estimate_only"] is True
+    assert out["realized_pnl_released"] is False
+    con = R.ledger(setup / "outage-recovery-open.duckdb")
+    rows = con.execute("SELECT exit_reason, exit_px, exit_ts, gross_pnl, net_pnl FROM trades").fetchall()
+    open_rows = [row for row in rows if row[2] is None]
+    assert open_rows and all(row[0:2] == (None, None) for row in open_rows)
+    assert all(row[3:] == (0.0, 0.0) for row in open_rows)

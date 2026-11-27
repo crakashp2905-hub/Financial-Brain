@@ -460,21 +460,31 @@ def run_live(*, n: int = UNIVERSE_SIZE, poll: int = POLL_SECONDS, quote_fn=None,
         publish(path, eng, now=now, status="Paper session running", polls=polls,
                 prices=last, quote_at=quote_at)
         sleep_fn(poll)
-    if session_issue is None and not eng.closed_for_day:
-        for t in eng.end_of_day(now_fn().replace(tzinfo=None), last):
-            save(con, t, "live")
-    status = "session_unavailable" if session_issue is not None else "complete"
+    # A cached last quote can support a valuation estimate, never a synthetic
+    # flatten fill. The normal 15:15 branch above closes positions only while a
+    # fresh poll is being processed; anything still open here remains unresolved.
+    unresolved = sum(t.is_open for t in eng.trades)
+    status = ("session_unavailable" if session_issue is not None else
+              "aborted" if unresolved else "complete")
+    note = feed_health_note(
+        skipped=len(eng.skipped), unresolved_positions=unresolved,
+        valuation_estimate_only=bool(unresolved),
+        reason="OPEN_POSITIONS_UNRESOLVED_AT_SESSION_END" if unresolved else None,
+    )
     record_run(con, day, "live", started=started, finished=now_fn().isoformat(), status=status,
-               symbols=len(syms), polls=polls, note=feed_health_note(skipped=len(eng.skipped)),
-               version=fingerprint)
+               symbols=len(syms), polls=polls, note=note, version=fingerprint)
     if qcon is not None:
         qcon.close()
-    if session_issue is None and _has_board(con):
+    if session_issue is None and not unresolved and _has_board(con):
         BD.resolve_close(con, day, "live", last)
     out = {"day": day, "status": status, "summary": eng.summary(), "polls": polls,
            "forward_quote_archive": forward_quote_archive_stats,
            "feed_health": feed_health.snapshot(now=now_fn())}
-    publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else "Session unavailable",
+    if unresolved:
+        out.update({"unresolved_positions": unresolved, "valuation_estimate_only": True,
+                    "realized_pnl_released": False})
+    publish(path, eng, now=now_fn(), status="Session complete" if status == "complete" else
+            "Open positions unresolved — valuation only" if unresolved else "Session unavailable",
             polls=polls, prices=last, quote_at=quote_at)
     write_report(con, day, "live", eng, cohort=cohort)
     return out

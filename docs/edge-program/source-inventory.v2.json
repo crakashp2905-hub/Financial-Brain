@@ -10489,7 +10489,7 @@
       "owner_role_hint": "Paper",
       "parse_status": "ok",
       "source": "src/financial_brain/paper/intraday_runner.py",
-      "source_sha256": "9afc72325d54b7cd204832fd461e786d48a38914713d114f763ffeff0f31c9c3",
+      "source_sha256": "7e5b95ab5aa9525fbae58604bef76cc6b600ab0929ff170a19f2f9612939cf2c",
       "test_paths": [
         "tests/test_forward_edge_cli.py",
         "tests/test_phase5_intraday_runner.py"
