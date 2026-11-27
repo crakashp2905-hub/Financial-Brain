@@ -48,6 +48,8 @@ def test_ranker_explains_no_selection_for_spread_depth_and_risk_failures():
         max_quote_age_seconds=5, max_spread_bps=100,
     )
     assert result["selected_candidate_id"] is None
+    assert result["selected_action"] == "CASH_NO_ACTION"
+    assert result["cash_no_action_baseline"]["expected_net_pnl_inr"] == 0
     assert result["selection_reason"] == "NO_CANDIDATE_CLEARED_ALL_GATES"
     reasons = {row["candidate_id"]: set(row["reason_codes"]) for row in result["candidates"]}
     assert "SPREAD_EXCEEDS_POLICY" in reasons["wide"]
@@ -74,3 +76,17 @@ def test_near_expiry_and_spread_or_tail_cost_can_block_even_high_expected_reward
     assert "TAIL_GAP_EXCEEDS_EXPECTED_ALPHA" in reasons["tail-risk"]
     assert "SPREAD_COST_EXCEEDS_EXPECTED_ALPHA" in reasons["wide-near-expiry"]
     assert result["selected_candidate_id"] is None
+
+
+def test_ranker_reports_delta_equivalent_cash_comparison_without_claiming_calibration():
+    candidate = replace(_candidate("call", "CE"),
+                        expected_underlying_exit_price=25_200)
+    result = rank_long_option_contracts(
+        candidates=(candidate,), underlying_price=25_100, as_of=AS_OF,
+        risk_budget_inr=10_000, max_quote_age_seconds=5, max_spread_bps=500,
+    )
+    benchmark = result["candidates"][0]["delta_equivalent_benchmark"]
+    assert benchmark["underlying_units_per_lot"] > 0
+    assert benchmark["gross_pnl_per_lot_inr_before_underlying_costs"] > 0
+    assert benchmark["calibrated"] is False
+    assert result["cash_no_action_baseline"]["always_available"] is True

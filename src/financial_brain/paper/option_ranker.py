@@ -25,6 +25,7 @@ class OptionRankCandidate:
     time_to_expiry_years: float
     minutes_to_expiry: float | None = None
     stress_tail_loss_per_lot_inr: float | None = None
+    expected_underlying_exit_price: float | None = None
 
 
 def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
@@ -76,6 +77,10 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
                 and (not math.isfinite(candidate.stress_tail_loss_per_lot_inr)
                      or candidate.stress_tail_loss_per_lot_inr < 0)):
             reasons.append("INVALID_STRESS_TAIL_LOSS")
+        if (candidate.expected_underlying_exit_price is not None
+                and (not math.isfinite(candidate.expected_underlying_exit_price)
+                     or candidate.expected_underlying_exit_price <= 0)):
+            reasons.append("INVALID_UNDERLYING_SCENARIO")
         if quote.observed_at.tzinfo is None or quote.observed_at.utcoffset() is None:
             reasons.append("QUOTE_CLOCK_MISSING")
         else:
@@ -129,6 +134,16 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
         break_even = (candidate.strike + quote.ask if call
                       else candidate.strike - quote.ask)
         break_even_move_pct = (break_even - underlying_price) / underlying_price * 100
+        delta_equivalent = None
+        if candidate.expected_underlying_exit_price is not None:
+            delta_units = greek_values["delta"] * quantity_per_lot
+            delta_equivalent = {
+                "underlying_units_per_lot": delta_units,
+                "expected_underlying_exit_price": candidate.expected_underlying_exit_price,
+                "gross_pnl_per_lot_inr_before_underlying_costs":
+                    delta_units * (candidate.expected_underlying_exit_price - underlying_price),
+                "calibrated": False,
+            }
         if spread_bps > max_spread_bps:
             reasons.append("SPREAD_EXCEEDS_POLICY")
         if depth_lots < 1:
@@ -162,6 +177,7 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
                      "expected_alpha_per_lot_inr": expected_alpha_per_lot,
                      "minutes_to_expiry": candidate.minutes_to_expiry,
                      "stress_tail_loss_per_lot_inr": candidate.stress_tail_loss_per_lot_inr,
+                     "delta_equivalent_benchmark": delta_equivalent,
                      "risk_capped_lots": risk_lots, "depth_capped_lots": depth_lots,
                      "recommended_lots": lots if not reasons else 0,
                      "maximum_loss_inr": max_loss,
@@ -187,6 +203,9 @@ def rank_long_option_contracts(*, candidates: tuple[OptionRankCandidate, ...],
         "paper_only": True, "risk_budget_inr": risk_budget_inr,
         "candidates": sorted(rows, key=lambda row: str(row["candidate_id"])),
         "selected_candidate_id": winner["candidate_id"] if eligible else None,
+        "selected_action": "OPTION_CANDIDATE" if eligible else "CASH_NO_ACTION",
+        "cash_no_action_baseline": {"expected_net_pnl_inr": 0.0, "risk_inr": 0.0,
+                                    "always_available": True},
         "selection_reason": ("HIGHEST_AFTER_COST_REWARD_TO_MAX_LOSS_AMONG_ELIGIBLE"
                              if eligible else "NO_CANDIDATE_CLEARED_ALL_GATES"),
         "calibrated": False,
