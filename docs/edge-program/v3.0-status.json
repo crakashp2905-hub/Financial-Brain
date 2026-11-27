@@ -9126,16 +9126,17 @@
       "status": "PARTIAL",
       "evidence": [
         "`paper.zoo_edges.h_targets` computes 12-1 daily momentum divided by trailing 250-session daily-return standard deviation with 200 minimum observations; non-finite scores are removed before selection.",
-        "`evaluation.edges.load` supplies point-in-time tradable ordinary shares and candidate tests cover H003 equal-weight picks and ETF/MF exclusion."
+        "`evaluation.edges.load` supplies point-in-time tradable ordinary shares and candidate tests cover H003 equal-weight picks and ETF/MF exclusion.",
+        "Commit 79395859 adds direct fail-closed cases: 180-session history and 300 flat-price sessions both produce no H003 holding and an explicit no-eligible-holdings reason."
       ],
       "blocker": "Formula implementation exists, but explicit zero/near-zero volatility, insufficient-history rejection and complete historical data coverage tests/replay are missing.",
-      "last_audited_at_utc": "2026-11-27T05:03:11Z",
-      "commit": "bd29ddd3",
+      "last_audited_at_utc": "2026-11-27T05:05:17Z",
+      "commit": "79395859",
       "test_evidence": [
-        "python -m pytest --basetemp .pytest-pa07-momentum-audit tests/test_reference_candidates.py tests/test_zoo_h_targets.py tests/test_phase5_edges.py tests/test_phase5_zoo_edges.py -q: 18 passed.",
-        "Ruff on the reviewed momentum source/tests and mypy on paper.zoo_edges and evaluation.edges passed; git diff --check passed."
+        "python -m pytest --basetemp .pytest-pa0706-abstain tests/test_zoo_h_targets.py -q: 9 passed, including insufficient-history and zero-volatility abstention.",
+        "Ruff on the reviewed target source/tests, mypy on paper.zoo_edges, and git diff --check passed."
       ],
-      "test_result": "`paper.zoo_edges.h_targets` computes 12-1 daily momentum divided by trailing 250-session daily-return standard deviation with 200 minimum observations; non-finite scores are removed before selection. Formula implementation exists, but explicit zero/near-zero volatility, insufficient-history rejection and complete historical data coverage tests/replay are missing. PA-07-06 remains PARTIAL."
+      "test_result": "The H003 formula is implemented; missing-history and zero-volatility cases now explicitly abstain and are tested. The registered candidate lineage and full point-in-time data coverage remain incomplete. PA-07-06 remains PARTIAL."
     },
     {
       "id": "PA-07-07",
